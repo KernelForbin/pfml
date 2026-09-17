@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-09-17 (follow-up 3)
+
+- **Points over time is now Performance over time**, and has a third
+  metric: Standing over time, leaderboard position (#1 to last) after
+  each round's points are counted. Ties share a place, with the next
+  distinct total skipping accordingly (competition ranking: 1, 1, 3, not
+  a manufactured tiebreak). The chart draws #1 at the top since it's the
+  best place to be, and the axis always spans the full field regardless
+  of which players are toggled on, so a filtered view of the middle of
+  the pack isn't stretched to look like the top.
+
 ## 2026-09-17 (follow-up 2)
 
 - **Points over time has a new default metric: Performance vs field.**
