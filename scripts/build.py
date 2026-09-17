@@ -41,6 +41,12 @@ OUT_DIR = ROOT / "site" / "data"
 # taste matrix, so one lucky round does not read as a lifelong grudge
 MIN_PAIR_OPPORTUNITIES = 5
 
+# Career Score = total points + WIN_BONUS per round won + PODIUM_BONUS per
+# podium finish (podiums include the win itself). See build_career() for
+# where these numbers come from.
+WIN_BONUS = 10
+PODIUM_BONUS = 5
+
 
 def read_csv(path):
     if not path.exists():
@@ -418,18 +424,26 @@ def build_career(season_datas):
     for t in totals.values():
         t["avgPointsPerSeason"] = round(t["totalPoints"] / t["seasonsPlayed"], 1) if t["seasonsPlayed"] else 0
         t["bySeason"] = t.pop("bySeasson")
+        # Career Score = total points + a bonus for rounds won + a bonus for
+        # podium finishes. The weights aren't arbitrary: across the real
+        # data, a round winner scores about 10 points above the field
+        # average (26.0 vs 15.8 in Season 1, 25.6 vs 15.7 in Season 2), and
+        # a podium finisher scores about 7-8 points above average. WIN_BONUS
+        # and PODIUM_BONUS below round those premiums to 10 and 5. Podiums
+        # already include the win itself (a round win is a podium finish
+        # too), so a win earns both bonuses: +15 on top of its raw points.
+        t["careerScore"] = t["totalPoints"] + WIN_BONUS * t["roundsWon"] + PODIUM_BONUS * t["podiums"]
         players.append(t)
-    players.sort(key=lambda p: (-p["totalPoints"], -p["roundsWon"], p["name"]))
+    players.sort(key=lambda p: (-p["careerScore"], -p["totalPoints"], p["name"]))
 
     highlights = {}
     if players:
-        highlights["mostPoints"] = {"name": players[0]["name"], "points": players[0]["totalPoints"]}
+        top_score = players[0]
+        highlights["topScore"] = {"name": top_score["name"], "careerScore": top_score["careerScore"]}
         most_wins = max(players, key=lambda p: p["roundsWon"])
         highlights["mostWins"] = {"name": most_wins["name"], "roundsWon": most_wins["roundsWon"]}
         most_podiums = max(players, key=lambda p: p["podiums"])
         highlights["mostPodiums"] = {"name": most_podiums["name"], "podiums": most_podiums["podiums"]}
-        most_seasons = max(players, key=lambda p: p["seasonsPlayed"])
-        highlights["mostSeasons"] = {"name": most_seasons["name"], "seasonsPlayed": most_seasons["seasonsPlayed"]}
         best_single = max(players, key=lambda p: p["bestSeasonPoints"])
         season_label = next((d["label"] for d in season_datas if d["key"] == best_single["bestSeasonKey"]), "")
         highlights["bestSingleSeason"] = {"name": best_single["name"], "points": best_single["bestSeasonPoints"],
@@ -440,6 +454,7 @@ def build_career(season_datas):
         "highlights": highlights,
         "seasons": [{"key": d["key"], "label": d["label"]} for d in played_seasons],
         "totalSeasons": len(played_seasons),
+        "careerScoreFormula": {"winBonus": WIN_BONUS, "podiumBonus": PODIUM_BONUS},
     }
 
 

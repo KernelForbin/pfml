@@ -252,6 +252,8 @@
     renderStandings(seasonData);
     renderFocus(seasonData);
     renderHighlights(seasonData);
+    trendSelected = selected.length ? selected.slice() : seasonData.standings.map(function (p) { return p.id; });
+    renderTrend(seasonData);
     renderTopTracks(seasonData);
     renderRounds(seasonData);
     renderTaste(seasonData);
@@ -728,35 +730,9 @@
     return row;
   }
 
-  var trackSort = "points-desc";
-  var TRACK_SORTS = [
-    ["points-desc", "Top scoring"],
-    ["points-asc", "Lowest scoring"],
-    ["az", "A\u2013Z"],
-    ["recent", "Most recent"],
-  ];
-
-  function renderTracksSort() {
-    var host = $("tracksSort");
-    if (!host) return;
-    host.innerHTML = "";
-    TRACK_SORTS.forEach(function (pair) {
-      var mode = pair[0], label = pair[1];
-      var b = el("button", "sort-pill" + (trackSort === mode ? " is-active" : ""), esc(label));
-      b.type = "button";
-      b.addEventListener("click", function () {
-        if (trackSort === mode) return;
-        trackSort = mode;
-        renderTracksSort();
-        renderTopTracks(seasonData);
-      });
-      host.appendChild(b);
-    });
-  }
-
   function renderTopTracks(d) {
     var all = [];
-    d.rounds.forEach(function (r, ri) { r.songs.forEach(function (s) { all.push(s); s.__roundIndex = ri; }); });
+    d.rounds.forEach(function (r) { all = all.concat(r.songs); });
     if (selected.length) {
       var idSet = {};
       selected.forEach(function (id) { idSet[id] = true; });
@@ -766,29 +742,12 @@
     host.innerHTML = "";
     attachFilterTag(host, seasonData);
     if (!all.length) { host.appendChild(empty(selected.length ? "No tracks from this selection." : "No tracks submitted yet.")); return; }
-
-    var list = all.slice();
-    var capped = true;
-    if (trackSort === "points-desc") {
-      list.sort(function (a, b) { return b.points - a.points; });
-    } else if (trackSort === "points-asc") {
-      list.sort(function (a, b) { return a.points - b.points; });
-    } else if (trackSort === "az") {
-      list.sort(function (a, b) { return a.title.localeCompare(b.title); });
-      capped = false;
-    } else if (trackSort === "recent") {
-      list.sort(function (a, b) { return b.__roundIndex - a.__roundIndex || b.points - a.points; });
-      capped = false;
-    }
-    var shown = capped ? list.slice(0, 20) : list;
-
-    var note = el("p", "block-note",
-      capped ? "Showing " + shown.length + " of " + list.length + " tracks." : "Showing all " + list.length + " tracks.");
-    host.appendChild(note);
+    var top = all.slice().sort(function (a, b) { return b.points - a.points; }).slice(0, 20);
     var box = el("div", "framed");
-    shown.forEach(function (s, i) { box.appendChild(trackRow(s, i + 1, true)); });
+    top.forEach(function (s, i) { box.appendChild(trackRow(s, i + 1, true)); });
     host.appendChild(box);
   }
+
 
   function renderRounds(d) {
     var host = $("rounds");
@@ -1008,8 +967,7 @@
         var index = res[0], d = res[1];
         seasonData = d;
         selected = [];
-        trendSelected = d.standings.slice(0, 3).map(function (p) { return p.id; });
-        trackSort = "points-desc";
+        trendSelected = d.standings.map(function (p) { return p.id; });
         renderNav(index, key);
         document.title = "PFML - " + d.label;
         renderHero(d);
@@ -1017,7 +975,6 @@
         renderFocus(d);
         renderHighlights(d);
         renderTrend(d);
-        renderTracksSort();
         renderTopTracks(d);
         renderRounds(d);
         renderTaste(d);
@@ -1038,6 +995,9 @@
      CAREER PAGE
      ===================================================================== */
 
+  var careerData = null;
+  var careerSort = { field: "careerScore", dir: "desc" };
+
   function careerTile(label, valueHtml, metaHtml) {
     var n = el("div", "hl");
     n.innerHTML = '<p class="hl-label">' + label + "</p>" +
@@ -1049,12 +1009,53 @@
   function renderCareerHighlights(c) {
     var h = c.highlights || {};
     var g = el("div", "hl-grid");
-    if (h.mostPoints) g.appendChild(careerTile("Most career points", esc(h.mostPoints.name), h.mostPoints.points + " points total"));
+    if (h.topScore) g.appendChild(careerTile("Highest career score", esc(h.topScore.name), h.topScore.careerScore + " career score"));
     if (h.mostWins) g.appendChild(careerTile("Most rounds won", esc(h.mostWins.name), h.mostWins.roundsWon + " round wins"));
     if (h.mostPodiums) g.appendChild(careerTile("Most podiums", esc(h.mostPodiums.name), h.mostPodiums.podiums + " top-3 finishes"));
-    if (h.mostSeasons) g.appendChild(careerTile("Most seasons played", esc(h.mostSeasons.name), h.mostSeasons.seasonsPlayed + " seasons"));
     if (h.bestSingleSeason) g.appendChild(careerTile("Best single season", esc(h.bestSingleSeason.name), h.bestSingleSeason.points + " points in " + esc(h.bestSingleSeason.season)));
     setBlock("highlights", g);
+  }
+
+  function careerColumns(c) {
+    var cols = [{ key: "name", label: "Player", align: "left" }];
+    c.seasons.forEach(function (s) { cols.push({ key: s.key, label: s.label.replace("Season ", "S") }); });
+    cols.push({ key: "totalPoints", label: "Total" });
+    cols.push({ key: "roundsWon", label: "Won" });
+    cols.push({ key: "podiums", label: "Top-3" });
+    cols.push({ key: "careerScore", label: "Score" });
+    return cols;
+  }
+
+  function careerFieldValue(p, key) {
+    if (key === "name") return p.name;
+    if (key === "totalPoints") return p.totalPoints;
+    if (key === "roundsWon") return p.roundsWon;
+    if (key === "podiums") return p.podiums;
+    if (key === "careerScore") return p.careerScore;
+    return (key in p.bySeason) ? p.bySeason[key] : null;
+  }
+
+  function sortCareerPlayers(players, field, dir) {
+    var arr = players.slice();
+    arr.sort(function (a, b) {
+      var av = careerFieldValue(a, field), bv = careerFieldValue(b, field);
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;   // no data for this season sinks to the bottom regardless of direction
+      if (bv == null) return -1;
+      if (field === "name") return dir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+      return dir === "asc" ? av - bv : bv - av;
+    });
+    return arr;
+  }
+
+  function setCareerSort(field) {
+    if (careerSort.field === field) {
+      careerSort.dir = careerSort.dir === "desc" ? "asc" : "desc";
+    } else {
+      careerSort.field = field;
+      careerSort.dir = field === "name" ? "asc" : "desc";
+    }
+    renderCareerStandings(careerData);
   }
 
   function renderCareerStandings(c) {
@@ -1062,28 +1063,33 @@
     host.innerHTML = "";
     if (!c.players.length) { host.appendChild(empty("No completed seasons yet.")); return; }
 
-    var colCount = c.seasons.length + 3; // seasons + total + won + top-3
-    var gridStyle = "grid-template-columns:1.6fr repeat(" + colCount + ",1fr);";
+    var cols = careerColumns(c);
+    var gridStyle = "grid-template-columns:1.6fr repeat(" + (cols.length - 1) + ",1fr);";
 
-    var head = el("div", "vrow head");
+    var head = el("div", "vrow head career-head");
     head.setAttribute("style", gridStyle);
-    var headHtml = "<div>Player</div>";
-    c.seasons.forEach(function (s) { headHtml += '<div class="num">' + esc(s.label.replace("Season ", "S")) + "</div>"; });
-    headHtml += '<div class="num">Total</div><div class="num">Won</div><div class="num">Top-3</div>';
-    head.innerHTML = headHtml;
+    cols.forEach(function (col) {
+      var active = careerSort.field === col.key;
+      var b = el("button", "career-sort-btn" + (active ? " is-active" : "") + (col.align === "left" ? " is-left" : ""));
+      b.type = "button";
+      b.innerHTML = esc(col.label) + (active ? '<span class="arrow">' + (careerSort.dir === "asc" ? " \u2191" : " \u2193") + "</span>" : "");
+      b.addEventListener("click", function () { setCareerSort(col.key); });
+      head.appendChild(b);
+    });
     var box = el("div", "framed career-table");
     box.appendChild(head);
 
-    c.players.forEach(function (p, i) {
-      var row = el("div", "vrow" + (i === 0 ? " is-leader" : ""));
+    var sorted = sortCareerPlayers(c.players, careerSort.field, careerSort.dir);
+    sorted.forEach(function (p, i) {
+      var row = el("div", "vrow" + (i === 0 && careerSort.field === "careerScore" && careerSort.dir === "desc" ? " is-leader" : ""));
       row.setAttribute("style", gridStyle);
-      var rowHtml = '<div class="vname">' + (i + 1) + ". " + esc(p.name) + "</div>";
+      var rowHtml = '<div class="vname">' + esc(p.name) + "</div>";
       c.seasons.forEach(function (s) {
         var pts = p.bySeason[s.key];
         rowHtml += '<div class="num">' + (pts == null ? "&ndash;" : pts) + "</div>";
       });
-      rowHtml += '<div class="num"><b>' + p.totalPoints + "</b></div><div class=\"num\">" + p.roundsWon +
-        '</div><div class="num">' + p.podiums + "</div>";
+      rowHtml += '<div class="num">' + p.totalPoints + "</div><div class=\"num\">" + p.roundsWon +
+        '</div><div class="num">' + p.podiums + '</div><div class="num"><b>' + p.careerScore + "</b></div>";
       row.innerHTML = rowHtml;
       box.appendChild(row);
     });
@@ -1094,6 +1100,7 @@
     Promise.all([fetchJSON(DATA + "/index.json"), fetchJSON(DATA + "/career.json")])
       .then(function (res) {
         var index = res[0], c = res[1];
+        careerData = c;
         renderNav(index, "career");
         var line = c.seasons.length
           ? "Combined standings across " + c.seasons.length + " played " + plural(c.seasons.length, "season") + ": " +
@@ -1101,6 +1108,13 @@
           : "No seasons have finished a round yet.";
         $("heroLine").textContent = line;
         renderCareerHighlights(c);
+        var note = $("standingsNote");
+        if (note && c.careerScoreFormula) {
+          var f = c.careerScoreFormula;
+          note.textContent = "Total points across every season played, plus " + f.winBonus +
+            " for every round won and " + f.podiumBonus + " for every top-3 finish (a win counts as both). " +
+            "Click any column to sort by it.";
+        }
         renderCareerStandings(c);
       })
       .catch(function (err) {
@@ -1109,6 +1123,7 @@
         if (l) l.textContent = "Career data didn't load. Check that site/data/career.json was built and deployed next to this page.";
       });
   }
+
 
   /* ---- boot ---- */
 

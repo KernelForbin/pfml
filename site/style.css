@@ -374,16 +374,6 @@ table.taste td.nil { color: #C6BDCC; font-weight: 400; }
 }
 .playlist-row { display: flex; flex-wrap: wrap; gap: 9px; }
 
-/* ---------- sort pills (Top tracks) ---------- */
-
-.sort-row { display: flex; flex-wrap: wrap; gap: 7px; margin: -6px 0 16px; }
-.sort-pill {
-  font-family: "Inter", sans-serif; font-size: 0.82rem; font-weight: 500; cursor: pointer;
-  border: 1px solid var(--border); border-radius: 999px; padding: 6px 13px; background: var(--card); color: var(--muted);
-}
-.sort-pill:hover { color: var(--ink); border-color: rgba(158, 0, 196, 0.3); }
-.sort-pill.is-active { background: var(--magenta); border-color: var(--magenta); color: #fff; }
-
 /* ---------- points-over-time trend chart ---------- */
 
 .trend-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 10px; }
@@ -417,6 +407,16 @@ button.trend-chip.is-on .dot { opacity: 1; }
    template is set inline per row from JS (see renderCareerStandings)
    rather than guessed here */
 .career-table .vrow.is-leader { background: var(--wash); }
+
+.career-head { padding: 0; }
+.career-sort-btn {
+  font-family: "Archivo", sans-serif; font-weight: 600; font-size: 0.74rem; color: var(--paper);
+  background: none; border: none; cursor: pointer; text-align: right; padding: 11px 18px;
+}
+.career-sort-btn.is-left { text-align: left; }
+.career-sort-btn:hover { color: var(--acid); }
+.career-sort-btn.is-active { color: var(--acid); }
+.career-sort-btn .arrow { font-size: 0.7rem; }
 
 /* ---------- footer ---------- */
 

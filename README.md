@@ -52,14 +52,14 @@ not templated) that reads `career.json` for all-time standings.
 - **Player focus and comparison**: click a name in Standings to filter the
   rest of the page to them, click a second to compare instead, see below.
 - **Points over time**: a line chart of cumulative points after each round.
-  Toggle players in and out from the chip legend below it, or use Select
-  all / Clear. Defaults to the top 3 finishers so it isn't a wall of lines
-  on first load. Colors are assigned by season rank so a given player's
-  color stays consistent across toggles.
-- **Top tracks sorting**: Top scoring (default, capped at 20), Lowest
-  scoring (capped at 20, the bottom of the pile), A–Z and Most recent (both
-  show every matching track, not just 20, since ranking isn't the point of
-  those two).
+  Defaults to everyone (Select all). If you've selected one or more players
+  from Standings, the chart follows that selection instead, since at that
+  point you're clearly looking at specific people; clear the scoreboard
+  selection and it goes back to everyone. You can still toggle individual
+  players on the chart's own legend afterward, that's independent of the
+  scoreboard until the scoreboard selection changes again. Colors are
+  assigned by season rank so a given player's color stays consistent
+  across toggles.
 
 ## Adding a new export
 
@@ -156,6 +156,31 @@ in it yet. If a name ever looks wrong on the Career page for someone who
 changed their Music League display name between seasons, that's the
 join taking the first name it saw for that id; `build_career()` in
 `build.py` is where to change that if it comes up.
+
+The all-time standings table is sortable by clicking any column header,
+including the season-by-season point columns; click again to flip the
+direction. Someone who hasn't played a season sorts to the bottom of that
+column regardless of direction, rather than sorting as a zero.
+
+### Career Score
+
+Default sort is Career Score, not raw total points. The formula:
+
+```
+Career Score = Total Points + 10 x Rounds Won + 5 x Podium Finishes
+```
+
+Podium finishes include the win itself, so a round win adds both bonuses:
++15 on top of the points that round actually scored. The 10 and 5 aren't
+arbitrary: across the real data, a round winner scores about 10 points
+above the field average (26.0 vs 15.8 in Season 1, 25.6 vs 15.7 in Season
+2), and a podium finisher scores about 7-8 points above average. The
+weights round those measured premiums to clean numbers. Raw points alone
+rewards volume; this rewards actually winning and placing on top of that,
+which is why the ranking can differ from a plain points sort, someone with
+fewer total points but more wins can outrank someone who racked up points
+without ever taking a round. `WIN_BONUS` and `PODIUM_BONUS` are the two
+constants to change in `build.py` if the weighting should shift.
 
 ## Scoring model
 
