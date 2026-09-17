@@ -99,6 +99,26 @@ A season with a `competitors.csv` and nothing else builds fine and renders
 empty states throughout, which is how Season 3 looks until its first round
 closes.
 
+## Player focus and comparison
+
+Click a name in the Standings on any season page to filter everything below
+(top tracks, rounds, taste matrix, voters, artists) to just that person, and
+a Player Focus panel appears with stats scoped to them: best and weakest
+submission, most divisive submission, biggest fan, hardest to win over,
+favorite to vote for, voting style.
+
+Click a second name to compare instead of filter: the panel switches to a
+side-by-side standings comparison, a head-to-head tally (whoever placed
+best in each round both submitted to), and, for exactly two people, their
+mutual taste index in both directions. Select a third, fourth, etc. and the
+comparison table and head-to-head tally extend to the whole group; the
+two-way mutual taste tiles only make sense for a pair, so they drop out
+once a third person joins.
+
+Everything here is computed client-side in `app.js` from data already in
+`seasonN.json`, no extra build step and no new fields needed beyond what
+`build.py` already produces.
+
 ## Scoring model
 
 These were verified against the real exports rather than assumed, and a few

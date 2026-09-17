@@ -145,6 +145,54 @@ a:hover { color: var(--magenta); }
 .stand-score b { font-family: "Archivo", sans-serif; font-weight: 700; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
 .stand-score span { display: block; font-size: 0.74rem; color: var(--muted); }
 
+.stand-row.is-clickable { cursor: pointer; transition: background .12s ease; }
+.stand-row.is-clickable:hover { background: var(--wash); }
+.stand-row.is-clickable:focus-visible { outline-offset: -2px; }
+.stand-row.is-selected {
+  background: rgba(158, 0, 196, 0.045);
+  box-shadow: inset 4px 0 0 var(--magenta);
+}
+.stand-row.is-selected.is-clickable:hover { background: rgba(158, 0, 196, 0.08); }
+.stand-row.is-selected .stand-name { color: var(--deep); }
+
+/* ---------- player focus / comparison panel ---------- */
+
+#block-focus { padding-top: 8px; }
+#block-focus .block-note { margin-bottom: 16px; }
+
+.focus-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 20px; }
+button.focus-chip {
+  font-family: "Inter", sans-serif; font-size: 0.87rem; cursor: pointer;
+  background: var(--wash); border-color: rgba(158, 0, 196, 0.25); color: var(--deep);
+}
+button.focus-chip:hover { background: var(--magenta); border-color: var(--magenta); color: #fff; }
+.focus-clear-all {
+  font-family: "Inter", sans-serif; font-size: 0.85rem; color: var(--muted);
+  background: none; border: none; text-decoration: underline; text-underline-offset: 2px;
+  cursor: pointer; padding: 8px 4px;
+}
+.focus-clear-all:hover { color: var(--magenta); }
+
+#focus h3 {
+  margin: 26px 0 8px; font-size: 1.02rem; font-weight: 700; letter-spacing: -0.01em;
+}
+#focus > .hl-grid:first-of-type { margin-top: 0; }
+.focus-grid-spaced { margin-top: 20px; }
+
+/* ---------- filter tag shown atop a filtered section ---------- */
+
+.filter-tag {
+  margin: 0 0 12px; font-size: 0.85rem; color: var(--muted);
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.filter-tag b { color: var(--ink); font-weight: 600; }
+.filter-tag-clear { font-size: 0.82rem; color: var(--magenta); }
+
+/* highlighted track row: a selected player's entry inside an otherwise
+   unfiltered round listing */
+.trk.trk-hl { background: rgba(158, 0, 196, 0.045); }
+.trk.trk-hl .trk-title { color: var(--deep); }
+
 /* ---------- highlights ---------- */
 
 .hl-grid {

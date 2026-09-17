@@ -196,32 +196,56 @@
      SEASON PAGE
      ===================================================================== */
 
-  function renderHero(d) {
-    $("heroTitle").textContent = d.label;
-    var h = d.highlights || {};
-    var rounds = d.rounds.length;
+  /* ---- player selection state (season pages only) ---- */
 
-    $("heroLine").textContent = rounds
-      ? rounds + " " + plural(rounds, "round") + ", " + d.songCount + " tracks, " +
-        d.scoringVoteCount + " scoring votes from " + d.competitors.length + " players."
-      : d.competitors.length + " players are signed up. No rounds have been posted yet, so the boards below fill in as results come through.";
+  var selected = [];      // ordered array of competitor ids, click order
+  var seasonData = null;
 
-    var stats = [
-      ["Rounds", rounds],
-      ["Tracks", d.songCount],
-      ["Players", d.competitors.length],
-      ["Artists", h.uniqueArtists || 0],
-      ["Scoring votes", h.scoringVotes || 0],
-    ];
-    var dl = $("scoreline");
-    dl.innerHTML = "";
-    stats.forEach(function (s) {
-      var wrap = el("div");
-      wrap.appendChild(el("dt", null, esc(s[0])));
-      wrap.appendChild(el("dd", null, esc(s[1])));
-      dl.appendChild(wrap);
-    });
+  function isSelected(id) { return selected.indexOf(id) !== -1; }
+
+  function toggleSelected(id) {
+    var i = selected.indexOf(id);
+    if (i === -1) selected.push(id); else selected.splice(i, 1);
+    rerenderFiltered();
   }
+
+  function clearSelected() {
+    selected = [];
+    rerenderFiltered();
+  }
+
+  function rerenderFiltered() {
+    if (!seasonData) return;
+    renderStandings(seasonData);
+    renderFocus(seasonData);
+    renderTopTracks(seasonData);
+    renderRounds(seasonData);
+    renderTaste(seasonData);
+    renderVoters(seasonData);
+    renderArtists(seasonData);
+  }
+
+  function nameOf(d, id) {
+    for (var i = 0; i < d.competitors.length; i++) if (d.competitors[i].id === id) return d.competitors[i].name;
+    return "Unknown";
+  }
+
+  function selectedNamesHtml(d) {
+    return selected.map(function (id) { return "<b>" + esc(nameOf(d, id)) + "</b>"; }).join(", ");
+  }
+
+  function attachFilterTag(host, d) {
+    if (!selected.length) return;
+    var tag = el("p", "filter-tag");
+    tag.innerHTML = "Filtered to " + selectedNamesHtml(d) + ". ";
+    var clear = el("a", "filter-tag-clear", "Clear");
+    clear.href = "#";
+    clear.addEventListener("click", function (ev) { ev.preventDefault && ev.preventDefault(); clearSelected(); });
+    tag.appendChild(clear);
+    host.appendChild(tag);
+  }
+
+  /* ---- standings (clickable) ---- */
 
   function renderStandings(d) {
     if (!d.standings.length) { setBlock("standings", empty("No submissions yet. Standings appear once the first round closes.")); return; }
@@ -229,17 +253,240 @@
     var box = el("div", "framed");
     d.standings.forEach(function (p, i) {
       var pct = Math.max(3, Math.round((p.points / max) * 100));
-      var row = el("div", "stand-row");
+      var on = isSelected(p.id);
+      var row = el("div", "stand-row is-clickable" + (on ? " is-selected" : ""));
+      row.setAttribute("role", "button");
+      row.setAttribute("tabindex", "0");
+      row.setAttribute("aria-pressed", String(on));
+      row.title = on ? "Click to remove " + p.name + " from comparison" : "Click to compare " + p.name;
       row.innerHTML =
         '<div class="stand-rank">' + (i + 1) + "</div>" +
         '<div><div class="stand-name">' + esc(p.name) + "</div>" +
         '<div class="bar"><i style="width:' + pct + '%"></i></div></div>' +
         '<div class="stand-score"><b>' + p.points + "</b><span>" +
         p.avgPerSubmission + " avg &middot; " + p.roundsWon + " won &middot; " + p.podiums + " top-3</span></div>";
+      row.addEventListener("click", function () { toggleSelected(p.id); });
+      row.addEventListener("keydown", function (ev) {
+        if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault && ev.preventDefault(); toggleSelected(p.id); }
+      });
       box.appendChild(row);
     });
     setBlock("standings", box);
   }
+
+  /* ---- player focus / comparison panel ---- */
+
+  function songsBy(d, id) {
+    var out = [];
+    d.rounds.forEach(function (r) { r.songs.forEach(function (s) { if (s.submitterId === id) out.push(s); }); });
+    return out;
+  }
+
+  function tasteTo(d, id) { return d.taste.filter(function (t) { return t.submitterId === id; }); }
+  function tasteFrom(d, id) { return d.taste.filter(function (t) { return t.voterId === id; }); }
+  function tastePair(d, voterId, submitterId) {
+    for (var i = 0; i < d.taste.length; i++) {
+      var t = d.taste[i];
+      if (t.voterId === voterId && t.submitterId === submitterId) return t;
+    }
+    return null;
+  }
+
+  function renderFocusIndividual(d, id, host) {
+    var name = nameOf(d, id);
+    var standing = null;
+    for (var i = 0; i < d.standings.length; i++) if (d.standings[i].id === id) { standing = d.standings[i]; break; }
+
+    if (!standing) {
+      host.appendChild(empty(name + " hasn't submitted anything yet this season."));
+      return;
+    }
+
+    var rank = d.standings.indexOf(standing) + 1;
+    var songs = songsBy(d, id);
+    var g = el("div", "hl-grid");
+
+    g.appendChild(tile("Season standing", "#" + rank + " of " + d.standings.length,
+      standing.points + " points &middot; " + standing.roundsWon + " round" + (standing.roundsWon === 1 ? "" : "s") +
+      " won &middot; " + standing.podiums + " top-3 finishes"));
+
+    if (songs.length) {
+      var best = songs.reduce(function (a, b) { return b.points > a.points ? b : a; });
+      g.appendChild(tile("Best submission", extLink(trackLink(best.spotifyId), best.title),
+        esc(best.artistText) + "<br>" + best.points + " points &middot; " + esc(best.roundName)));
+    }
+    if (songs.length >= 2) {
+      var worst = songs.reduce(function (a, b) { return b.points < a.points ? b : a; });
+      g.appendChild(tile("Weakest submission", extLink(trackLink(worst.spotifyId), worst.title),
+        esc(worst.artistText) + "<br>" + worst.points + " points &middot; " + esc(worst.roundName)));
+    }
+    var contested = songs.filter(function (s) { return s.backers >= 3; });
+    if (contested.length) {
+      var divisive = contested.reduce(function (a, b) { return b.spread > a.spread ? b : a; });
+      if (divisive.spread > 0) {
+        g.appendChild(tile("Most divisive submission", extLink(trackLink(divisive.spotifyId), divisive.title),
+          "&sigma; " + divisive.spread + " among voters who backed it &middot; " + esc(divisive.roundName)));
+      }
+    }
+
+    var fansOf = tasteTo(d, id).slice().sort(function (a, b) { return b.index - a.index; });
+    if (fansOf.length) {
+      g.appendChild(tile("Biggest fan", esc(fansOf[0].voterName),
+        "sends " + fansOf[0].index + "&times; their baseline share of points to " + esc(name)));
+      if (fansOf.length >= 2) {
+        var cold = fansOf[fansOf.length - 1];
+        g.appendChild(tile("Hardest to win over", esc(cold.voterName),
+          "only " + cold.index + "&times; their baseline share"));
+      }
+    }
+    var favorsOf = tasteFrom(d, id).slice().sort(function (a, b) { return b.index - a.index; });
+    if (favorsOf.length) {
+      g.appendChild(tile("Favorite to vote for", esc(favorsOf[0].submitterName),
+        esc(name) + " sends " + favorsOf[0].index + "&times; baseline their way"));
+    }
+
+    var voter = null;
+    for (var j = 0; j < d.voters.length; j++) if (d.voters[j].id === id) { voter = d.voters[j]; break; }
+    if (voter) {
+      g.appendChild(tile("Voting style", voter.avgTopBet.toFixed(1) + " pt top bet",
+        "backs " + voter.avgTracksBacked.toFixed(1) + " tracks a round &middot; top pick wins " +
+        Math.round(voter.kingmakerRate * 100) + "% of the time"));
+    }
+
+    host.appendChild(g);
+  }
+
+  function renderFocusGroup(d, ids, host) {
+    // comparison rows, ranked by season-wide points
+    var rows = ids.map(function (id) {
+      var standing = null;
+      for (var i = 0; i < d.standings.length; i++) if (d.standings[i].id === id) { standing = d.standings[i]; break; }
+      return { id: id, name: nameOf(d, id), standing: standing };
+    }).sort(function (a, b) { return (b.standing ? b.standing.points : -1) - (a.standing ? a.standing.points : -1); });
+
+    var max = Math.max.apply(null, rows.map(function (r) { return r.standing ? r.standing.points : 0; }).concat([1]));
+    var box = el("div", "framed");
+    rows.forEach(function (r) {
+      var row = el("div", "stand-row");
+      if (!r.standing) {
+        row.innerHTML = '<div class="stand-rank">&mdash;</div><div><div class="stand-name">' + esc(r.name) +
+          '</div></div><div class="stand-score"><span>no submissions yet</span></div>';
+      } else {
+        var overallRank = d.standings.indexOf(r.standing) + 1;
+        var pct = Math.max(3, Math.round((r.standing.points / max) * 100));
+        row.innerHTML =
+          '<div class="stand-rank">#' + overallRank + "</div>" +
+          '<div><div class="stand-name">' + esc(r.name) + "</div>" +
+          '<div class="bar"><i style="width:' + pct + '%"></i></div></div>' +
+          '<div class="stand-score"><b>' + r.standing.points + "</b><span>" +
+          r.standing.avgPerSubmission + " avg &middot; " + r.standing.roundsWon + " won &middot; " +
+          r.standing.podiums + " top-3</span></div>";
+      }
+      box.appendChild(row);
+    });
+    host.appendChild(box);
+
+    // head-to-head: among rounds where 2+ of the selected submitted, who placed best
+    var idSet = {};
+    ids.forEach(function (id) { idSet[id] = true; });
+    var tally = {};
+    ids.forEach(function (id) { tally[id] = 0; });
+    var ties = 0, consideredRounds = 0;
+    d.rounds.forEach(function (r) {
+      var subset = r.songs.filter(function (s) { return idSet[s.submitterId]; });
+      if (subset.length < 2) return;
+      consideredRounds++;
+      var bestPlace = Math.min.apply(null, subset.map(function (s) { return s.place; }));
+      var winners = subset.filter(function (s) { return s.place === bestPlace; });
+      if (winners.length === 1) tally[winners[0].submitterId]++;
+      else ties++;
+    });
+
+    if (consideredRounds) {
+      var title = el("h3", null, "Head-to-head");
+      var note = el("p", "block-note",
+        "Across " + consideredRounds + " round" + (consideredRounds === 1 ? "" : "s") +
+        " where at least two of them submitted, whoever placed best takes the point." +
+        (ties ? " " + ties + " ended tied between them." : ""));
+      host.appendChild(title);
+      host.appendChild(note);
+      var tbox = el("div", "framed");
+      var ordered = ids.slice().sort(function (a, b) { return tally[b] - tally[a]; });
+      var maxT = Math.max.apply(null, ordered.map(function (id) { return tally[id]; }).concat([1]));
+      ordered.forEach(function (id) {
+        var pct = Math.max(3, Math.round((tally[id] / maxT) * 100));
+        var row = el("div", "stand-row");
+        row.innerHTML =
+          '<div class="stand-rank">' + tally[id] + "</div>" +
+          '<div><div class="stand-name">' + esc(nameOf(d, id)) + "</div>" +
+          '<div class="bar"><i style="width:' + pct + '%"></i></div></div>' +
+          '<div class="stand-score"><span>round' + (tally[id] === 1 ? "" : "s") + ' won</span></div>';
+        tbox.appendChild(row);
+      });
+      host.appendChild(tbox);
+    }
+
+    // mutual taste, only clean to show for exactly two
+    if (ids.length === 2) {
+      var a = ids[0], b = ids[1];
+      var ab = tastePair(d, a, b), ba = tastePair(d, b, a);
+      var g = el("div", "hl-grid focus-grid-spaced");
+      if (ab) {
+        g.appendChild(tile(esc(nameOf(d, a)) + " &rarr; " + esc(nameOf(d, b)), ab.index + "&times; baseline",
+          ab.points + " points across " + ab.chances + " chances to vote"));
+      }
+      if (ba) {
+        g.appendChild(tile(esc(nameOf(d, b)) + " &rarr; " + esc(nameOf(d, a)), ba.index + "&times; baseline",
+          ba.points + " points across " + ba.chances + " chances to vote"));
+      }
+      if (!ab && !ba) {
+        g.appendChild(tile("Mutual taste", "Not enough data", "needs a few more rounds of head-to-head voting history"));
+      }
+      host.appendChild(g);
+    }
+  }
+
+  function renderFocus(d) {
+    var section = document.getElementById("block-focus");
+    if (!section) return;
+    if (!selected.length) { section.hidden = true; return; }
+    section.hidden = false;
+
+    var titleEl = $("focusTitle");
+    var noteEl = $("focusNote");
+    if (selected.length === 1) {
+      titleEl.textContent = nameOf(d, selected[0]);
+      noteEl.textContent = "Stats scoped to just this player.";
+    } else {
+      titleEl.textContent = "Comparing " + selected.length + " players";
+      noteEl.textContent = "Everything below compares only these players against each other.";
+    }
+
+    var host = $("focus");
+    host.innerHTML = "";
+
+    var chips = el("div", "focus-chips");
+    selected.forEach(function (id) {
+      var chip = el("button", "pill focus-chip");
+      chip.type = "button";
+      chip.innerHTML = esc(nameOf(d, id)) + " &times;";
+      chip.addEventListener("click", function () { toggleSelected(id); });
+      chips.appendChild(chip);
+    });
+    if (selected.length > 1) {
+      var clearBtn = el("button", "focus-clear-all");
+      clearBtn.type = "button";
+      clearBtn.textContent = "Clear all";
+      clearBtn.addEventListener("click", clearSelected);
+      chips.appendChild(clearBtn);
+    }
+    host.appendChild(chips);
+
+    if (selected.length === 1) renderFocusIndividual(d, selected[0], host);
+    else renderFocusGroup(d, selected, host);
+  }
+
+  /* ---- highlights (season-wide, unfiltered) ---- */
 
   function tile(label, valueHtml, metaHtml, big) {
     var n = el("div", "hl");
@@ -302,8 +549,11 @@
     setBlock("highlights", g);
   }
 
-  function trackRow(s, pos, showRound) {
-    var row = el("div", "trk");
+  /* ---- tracks / rounds (filterable) ---- */
+
+  function trackRow(s, pos, showRound, highlightSet) {
+    var hl = highlightSet && highlightSet[s.submitterId];
+    var row = el("div", "trk" + (hl ? " trk-hl" : ""));
     var meta = artistLinks(s.artists, s.artistText);
     if (s.album) meta += " &middot; " + extLink(searchLink(s.album), s.album);
     meta += " &middot; " + esc(s.submitterName);
@@ -319,17 +569,36 @@
   function renderTopTracks(d) {
     var all = [];
     d.rounds.forEach(function (r) { all = all.concat(r.songs); });
-    if (!all.length) { setBlock("topTracks", empty("No tracks submitted yet.")); return; }
+    if (selected.length) {
+      var idSet = {};
+      selected.forEach(function (id) { idSet[id] = true; });
+      all = all.filter(function (s) { return idSet[s.submitterId]; });
+    }
+    var host = $("topTracks");
+    host.innerHTML = "";
+    attachFilterTag(host, seasonData);
+    if (!all.length) { host.appendChild(empty(selected.length ? "No tracks from this selection." : "No tracks submitted yet.")); return; }
     var top = all.slice().sort(function (a, b) { return b.points - a.points; }).slice(0, 20);
     var box = el("div", "framed");
     top.forEach(function (s, i) { box.appendChild(trackRow(s, i + 1, true)); });
-    setBlock("topTracks", box);
+    host.appendChild(box);
   }
 
   function renderRounds(d) {
-    if (!d.rounds.length) { setBlock("rounds", empty("No rounds posted yet this season.")); return; }
+    var host = $("rounds");
+    host.innerHTML = "";
+    attachFilterTag(host, seasonData);
+
+    var idSet = null;
+    if (selected.length) { idSet = {}; selected.forEach(function (id) { idSet[id] = true; }); }
+    var rounds = d.rounds;
+    if (idSet) rounds = rounds.filter(function (r) { return r.songs.some(function (s) { return idSet[s.submitterId]; }); });
+
+    if (!d.rounds.length) { host.appendChild(empty("No rounds posted yet this season.")); return; }
+    if (!rounds.length) { host.appendChild(empty("No rounds involve this selection.")); return; }
+
     var wrap = el("div", "rounds-list");
-    d.rounds.slice().reverse().forEach(function (r) {
+    rounds.slice().reverse().forEach(function (r) {
       var det = el("details", "round");
       var win = r.songs[0];
       var sum = el("summary");
@@ -348,26 +617,61 @@
           '<a class="pill" href="' + esc(r.playlistUrl) + '" target="_blank" rel="noopener">Open the round playlist &nearr;</a>');
       }
       var list = el("div", "inner-list");
-      r.songs.forEach(function (s, i) { list.appendChild(trackRow(s, s.place || i + 1, false)); });
+      r.songs.forEach(function (s, i) { list.appendChild(trackRow(s, s.place || i + 1, false, idSet)); });
       body.appendChild(list);
       det.appendChild(body);
       wrap.appendChild(det);
     });
-    setBlock("rounds", wrap);
+    host.appendChild(wrap);
+  }
+
+  /* ---- taste matrix (filterable) ---- */
+
+  function renderTasteRowList(title, rows, host) {
+    var block = el("div");
+    block.appendChild(el("h3", null, title));
+    if (!rows.length) { block.appendChild(empty("Not enough voting history yet.")); host.appendChild(block); return; }
+    var box = el("div", "framed");
+    rows.forEach(function (r) {
+      box.insertAdjacentHTML("beforeend",
+        '<div class="vrow"><div class="vname">' + esc(r.label) + '</div><div class="num">' + r.index.toFixed(2) +
+        '&times;</div><div class="num">' + r.points + ' pts</div><div class="num">' + r.chances + ' ch.</div></div>');
+    });
+    block.appendChild(box);
+    host.appendChild(block);
   }
 
   function renderTaste(d) {
     var note = $("tasteNote");
+    var host = $("taste");
+    host.innerHTML = "";
+
     if (!d.taste.length) {
       if (note) note.textContent = "";
-      setBlock("taste", empty("Needs a few rounds of voting history before this says anything."));
+      host.appendChild(empty("Needs a few rounds of voting history before this says anything."));
       return;
     }
     if (note) note.textContent =
       "Read a row as: this voter sends that submitter this much of their points, relative to spreading points evenly across every track they saw. " +
       "1.00 is neutral, 2.00 is twice their usual share, 0.50 is half. Self-votes are excluded, and a pair needs at least five chances to vote before it shows.";
 
-    var people = d.competitors;
+    attachFilterTag(host, d);
+
+    if (selected.length === 1) {
+      var id = selected[0], name = nameOf(d, id);
+      var out = tasteFrom(d, id).slice().sort(function (a, b) { return b.index - a.index; })
+        .map(function (t) { return { label: t.submitterName, index: t.index, points: t.points, chances: t.chances }; });
+      var into = tasteTo(d, id).slice().sort(function (a, b) { return b.index - a.index; })
+        .map(function (t) { return { label: t.voterName, index: t.index, points: t.points, chances: t.chances }; });
+      renderTasteRowList("How " + name + " rates everyone else", out, host);
+      renderTasteRowList("How everyone else rates " + name, into, host);
+      return;
+    }
+
+    var people = selected.length >= 2
+      ? d.competitors.filter(function (p) { return selected.indexOf(p.id) !== -1; })
+      : d.competitors;
+
     var byKey = {};
     d.taste.forEach(function (t) { byKey[t.voterId + "|" + t.submitterId] = t; });
     var vals = d.taste.map(function (t) { return t.index; });
@@ -399,49 +703,110 @@
     table.innerHTML = head + body;
     var scroll = el("div", "taste-scroll");
     scroll.appendChild(table);
-
-    var host = $("taste");
-    host.innerHTML = "";
     host.appendChild(scroll);
     host.insertAdjacentHTML("beforeend",
       '<div class="legend"><span>' + lo.toFixed(2) + '</span><span class="ramp"></span><span>' + hi.toFixed(2) +
       "</span><span>darker means a bigger share of that voter's points</span></div>");
   }
 
+  /* ---- voters / artists (filterable) ---- */
+
   function renderVoters(d) {
-    if (!d.voters.length) { setBlock("voters", empty("No votes cast yet.")); return; }
+    var host = $("voters");
+    host.innerHTML = "";
+    attachFilterTag(host, d);
+    var rows = selected.length ? d.voters.filter(function (v) { return selected.indexOf(v.id) !== -1; }) : d.voters;
+    if (!rows.length) { host.appendChild(empty(selected.length ? "No votes from this selection." : "No votes cast yet.")); return; }
     var box = el("div", "framed");
     box.insertAdjacentHTML("beforeend",
       '<div class="vrow head"><div>Player</div><div class="num">Top bet</div><div class="num">Tracks backed</div><div class="num">Top pick won</div></div>');
-    d.voters.forEach(function (v) {
+    rows.forEach(function (v) {
       box.insertAdjacentHTML("beforeend",
         '<div class="vrow"><div class="vname">' + esc(v.name) + "</div>" +
         '<div class="num">' + v.avgTopBet.toFixed(1) + "</div>" +
         '<div class="num">' + v.avgTracksBacked.toFixed(1) + "</div>" +
         '<div class="num">' + Math.round(v.kingmakerRate * 100) + "%</div></div>");
     });
-    setBlock("voters", box);
+    host.appendChild(box);
+  }
+
+  function countArtists(songs) {
+    var counts = {};
+    songs.forEach(function (s) {
+      var names = (s.artists && s.artists.length) ? s.artists : (s.artistText ? [s.artistText] : []);
+      names.forEach(function (a) {
+        if (!a) return;
+        if (!counts[a]) counts[a] = { name: a, count: 0, points: 0 };
+        counts[a].count++;
+        counts[a].points += s.points;
+      });
+    });
+    return Object.keys(counts).map(function (k) { return counts[k]; });
   }
 
   function renderArtists(d) {
-    var list = (d.highlights && d.highlights.repeatArtists) || [];
-    if (!list.length) { setBlock("artists", empty("No artist has been submitted more than once yet.")); return; }
+    var host = $("artists");
+    host.innerHTML = "";
+    attachFilterTag(host, d);
+
+    var list;
+    if (selected.length) {
+      var songs = [];
+      selected.forEach(function (id) { songs = songs.concat(songsBy(d, id)); });
+      list = countArtists(songs).filter(function (a) { return a.count > 1; })
+        .sort(function (a, b) { return b.count - a.count || b.points - a.points; });
+    } else {
+      list = (d.highlights && d.highlights.repeatArtists) || [];
+    }
+    if (!list.length) { host.appendChild(empty("No artist has been submitted more than once" + (selected.length ? " by this selection" : "") + " yet.")); return; }
     var g = el("div", "art-grid");
     list.forEach(function (a) {
       g.insertAdjacentHTML("beforeend",
         '<a class="art" href="' + esc(searchLink(a.name)) + '" target="_blank" rel="noopener">' + esc(a.name) + " <b>&times;" + a.count + "</b></a>");
     });
-    setBlock("artists", g);
+    host.appendChild(g);
+  }
+
+  /* ---- hero (season-wide, unfiltered) ---- */
+
+  function renderHero(d) {
+    $("heroTitle").textContent = d.label;
+    var h = d.highlights || {};
+    var rounds = d.rounds.length;
+
+    $("heroLine").textContent = rounds
+      ? rounds + " " + plural(rounds, "round") + ", " + d.songCount + " tracks, " +
+        d.scoringVoteCount + " scoring votes from " + d.competitors.length + " players."
+      : d.competitors.length + " players are signed up. No rounds have been posted yet, so the boards below fill in as results come through.";
+
+    var stats = [
+      ["Rounds", rounds],
+      ["Tracks", d.songCount],
+      ["Players", d.competitors.length],
+      ["Artists", h.uniqueArtists || 0],
+      ["Scoring votes", h.scoringVotes || 0],
+    ];
+    var dl = $("scoreline");
+    dl.innerHTML = "";
+    stats.forEach(function (s) {
+      var wrap = el("div");
+      wrap.appendChild(el("dt", null, esc(s[0])));
+      wrap.appendChild(el("dd", null, esc(s[1])));
+      dl.appendChild(wrap);
+    });
   }
 
   function initSeason(key) {
     Promise.all([fetchJSON(DATA + "/index.json"), fetchJSON(DATA + "/" + key + ".json")])
       .then(function (res) {
         var index = res[0], d = res[1];
+        seasonData = d;
+        selected = [];
         renderNav(index, key);
         document.title = "PFML - " + d.label;
         renderHero(d);
         renderStandings(d);
+        renderFocus(d);
         renderHighlights(d);
         renderTopTracks(d);
         renderRounds(d);
