@@ -592,33 +592,53 @@
   /* ---- points-over-time trend chart ---- */
 
   var trendSelected = [];
+  var trendMode = "ratio"; // "ratio" (default) or "points"
 
   function trendColor(i) {
     var hue = (i * 137.508) % 360;
     return "hsl(" + hue.toFixed(1) + ", 68%, 42%)";
   }
 
-  function computeTrendSeries(d) {
+  function computeTrendSeries(d, mode) {
     // one entry per player who has a standings entry (submitted at least
     // once), ordered by final season points so color/legend order is
-    // stable regardless of what's currently toggled on
+    // stable regardless of what's currently toggled on.
+    //
+    // mode "points": raw cumulative points. Nearly everyone trends up
+    // together, since points only accumulate, so this is bad at showing
+    // who's actually winning at a given moment.
+    //
+    // mode "ratio": cumulative points captured as a percentage of the
+    // cumulative winning score, i.e. what a player would have if they won
+    // every round so far. Rounds already come sorted with songs[0] as that
+    // round's winner. A player who wins every round sits at 100%; someone
+    // coasting sits low; someone who started strong and faded shows a
+    // rising-then-falling line, which raw cumulative totals can't show
+    // because they never go down.
     var ids = d.standings.map(function (p) { return p.id; });
     var cum = {};
     ids.forEach(function (id) { cum[id] = 0; });
+    var cumWinScore = 0;
     var series = {};
     ids.forEach(function (id) { series[id] = []; });
 
     d.rounds.forEach(function (r) {
       var earned = {};
       r.songs.forEach(function (s) { earned[s.submitterId] = (earned[s.submitterId] || 0) + s.points; });
+      var winScore = r.songs.length ? r.songs[0].points : 0;
+      cumWinScore += winScore;
       ids.forEach(function (id) {
         cum[id] += earned[id] || 0;
-        series[id].push(cum[id]);
+        if (mode === "ratio") {
+          series[id].push(cumWinScore > 0 ? (cum[id] / cumWinScore) * 100 : 0);
+        } else {
+          series[id].push(cum[id]);
+        }
       });
     });
 
     return ids.map(function (id, i) {
-      return { id: id, name: nameOf(d, id), color: trendColor(i), points: series[id] };
+      return { id: id, name: nameOf(d, id), color: trendColor(i), values: series[id] };
     });
   }
 
@@ -628,13 +648,14 @@
     renderTrend(seasonData);
   }
 
-  function buildLineChartSVG(series, roundCount) {
+  function buildLineChartSVG(series, roundCount, percent) {
     var W = 760, H = 320, padL = 44, padR = 16, padT = 16, padB = 30;
     var plotW = W - padL - padR, plotH = H - padT - padB;
 
     var allVals = [0];
-    series.forEach(function (s) { s.points.forEach(function (v) { allVals.push(v); }); });
+    series.forEach(function (s) { s.values.forEach(function (v) { allVals.push(v); }); });
     var lo = Math.min.apply(null, allVals), hi = Math.max.apply(null, allVals);
+    if (percent) hi = Math.max(hi, 100); // keep 100% on the axis even if nobody's hit it yet
     if (lo === hi) { hi = lo + 1; }
     var pad = (hi - lo) * 0.08;
     lo -= pad; hi += pad;
@@ -642,7 +663,8 @@
     function x(i) { return padL + (roundCount <= 1 ? 0 : (i / (roundCount - 1)) * plotW); }
     function y(v) { return padT + plotH - ((v - lo) / (hi - lo)) * plotH; }
 
-    var svg = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Cumulative points by round">';
+    var svg = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' +
+      (percent ? "Performance versus field by round" : "Cumulative points by round") + '">';
 
     // gridlines + y labels
     var ticks = 4;
@@ -650,7 +672,8 @@
       var val = lo + (hi - lo) * (t / ticks);
       var yy = y(val);
       svg += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + yy.toFixed(1) + '" y2="' + yy.toFixed(1) + '" class="chart-grid" />';
-      svg += '<text x="' + (padL - 8) + '" y="' + (yy + 4).toFixed(1) + '" class="chart-axis-y" text-anchor="end">' + Math.round(val) + "</text>";
+      var label = percent ? Math.round(val) + "%" : Math.round(val);
+      svg += '<text x="' + (padL - 8) + '" y="' + (yy + 4).toFixed(1) + '" class="chart-axis-y" text-anchor="end">' + label + "</text>";
     }
 
     // x labels
@@ -660,16 +683,23 @@
     }
 
     series.forEach(function (s) {
-      var pts = s.points.map(function (v, i) { return x(i).toFixed(1) + "," + y(v).toFixed(1); }).join(" ");
+      var pts = s.values.map(function (v, i) { return x(i).toFixed(1) + "," + y(v).toFixed(1); }).join(" ");
+      var lastV = s.values[s.values.length - 1];
+      var lastLabel = percent ? lastV.toFixed(1) + "%" : lastV + " pts";
       svg += '<polyline points="' + pts + '" fill="none" stroke="' + s.color + '" stroke-width="2.5" ' +
-        'stroke-linejoin="round" stroke-linecap="round"><title>' + esc(s.name) + ": " +
-        s.points[s.points.length - 1] + " pts</title></polyline>";
-      var lastI = s.points.length - 1;
-      svg += '<circle cx="' + x(lastI).toFixed(1) + '" cy="' + y(s.points[lastI]).toFixed(1) + '" r="3.5" fill="' + s.color + '" />';
+        'stroke-linejoin="round" stroke-linecap="round"><title>' + esc(s.name) + ": " + lastLabel + "</title></polyline>";
+      var lastI = s.values.length - 1;
+      svg += '<circle cx="' + x(lastI).toFixed(1) + '" cy="' + y(lastV).toFixed(1) + '" r="3.5" fill="' + s.color + '" />';
     });
 
     svg += "</svg>";
     return svg;
+  }
+
+  function setTrendMode(mode) {
+    if (trendMode === mode) return;
+    trendMode = mode;
+    renderTrend(seasonData);
   }
 
   function renderTrend(d) {
@@ -677,10 +707,25 @@
     if (!d.rounds.length || !d.standings.length) { if (section) section.hidden = true; return; }
     if (section) section.hidden = false;
 
-    var all = computeTrendSeries(d);
+    var all = computeTrendSeries(d, trendMode);
 
     var legend = $("trendLegend");
     legend.innerHTML = "";
+
+    var modeRow = el("div", "chart-mode");
+    [["ratio", "Performance vs field"], ["points", "Cumulative points"]].forEach(function (pair) {
+      var b = el("button", trendMode === pair[0] ? "is-active" : "", esc(pair[1]));
+      b.type = "button";
+      b.addEventListener("click", function () { setTrendMode(pair[0]); });
+      modeRow.appendChild(b);
+    });
+    legend.appendChild(modeRow);
+
+    if (trendMode === "ratio") {
+      legend.appendChild(el("p", "block-note chart-mode-note",
+        "Cumulative points captured so far, as a percentage of what a player would have if they'd won every round to date. 100% means never off the pace; a falling line means someone who started strong is losing ground."));
+    }
+
     var chipRow = el("div", "trend-chips");
     all.forEach(function (s) {
       var on = trendSelected.indexOf(s.id) !== -1;
@@ -710,7 +755,7 @@
       chartHost.appendChild(empty("Pick at least one player above to plot."));
       return;
     }
-    chartHost.innerHTML = '<div class="chart-frame">' + buildLineChartSVG(shown, d.rounds.length) + "</div>";
+    chartHost.innerHTML = '<div class="chart-frame">' + buildLineChartSVG(shown, d.rounds.length, trendMode === "ratio") + "</div>";
   }
 
   /* ---- tracks / rounds (filterable) ---- */
@@ -968,6 +1013,7 @@
         seasonData = d;
         selected = [];
         trendSelected = d.standings.map(function (p) { return p.id; });
+        trendMode = "ratio";
         renderNav(index, key);
         document.title = "PFML - " + d.label;
         renderHero(d);

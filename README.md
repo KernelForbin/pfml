@@ -51,15 +51,22 @@ not templated) that reads `career.json` for all-time standings.
   jump nav too, so it never links to something that isn't there.
 - **Player focus and comparison**: click a name in Standings to filter the
   rest of the page to them, click a second to compare instead, see below.
-- **Points over time**: a line chart of cumulative points after each round.
-  Defaults to everyone (Select all). If you've selected one or more players
-  from Standings, the chart follows that selection instead, since at that
-  point you're clearly looking at specific people; clear the scoreboard
-  selection and it goes back to everyone. You can still toggle individual
-  players on the chart's own legend afterward, that's independent of the
-  scoreboard until the scoreboard selection changes again. Colors are
-  assigned by season rank so a given player's color stays consistent
-  across toggles.
+- **Points over time**: defaults to **Performance vs field**, not raw
+  cumulative points. Raw cumulative totals only ever go up, so on a graph
+  everyone's line looks like a similar upward slope regardless of how
+  they're actually doing; it can't show someone fading. Performance vs
+  field is cumulative points captured so far as a percentage of the
+  cumulative *winning* score to that point, i.e. what a player would have
+  if they'd won every round. 100% means never off the pace; a line that
+  rises then falls is someone who started strong and lost ground, exactly
+  the shape raw totals can't produce. A toggle switches to plain
+  Cumulative points if you want the raw numbers instead. Either way, it
+  defaults to everyone (Select all) and follows the Standings player
+  selection when one is active, clear the scoreboard selection and it goes
+  back to everyone. You can still toggle individual players on the chart's
+  own legend afterward, that's independent of the scoreboard until the
+  scoreboard selection changes again. Colors are assigned by season rank
+  so a given player's color stays consistent across toggles.
 
 ## Adding a new export
 
