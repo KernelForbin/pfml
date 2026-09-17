@@ -366,20 +366,36 @@ def main():
     if not folders:
         raise SystemExit("No data/seasonN folders found.")
 
+    template_path = OUT_DIR.parent / "season.template.html"
+    template = template_path.read_text(encoding="utf-8") if template_path.exists() else None
+
     index = []
     for folder in folders:
         num = int(re.search(r"\d+", folder.name).group())
         key = f"season{num}"
-        data = build_season(folder, key, f"Season {num}")
+        label = f"Season {num}"
+        data = build_season(folder, key, label)
         with open(OUT_DIR / f"{key}.json", "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
+
+        leader = data["standings"][0] if data["standings"] else None
         index.append({
             "key": key,
-            "label": data["label"],
+            "label": label,
             "roundCount": len(data["rounds"]),
             "songCount": data["songCount"],
             "playerCount": len(data["competitors"]),
+            "leaderName": leader["name"] if leader else None,
+            "leaderPoints": leader["points"] if leader else None,
         })
+
+        if template:
+            page = (template
+                     .replace("{{TITLE}}", f"PFML - {label}")
+                     .replace("{{SEASON_KEY}}", key)
+                     .replace("{{LABEL}}", label))
+            (OUT_DIR.parent / f"{key}.html").write_text(page, encoding="utf-8")
+
         print(f"{key}: {len(data['rounds'])} rounds, {data['songCount']} songs, "
               f"{data['scoringVoteCount']} scoring votes")
 

@@ -2,24 +2,29 @@
    PFML
 
    Palette   paper  #F8F9FA   ink    #16111A   magenta #9E00C4
-             deep   #5C0072   wash   #F4E4FA   acid    #CCFF3D
+             deep   #7A0099   wash   #F4E4FA   acid    #CCFF3D
    Type      Archivo (headings, numerals) / Inter (body)
-   Devices   2px ink rules instead of shadows; magenta reserved
-             for scores, links and the live season; acid used once,
-             on the leader's bar.
+   Devices   soft 1px borders + a low, wide shadow instead of
+              heavy black rules; generous whitespace does the
+              separating. Magenta stays reserved for scores,
+              links and the live season; acid marks the leader.
    ========================================================== */
 
 :root {
   --paper: #F8F9FA;
   --ink: #16111A;
   --muted: #6A6172;
-  --hairline: #E2DCE6;
+  --border: rgba(22, 17, 26, 0.10);
+  --border-soft: rgba(22, 17, 26, 0.06);
   --magenta: #9E00C4;
-  --deep: #5C0072;
+  --deep: #7A0099;
   --wash: #F4E4FA;
   --acid: #CCFF3D;
   --card: #FFFFFF;
-  --r: 12px;
+  --shadow-sm: 0 1px 2px rgba(22, 17, 26, .05);
+  --shadow-md: 0 18px 40px -22px rgba(22, 17, 26, .35), 0 2px 6px -2px rgba(22, 17, 26, .08);
+  --r: 16px;
+  --r-sm: 11px;
 }
 
 * { box-sizing: border-box; }
@@ -47,8 +52,10 @@ a:hover { color: var(--magenta); }
 
 .topbar {
   position: sticky; top: 0; z-index: 20;
-  background: var(--paper);
-  border-bottom: 2px solid var(--ink);
+  background: rgba(248, 249, 250, 0.86);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
 }
 .topbar-inner {
   display: flex; align-items: center; justify-content: space-between;
@@ -58,18 +65,20 @@ a:hover { color: var(--magenta); }
   font-family: "Archivo", sans-serif; font-weight: 800; font-size: 1.3rem;
   letter-spacing: -0.02em; color: var(--ink); text-decoration: none;
 }
+.wordmark:hover { color: var(--magenta); }
 .seasons { display: flex; gap: 7px; flex-wrap: wrap; }
 .season-tab {
-  font-family: "Archivo", sans-serif; font-weight: 600; font-size: 0.88rem;
-  padding: 7px 15px; border: 2px solid var(--ink); border-radius: 999px;
+  font-family: "Archivo", sans-serif; font-weight: 600; font-size: 0.86rem;
+  padding: 7px 15px; border: 1px solid var(--border); border-radius: 999px;
   background: var(--card); color: var(--ink); cursor: pointer; line-height: 1;
-  display: inline-flex; align-items: center; gap: 7px;
+  display: inline-flex; align-items: center; gap: 7px; text-decoration: none;
+  box-shadow: var(--shadow-sm); transition: box-shadow .15s ease, transform .15s ease;
 }
-.season-tab:hover { background: var(--wash); }
+.season-tab:hover { color: var(--ink); box-shadow: var(--shadow-md); transform: translateY(-1px); }
 .season-tab[aria-current="true"] {
-  background: var(--magenta); border-color: var(--magenta); color: #fff;
+  background: var(--magenta); border-color: var(--magenta); color: #fff; box-shadow: var(--shadow-md);
 }
-.season-tab[aria-current="true"]:hover { background: var(--magenta); }
+.season-tab[aria-current="true"]:hover { color: #fff; }
 .pip {
   width: 7px; height: 7px; border-radius: 50%; background: var(--magenta);
   box-shadow: 0 0 0 3px var(--wash);
@@ -88,10 +97,12 @@ a:hover { color: var(--magenta); }
 .scoreline {
   margin: 26px 0 0; padding: 0;
   display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
-  gap: 2px; background: var(--ink); border: 2px solid var(--ink);
-  border-radius: var(--r); overflow: hidden;
+  gap: 12px;
 }
-.scoreline > div { background: var(--card); padding: 14px 16px; }
+.scoreline > div {
+  background: var(--card); padding: 14px 16px;
+  border: 1px solid var(--border); border-radius: var(--r-sm); box-shadow: var(--shadow-sm);
+}
 .scoreline dt { margin: 0 0 3px; font-size: 0.78rem; color: var(--muted); }
 .scoreline dd {
   margin: 0; font-family: "Archivo", sans-serif; font-weight: 700;
@@ -100,30 +111,33 @@ a:hover { color: var(--magenta); }
 
 /* ---------- blocks ---------- */
 
-.block { padding-top: 34px; padding-bottom: 6px; }
+.block { padding-top: 44px; padding-bottom: 6px; }
 .block h2 { margin: 0 0 5px; font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; }
 .block-note { margin: 0 0 18px; color: var(--muted); font-size: 0.9rem; max-width: 70ch; }
 .block h2 + div, .block-note + div { margin-top: 0; }
 
 .empty {
-  border: 2px dashed #C9C0D0; border-radius: var(--r);
-  padding: 22px; color: var(--muted); font-size: 0.94rem;
+  border: 1px dashed var(--border); border-radius: var(--r);
+  padding: 22px; color: var(--muted); font-size: 0.94rem; background: var(--card);
 }
 
-.framed { border: 2px solid var(--ink); border-radius: var(--r); overflow: hidden; background: var(--card); }
+.framed {
+  border: 1px solid var(--border); border-radius: var(--r); overflow: hidden;
+  background: var(--card); box-shadow: var(--shadow-sm);
+}
 
 /* ---------- standings ---------- */
 
 .stand-row {
   display: grid; grid-template-columns: 30px 1fr auto; gap: 14px;
-  align-items: center; padding: 12px 16px;
+  align-items: center; padding: 13px 18px;
 }
-.stand-row + .stand-row { border-top: 1px solid var(--hairline); }
+.stand-row + .stand-row { border-top: 1px solid var(--border-soft); }
 .stand-row:first-child { background: var(--wash); }
 .stand-rank { font-family: "Archivo", sans-serif; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
 .stand-row:first-child .stand-rank { color: var(--magenta); }
 .stand-name { font-weight: 600; }
-.bar { margin-top: 6px; height: 7px; border-radius: 4px; background: var(--hairline); overflow: hidden; }
+.bar { margin-top: 6px; height: 7px; border-radius: 4px; background: var(--wash); overflow: hidden; }
 .bar > i { display: block; height: 100%; background: var(--magenta); border-radius: 4px; }
 .stand-row:first-child .bar > i { background: linear-gradient(90deg, var(--magenta), var(--acid)); }
 .stand-score { text-align: right; white-space: nowrap; }
@@ -134,10 +148,12 @@ a:hover { color: var(--magenta); }
 
 .hl-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 2px; background: var(--ink); border: 2px solid var(--ink);
-  border-radius: var(--r); overflow: hidden;
+  gap: 12px;
 }
-.hl { background: var(--card); padding: 16px 18px; }
+.hl {
+  background: var(--card); padding: 17px 19px;
+  border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow-sm);
+}
 .hl-label { margin: 0 0 7px; font-size: 0.79rem; color: var(--muted); }
 .hl-value { font-family: "Archivo", sans-serif; font-weight: 700; font-size: 1.06rem; line-height: 1.25; letter-spacing: -0.01em; }
 .hl-value a { color: inherit; text-decoration-color: var(--magenta); }
@@ -148,73 +164,84 @@ a:hover { color: var(--magenta); }
 
 .trk {
   display: grid; grid-template-columns: 28px 1fr auto; gap: 12px;
-  align-items: center; padding: 11px 15px;
+  align-items: center; padding: 12px 16px;
 }
-.trk + .trk { border-top: 1px solid var(--hairline); }
+.trk + .trk { border-top: 1px solid var(--border-soft); }
 .trk-pos { font-family: "Archivo", sans-serif; font-weight: 700; font-size: .85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .trk-body { min-width: 0; }
 .trk-title { font-weight: 600; }
 .trk-title a { color: var(--ink); text-decoration-color: var(--magenta); }
 .trk-title a:hover { color: var(--magenta); }
 .trk-meta { font-size: 0.85rem; color: var(--muted); margin-top: 1px; }
-.trk-meta a { color: var(--muted); text-decoration-color: var(--hairline); }
+.trk-meta a { color: var(--muted); text-decoration-color: var(--border); }
 .trk-meta a:hover { color: var(--magenta); text-decoration-color: var(--magenta); }
 .trk-pts { font-family: "Archivo", sans-serif; font-weight: 700; color: var(--magenta); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .trk-pts small { color: var(--muted); font-weight: 500; font-family: "Inter", sans-serif; }
 
 /* ---------- rounds ---------- */
 
-.rounds-list { display: flex; flex-direction: column; gap: 10px; }
-.round { border: 2px solid var(--ink); border-radius: var(--r); background: var(--card); overflow: hidden; }
+.rounds-list { display: flex; flex-direction: column; gap: 12px; }
+.round {
+  border: 1px solid var(--border); border-radius: var(--r); background: var(--card);
+  overflow: hidden; box-shadow: var(--shadow-sm);
+}
 .round > summary {
-  padding: 15px 17px; cursor: pointer; list-style: none;
+  padding: 16px 19px; cursor: pointer; list-style: none;
   display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap;
 }
 .round > summary::-webkit-details-marker { display: none; }
 .round > summary:hover { background: var(--wash); }
-.round[open] > summary { border-bottom: 2px solid var(--ink); background: var(--wash); }
+.round[open] { box-shadow: var(--shadow-md); }
+.round[open] > summary { border-bottom: 1px solid var(--border); background: var(--wash); }
 .round-title { font-family: "Archivo", sans-serif; font-weight: 700; font-size: 1.04rem; }
 .round-sub { color: var(--muted); font-size: 0.87rem; }
 .round-sub b { color: var(--ink); font-weight: 600; }
 .round-open { font-family: "Archivo", sans-serif; font-weight: 600; font-size: 0.82rem; color: var(--magenta); white-space: nowrap; }
-.round-body { padding: 16px 17px; }
+.round-body { padding: 17px 19px; }
 .round-desc { margin: 0 0 14px; color: var(--muted); font-size: 0.91rem; max-width: 70ch; white-space: pre-wrap; }
-.inner-list { border: 1px solid var(--hairline); border-radius: 9px; overflow: hidden; }
+.inner-list { border: 1px solid var(--border-soft); border-radius: var(--r-sm); overflow: hidden; }
 
 .pill {
   display: inline-flex; align-items: center; gap: 7px;
-  border: 2px solid var(--ink); border-radius: 999px; padding: 7px 15px;
+  border: 1px solid var(--border); border-radius: 999px; padding: 8px 16px;
   font-weight: 600; font-size: 0.87rem; color: var(--ink);
   text-decoration: none; background: var(--card); margin-bottom: 14px;
+  box-shadow: var(--shadow-sm); transition: box-shadow .15s ease, transform .15s ease;
 }
-.pill:hover { background: var(--acid); color: var(--ink); }
+.pill:hover { color: var(--ink); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.pill.is-disabled {
+  color: var(--muted); border-style: dashed; box-shadow: none; cursor: default;
+}
+.pill.is-disabled:hover { box-shadow: none; transform: none; }
 
 /* ---------- taste matrix ---------- */
 
-.taste-scroll { border: 2px solid var(--ink); border-radius: var(--r); overflow: auto; max-height: 560px; background: var(--card); }
+.taste-scroll {
+  border: 1px solid var(--border); border-radius: var(--r); overflow: auto; max-height: 560px;
+  background: var(--card); box-shadow: var(--shadow-sm);
+}
 table.taste { border-collapse: separate; border-spacing: 0; font-size: 0.8rem; }
-table.taste th, table.taste td { padding: 6px 8px; border-bottom: 1px solid var(--hairline); border-right: 1px solid var(--hairline); white-space: nowrap; }
+table.taste th, table.taste td { padding: 6px 8px; border-bottom: 1px solid var(--border-soft); border-right: 1px solid var(--border-soft); white-space: nowrap; }
 table.taste thead th {
   position: sticky; top: 0; z-index: 2; background: var(--card);
   font-family: "Archivo", sans-serif; font-weight: 600; font-size: 0.72rem;
-  text-align: left; border-bottom: 2px solid var(--ink);
+  text-align: left; border-bottom: 1px solid var(--border);
 }
 table.taste thead th.corner { left: 0; z-index: 3; }
 table.taste tbody th {
   position: sticky; left: 0; z-index: 1; background: var(--card);
-  text-align: left; font-weight: 600; border-right: 2px solid var(--ink);
+  text-align: left; font-weight: 600; border-right: 1px solid var(--border);
 }
 table.taste td { text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; }
 table.taste td.nil { color: #C6BDCC; font-weight: 400; }
 
 .legend { margin-top: 12px; display: flex; align-items: center; gap: 10px; font-size: 0.8rem; color: var(--muted); flex-wrap: wrap; }
-.legend .ramp { width: 130px; height: 10px; border-radius: 5px; border: 1px solid var(--hairline);
-  background: linear-gradient(90deg, #fff, var(--magenta)); }
+.legend .ramp { width: 130px; height: 10px; border-radius: 5px; border: 1px solid var(--border); background: linear-gradient(90deg, #fff, var(--magenta)); }
 
 /* ---------- voters ---------- */
 
-.vrow { display: grid; grid-template-columns: 1fr 5.5rem 5.5rem 5.5rem; gap: 10px; align-items: center; padding: 10px 15px; font-size: 0.92rem; }
-.vrow + .vrow { border-top: 1px solid var(--hairline); }
+.vrow { display: grid; grid-template-columns: 1fr 5.5rem 5.5rem 5.5rem; gap: 10px; align-items: center; padding: 11px 18px; font-size: 0.92rem; }
+.vrow + .vrow { border-top: 1px solid var(--border-soft); }
 .vrow.head { background: var(--ink); color: var(--paper); font-family: "Archivo", sans-serif; font-weight: 600; font-size: 0.74rem; }
 .vrow .num { text-align: right; font-family: "Archivo", sans-serif; font-weight: 600; font-variant-numeric: tabular-nums; }
 .vrow.head .num { font-size: 0.74rem; }
@@ -225,19 +252,51 @@ table.taste td.nil { color: #C6BDCC; font-weight: 400; }
 .art-grid { display: flex; flex-wrap: wrap; gap: 8px; }
 .art {
   display: inline-flex; align-items: baseline; gap: 8px;
-  border: 2px solid var(--ink); border-radius: 999px; padding: 7px 14px;
+  border: 1px solid var(--border); border-radius: 999px; padding: 8px 15px;
   background: var(--card); text-decoration: none; color: var(--ink); font-size: 0.9rem; font-weight: 600;
+  box-shadow: var(--shadow-sm); transition: box-shadow .15s ease, transform .15s ease;
 }
-.art:hover { background: var(--wash); color: var(--ink); }
+.art:hover { color: var(--ink); box-shadow: var(--shadow-md); transform: translateY(-1px); }
 .art b { font-family: "Archivo", sans-serif; color: var(--magenta); font-variant-numeric: tabular-nums; }
+
+/* ---------- home page: season cards ---------- */
+
+.season-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
+.season-card {
+  display: block; text-decoration: none; color: var(--ink);
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--r);
+  padding: 20px 22px; box-shadow: var(--shadow-sm);
+  transition: box-shadow .18s ease, transform .18s ease;
+}
+.season-card:hover { color: var(--ink); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.season-card.is-live { background: linear-gradient(165deg, #fff 0%, var(--wash) 130%); }
+.season-card-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.season-card-name { font-family: "Archivo", sans-serif; font-weight: 700; font-size: 1.28rem; letter-spacing: -0.01em; }
+.season-card-arrow { color: var(--magenta); font-size: 1.2rem; }
+.season-card-stats { margin-top: 10px; color: var(--muted); font-size: 0.88rem; }
+.season-card-leader { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-soft); font-size: 0.9rem; }
+.season-card-leader .lbl { color: var(--muted); display: block; font-size: 0.76rem; margin-bottom: 2px; }
+.season-card-leader .val { font-weight: 700; font-family: "Archivo", sans-serif; }
+.season-card-leader .val .pts { color: var(--magenta); }
+
+/* ---------- home page: playlists ---------- */
+
+.playlist-group { margin-bottom: 20px; }
+.playlist-group:last-child { margin-bottom: 0; }
+.playlist-group h3 {
+  margin: 0 0 10px; font-size: 0.82rem; font-weight: 600; color: var(--muted);
+  text-transform: none;
+}
+.playlist-row { display: flex; flex-wrap: wrap; gap: 9px; }
 
 /* ---------- footer ---------- */
 
 .site-footer {
-  margin-top: 40px; padding-top: 22px; padding-bottom: 60px;
-  border-top: 2px solid var(--ink); color: var(--muted); font-size: 0.84rem;
+  margin-top: 46px; padding-top: 24px; padding-bottom: 60px;
+  border-top: 1px solid var(--border); color: var(--muted); font-size: 0.84rem;
 }
 .site-footer p { margin: 0; max-width: 70ch; }
+.site-footer p + p { margin-top: 6px; }
 
 /* ---------- responsive ---------- */
 
@@ -246,9 +305,10 @@ table.taste td.nil { color: #C6BDCC; font-weight: 400; }
   .scoreline dd { font-size: 1.3rem; }
   .vrow { grid-template-columns: 1fr 4.2rem 4.2rem; }
   .vrow > :nth-child(4) { display: none; }
-  .stand-row, .trk { padding-left: 12px; padding-right: 12px; }
+  .stand-row, .trk { padding-left: 14px; padding-right: 14px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
+  .season-tab, .pill, .art, .season-card { transition: none; }
 }
