@@ -41,11 +41,123 @@ OUT_DIR = ROOT / "site" / "data"
 # taste matrix, so one lucky round does not read as a lifelong grudge
 MIN_PAIR_OPPORTUNITIES = 5
 
+# Same guard for the comment matrix. It's the same denominator (chances to
+# vote on that submitter's tracks), so a pair below this threshold is
+# hidden there too rather than reading a single round as a habit.
+MIN_COMMENT_PAIR_OPPORTUNITIES = MIN_PAIR_OPPORTUNITIES
+
+# Vocabulary richness is measured on fixed-size chunks of this many words
+# (see sampled_richness). 500 sits below the smallest real corpus in the
+# data (813 words), so everyone who clears one chunk is compared on the
+# same amount of text.
+VOCAB_SAMPLE_WORDS = 500
+
+# Minimum comments before someone is eligible for a comment superlative or
+# a rate-based stat. Rates over two or three comments are noise: one
+# exclamation mark would read as a 33% exclamation rate.
+MIN_COMMENTS_FOR_RATES = 10
+
 # Career Score = total points + WIN_BONUS per round won + PODIUM_BONUS per
 # podium finish (podiums include the win itself). See build_career() for
 # where these numbers come from.
 WIN_BONUS = 10
 PODIUM_BONUS = 5
+
+# Optional, produced by scripts/enrich_comments.py, never by this build.
+# Absent is the normal case: the site just omits sentiment-based stats.
+SENTIMENT_PATH = DATA_DIR / "comment_sentiment.json"
+
+# The sentiment labels the site knows how to render. A label outside this
+# set in comment_sentiment.json is ignored rather than rendered blindly,
+# so a change to the enrichment prompt can't inject arbitrary keys here.
+SENTIMENT_LABELS = ("witty", "funny", "rude", "appreciative", "storytelling", "analytical")
+
+# Deliberately small and hand-written: a dependency-free stopword list for
+# picking out someone's distinctive recurring word. Covers English
+# function words plus the handful of words that dominate *every* Music
+# League comment ("song", "track", "love") and would otherwise be the top
+# word for all 16 players, telling you nothing about any of them.
+STOPWORDS = frozenset("""
+a about after all also am an and any are as at be because been before being but by
+can cant cause come could did didnt do does doesnt doing dont down each even ever
+every for from get gets getting go goes going good got great had has have havent he
+her here hers him his how i id if ill im in into is isnt it its ive just know like
+ll little lot m me more most much my never no not now of off oh ok on once one only
+or other our out over own re really right s said same say see she should since so
+some still such than that thats the their them then there these they thing things
+this those though thought through to too two up us very was wasnt way we well were
+what when where which while who why will with without would yeah yes yet you your
+youre song songs track tracks album albums listen listening love loved lovely
+wouldve couldve shouldve woulda coulda shoulda gonna gotta wanna kinda sorta
+""".split())
+
+EMOJI_RE = re.compile(
+    "["
+    "\U0001F300-\U0001FAFF"  # pictographs, emoticons, symbols, supplemental
+    "\U00002600-\U000027BF"  # misc symbols + dingbats
+    "\U0001F1E6-\U0001F1FF"  # regional indicators (flags)
+    "\U00002190-\U000021FF"  # arrows
+    "\U00002B00-\U00002BFF"  # misc symbols and arrows
+    "]"
+)
+
+WORD_RE = re.compile(r"[A-Za-z']+")
+
+
+def comment_words(text):
+    """Words for counting: letters and apostrophes only, so "don't" is one
+    word and "2024" or a bare "..." is none. Used for every word-based
+    stat so they all count the same thing."""
+    return WORD_RE.findall(text or "")
+
+
+def norm_word(w):
+    """Lowercased, apostrophes stripped, so "don't", "dont" and "Don't" are
+    one word. The stopword list is written without apostrophes and is
+    matched against this, otherwise every contraction slips through the
+    filter and wins "distinctive word" on rarity alone."""
+    return w.lower().replace("'", "")
+
+
+def is_allcaps_word(w):
+    """SHOUTING, not "I" or "A" or "OK". Two letters minimum, and it has to
+    have an uppercase letter to begin with, so "a" never qualifies."""
+    return len(w) >= 3 and w.isupper() and w.isalpha()
+
+
+def comment_id(round_id, uri, voter_id):
+    """Stable id for a single voter comment, matching the key
+    scripts/enrich_comments.py writes into data/comment_sentiment.json.
+    Round + track + voter is unique: a voter gets one vote row per track
+    per round."""
+    return "%s|%s|%s" % (round_id, uri, voter_id)
+
+
+def load_sentiment():
+    """Reads data/comment_sentiment.json if it exists. Missing file is the
+    normal case and not an error: the build carries on and the site omits
+    every sentiment-based stat. Labels outside SENTIMENT_LABELS are
+    dropped rather than passed through, and nothing here ever invents a
+    label for a comment the file doesn't mention."""
+    if not SENTIMENT_PATH.exists():
+        return {}
+    try:
+        with open(SENTIMENT_PATH, encoding="utf-8") as f:
+            raw = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"  ! {SENTIMENT_PATH.name} unreadable ({e}); building without sentiment")
+        return {}
+
+    entries = raw.get("comments", raw) if isinstance(raw, dict) else {}
+    out = {}
+    for cid, entry in entries.items():
+        if not isinstance(entry, dict):
+            continue
+        labels = [l for l in entry.get("labels", []) if l in SENTIMENT_LABELS]
+        if not labels:
+            continue
+        out[cid] = {"labels": labels, "rationale": (entry.get("rationale") or "").strip()}
+    return out
 
 
 def read_csv(path):
@@ -80,6 +192,112 @@ def split_artists(raw):
     return [a.strip() for a in raw.split(",") if a.strip()]
 
 
+def comment_text_stats(comments):
+    """Per-player text stats over one player's voter comments.
+
+    `comments` is a list of dicts with at least "text" and "points". Every
+    word-based number counts the same thing (see comment_words): letters
+    and apostrophes, so "don't" is one word and "2024" is none.
+
+    The four style rates (exclamation, question, ALL-CAPS, emoji) are all
+    the *share of that player's comments containing at least one*, not a
+    per-comment average. One comment shouting "YES!!!!!!!!" would drag an
+    average into nonsense; "what fraction of their comments do this" is
+    robust to that and is what the page claims.
+    """
+    texts = [c["text"] for c in comments]
+    word_lists = [comment_words(t) for t in texts]
+    lengths = [len(w) for w in word_lists]
+    total_words = sum(lengths)
+    all_words = [norm_word(w) for words in word_lists for w in words]
+
+    n = len(comments)
+    containing = lambda pred: round(sum(1 for t in texts if pred(t)) / n, 3) if n else 0
+
+    return {
+        "comments": n,
+        "totalWords": total_words,
+        "meanWords": round(statistics.mean(lengths), 1) if lengths else 0,
+        "medianWords": round(statistics.median(lengths), 1) if lengths else 0,
+        "zeroPointComments": sum(1 for c in comments if c["points"] == 0),
+        # share of comments containing at least one of each
+        "exclamationRate": containing(lambda t: "!" in t),
+        "questionRate": containing(lambda t: "?" in t),
+        "allCapsRate": containing(lambda t: any(is_allcaps_word(w) for w in comment_words(t))),
+        "emojiRate": containing(lambda t: EMOJI_RE.search(t) is not None),
+        # unique words / total words, lowercased. Type-token ratio falls as
+        # a body of text grows, so this is only comparable between players
+        # with a similar number of comments; the page guards it with
+        # MIN_COMMENTS_FOR_RATES and the README says so.
+        # Raw unique/total. Kept because it's the number people expect to
+        # see, but it is NOT comparable between players: it falls as a
+        # corpus grows. Nothing ranks on it; vocabRichnessSampled does.
+        "vocabRichness": round(len(set(all_words)) / total_words, 3) if total_words else 0,
+        "vocabRichnessSampled": sampled_richness(all_words),
+        "uniqueWords": len(set(all_words)),
+    }
+
+
+def sampled_richness(words, size=VOCAB_SAMPLE_WORDS):
+    """Mean segmental type-token ratio: unique-over-total measured on fixed
+    `size`-word chunks and averaged, rather than over someone's whole
+    corpus at once.
+
+    A raw unique/total ratio falls as a body of text grows (you run out of
+    new words to use), so comparing it between players mostly ranks them
+    by how little they wrote. In this league's real data that inversion is
+    near total: the top of a raw ranking is the player with 813 words and
+    the bottom is the player with 13,549. Chunking fixes the denominator
+    so everyone is measured over the same amount of text.
+
+    Returns None below one full chunk, so a short commenter is left out of
+    the comparison instead of being given a flattering number.
+    """
+    if len(words) < size:
+        return None
+    chunks = [words[i:i + size] for i in range(0, len(words) - size + 1, size)]
+    ratios = [len(set(c)) / size for c in chunks]
+    return round(statistics.mean(ratios), 3)
+
+
+def distinctive_word(player_words, league_counts, league_total, min_uses=3):
+    """The word this player uses most out of proportion to the league.
+
+    Same shape as the taste index: the player's share of a word divided by
+    the league's share of it. A word has to appear at least `min_uses`
+    times for that player to qualify, so a one-off doesn't win on a
+    denominator of one. Stopwords are dropped first (see STOPWORDS),
+    otherwise every player's answer is "the" and then "song".
+
+    Returns None when the player has no qualifying word, which is the
+    normal case for someone with only a handful of comments.
+    """
+    counts = {}
+    for w in player_words:
+        w = norm_word(w)
+        if len(w) < 3 or w in STOPWORDS:
+            continue
+        counts[w] = counts.get(w, 0) + 1
+    total = sum(counts.values())
+    if not total or not league_total:
+        return None
+
+    best = None
+    for w, c in counts.items():
+        if c < min_uses:
+            continue
+        league_share = league_counts.get(w, 0) / league_total
+        if not league_share:
+            continue
+        ratio = (c / total) / league_share
+        # ties break on the more-used word, then alphabetically, so the
+        # result is stable across builds rather than dict-order luck
+        key = (ratio, c, w)
+        if best is None or key > best[0]:
+            best = (key, {"word": w, "uses": c, "vsLeague": round(ratio, 2)})
+    return best[1] if best else None
+
+
 def build_season(folder: Path, season_key: str, label: str):
     competitor_rows = read_csv(folder / "competitors.csv")
     round_rows = read_csv(folder / "rounds.csv")
@@ -95,11 +313,13 @@ def build_season(folder: Path, season_key: str, label: str):
     # (round, uri, voter) -> points, plus a comment index
     points_at = {}
     comments_at = {}
+    comments_by_vote = set()   # (round, uri, voter) keys that carry a comment
     voters_in_round = {}
     for v in vote_rows:
         key = (v["Round ID"], v["Spotify URI"], v["Voter ID"])
         points_at[key] = int(v["Points Assigned"])
         if v.get("Comment", "").strip():
+            comments_by_vote.add(key)
             comments_at.setdefault((v["Round ID"], v["Spotify URI"]), []).append(
                 {"voterId": v["Voter ID"], "voterName": names.get(v["Voter ID"], "Unknown"),
                  "points": int(v["Points Assigned"]), "comment": v["Comment"].strip()}
@@ -116,12 +336,44 @@ def build_season(folder: Path, season_key: str, label: str):
              for cid, name in names.items()}
     pair_points = {}        # (voter, submitter) -> points given
     pair_chances = {}       # (voter, submitter) -> tracks they could have voted on
+    pair_comments = {}      # (voter, submitter) -> comments left on their tracks
     voter_total_points = {}
     voter_total_chances = {}
+    # every voter comment with the context the page needs to show it
+    voter_comments = {cid: [] for cid in names}
+    vote_rows_by_voter = {}
+
+    # lookups so a comment can name the track and round it was left on
+    round_name_by_id = {r["ID"]: r.get("Name", "") for r in round_rows}
+    sub_by_key = {(r["Round ID"], r["Spotify URI"]): r for r in sub_rows}
+
+    sentiment = load_sentiment()
 
     for v in vote_rows:
-        if v.get("Comment", "").strip() and v["Voter ID"] in voter:
-            voter[v["Voter ID"]]["commentsLeft"] += 1
+        vid = v["Voter ID"]
+        vote_rows_by_voter[vid] = vote_rows_by_voter.get(vid, 0) + 1
+        text = v.get("Comment", "").strip()
+        if not text or vid not in voter:
+            continue
+        voter[vid]["commentsLeft"] += 1
+        sub = sub_by_key.get((v["Round ID"], v["Spotify URI"]))
+        cid = comment_id(v["Round ID"], v["Spotify URI"], vid)
+        entry = {
+            "id": cid,
+            "text": text,
+            "points": int(v["Points Assigned"]),
+            "roundId": v["Round ID"],
+            "roundName": round_name_by_id.get(v["Round ID"], ""),
+            "trackTitle": sub.get("Title", "") if sub else "",
+            "trackArtist": sub.get("Artist(s)", "") if sub else "",
+            "spotifyId": track_id(v["Spotify URI"]),
+            "submitterId": sub.get("Submitter ID") if sub else None,
+        }
+        # Only ever attached when enrich_comments.py has actually labelled
+        # this exact comment; never inferred here.
+        if cid in sentiment:
+            entry["sentiment"] = sentiment[cid]
+        voter_comments[vid].append(entry)
 
     rounds_out = []
     all_songs = []
@@ -238,6 +490,11 @@ def build_season(folder: Path, season_key: str, label: str):
                 pair_chances[(vid, submitter)] = pair_chances.get((vid, submitter), 0) + 1
                 voter_total_points[vid] = voter_total_points.get(vid, 0) + pts
                 voter_total_chances[vid] = voter_total_chances.get(vid, 0) + 1
+                # same denominator as the taste index above: a "chance" is
+                # one of that submitter's tracks this voter could have
+                # voted on. Here we count how often they said something.
+                if (rid, s["Spotify URI"], vid) in comments_by_vote:
+                    pair_comments[(vid, submitter)] = pair_comments.get((vid, submitter), 0) + 1
 
         margin = (songs[0]["points"] - songs[1]["points"]) if len(songs) > 1 else None
         rounds_out.append({
@@ -321,6 +578,165 @@ def build_season(folder: Path, season_key: str, label: str):
             "chances": chances,
         })
 
+    # ---- comment stats ----
+    # Voter comments only. A submitter's own note on their track lives in
+    # submissions.csv and is counted separately below, since it's a
+    # different act: describing your own pick, not reacting to someone
+    # else's, and it's far rarer (60 of 316 in S1 against 2,194 vote
+    # comments).
+    league_word_counts = {}
+    league_word_total = 0
+    for cid, entries in voter_comments.items():
+        for e in entries:
+            for w in comment_words(e["text"]):
+                w = norm_word(w)
+                if len(w) < 3 or w in STOPWORDS:
+                    continue
+                league_word_counts[w] = league_word_counts.get(w, 0) + 1
+                league_word_total += 1
+
+    commenters = []
+    for cid in sorted(names, key=lambda c: names[c]):
+        entries = voter_comments.get(cid, [])
+        vote_row_count = vote_rows_by_voter.get(cid, 0)
+        if not vote_row_count:
+            continue
+        stats = comment_text_stats([{"text": e["text"], "points": e["points"]} for e in entries])
+        stats["id"] = cid
+        stats["name"] = names[cid]
+        stats["voteRows"] = vote_row_count
+        # share of this player's vote rows that carried a comment. The
+        # denominator is every row they filed, including the zero-point
+        # rows that exist *only* to carry a comment.
+        stats["commentRate"] = round(len(entries) / vote_row_count, 3) if vote_row_count else 0
+        player_words = [w for e in entries for w in comment_words(e["text"])]
+        stats["distinctiveWord"] = (
+            distinctive_word(player_words, league_word_counts, league_word_total)
+            if len(entries) >= MIN_COMMENTS_FOR_RATES else None
+        )
+        if entries:
+            longest = max(entries, key=lambda e: (len(comment_words(e["text"])), len(e["text"])))
+            stats["longest"] = {
+                "text": longest["text"],
+                "words": len(comment_words(longest["text"])),
+                "chars": len(longest["text"]),
+                "roundName": longest["roundName"],
+                "trackTitle": longest["trackTitle"],
+                "trackArtist": longest["trackArtist"],
+                "spotifyId": longest["spotifyId"],
+                "points": longest["points"],
+            }
+        # only present when enrich_comments.py has run; never invented
+        labelled = [e for e in entries if "sentiment" in e]
+        if labelled:
+            counts = {}
+            for e in labelled:
+                for l in e["sentiment"]["labels"]:
+                    counts[l] = counts.get(l, 0) + 1
+            stats["sentiment"] = {"labelled": len(labelled), "counts": counts}
+        commenters.append(stats)
+
+    commenters.sort(key=lambda c: (-c["comments"], c["name"]))
+
+    # directed comment matrix, same shape and same minimum-sample guard as
+    # the taste matrix: how often this voter says something on that
+    # submitter's tracks, out of the chances they had to.
+    comment_pairs = []
+    for (vid, sid), chances in pair_chances.items():
+        if chances < MIN_COMMENT_PAIR_OPPORTUNITIES:
+            continue
+        said = pair_comments.get((vid, sid), 0)
+        comment_pairs.append({
+            "voterId": vid,
+            "voterName": names.get(vid, "Unknown"),
+            "submitterId": sid,
+            "submitterName": names.get(sid, "Unknown"),
+            "comments": said,
+            "chances": chances,
+            "rate": round(said / chances, 3),
+        })
+    comment_pairs.sort(key=lambda p: (p["voterName"], p["submitterName"]))
+
+    # submitter notes: the submitter's own comment on their own track
+    submitter_notes = []
+    notes_by_player = {}
+    for r in sub_rows:
+        text = (r.get("Comment") or "").strip()
+        if not text:
+            continue
+        notes_by_player.setdefault(r["Submitter ID"], []).append({
+            "text": text,
+            "words": len(comment_words(text)),
+            "roundName": round_name_by_id.get(r["Round ID"], ""),
+            "trackTitle": r.get("Title", ""),
+            "spotifyId": track_id(r["Spotify URI"]),
+        })
+    subs_by_player = {}
+    for r in sub_rows:
+        subs_by_player[r["Submitter ID"]] = subs_by_player.get(r["Submitter ID"], 0) + 1
+    for pid, notes in sorted(notes_by_player.items(), key=lambda kv: names.get(kv[0], "")):
+        total = subs_by_player.get(pid, 0)
+        submitter_notes.append({
+            "id": pid,
+            "name": names.get(pid, "Unknown"),
+            "notes": len(notes),
+            "submissions": total,
+            "noteRate": round(len(notes) / total, 3) if total else 0,
+            "totalWords": sum(n["words"] for n in notes),
+            "longest": max(notes, key=lambda n: n["words"]),
+        })
+    submitter_notes.sort(key=lambda s: (-s["notes"], s["name"]))
+
+    comment_summary = {}
+    if commenters:
+        total_comments = sum(c["comments"] for c in commenters)
+        eligible = [c for c in commenters if c["comments"] >= MIN_COMMENTS_FOR_RATES]
+        comment_summary = {
+            "totalComments": total_comments,
+            "totalWords": sum(c["totalWords"] for c in commenters),
+            "commentOnlyVotes": comment_only_votes,
+            "minCommentsForRates": MIN_COMMENTS_FOR_RATES,
+            "minPairOpportunities": MIN_COMMENT_PAIR_OPPORTUNITIES,
+            "submitterNoteCount": sum(s["notes"] for s in submitter_notes),
+            "hasSentiment": any("sentiment" in c for c in commenters),
+        }
+        if total_comments:
+            longest_overall = max(
+                (c for c in commenters if c.get("longest")),
+                key=lambda c: c["longest"]["words"], default=None)
+            if longest_overall:
+                comment_summary["longestComment"] = dict(longest_overall["longest"], name=longest_overall["name"])
+        if eligible:
+            chattiest = max(eligible, key=lambda c: c["commentRate"])
+            comment_summary["chattiest"] = {"name": chattiest["name"], "rate": chattiest["commentRate"],
+                                            "comments": chattiest["comments"]}
+            quietest = min(eligible, key=lambda c: c["commentRate"])
+            comment_summary["quietest"] = {"name": quietest["name"], "rate": quietest["commentRate"],
+                                           "comments": quietest["comments"]}
+            wordiest = max(eligible, key=lambda c: c["meanWords"])
+            comment_summary["wordiest"] = {"name": wordiest["name"], "meanWords": wordiest["meanWords"]}
+            tersest = min(eligible, key=lambda c: c["meanWords"])
+            comment_summary["tersest"] = {"name": tersest["name"], "meanWords": tersest["meanWords"]}
+            loudest = max(eligible, key=lambda c: c["allCapsRate"])
+            if loudest["allCapsRate"] > 0:
+                comment_summary["loudest"] = {"name": loudest["name"], "rate": loudest["allCapsRate"]}
+            sampled = [c for c in eligible if c.get("vocabRichnessSampled") is not None]
+            if sampled:
+                richest = max(sampled, key=lambda c: c["vocabRichnessSampled"])
+                comment_summary["richestVocab"] = {"name": richest["name"],
+                                                   "richness": richest["vocabRichnessSampled"],
+                                                   "comments": richest["comments"],
+                                                   "sampleWords": VOCAB_SAMPLE_WORDS}
+            most_zero = max(eligible, key=lambda c: c["zeroPointComments"])
+            if most_zero["zeroPointComments"] > 0:
+                comment_summary["mostZeroPoint"] = {"name": most_zero["name"],
+                                                    "count": most_zero["zeroPointComments"]}
+        if comment_pairs:
+            warmest = max(comment_pairs, key=lambda p: (p["rate"], p["chances"]))
+            comment_summary["mostTalkedAt"] = warmest
+            silent = min(comment_pairs, key=lambda p: (p["rate"], -p["chances"]))
+            comment_summary["silentTreatment"] = silent
+
     # ---- highlights ----
     highlights = {}
     if all_songs:
@@ -374,7 +790,7 @@ def build_season(folder: Path, season_key: str, label: str):
         highlights["commentOnlyVotes"] = comment_only_votes
         highlights["downvotes"] = downvotes
 
-    return {
+    data = {
         "key": season_key,
         "label": label,
         "competitors": sorted([{"id": cid, "name": n} for cid, n in names.items()], key=lambda c: c["name"]),
@@ -382,6 +798,10 @@ def build_season(folder: Path, season_key: str, label: str):
         "standings": standings,
         "voters": voters_out,
         "taste": taste,
+        "commenters": commenters,
+        "commentPairs": comment_pairs,
+        "submitterNotes": submitter_notes,
+        "commentSummary": comment_summary,
         "highlights": highlights,
         "songCount": len(all_songs),
         "voteRowCount": len(vote_rows),
@@ -390,8 +810,190 @@ def build_season(folder: Path, season_key: str, label: str):
         "liveRound": live_round,
     }
 
+    # Side channel for build_career, deliberately NOT part of the season
+    # JSON the site downloads. A career median or vocabulary richness can't
+    # be recombined from per-season summaries (you need every comment's
+    # length, and the union of the words, not two medians averaged), and
+    # shipping every raw comment length per player per season would bloat
+    # seasonN.json for data no page reads. So the raw corpus goes to
+    # build_career() in memory and dies there.
+    raw = {
+        "key": season_key,
+        "label": label,
+        "names": names,
+        "voterComments": voter_comments,
+        "voteRowsByVoter": vote_rows_by_voter,
+        "pairChances": pair_chances,
+        "pairComments": pair_comments,
+        "notesByPlayer": notes_by_player,
+        "subsByPlayer": subs_by_player,
+    }
+    return data, raw
 
-def build_career(season_datas):
+
+def build_career_comments(raw_seasons):
+    """Career comment stats, recomputed from every season's raw comments
+    rather than by averaging per-season summaries.
+
+    That matters for two of these: a career median words-per-comment is
+    the median over all of someone's comments, not the mean of their
+    per-season medians, and career vocabulary richness needs the union of
+    the words they used, not a sum of per-season unique counts. Both come
+    out wrong if you aggregate the summaries. Everything else here is a
+    plain sum and would have survived either way.
+
+    Seasons with no rounds contribute nothing, same as the standings join.
+    """
+    by_player = {}
+    names = {}
+    for raw in raw_seasons:
+        for cid, name in raw["names"].items():
+            names.setdefault(cid, name)
+        for cid, entries in raw["voterComments"].items():
+            slot = by_player.setdefault(cid, {"entries": [], "voteRows": 0, "seasons": 0})
+            rows = raw["voteRowsByVoter"].get(cid, 0)
+            if not rows:
+                continue
+            slot["entries"].extend(entries)
+            slot["voteRows"] += rows
+            slot["seasons"] += 1
+
+    league_word_counts = {}
+    league_word_total = 0
+    for slot in by_player.values():
+        for e in slot["entries"]:
+            for w in comment_words(e["text"]):
+                w = norm_word(w)
+                if len(w) < 3 or w in STOPWORDS:
+                    continue
+                league_word_counts[w] = league_word_counts.get(w, 0) + 1
+                league_word_total += 1
+
+    players = []
+    for cid, slot in by_player.items():
+        if not slot["voteRows"]:
+            continue
+        entries = slot["entries"]
+        stats = comment_text_stats([{"text": e["text"], "points": e["points"]} for e in entries])
+        stats["id"] = cid
+        stats["name"] = names.get(cid, "Unknown")
+        stats["voteRows"] = slot["voteRows"]
+        stats["seasons"] = slot["seasons"]
+        stats["commentRate"] = round(len(entries) / slot["voteRows"], 3)
+        player_words = [w for e in entries for w in comment_words(e["text"])]
+        stats["distinctiveWord"] = (
+            distinctive_word(player_words, league_word_counts, league_word_total)
+            if len(entries) >= MIN_COMMENTS_FOR_RATES else None
+        )
+        if entries:
+            longest = max(entries, key=lambda e: (len(comment_words(e["text"])), len(e["text"])))
+            stats["longest"] = {
+                "text": longest["text"],
+                "words": len(comment_words(longest["text"])),
+                "chars": len(longest["text"]),
+                "roundName": longest["roundName"],
+                "trackTitle": longest["trackTitle"],
+                "trackArtist": longest["trackArtist"],
+                "spotifyId": longest["spotifyId"],
+                "points": longest["points"],
+                "seasonLabel": longest.get("seasonLabel", ""),
+            }
+        # present only for comments enrich_comments.py actually labelled
+        labelled = [e for e in entries if "sentiment" in e]
+        if labelled:
+            counts = {}
+            for e in labelled:
+                for l in e["sentiment"]["labels"]:
+                    counts[l] = counts.get(l, 0) + 1
+            stats["sentiment"] = {"labelled": len(labelled), "counts": counts}
+        players.append(stats)
+    players.sort(key=lambda p: (-p["comments"], p["name"]))
+
+    # career comment matrix: chances and comments summed across seasons,
+    # then the same minimum-sample guard applied once to the career totals
+    pair_chances, pair_comments = {}, {}
+    for raw in raw_seasons:
+        for key, n in raw["pairChances"].items():
+            pair_chances[key] = pair_chances.get(key, 0) + n
+        for key, n in raw["pairComments"].items():
+            pair_comments[key] = pair_comments.get(key, 0) + n
+    pairs = []
+    for (vid, sid), chances in pair_chances.items():
+        if chances < MIN_COMMENT_PAIR_OPPORTUNITIES:
+            continue
+        said = pair_comments.get((vid, sid), 0)
+        pairs.append({
+            "voterName": names.get(vid, "Unknown"), "submitterName": names.get(sid, "Unknown"),
+            "comments": said, "chances": chances, "rate": round(said / chances, 3),
+        })
+    pairs.sort(key=lambda p: (p["voterName"], p["submitterName"]))
+
+    notes = {}
+    subs = {}
+    for raw in raw_seasons:
+        for pid, lst in raw["notesByPlayer"].items():
+            notes.setdefault(pid, []).extend(lst)
+        for pid, n in raw["subsByPlayer"].items():
+            subs[pid] = subs.get(pid, 0) + n
+
+    summary = {}
+    if players:
+        eligible = [p for p in players if p["comments"] >= MIN_COMMENTS_FOR_RATES]
+        summary["totalComments"] = sum(p["comments"] for p in players)
+        summary["totalWords"] = sum(p["totalWords"] for p in players)
+        summary["minCommentsForRates"] = MIN_COMMENTS_FOR_RATES
+        summary["minPairOpportunities"] = MIN_COMMENT_PAIR_OPPORTUNITIES
+        summary["hasSentiment"] = any("sentiment" in p for p in players)
+        longest_overall = max((p for p in players if p.get("longest")),
+                              key=lambda p: p["longest"]["words"], default=None)
+        if longest_overall:
+            summary["longestComment"] = dict(longest_overall["longest"], name=longest_overall["name"])
+        if eligible:
+            talkative = max(eligible, key=lambda p: p["commentRate"])
+            summary["mostTalkative"] = {"name": talkative["name"], "rate": talkative["commentRate"],
+                                        "comments": talkative["comments"]}
+            terse = min(eligible, key=lambda p: p["meanWords"])
+            summary["mostTerse"] = {"name": terse["name"], "meanWords": terse["meanWords"],
+                                    "comments": terse["comments"]}
+            wordiest = max(eligible, key=lambda p: p["meanWords"])
+            summary["wordiest"] = {"name": wordiest["name"], "meanWords": wordiest["meanWords"]}
+            quietest = min(eligible, key=lambda p: p["commentRate"])
+            summary["quietest"] = {"name": quietest["name"], "rate": quietest["commentRate"],
+                                   "comments": quietest["comments"]}
+            sampled = [p for p in eligible if p.get("vocabRichnessSampled") is not None]
+            if sampled:
+                richest = max(sampled, key=lambda p: p["vocabRichnessSampled"])
+                summary["richestVocab"] = {"name": richest["name"],
+                                           "richness": richest["vocabRichnessSampled"],
+                                           "comments": richest["comments"],
+                                           "sampleWords": VOCAB_SAMPLE_WORDS}
+            loudest = max(eligible, key=lambda p: p["allCapsRate"])
+            if loudest["allCapsRate"] > 0:
+                summary["loudest"] = {"name": loudest["name"], "rate": loudest["allCapsRate"]}
+            zero = max(eligible, key=lambda p: p["zeroPointComments"])
+            if zero["zeroPointComments"] > 0:
+                summary["mostZeroPoint"] = {"name": zero["name"], "count": zero["zeroPointComments"]}
+        if pairs:
+            # "silent treatment": the pair with the lowest comment rate over
+            # the most chances, i.e. the person you've had every chance to
+            # say something to and never have.
+            silent = min(pairs, key=lambda p: (p["rate"], -p["chances"]))
+            summary["silentTreatment"] = silent
+            chatty = max(pairs, key=lambda p: (p["rate"], p["chances"]))
+            summary["mostTalkedAt"] = chatty
+        if notes:
+            noter = max(notes.items(), key=lambda kv: len(kv[1]))
+            summary["mostSubmitterNotes"] = {
+                "name": names.get(noter[0], "Unknown"),
+                "notes": len(noter[1]),
+                "submissions": subs.get(noter[0], 0),
+            }
+            summary["submitterNoteCount"] = sum(len(v) for v in notes.values())
+
+    return {"players": players, "pairs": pairs, "summary": summary}
+
+
+def build_career(season_datas, raw_seasons=None):
     """Aggregates standings across every season by competitor id. IDs and
     names were checked to be stable for the same person across seasons in
     the real exports (no mismatches found), so this is a safe join, not a
@@ -449,12 +1051,16 @@ def build_career(season_datas):
         highlights["bestSingleSeason"] = {"name": best_single["name"], "points": best_single["bestSeasonPoints"],
                                           "season": season_label}
 
+    comments = build_career_comments(raw_seasons or [])
+
     return {
         "players": players,
         "highlights": highlights,
         "seasons": [{"key": d["key"], "label": d["label"]} for d in played_seasons],
         "totalSeasons": len(played_seasons),
         "careerScoreFormula": {"winBonus": WIN_BONUS, "podiumBonus": PODIUM_BONUS},
+        "commenters": comments["players"],
+        "commentSummary": comments["summary"],
     }
 
 
@@ -472,12 +1078,19 @@ def main():
 
     index = []
     season_datas = []
+    raw_seasons = []
     for folder in folders:
         num = int(re.search(r"\d+", folder.name).group())
         key = f"season{num}"
         label = f"Season {num}"
-        data = build_season(folder, key, label)
+        data, raw = build_season(folder, key, label)
         season_datas.append(data)
+        # tag each comment with the season it came from, so a career
+        # superlative can say which season it happened in
+        for entries in raw["voterComments"].values():
+            for e in entries:
+                e["seasonLabel"] = label
+        raw_seasons.append(raw)
         with open(OUT_DIR / f"{key}.json", "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
 
@@ -517,7 +1130,7 @@ def main():
                    "currentSeason": index[-1]["key"]}, f, ensure_ascii=False, separators=(",", ":"))
     print(f"index.json: {len(index)} seasons, default {default_key}")
 
-    career = build_career(season_datas)
+    career = build_career(season_datas, raw_seasons)
     with open(OUT_DIR / "career.json", "w", encoding="utf-8") as f:
         json.dump(career, f, ensure_ascii=False, separators=(",", ":"))
     print(f"career.json: {len(career['players'])} players across {career['totalSeasons']} played seasons")

@@ -103,6 +103,7 @@
     ["block-rounds", "Rounds"],
     ["block-taste", "Taste"],
     ["block-voters", "Voting"],
+    ["block-comments", "Comments"],
     ["block-artists", "Artists"],
   ];
 
@@ -258,6 +259,7 @@
     renderRounds(seasonData);
     renderTaste(seasonData);
     renderVoters(seasonData);
+    renderComments(seasonData);
     renderArtists(seasonData);
     renderJumpNav(seasonData);
   }
@@ -1016,6 +1018,212 @@
     host.appendChild(box);
   }
 
+  /* ---- comments (filterable) ----
+     Counts and superlatives, not a transcript. The one place raw comment
+     text appears is the longest comment, where the text is the point.
+     Everything here is a voter comment (votes.csv); a submitter's note on
+     their own track is a different thing and gets its own line. */
+
+  function pct(rate) { return Math.round(rate * 100) + "%"; }
+
+  function commentQuote(c, label) {
+    var meta = [];
+    if (c.trackTitle) meta.push(extLink(trackLink(c.spotifyId), c.trackTitle));
+    if (c.roundName) meta.push(esc(c.roundName));
+    if (c.seasonLabel) meta.push(esc(c.seasonLabel));
+    meta.push(c.words + " words");
+    var box = el("div", "cmt-quote");
+    box.innerHTML =
+      '<p class="cmt-label">' + esc(label) + "</p>" +
+      "<blockquote>" + esc(c.text) + "</blockquote>" +
+      '<p class="cmt-src">' + (c.name ? "<b>" + esc(c.name) + "</b> &middot; " : "") +
+      meta.join(" &middot; ") + "</p>";
+    return box;
+  }
+
+  function renderComments(d) {
+    var section = document.getElementById("block-comments");
+    var host = $("comments");
+    if (!host) return;
+    host.innerHTML = "";
+
+    var summary = d.commentSummary || {};
+    var all = d.commenters || [];
+    // A season with no rounds has no votes and so no comments. Hide the
+    // whole section rather than showing a grid of zeroes, same as the
+    // trend chart does, and the jump nav drops it automatically.
+    if (!all.length || !summary.totalComments) {
+      if (section) section.hidden = true;
+      return;
+    }
+    if (section) section.hidden = false;
+
+    attachFilterTag(host, d);
+
+    var rows = selected.length
+      ? all.filter(function (c) { return selected.indexOf(c.id) !== -1; })
+      : all;
+    if (!rows.length) {
+      host.appendChild(empty("No comments from this selection."));
+      return;
+    }
+
+    // Superlatives are season-wide, so they only make sense unfiltered.
+    // With a player selected the table below is already about them.
+    if (!selected.length) {
+      var g = el("div", "hl-grid");
+      if (summary.chattiest) {
+        g.appendChild(tile("Most likely to say something", esc(summary.chattiest.name),
+          pct(summary.chattiest.rate) + " of their votes carry a comment"));
+      }
+      if (summary.quietest) {
+        g.appendChild(tile("Least likely", esc(summary.quietest.name),
+          pct(summary.quietest.rate) + " &middot; " + summary.quietest.comments + " comments"));
+      }
+      if (summary.wordiest) {
+        g.appendChild(tile("Wordiest", esc(summary.wordiest.name),
+          summary.wordiest.meanWords + " words per comment on average"));
+      }
+      if (summary.tersest) {
+        g.appendChild(tile("Tersest", esc(summary.tersest.name),
+          summary.tersest.meanWords + " words per comment on average"));
+      }
+      if (summary.loudest) {
+        g.appendChild(tile("Most SHOUTING", esc(summary.loudest.name),
+          pct(summary.loudest.rate) + " of their comments have an all-caps word"));
+      }
+      if (summary.richestVocab) {
+        g.appendChild(tile("Widest vocabulary", esc(summary.richestVocab.name),
+          summary.richestVocab.richness.toFixed(2) + " unique words per word, measured over " +
+          summary.richestVocab.sampleWords + "-word samples"));
+      }
+      if (summary.mostZeroPoint) {
+        g.appendChild(tile("Most all-talk", esc(summary.mostZeroPoint.name),
+          summary.mostZeroPoint.count + " comments awarding zero points"));
+      }
+      if (summary.silentTreatment && summary.silentTreatment.comments === 0) {
+        g.appendChild(tile("Silent treatment",
+          esc(summary.silentTreatment.voterName) + " &rarr; " + esc(summary.silentTreatment.submitterName),
+          "never commented on them in " + summary.silentTreatment.chances + " chances"));
+      } else if (summary.mostTalkedAt) {
+        g.appendChild(tile("Most talked at",
+          esc(summary.mostTalkedAt.voterName) + " &rarr; " + esc(summary.mostTalkedAt.submitterName),
+          pct(summary.mostTalkedAt.rate) + " of their tracks got a comment"));
+      }
+      host.appendChild(g);
+    }
+
+    var box = el("div", "framed");
+    box.insertAdjacentHTML("beforeend",
+      '<div class="crow head"><div>Player</div><div class="num">Comments</div>' +
+      '<div class="num">Rate</div><div class="num">Avg words</div>' +
+      '<div class="num">Median</div><div class="num">Zero-pt</div>' +
+      '<div class="num">!</div><div class="num">?</div><div class="num">CAPS</div></div>');
+    rows.forEach(function (c) {
+      box.insertAdjacentHTML("beforeend",
+        '<div class="crow"><div class="vname">' + esc(c.name) + "</div>" +
+        '<div class="num">' + c.comments + "</div>" +
+        '<div class="num">' + pct(c.commentRate) + "</div>" +
+        '<div class="num">' + c.meanWords + "</div>" +
+        '<div class="num">' + c.medianWords + "</div>" +
+        '<div class="num">' + c.zeroPointComments + "</div>" +
+        '<div class="num">' + pct(c.exclamationRate) + "</div>" +
+        '<div class="num">' + pct(c.questionRate) + "</div>" +
+        '<div class="num">' + pct(c.allCapsRate) + "</div></div>");
+    });
+    host.appendChild(box);
+
+    var words = rows.filter(function (c) { return c.distinctiveWord; });
+    if (words.length) {
+      var wbox = el("div", "framed cmt-words");
+      wbox.appendChild(el("h3", null, "Words they reach for more than anyone else"));
+      var list = el("div", "cmt-word-row");
+      words.forEach(function (c) {
+        list.insertAdjacentHTML("beforeend",
+          '<span class="cmt-word" title="' + esc(c.name) + " used it " + c.distinctiveWord.uses +
+          " times, " + c.distinctiveWord.vsLeague + '&times; the league\'s rate">' +
+          esc(c.name) + ' <b>&ldquo;' + esc(c.distinctiveWord.word) + '&rdquo;</b></span>');
+      });
+      wbox.appendChild(list);
+      host.appendChild(wbox);
+    }
+
+    // The longest comment, in full, because the length is the point. When
+    // a player is selected it's theirs; otherwise it's the season's.
+    var longest = null;
+    var longestLabel = "Longest comment of the season";
+    if (selected.length && rows.length) {
+      // whoever in the current selection wrote the longest one
+      var withLongest = rows.filter(function (c) { return c.longest; });
+      if (withLongest.length) {
+        var pick = withLongest.reduce(function (a, b) {
+          return b.longest.words > a.longest.words ? b : a;
+        });
+        longest = Object.keys(pick.longest).reduce(function (o, k) {
+          o[k] = pick.longest[k]; return o;
+        }, {});
+        longest.name = pick.name;
+        longestLabel = selected.length === 1
+          ? "Their longest comment"
+          : "Longest comment in this comparison";
+      }
+    } else if (summary.longestComment) {
+      longest = summary.longestComment;
+    }
+    if (longest) host.appendChild(commentQuote(longest, longestLabel));
+
+    var notes = d.submitterNotes || [];
+    if (selected.length) {
+      notes = notes.filter(function (n) { return selected.indexOf(n.id) !== -1; });
+    }
+    if (notes.length) {
+      var nbox = el("div", "framed cmt-notes");
+      nbox.appendChild(el("h3", null, "Notes on their own submissions"));
+      nbox.insertAdjacentHTML("beforeend",
+        '<p class="block-note">A different thing from a vote comment: this is the submitter ' +
+        'explaining their own pick, and it is much rarer.</p>' +
+        '<div class="nrow head"><div>Player</div><div class="num">Notes</div>' +
+        '<div class="num">Of their subs</div></div>');
+      notes.slice(0, 12).forEach(function (n) {
+        nbox.insertAdjacentHTML("beforeend",
+          '<div class="nrow"><div class="vname">' + esc(n.name) + "</div>" +
+          '<div class="num">' + n.notes + " of " + n.submissions + "</div>" +
+          '<div class="num">' + pct(n.noteRate) + "</div></div>");
+      });
+      host.appendChild(nbox);
+    }
+
+    if (summary.hasSentiment) {
+      var withSent = rows.filter(function (c) { return c.sentiment; });
+      if (withSent.length) {
+        var sbox = el("div", "framed cmt-words");
+        sbox.appendChild(el("h3", null, "Tone"));
+        sbox.insertAdjacentHTML("beforeend",
+          '<p class="block-note">Labels from scripts/enrich_comments.py, over the ' +
+          'comments it has actually classified. Unlabelled comments are not counted.</p>');
+        var srow = el("div", "cmt-word-row");
+        withSent.forEach(function (c) {
+          var top = Object.keys(c.sentiment.counts).sort(function (a, b) {
+            return c.sentiment.counts[b] - c.sentiment.counts[a];
+          }).slice(0, 3);
+          srow.insertAdjacentHTML("beforeend",
+            '<span class="cmt-word" title="' + c.sentiment.labelled + ' comments labelled">' +
+            esc(c.name) + " <b>" + top.map(esc).join(", ") + "</b></span>");
+        });
+        sbox.appendChild(srow);
+        host.appendChild(sbox);
+      }
+    }
+
+    var foot = [];
+    foot.push(summary.totalComments + " comments, " + summary.totalWords.toLocaleString() + " words");
+    if (summary.submitterNoteCount) foot.push(summary.submitterNoteCount + " submitter notes");
+    if (summary.commentOnlyVotes) foot.push(summary.commentOnlyVotes + " comment-only votes (zero points awarded)");
+    host.insertAdjacentHTML("beforeend", '<p class="block-note cmt-foot">' + foot.join(" &middot; ") +
+      ". Rates over fewer than " + summary.minCommentsForRates +
+      " comments are left out of the superlatives above.</p>");
+  }
+
   function countArtists(songs) {
     var counts = {};
     songs.forEach(function (s) {
@@ -1101,6 +1309,7 @@
         renderRounds(d);
         renderTaste(d);
         renderVoters(d);
+        renderComments(d);
         renderArtists(d);
         renderJumpNav(d);
       })
@@ -1126,6 +1335,105 @@
       '<div class="hl-value">' + valueHtml + "</div>" +
       (metaHtml ? '<div class="hl-meta">' + metaHtml + "</div>" : "");
     return n;
+  }
+
+  function renderCareerComments(c) {
+    var section = document.getElementById("block-comments");
+    var host = $("comments");
+    if (!host) return;
+    host.innerHTML = "";
+    var s = c.commentSummary || {};
+    var rows = c.commenters || [];
+    if (!rows.length || !s.totalComments) { if (section) section.hidden = true; return; }
+    if (section) section.hidden = false;
+
+    var g = el("div", "hl-grid");
+    if (s.mostTalkative) {
+      g.appendChild(careerTile("Most talkative", esc(s.mostTalkative.name),
+        pct(s.mostTalkative.rate) + " of their votes carry a comment &middot; " +
+        s.mostTalkative.comments + " comments"));
+    }
+    if (s.mostTerse) {
+      g.appendChild(careerTile("Most terse", esc(s.mostTerse.name),
+        s.mostTerse.meanWords + " words per comment across " + s.mostTerse.comments));
+    }
+    if (s.wordiest) {
+      g.appendChild(careerTile("Wordiest", esc(s.wordiest.name),
+        s.wordiest.meanWords + " words per comment"));
+    }
+    if (s.quietest) {
+      g.appendChild(careerTile("Quietest", esc(s.quietest.name),
+        pct(s.quietest.rate) + " of their votes carry a comment"));
+    }
+    if (s.silentTreatment && s.silentTreatment.comments === 0) {
+      g.appendChild(careerTile("Biggest silent treatment",
+        esc(s.silentTreatment.voterName) + " &rarr; " + esc(s.silentTreatment.submitterName),
+        "never once commented, across " + s.silentTreatment.chances + " chances to"));
+    }
+    if (s.loudest) {
+      g.appendChild(careerTile("Most SHOUTING", esc(s.loudest.name),
+        pct(s.loudest.rate) + " of their comments have an all-caps word"));
+    }
+    if (s.richestVocab) {
+      g.appendChild(careerTile("Widest vocabulary", esc(s.richestVocab.name),
+        s.richestVocab.richness.toFixed(2) + " unique words per word over " +
+        s.richestVocab.sampleWords + "-word samples"));
+    }
+    if (s.mostZeroPoint) {
+      g.appendChild(careerTile("Most all-talk", esc(s.mostZeroPoint.name),
+        s.mostZeroPoint.count + " comments awarding zero points"));
+    }
+    if (s.mostSubmitterNotes) {
+      g.appendChild(careerTile("Most notes on their own picks", esc(s.mostSubmitterNotes.name),
+        s.mostSubmitterNotes.notes + " of " + s.mostSubmitterNotes.submissions + " submissions"));
+    }
+    host.appendChild(g);
+
+    var box = el("div", "framed");
+    box.insertAdjacentHTML("beforeend",
+      '<div class="crow head"><div>Player</div><div class="num">Comments</div>' +
+      '<div class="num">Rate</div><div class="num">Avg words</div>' +
+      '<div class="num">Median</div><div class="num">Zero-pt</div>' +
+      '<div class="num">!</div><div class="num">?</div><div class="num">CAPS</div></div>');
+    rows.forEach(function (p) {
+      box.insertAdjacentHTML("beforeend",
+        '<div class="crow"><div class="vname">' + esc(p.name) + "</div>" +
+        '<div class="num">' + p.comments + "</div>" +
+        '<div class="num">' + pct(p.commentRate) + "</div>" +
+        '<div class="num">' + p.meanWords + "</div>" +
+        '<div class="num">' + p.medianWords + "</div>" +
+        '<div class="num">' + p.zeroPointComments + "</div>" +
+        '<div class="num">' + pct(p.exclamationRate) + "</div>" +
+        '<div class="num">' + pct(p.questionRate) + "</div>" +
+        '<div class="num">' + pct(p.allCapsRate) + "</div></div>");
+    });
+    host.appendChild(box);
+
+    if (s.longestComment) {
+      host.appendChild(commentQuote(s.longestComment, "Longest comment ever written"));
+    }
+
+    var words = rows.filter(function (p) { return p.distinctiveWord; });
+    if (words.length) {
+      var wbox = el("div", "framed cmt-words");
+      wbox.appendChild(el("h3", null, "Words they reach for more than anyone else"));
+      var list = el("div", "cmt-word-row");
+      words.forEach(function (p) {
+        list.insertAdjacentHTML("beforeend",
+          '<span class="cmt-word" title="' + esc(p.name) + " used it " + p.distinctiveWord.uses +
+          " times, " + p.distinctiveWord.vsLeague + '&times; the league\'s rate">' +
+          esc(p.name) + ' <b>&ldquo;' + esc(p.distinctiveWord.word) + '&rdquo;</b></span>');
+      });
+      wbox.appendChild(list);
+      host.appendChild(wbox);
+    }
+
+    host.insertAdjacentHTML("beforeend",
+      '<p class="block-note cmt-foot">' + s.totalComments + " comments, " +
+      s.totalWords.toLocaleString() + " words" +
+      (s.submitterNoteCount ? ", " + s.submitterNoteCount + " submitter notes" : "") +
+      ". Rates over fewer than " + s.minCommentsForRates +
+      " comments are left out of the superlatives above.</p>");
   }
 
   function renderCareerHighlights(c) {
@@ -1230,6 +1538,7 @@
           : "No seasons have finished a round yet.";
         $("heroLine").textContent = line;
         renderCareerHighlights(c);
+        renderCareerComments(c);
         var note = $("standingsNote");
         if (note && c.careerScoreFormula) {
           var f = c.careerScoreFormula;

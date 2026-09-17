@@ -416,6 +416,67 @@ button.trend-chip.is-on .dot { opacity: 1; }
 .trend-line-hit, .trend-point-hit { cursor: pointer; }
 .trend-series:hover .trend-line-visible { stroke-width: 4; }
 
+/* ---------- comments ---------- */
+/* .crow mirrors .vrow (voting style) but carries more numeric columns, so
+   it gets its own grid template rather than overloading that one. */
+.crow {
+  display: grid; grid-template-columns: minmax(120px, 1.6fr) repeat(8, minmax(44px, 0.55fr));
+  gap: 8px; align-items: center; padding: 9px 14px; border-bottom: 1px solid var(--border-soft);
+  font-size: 0.9rem;
+}
+.crow:last-child { border-bottom: none; }
+.crow.head {
+  font-family: "Archivo", sans-serif; font-weight: 600; font-size: 0.72rem;
+  text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); background: var(--wash);
+}
+.crow .num { text-align: right; font-variant-numeric: tabular-nums; }
+.crow .vname { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.cmt-quote {
+  border: 1px solid var(--border); border-radius: var(--r); background: var(--card);
+  box-shadow: var(--shadow-sm); padding: 14px 16px; margin-top: 14px;
+}
+.cmt-label {
+  margin: 0 0 8px; font-family: "Archivo", sans-serif; font-weight: 600; font-size: 0.72rem;
+  text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted);
+}
+.cmt-quote blockquote {
+  margin: 0; padding-left: 12px; border-left: 3px solid var(--magenta);
+  white-space: pre-wrap; font-size: 0.93rem; line-height: 1.55; max-width: 72ch;
+}
+.cmt-src { margin: 10px 0 0; font-size: 0.83rem; color: var(--muted); }
+
+.nrow {
+  display: grid; grid-template-columns: 1fr 7rem 7rem; gap: 10px; align-items: center;
+  padding: 8px 0; font-size: 0.9rem; border-bottom: 1px solid var(--border-soft);
+}
+.nrow:last-child { border-bottom: none; }
+.nrow.head {
+  font-family: "Archivo", sans-serif; font-weight: 600; font-size: 0.72rem;
+  text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted);
+}
+.nrow .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.cmt-words, .cmt-notes { margin-top: 14px; padding: 14px 16px; }
+.cmt-words h3, .cmt-notes h3 {
+  margin: 0 0 10px; font-size: 0.82rem; font-weight: 600; color: var(--muted);
+}
+.cmt-notes h3 { margin-bottom: 4px; }
+.cmt-word-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.cmt-word {
+  display: inline-flex; align-items: baseline; gap: 6px; font-size: 0.83rem;
+  border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px;
+  background: var(--wash); color: var(--muted);
+}
+.cmt-word b { color: var(--ink); font-weight: 600; }
+.cmt-foot { margin-top: 12px; }
+
+@media (max-width: 720px) {
+  /* the four style-rate columns are the first to go when there's no room */
+  .crow { grid-template-columns: minmax(90px, 1.4fr) repeat(4, minmax(38px, 0.5fr)); font-size: 0.84rem; }
+  .crow > :nth-child(n + 6) { display: none; }
+}
+
 /* ---------- career table ---------- */
 /* column count varies with how many seasons have data, so the grid
    template is set inline per row from JS (see renderCareerStandings)
