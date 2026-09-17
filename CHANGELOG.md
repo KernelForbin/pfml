@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-09-17 (follow-up 2)
+
+- **Points over time has a new default metric: Performance vs field.**
+  Raw cumulative points only ever climb, so every player's line looked
+  like a similar upward slope, it couldn't show anyone actually fading.
+  The new default is cumulative points captured so far as a percentage of
+  the cumulative *winning* score, i.e. what a player would have if they'd
+  won every round to date. 100% means never off the pace; a line that
+  rises then falls shows someone who started strong and lost ground. A
+  toggle switches to the old raw Cumulative points view if you want it.
+
 ## 2026-09-17 (follow-up)
 
 - **Removed Top Tracks sorting.** Back to a plain top-20-by-points list.

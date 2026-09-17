@@ -376,6 +376,18 @@ table.taste td.nil { color: #C6BDCC; font-weight: 400; }
 
 /* ---------- points-over-time trend chart ---------- */
 
+.chart-mode {
+  display: inline-flex; border: 1px solid var(--border); border-radius: 999px;
+  overflow: hidden; margin-bottom: 12px; box-shadow: var(--shadow-sm);
+}
+.chart-mode button {
+  font-family: "Inter", sans-serif; font-size: 0.82rem; font-weight: 500; cursor: pointer;
+  padding: 7px 14px; background: var(--card); color: var(--muted); border: none;
+}
+.chart-mode button:not(:last-child) { border-right: 1px solid var(--border); }
+.chart-mode button.is-active { background: var(--magenta); color: #fff; }
+.chart-mode-note { margin: 0 0 14px; }
+
 .trend-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 10px; }
 button.trend-chip {
   display: inline-flex; align-items: center; gap: 7px; font-family: "Inter", sans-serif; font-size: 0.83rem;
