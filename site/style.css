@@ -413,6 +413,8 @@ button.trend-chip.is-on .dot { opacity: 1; }
 .chart-frame svg { width: 100%; height: auto; display: block; }
 .chart-grid { stroke: var(--border-soft); stroke-width: 1; }
 .chart-axis-y, .chart-axis-x { font-size: 10px; fill: var(--muted); font-family: "Inter", sans-serif; }
+.trend-line-hit, .trend-point-hit { cursor: pointer; }
+.trend-series:hover .trend-line-visible { stroke-width: 4; }
 
 /* ---------- career table ---------- */
 /* column count varies with how many seasons have data, so the grid
