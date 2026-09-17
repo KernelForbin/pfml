@@ -385,6 +385,64 @@ def build_season(folder: Path, season_key: str, label: str):
     }
 
 
+def build_career(season_datas):
+    """Aggregates standings across every season by competitor id. IDs and
+    names were checked to be stable for the same person across seasons in
+    the real exports (no mismatches found), so this is a safe join, not a
+    guess. A season with zero rounds contributes nothing (nobody has a
+    standings entry yet)."""
+    names = {}
+    totals = {}
+    played_seasons = [d for d in season_datas if d["rounds"]]
+
+    for d in season_datas:
+        for c in d["competitors"]:
+            names.setdefault(c["id"], c["name"])
+        for p in d["standings"]:
+            t = totals.setdefault(p["id"], {
+                "id": p["id"], "name": p["name"], "totalPoints": 0,
+                "roundsWon": 0, "podiums": 0, "submissions": 0,
+                "seasonsPlayed": 0, "bySeasson": {}, "bestSeasonPoints": None, "bestSeasonKey": None,
+            })
+            t["totalPoints"] += p["points"]
+            t["roundsWon"] += p["roundsWon"]
+            t["podiums"] += p["podiums"]
+            t["submissions"] += p["submissions"]
+            t["seasonsPlayed"] += 1
+            t["bySeasson"][d["key"]] = p["points"]
+            if t["bestSeasonPoints"] is None or p["points"] > t["bestSeasonPoints"]:
+                t["bestSeasonPoints"] = p["points"]
+                t["bestSeasonKey"] = d["key"]
+
+    players = []
+    for t in totals.values():
+        t["avgPointsPerSeason"] = round(t["totalPoints"] / t["seasonsPlayed"], 1) if t["seasonsPlayed"] else 0
+        t["bySeason"] = t.pop("bySeasson")
+        players.append(t)
+    players.sort(key=lambda p: (-p["totalPoints"], -p["roundsWon"], p["name"]))
+
+    highlights = {}
+    if players:
+        highlights["mostPoints"] = {"name": players[0]["name"], "points": players[0]["totalPoints"]}
+        most_wins = max(players, key=lambda p: p["roundsWon"])
+        highlights["mostWins"] = {"name": most_wins["name"], "roundsWon": most_wins["roundsWon"]}
+        most_podiums = max(players, key=lambda p: p["podiums"])
+        highlights["mostPodiums"] = {"name": most_podiums["name"], "podiums": most_podiums["podiums"]}
+        most_seasons = max(players, key=lambda p: p["seasonsPlayed"])
+        highlights["mostSeasons"] = {"name": most_seasons["name"], "seasonsPlayed": most_seasons["seasonsPlayed"]}
+        best_single = max(players, key=lambda p: p["bestSeasonPoints"])
+        season_label = next((d["label"] for d in season_datas if d["key"] == best_single["bestSeasonKey"]), "")
+        highlights["bestSingleSeason"] = {"name": best_single["name"], "points": best_single["bestSeasonPoints"],
+                                          "season": season_label}
+
+    return {
+        "players": players,
+        "highlights": highlights,
+        "seasons": [{"key": d["key"], "label": d["label"]} for d in played_seasons],
+        "totalSeasons": len(played_seasons),
+    }
+
+
 def main():
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     folders = sorted(
@@ -398,11 +456,13 @@ def main():
     template = template_path.read_text(encoding="utf-8") if template_path.exists() else None
 
     index = []
+    season_datas = []
     for folder in folders:
         num = int(re.search(r"\d+", folder.name).group())
         key = f"season{num}"
         label = f"Season {num}"
         data = build_season(folder, key, label)
+        season_datas.append(data)
         with open(OUT_DIR / f"{key}.json", "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
 
@@ -441,6 +501,11 @@ def main():
         json.dump({"seasons": index, "defaultSeason": default_key,
                    "currentSeason": index[-1]["key"]}, f, ensure_ascii=False, separators=(",", ":"))
     print(f"index.json: {len(index)} seasons, default {default_key}")
+
+    career = build_career(season_datas)
+    with open(OUT_DIR / "career.json", "w", encoding="utf-8") as f:
+        json.dump(career, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"career.json: {len(career['players'])} players across {career['totalSeasons']} played seasons")
 
 
 if __name__ == "__main__":

@@ -17,14 +17,16 @@ data/season3/
 scripts/build.py         CSV -> JSON + season1.html, season2.html, ...
 site/                    everything GitHub Pages serves
   index.html             home page: season cards + playlists, pfml.fun
+  career.html            cross-season standings, static, not templated
   season.template.html   template build.py fills in per season
   season1.html           generated, one page per season, own URL
   season2.html
   season3.html
   style.css
-  app.js                 shared by the home page and every season page
+  app.js                 shared by the home page, career page, and every season page
   data/
     index.json           generated: season list + each leader
+    career.json           generated: cross-season standings and highlights
     season1.json          generated
     season2.json
     season3.json
@@ -37,7 +39,27 @@ to that season's own page, plus the playlists section. Each `seasonN.html`
 is a full standings/rounds/stats dashboard for just that season, with its
 own URL and its own `<title>` ("PFML - Season 1", etc.), generated fresh on
 every build from `season.template.html`, so a new season gets a page with no
-template edits needed.
+template edits needed. `career.html` is a fixed page (not per-season, so
+not templated) that reads `career.json` for all-time standings.
+
+## Season page features
+
+- **Jump nav**: a second row in the sticky top bar links to each section on
+  the page (Standings, Numbers, Trend, Tracks, Rounds, Taste, Voting,
+  Artists). A section that's currently hidden (Numbers while a player
+  filter is active, Trend on a season with no rounds yet) drops out of the
+  jump nav too, so it never links to something that isn't there.
+- **Player focus and comparison**: click a name in Standings to filter the
+  rest of the page to them, click a second to compare instead, see below.
+- **Points over time**: a line chart of cumulative points after each round.
+  Toggle players in and out from the chip legend below it, or use Select
+  all / Clear. Defaults to the top 3 finishers so it isn't a wall of lines
+  on first load. Colors are assigned by season rank so a given player's
+  color stays consistent across toggles.
+- **Top tracks sorting**: Top scoring (default, capped at 20), Lowest
+  scoring (capped at 20, the bottom of the pile), A–Z and Most recent (both
+  show every matching track, not just 20, since ranking isn't the point of
+  those two).
 
 ## Adding a new export
 
@@ -117,7 +139,23 @@ once a third person joins.
 
 Everything here is computed client-side in `app.js` from data already in
 `seasonN.json`, no extra build step and no new fields needed beyond what
-`build.py` already produces.
+`build.py` already produces. The "season in numbers" block hides itself
+while a filter is active (it's a season-wide summary, not a per-player one,
+so it stops making sense to show it between player-specific panels), and
+its jump-nav link disappears along with it.
+
+## Career page
+
+`career.json`, built once per `build.py` run from all seasons' standings,
+joins players across seasons by competitor id. This relies on Music
+League reusing the same id for the same person across separate CSV
+exports, which was checked against the real data (13 people who played
+all 3 seasons, zero id/name mismatches) rather than assumed. A season
+with zero rounds contributes nothing, since nobody has a standings entry
+in it yet. If a name ever looks wrong on the Career page for someone who
+changed their Music League display name between seasons, that's the
+join taking the first name it saw for that id; `build_career()` in
+`build.py` is where to change that if it comes up.
 
 ## Scoring model
 

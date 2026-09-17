@@ -87,6 +87,39 @@
       if (live) a.title = "Season in progress";
       nav.appendChild(a);
     });
+
+    var career = el("a", "season-tab");
+    career.href = "career.html";
+    career.textContent = "Career";
+    career.setAttribute("aria-current", String(activeKey === "career"));
+    nav.appendChild(career);
+  }
+
+  var JUMP_SECTIONS = [
+    ["block-standings", "Standings"],
+    ["block-highlights", "Numbers"],
+    ["block-trend", "Trend"],
+    ["block-tracks", "Tracks"],
+    ["block-rounds", "Rounds"],
+    ["block-taste", "Taste"],
+    ["block-voters", "Voting"],
+    ["block-artists", "Artists"],
+  ];
+
+  function renderJumpNav(d) {
+    var nav = $("jumpNav");
+    if (!nav) return;
+    nav.innerHTML = "";
+    if (!d.rounds.length) { nav.hidden = true; return; }
+    nav.hidden = false;
+    JUMP_SECTIONS.forEach(function (pair) {
+      var id = pair[0], label = pair[1];
+      var section = document.getElementById(id);
+      if (!section || section.hidden) return;
+      var a = el("a", "jump-link", esc(label));
+      a.href = "#" + id;
+      nav.appendChild(a);
+    });
   }
 
   /* =====================================================================
@@ -218,11 +251,13 @@
     if (!seasonData) return;
     renderStandings(seasonData);
     renderFocus(seasonData);
+    renderHighlights(seasonData);
     renderTopTracks(seasonData);
     renderRounds(seasonData);
     renderTaste(seasonData);
     renderVoters(seasonData);
     renderArtists(seasonData);
+    renderJumpNav(seasonData);
   }
 
   function nameOf(d, id) {
@@ -497,6 +532,9 @@
   }
 
   function renderHighlights(d) {
+    var section = document.getElementById("block-highlights");
+    if (selected.length) { if (section) section.hidden = true; return; }
+    if (section) section.hidden = false;
     var h = d.highlights || {};
     if (!d.rounds.length) { setBlock("highlights", empty("Highlights need at least one closed round.")); return; }
     var g = el("div", "hl-grid");
@@ -549,6 +587,130 @@
     setBlock("highlights", g);
   }
 
+  /* ---- points-over-time trend chart ---- */
+
+  var trendSelected = [];
+
+  function trendColor(i) {
+    var hue = (i * 137.508) % 360;
+    return "hsl(" + hue.toFixed(1) + ", 68%, 42%)";
+  }
+
+  function computeTrendSeries(d) {
+    // one entry per player who has a standings entry (submitted at least
+    // once), ordered by final season points so color/legend order is
+    // stable regardless of what's currently toggled on
+    var ids = d.standings.map(function (p) { return p.id; });
+    var cum = {};
+    ids.forEach(function (id) { cum[id] = 0; });
+    var series = {};
+    ids.forEach(function (id) { series[id] = []; });
+
+    d.rounds.forEach(function (r) {
+      var earned = {};
+      r.songs.forEach(function (s) { earned[s.submitterId] = (earned[s.submitterId] || 0) + s.points; });
+      ids.forEach(function (id) {
+        cum[id] += earned[id] || 0;
+        series[id].push(cum[id]);
+      });
+    });
+
+    return ids.map(function (id, i) {
+      return { id: id, name: nameOf(d, id), color: trendColor(i), points: series[id] };
+    });
+  }
+
+  function toggleTrend(id) {
+    var i = trendSelected.indexOf(id);
+    if (i === -1) trendSelected.push(id); else trendSelected.splice(i, 1);
+    renderTrend(seasonData);
+  }
+
+  function buildLineChartSVG(series, roundCount) {
+    var W = 760, H = 320, padL = 44, padR = 16, padT = 16, padB = 30;
+    var plotW = W - padL - padR, plotH = H - padT - padB;
+
+    var allVals = [0];
+    series.forEach(function (s) { s.points.forEach(function (v) { allVals.push(v); }); });
+    var lo = Math.min.apply(null, allVals), hi = Math.max.apply(null, allVals);
+    if (lo === hi) { hi = lo + 1; }
+    var pad = (hi - lo) * 0.08;
+    lo -= pad; hi += pad;
+
+    function x(i) { return padL + (roundCount <= 1 ? 0 : (i / (roundCount - 1)) * plotW); }
+    function y(v) { return padT + plotH - ((v - lo) / (hi - lo)) * plotH; }
+
+    var svg = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Cumulative points by round">';
+
+    // gridlines + y labels
+    var ticks = 4;
+    for (var t = 0; t <= ticks; t++) {
+      var val = lo + (hi - lo) * (t / ticks);
+      var yy = y(val);
+      svg += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + yy.toFixed(1) + '" y2="' + yy.toFixed(1) + '" class="chart-grid" />';
+      svg += '<text x="' + (padL - 8) + '" y="' + (yy + 4).toFixed(1) + '" class="chart-axis-y" text-anchor="end">' + Math.round(val) + "</text>";
+    }
+
+    // x labels
+    var xStep = roundCount > 14 ? 2 : 1;
+    for (var i = 0; i < roundCount; i += xStep) {
+      svg += '<text x="' + x(i).toFixed(1) + '" y="' + (H - 8) + '" class="chart-axis-x" text-anchor="middle">' + (i + 1) + "</text>";
+    }
+
+    series.forEach(function (s) {
+      var pts = s.points.map(function (v, i) { return x(i).toFixed(1) + "," + y(v).toFixed(1); }).join(" ");
+      svg += '<polyline points="' + pts + '" fill="none" stroke="' + s.color + '" stroke-width="2.5" ' +
+        'stroke-linejoin="round" stroke-linecap="round"><title>' + esc(s.name) + ": " +
+        s.points[s.points.length - 1] + " pts</title></polyline>";
+      var lastI = s.points.length - 1;
+      svg += '<circle cx="' + x(lastI).toFixed(1) + '" cy="' + y(s.points[lastI]).toFixed(1) + '" r="3.5" fill="' + s.color + '" />';
+    });
+
+    svg += "</svg>";
+    return svg;
+  }
+
+  function renderTrend(d) {
+    var section = document.getElementById("block-trend");
+    if (!d.rounds.length || !d.standings.length) { if (section) section.hidden = true; return; }
+    if (section) section.hidden = false;
+
+    var all = computeTrendSeries(d);
+
+    var legend = $("trendLegend");
+    legend.innerHTML = "";
+    var chipRow = el("div", "trend-chips");
+    all.forEach(function (s) {
+      var on = trendSelected.indexOf(s.id) !== -1;
+      var b = el("button", "trend-chip" + (on ? " is-on" : ""));
+      b.type = "button";
+      b.innerHTML = '<span class="dot" style="background:' + s.color + '"></span>' + esc(s.name);
+      b.addEventListener("click", function () { toggleTrend(s.id); });
+      chipRow.appendChild(b);
+    });
+    legend.appendChild(chipRow);
+
+    var controls = el("div", "trend-controls");
+    var allBtn = el("button", "trend-control", "Select all");
+    allBtn.type = "button";
+    allBtn.addEventListener("click", function () { trendSelected = all.map(function (s) { return s.id; }); renderTrend(seasonData); });
+    var clearBtn = el("button", "trend-control", "Clear");
+    clearBtn.type = "button";
+    clearBtn.addEventListener("click", function () { trendSelected = []; renderTrend(seasonData); });
+    controls.appendChild(allBtn);
+    controls.appendChild(clearBtn);
+    legend.appendChild(controls);
+
+    var chartHost = $("trendChart");
+    var shown = all.filter(function (s) { return trendSelected.indexOf(s.id) !== -1; });
+    if (!shown.length) {
+      chartHost.innerHTML = "";
+      chartHost.appendChild(empty("Pick at least one player above to plot."));
+      return;
+    }
+    chartHost.innerHTML = '<div class="chart-frame">' + buildLineChartSVG(shown, d.rounds.length) + "</div>";
+  }
+
   /* ---- tracks / rounds (filterable) ---- */
 
   function trackRow(s, pos, showRound, highlightSet) {
@@ -566,9 +728,35 @@
     return row;
   }
 
+  var trackSort = "points-desc";
+  var TRACK_SORTS = [
+    ["points-desc", "Top scoring"],
+    ["points-asc", "Lowest scoring"],
+    ["az", "A\u2013Z"],
+    ["recent", "Most recent"],
+  ];
+
+  function renderTracksSort() {
+    var host = $("tracksSort");
+    if (!host) return;
+    host.innerHTML = "";
+    TRACK_SORTS.forEach(function (pair) {
+      var mode = pair[0], label = pair[1];
+      var b = el("button", "sort-pill" + (trackSort === mode ? " is-active" : ""), esc(label));
+      b.type = "button";
+      b.addEventListener("click", function () {
+        if (trackSort === mode) return;
+        trackSort = mode;
+        renderTracksSort();
+        renderTopTracks(seasonData);
+      });
+      host.appendChild(b);
+    });
+  }
+
   function renderTopTracks(d) {
     var all = [];
-    d.rounds.forEach(function (r) { all = all.concat(r.songs); });
+    d.rounds.forEach(function (r, ri) { r.songs.forEach(function (s) { all.push(s); s.__roundIndex = ri; }); });
     if (selected.length) {
       var idSet = {};
       selected.forEach(function (id) { idSet[id] = true; });
@@ -578,9 +766,27 @@
     host.innerHTML = "";
     attachFilterTag(host, seasonData);
     if (!all.length) { host.appendChild(empty(selected.length ? "No tracks from this selection." : "No tracks submitted yet.")); return; }
-    var top = all.slice().sort(function (a, b) { return b.points - a.points; }).slice(0, 20);
+
+    var list = all.slice();
+    var capped = true;
+    if (trackSort === "points-desc") {
+      list.sort(function (a, b) { return b.points - a.points; });
+    } else if (trackSort === "points-asc") {
+      list.sort(function (a, b) { return a.points - b.points; });
+    } else if (trackSort === "az") {
+      list.sort(function (a, b) { return a.title.localeCompare(b.title); });
+      capped = false;
+    } else if (trackSort === "recent") {
+      list.sort(function (a, b) { return b.__roundIndex - a.__roundIndex || b.points - a.points; });
+      capped = false;
+    }
+    var shown = capped ? list.slice(0, 20) : list;
+
+    var note = el("p", "block-note",
+      capped ? "Showing " + shown.length + " of " + list.length + " tracks." : "Showing all " + list.length + " tracks.");
+    host.appendChild(note);
     var box = el("div", "framed");
-    top.forEach(function (s, i) { box.appendChild(trackRow(s, i + 1, true)); });
+    shown.forEach(function (s, i) { box.appendChild(trackRow(s, i + 1, true)); });
     host.appendChild(box);
   }
 
@@ -802,17 +1008,22 @@
         var index = res[0], d = res[1];
         seasonData = d;
         selected = [];
+        trendSelected = d.standings.slice(0, 3).map(function (p) { return p.id; });
+        trackSort = "points-desc";
         renderNav(index, key);
         document.title = "PFML - " + d.label;
         renderHero(d);
         renderStandings(d);
         renderFocus(d);
         renderHighlights(d);
+        renderTrend(d);
+        renderTracksSort();
         renderTopTracks(d);
         renderRounds(d);
         renderTaste(d);
         renderVoters(d);
         renderArtists(d);
+        renderJumpNav(d);
       })
       .catch(function (err) {
         console.error(err);
@@ -823,6 +1034,82 @@
       });
   }
 
+  /* =====================================================================
+     CAREER PAGE
+     ===================================================================== */
+
+  function careerTile(label, valueHtml, metaHtml) {
+    var n = el("div", "hl");
+    n.innerHTML = '<p class="hl-label">' + label + "</p>" +
+      '<div class="hl-value">' + valueHtml + "</div>" +
+      (metaHtml ? '<div class="hl-meta">' + metaHtml + "</div>" : "");
+    return n;
+  }
+
+  function renderCareerHighlights(c) {
+    var h = c.highlights || {};
+    var g = el("div", "hl-grid");
+    if (h.mostPoints) g.appendChild(careerTile("Most career points", esc(h.mostPoints.name), h.mostPoints.points + " points total"));
+    if (h.mostWins) g.appendChild(careerTile("Most rounds won", esc(h.mostWins.name), h.mostWins.roundsWon + " round wins"));
+    if (h.mostPodiums) g.appendChild(careerTile("Most podiums", esc(h.mostPodiums.name), h.mostPodiums.podiums + " top-3 finishes"));
+    if (h.mostSeasons) g.appendChild(careerTile("Most seasons played", esc(h.mostSeasons.name), h.mostSeasons.seasonsPlayed + " seasons"));
+    if (h.bestSingleSeason) g.appendChild(careerTile("Best single season", esc(h.bestSingleSeason.name), h.bestSingleSeason.points + " points in " + esc(h.bestSingleSeason.season)));
+    setBlock("highlights", g);
+  }
+
+  function renderCareerStandings(c) {
+    var host = $("standings");
+    host.innerHTML = "";
+    if (!c.players.length) { host.appendChild(empty("No completed seasons yet.")); return; }
+
+    var colCount = c.seasons.length + 3; // seasons + total + won + top-3
+    var gridStyle = "grid-template-columns:1.6fr repeat(" + colCount + ",1fr);";
+
+    var head = el("div", "vrow head");
+    head.setAttribute("style", gridStyle);
+    var headHtml = "<div>Player</div>";
+    c.seasons.forEach(function (s) { headHtml += '<div class="num">' + esc(s.label.replace("Season ", "S")) + "</div>"; });
+    headHtml += '<div class="num">Total</div><div class="num">Won</div><div class="num">Top-3</div>';
+    head.innerHTML = headHtml;
+    var box = el("div", "framed career-table");
+    box.appendChild(head);
+
+    c.players.forEach(function (p, i) {
+      var row = el("div", "vrow" + (i === 0 ? " is-leader" : ""));
+      row.setAttribute("style", gridStyle);
+      var rowHtml = '<div class="vname">' + (i + 1) + ". " + esc(p.name) + "</div>";
+      c.seasons.forEach(function (s) {
+        var pts = p.bySeason[s.key];
+        rowHtml += '<div class="num">' + (pts == null ? "&ndash;" : pts) + "</div>";
+      });
+      rowHtml += '<div class="num"><b>' + p.totalPoints + "</b></div><div class=\"num\">" + p.roundsWon +
+        '</div><div class="num">' + p.podiums + "</div>";
+      row.innerHTML = rowHtml;
+      box.appendChild(row);
+    });
+    host.appendChild(box);
+  }
+
+  function initCareer() {
+    Promise.all([fetchJSON(DATA + "/index.json"), fetchJSON(DATA + "/career.json")])
+      .then(function (res) {
+        var index = res[0], c = res[1];
+        renderNav(index, "career");
+        var line = c.seasons.length
+          ? "Combined standings across " + c.seasons.length + " played " + plural(c.seasons.length, "season") + ": " +
+            c.seasons.map(function (s) { return s.label; }).join(", ") + "."
+          : "No seasons have finished a round yet.";
+        $("heroLine").textContent = line;
+        renderCareerHighlights(c);
+        renderCareerStandings(c);
+      })
+      .catch(function (err) {
+        console.error(err);
+        var l = $("heroLine");
+        if (l) l.textContent = "Career data didn't load. Check that site/data/career.json was built and deployed next to this page.";
+      });
+  }
+
   /* ---- boot ---- */
 
   var page = document.body.getAttribute("data-page");
@@ -830,5 +1117,7 @@
     initHome();
   } else if (page === "season") {
     initSeason(document.body.getAttribute("data-season-key"));
+  } else if (page === "career") {
+    initCareer();
   }
 })();

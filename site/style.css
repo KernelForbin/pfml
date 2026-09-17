@@ -85,6 +85,18 @@ a:hover { color: var(--magenta); }
 }
 .season-tab[aria-current="true"] .pip { background: var(--acid); box-shadow: 0 0 0 3px rgba(255,255,255,.3); }
 
+/* jump-to-section nav, second row of the same sticky top bar */
+.jumpnav {
+  display: flex; gap: 4px; overflow-x: auto; padding: 0 20px 10px;
+  -ms-overflow-style: none; scrollbar-width: none;
+}
+.jumpnav::-webkit-scrollbar { display: none; }
+.jump-link {
+  flex: 0 0 auto; font-family: "Inter", sans-serif; font-size: 0.82rem; font-weight: 500;
+  color: var(--muted); text-decoration: none; padding: 4px 10px; border-radius: 999px; white-space: nowrap;
+}
+.jump-link:hover { color: var(--magenta); background: var(--wash); }
+
 /* ---------- hero ---------- */
 
 .hero { padding-top: 46px; padding-bottom: 8px; }
@@ -361,6 +373,50 @@ table.taste td.nil { color: #C6BDCC; font-weight: 400; }
   text-transform: none;
 }
 .playlist-row { display: flex; flex-wrap: wrap; gap: 9px; }
+
+/* ---------- sort pills (Top tracks) ---------- */
+
+.sort-row { display: flex; flex-wrap: wrap; gap: 7px; margin: -6px 0 16px; }
+.sort-pill {
+  font-family: "Inter", sans-serif; font-size: 0.82rem; font-weight: 500; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 999px; padding: 6px 13px; background: var(--card); color: var(--muted);
+}
+.sort-pill:hover { color: var(--ink); border-color: rgba(158, 0, 196, 0.3); }
+.sort-pill.is-active { background: var(--magenta); border-color: var(--magenta); color: #fff; }
+
+/* ---------- points-over-time trend chart ---------- */
+
+.trend-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 10px; }
+button.trend-chip {
+  display: inline-flex; align-items: center; gap: 7px; font-family: "Inter", sans-serif; font-size: 0.83rem;
+  border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px 5px 8px; background: var(--card);
+  color: var(--muted); cursor: pointer; box-shadow: var(--shadow-sm);
+}
+button.trend-chip .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; opacity: 0.35; }
+button.trend-chip:hover { border-color: rgba(158, 0, 196, 0.3); color: var(--ink); }
+button.trend-chip.is-on { color: var(--ink); border-color: var(--border); background: var(--wash); }
+button.trend-chip.is-on .dot { opacity: 1; }
+
+.trend-controls { display: flex; gap: 14px; margin-bottom: 16px; }
+.trend-control {
+  font-family: "Inter", sans-serif; font-size: 0.82rem; color: var(--magenta); background: none; border: none;
+  cursor: pointer; padding: 2px 0; text-decoration: underline; text-underline-offset: 2px;
+}
+.trend-control:hover { color: var(--deep); }
+
+.chart-frame {
+  border: 1px solid var(--border); border-radius: var(--r); background: var(--card);
+  box-shadow: var(--shadow-sm); padding: 12px 8px;
+}
+.chart-frame svg { width: 100%; height: auto; display: block; }
+.chart-grid { stroke: var(--border-soft); stroke-width: 1; }
+.chart-axis-y, .chart-axis-x { font-size: 10px; fill: var(--muted); font-family: "Inter", sans-serif; }
+
+/* ---------- career table ---------- */
+/* column count varies with how many seasons have data, so the grid
+   template is set inline per row from JS (see renderCareerStandings)
+   rather than guessed here */
+.career-table .vrow.is-leader { background: var(--wash); }
 
 /* ---------- footer ---------- */
 
