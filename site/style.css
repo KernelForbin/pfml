@@ -112,6 +112,7 @@ a:hover { color: var(--magenta); }
 /* ---------- blocks ---------- */
 
 .block { padding-top: 44px; padding-bottom: 6px; }
+.block-first { padding-top: 46px; }
 .block h2 { margin: 0 0 5px; font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; }
 .block-note { margin: 0 0 18px; color: var(--muted); font-size: 0.9rem; max-width: 70ch; }
 .block h2 + div, .block-note + div { margin-top: 0; }
@@ -271,9 +272,22 @@ table.taste td.nil { color: #C6BDCC; font-weight: 400; }
 .season-card:hover { color: var(--ink); box-shadow: var(--shadow-md); transform: translateY(-2px); }
 .season-card.is-live { background: linear-gradient(165deg, #fff 0%, var(--wash) 130%); }
 .season-card-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.season-card-name-wrap { display: flex; align-items: center; gap: 9px; }
 .season-card-name { font-family: "Archivo", sans-serif; font-weight: 700; font-size: 1.28rem; letter-spacing: -0.01em; }
 .season-card-arrow { color: var(--magenta); font-size: 1.2rem; }
+.live-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--magenta); color: #fff; font-family: "Archivo", sans-serif;
+  font-weight: 700; font-size: 0.68rem; letter-spacing: 0.03em;
+  padding: 3px 9px 3px 7px; border-radius: 999px; line-height: 1.4;
+}
+.live-badge .pip { background: var(--acid); box-shadow: 0 0 0 2px rgba(255,255,255,.35); }
 .season-card-stats { margin-top: 10px; color: var(--muted); font-size: 0.88rem; }
+.season-card-round { margin-top: 6px; font-size: 0.88rem; }
+.season-card-round .phase {
+  display: inline-flex; align-items: center; font-weight: 600; color: var(--deep);
+  background: var(--wash); border-radius: 999px; padding: 2px 10px; margin-left: 6px; font-size: 0.8rem;
+}
 .season-card-leader { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-soft); font-size: 0.9rem; }
 .season-card-leader .lbl { color: var(--muted); display: block; font-size: 0.76rem; margin-bottom: 2px; }
 .season-card-leader .val { font-weight: 700; font-family: "Archivo", sans-serif; }

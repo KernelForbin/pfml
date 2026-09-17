@@ -48,6 +48,27 @@ template edits needed.
    and its `seasonN.html` page, and adds it to the home page automatically.
 3. Commit and push. The Action rebuilds everything and redeploys.
 
+## The "live" season on the home page
+
+The home page marks whichever season is last by number as the current one.
+If it has at least one round, its card shows a LIVE badge, the round it's
+on, a phase, and a start date. All of that comes from inference, not a
+field Music League's export states outright, worth knowing before you trust
+it blindly:
+
+- **Started** is the `Created` timestamp of that season's first round.
+- **Round N** is just "however many rounds exist so far," on the assumption
+  the most recently created one is the one currently in play.
+- **Phase** (Song Selection vs. Voting) is guessed from whether anyone has
+  a row in `votes.csv` for that round yet, since a voter only appears there
+  once voting has opened, even a zero-point comment-only vote counts. There
+  is no field in the export for phase or for submission/voting deadlines,
+  so this is the best signal available, not a fact the CSV states.
+
+A season with zero rounds in its CSVs (a freshly created `data/seasonN/`
+with only `competitors.csv`) shows "not started yet" instead, no LIVE badge,
+no guessed round or phase, since there is nothing to infer from.
+
 ## Playlists on the home page
 
 `site/data/playlists.json` is the one file in `site/data/` that `build.py`

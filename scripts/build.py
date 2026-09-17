@@ -244,6 +244,15 @@ def build_season(folder: Path, season_key: str, label: str):
             "songs": songs,
             "margin": margin,
             "voterCount": len(electorate),
+            "submissionCount": len(round_subs),
+            # Music League's export has no explicit phase field. A voter
+            # only appears in votes.csv for a round once voting has opened
+            # for it (even a zero-point comment-only row means they were
+            # able to vote), so "someone has a vote row for this round" is
+            # the best available signal that it left song-selection and
+            # entered voting. This is an inference, not a fact the export
+            # states outright.
+            "hasVotingActivity": len(electorate) > 0,
         })
 
     # ---- standings ----
@@ -251,6 +260,23 @@ def build_season(folder: Path, season_key: str, label: str):
     standings.sort(key=lambda p: (-p["points"], -p["roundsWon"], p["name"]))
     for p in standings:
         p["avgPerSubmission"] = round(p["points"] / p["submissions"], 1)
+
+    # ---- season timeline ----
+    # startedAt: the Created timestamp of the first round, straight from
+    # rounds.csv. liveRound describes whichever round was created most
+    # recently, on the assumption that's the one currently in play; its
+    # "phase" is the hasVotingActivity heuristic explained above, not a
+    # field the export provides directly.
+    started_at = rounds_out[0]["created"] if rounds_out else None
+    live_round = None
+    if rounds_out:
+        latest = rounds_out[-1]
+        live_round = {
+            "number": len(rounds_out),
+            "name": latest["name"],
+            "submissionCount": latest["submissionCount"],
+            "phase": "Voting" if latest["hasVotingActivity"] else "Song Selection",
+        }
 
     # ---- voting style ----
     voters_out = []
@@ -354,6 +380,8 @@ def build_season(folder: Path, season_key: str, label: str):
         "songCount": len(all_songs),
         "voteRowCount": len(vote_rows),
         "scoringVoteCount": scoring_votes,
+        "startedAt": started_at,
+        "liveRound": live_round,
     }
 
 
@@ -387,6 +415,8 @@ def main():
             "playerCount": len(data["competitors"]),
             "leaderName": leader["name"] if leader else None,
             "leaderPoints": leader["points"] if leader else None,
+            "startedAt": data["startedAt"],
+            "liveRound": data["liveRound"],
         })
 
         if template:

@@ -93,21 +93,45 @@
      HOME PAGE
      ===================================================================== */
 
-  function seasonCard(s) {
-    var a = el("a", "season-card" + (s.key === window.__pfmlIndex.currentSeason ? " is-live" : ""));
+  function fmtDate(iso) {
+    if (!iso) return null;
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return null;
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  function seasonCard(s, isLive) {
+    var a = el("a", "season-card" + (isLive ? " is-live" : ""));
     a.href = s.key + ".html";
+
+    var nameHtml = '<div class="season-card-name-wrap"><span class="season-card-name">' + esc(s.label) + "</span>" +
+      (isLive ? '<span class="live-badge"><span class="pip" aria-hidden="true"></span>Live</span>' : "") + "</div>";
+
     var statLine = s.roundCount
       ? s.roundCount + " " + plural(s.roundCount, "round") + " &middot; " + s.songCount + " tracks &middot; " + s.playerCount + " players"
       : s.playerCount + " players &middot; not started yet";
+
+    var roundLine = "";
+    if (isLive && s.liveRound) {
+      roundLine = '<div class="season-card-round">Round ' + s.liveRound.number + ": " + esc(s.liveRound.name) +
+        '<span class="phase">' + esc(s.liveRound.phase) + " phase</span></div>";
+    }
+    var startedLine = "";
+    if (isLive && s.startedAt) {
+      var d = fmtDate(s.startedAt);
+      if (d) startedLine = '<div class="season-card-round">Started ' + d + "</div>";
+    }
+
     var leaderHtml = "";
     if (s.leaderName) {
-      leaderHtml = '<div class="season-card-leader"><span class="lbl">Leading</span>' +
+      var label = isLive ? "Leading" : "Winner";
+      leaderHtml = '<div class="season-card-leader"><span class="lbl">' + label + '</span>' +
         '<div class="val">' + esc(s.leaderName) + ' <span class="pts">' + s.leaderPoints + ' pts</span></div></div>';
     }
+
     a.innerHTML =
-      '<div class="season-card-top"><span class="season-card-name">' + esc(s.label) + "</span>" +
-      '<span class="season-card-arrow">&rarr;</span></div>' +
-      '<div class="season-card-stats">' + statLine + "</div>" + leaderHtml;
+      '<div class="season-card-top">' + nameHtml + '<span class="season-card-arrow">&rarr;</span></div>' +
+      '<div class="season-card-stats">' + statLine + "</div>" + roundLine + startedLine + leaderHtml;
     return a;
   }
 
@@ -155,7 +179,10 @@
       if (!index.seasons.length) {
         setBlock("seasonCards", empty("No seasons yet."));
       } else {
-        index.seasons.slice().reverse().forEach(function (s) { grid.appendChild(seasonCard(s)); });
+        index.seasons.slice().reverse().forEach(function (s) {
+          var isLive = s.key === index.currentSeason && s.roundCount > 0;
+          grid.appendChild(seasonCard(s, isLive));
+        });
         setBlock("seasonCards", grid);
       }
       return fetchJSON(DATA + "/playlists.json").catch(function () { return null; });
