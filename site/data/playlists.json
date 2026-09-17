@@ -1,0 +1,29 @@
+{
+  "leagueWide": [
+    { "label": "PFML - All Tracks Submitted", "url": null },
+    { "label": "PFML - All Podium Tracks", "url": null }
+  ],
+  "seasons": [
+    {
+      "season": "Season 1",
+      "items": [
+        { "label": "PFML - S1 - All Submissions", "url": null },
+        { "label": "PFML - S1 - Podium Tracks", "url": null }
+      ]
+    },
+    {
+      "season": "Season 2",
+      "items": [
+        { "label": "PFML - S2 - All Submissions", "url": null },
+        { "label": "PFML - S2 - Podium Tracks", "url": null }
+      ]
+    },
+    {
+      "season": "Season 3",
+      "items": [
+        { "label": "PFML - S3 - All Submissions", "url": null },
+        { "label": "PFML - S3 - Podium Tracks", "url": null }
+      ]
+    }
+  ]
+}

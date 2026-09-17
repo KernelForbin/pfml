@@ -5,32 +5,64 @@ from Music League's own CSV exports. Live at https://pfml.fun
 
 ## How it works
 
-Raw CSV exports go in `data/seasonN/`. A Python script turns them into JSON,
-and the site reads that JSON. There is no database, no backend, and no
-Spotify API: every Spotify link is a plain `open.spotify.com` URL built from
-IDs already present in the export.
+Raw CSV exports go in `data/seasonN/`. A Python script turns them into JSON
+and a static HTML page per season, and the site reads that JSON. There is no
+database, no backend, and no Spotify API: every Spotify link is a plain
+`open.spotify.com` URL built from IDs already present in the export.
 
 ```
-data/season1/        raw Music League export (4 CSVs)
+data/season1/            raw Music League export (4 CSVs)
 data/season2/
 data/season3/
-scripts/build.py     CSV -> JSON, standard library only
-site/                everything GitHub Pages serves
-  index.html
+scripts/build.py         CSV -> JSON + season1.html, season2.html, ...
+site/                    everything GitHub Pages serves
+  index.html             home page: season cards + playlists, pfml.fun
+  season.template.html   template build.py fills in per season
+  season1.html           generated, one page per season, own URL
+  season2.html
+  season3.html
   style.css
-  app.js
-  data/*.json        generated, committed for convenience
+  app.js                 shared by the home page and every season page
+  data/
+    index.json           generated: season list + each leader
+    season1.json          generated
+    season2.json
+    season3.json
+    playlists.json       hand-maintained, see below, NOT touched by build.py
   CNAME
 ```
+
+`index.html` is the site's home page (`pfml.fun`): a card per season linking
+to that season's own page, plus the playlists section. Each `seasonN.html`
+is a full standings/rounds/stats dashboard for just that season, with its
+own URL and its own `<title>` ("PFML - Season 1", etc.), generated fresh on
+every build from `season.template.html`, so a new season gets a page with no
+template edits needed.
 
 ## Adding a new export
 
 1. Export the season from Music League.
 2. Drop the four CSVs into `data/seasonN/`, overwriting the old ones. For a
    brand new season, make a new `data/seasonN/` folder; the build discovers
-   season folders by name and orders them numerically, so nothing else needs
-   editing.
-3. Commit and push. The Action rebuilds the JSON and redeploys.
+   season folders by name and orders them numerically, generates its JSON
+   and its `seasonN.html` page, and adds it to the home page automatically.
+3. Commit and push. The Action rebuilds everything and redeploys.
+
+## Playlists on the home page
+
+`site/data/playlists.json` is the one file in `site/data/` that `build.py`
+never touches, it's yours to edit directly. It holds the league-wide and
+per-season playlist links shown on the home page. Each entry looks like:
+
+```json
+{ "label": "PFML - S1 - All Submissions", "url": null }
+```
+
+`url: null` renders as a "coming soon" chip with no link. Fill in a real
+`https://open.spotify.com/playlist/...` URL and it becomes a live link on
+the next deploy. Adding a Season 4 group here is manual, since these are
+curated meta-playlists you build yourself, not something derivable from the
+CSV export the way round playlists are.
 
 To preview locally before pushing:
 
