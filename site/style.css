@@ -215,6 +215,17 @@ a:hover { color: var(--magenta); }
 }
 .pill.is-disabled:hover { box-shadow: none; transform: none; }
 
+/* resting-state hint that a playlist chip is a real, clickable link, not
+   just a hover effect: a faint magenta halo and a barely-tinted border */
+.pill.pill-live {
+  border-color: rgba(158, 0, 196, 0.28);
+  box-shadow: 0 0 0 3px rgba(158, 0, 196, 0.08), var(--shadow-sm);
+}
+.pill.pill-live:hover {
+  border-color: rgba(158, 0, 196, 0.45);
+  box-shadow: 0 0 0 4px rgba(158, 0, 196, 0.12), var(--shadow-md);
+}
+
 /* ---------- taste matrix ---------- */
 
 .taste-scroll {
