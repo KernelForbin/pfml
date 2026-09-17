@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-09-17 (follow-up)
+
+- **Removed Top Tracks sorting.** Back to a plain top-20-by-points list.
+- **Points-over-time chart now defaults to Select All**, and follows the
+  Standings player selection when one is active (clear the Standings
+  selection and it goes back to everyone). You can still adjust the
+  chart's own legend afterward; it only re-syncs when the Standings
+  selection itself changes.
+- **Removed "Most seasons played" from Career highlights** — with most of
+  the roster having played every season, it wasn't distinguishing anyone.
+- **Added Career Score**, a new column on the Career page and the new
+  default sort: total points + 10 per round won + 5 per podium finish
+  (podiums include the win, so a win is worth +15 total). The 10/5
+  weighting is grounded in the real per-round data, not picked at random,
+  see the README's Career Score section for the numbers behind it.
+- **Career all-time standings table is now sortable** by clicking any
+  column header, including each season's point column and the new Career
+  Score column. Click again to flip direction.
+
 ## 2026-09-17
 
 - **Career page** (`career.html`, linked from the top nav on every page):
