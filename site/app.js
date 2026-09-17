@@ -1142,7 +1142,8 @@
         list.insertAdjacentHTML("beforeend",
           '<span class="cmt-word" title="' + esc(c.name) + " used it " + c.distinctiveWord.uses +
           " times, " + c.distinctiveWord.vsLeague + '&times; the league\'s rate">' +
-          esc(c.name) + ' <b>&ldquo;' + esc(c.distinctiveWord.word) + '&rdquo;</b></span>');
+          esc(c.name) + ' <b>&ldquo;' + esc(c.distinctiveWord.word) + '&rdquo;</b> &times;' +
+          c.distinctiveWord.uses + '</span>');
       });
       wbox.appendChild(list);
       host.appendChild(wbox);
@@ -1422,7 +1423,8 @@
         list.insertAdjacentHTML("beforeend",
           '<span class="cmt-word" title="' + esc(p.name) + " used it " + p.distinctiveWord.uses +
           " times, " + p.distinctiveWord.vsLeague + '&times; the league\'s rate">' +
-          esc(p.name) + ' <b>&ldquo;' + esc(p.distinctiveWord.word) + '&rdquo;</b></span>');
+          esc(p.name) + ' <b>&ldquo;' + esc(p.distinctiveWord.word) + '&rdquo;</b> &times;' +
+          p.distinctiveWord.uses + '</span>');
       });
       wbox.appendChild(list);
       host.appendChild(wbox);
