@@ -1,20 +1,20 @@
 {
   "leagueWide": [
-    { "label": "PFML - All Tracks Submitted", "url": null },
+    { "label": "PFML - All Tracks Submitted", "url": "https://open.spotify.com/playlist/2Cy2JfBNmgF342xiaNPIyv?si=T2x04braTl6_4qSOGStz5w" },
     { "label": "PFML - All Podium Tracks", "url": null }
   ],
   "seasons": [
     {
       "season": "Season 1",
       "items": [
-        { "label": "PFML - S1 - All Submissions", "url": null },
-        { "label": "PFML - S1 - Podium Tracks", "url": null }
+        { "label": "PFML - S1 - All Submissions", "url": "https://open.spotify.com/playlist/6b8pQ7JwdDNnlYjzNWhe6s?si=Jxj2oKUHQmmnQCh_XnP6pQ" },
+        { "label": "PFML - S1 - Podium Tracks", "url": "https://open.spotify.com/playlist/2rxwhIkqzwZx89du4srH6m?si=WXdsmolfSC6raHZKfP_MXA" }
       ]
     },
     {
       "season": "Season 2",
       "items": [
-        { "label": "PFML - S2 - All Submissions", "url": null },
+        { "label": "PFML - S2 - All Submissions", "url": "https://open.spotify.com/playlist/1u9ztfLu6hXlq0ZwyBOwuC?si=Xzc0XNsRT6am9Zazvxjz3g" },
         { "label": "PFML - S2 - Podium Tracks", "url": null }
       ]
     },
