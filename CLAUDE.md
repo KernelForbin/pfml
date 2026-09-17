@@ -16,16 +16,23 @@ have to be told by hand.
 
 ## Before you push, check this
 
-Earlier in this project, `git init` accidentally ran in a parent folder
-(`Downloads`) instead of inside the actual `pfml` project folder, so a push
-briefly carried two unrelated personal projects into the public PFML repo
-on GitHub. The repo was deleted and recreated to fix it. Before any push:
+`git init` once ran in a parent folder (`Downloads`) instead of inside the
+`pfml` project folder, so a push briefly carried two unrelated personal
+projects into the public PFML repo on GitHub. The repo was deleted and
+recreated to fix it.
+
+That stray repo is gone as of 2026-09-17: the `.git` in the home folder was
+deleted, after its history was bundled and the two trees that survived only
+inside it were extracted back to `Downloads`. This clone now lives in its
+own folder, `code/pfml`, well outside `Downloads`. So the hazard is fixed,
+not just documented, but nothing stops it recurring, so keep the habits:
 
 - `git remote -v` — confirm origin is `https://github.com/KernelForbin/pfml.git`
 - `git status` — confirm the changed files are only inside this project,
   nothing from a parent directory
 - Run git commands from inside the `pfml` folder itself, never a level
   above it
+- Never run `git init` anywhere but the project folder you mean to track
 
 ## No automated tests ship in this repo
 
