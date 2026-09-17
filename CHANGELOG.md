@@ -1,5 +1,41 @@
 # Changelog
 
+## 2026-09-17 (follow-up 5)
+
+- **Comment stats, season and career.** A new Comments section on every
+  season page (after Voting style, in the jump nav) and an all-time one on
+  the Career page. Per player: comments left, comment rate, mean and median
+  words, zero-point comments, exclamation / question / ALL-CAPS / emoji
+  rates, vocabulary richness, and the word they reach for more than anyone
+  else. Plus a directed comment matrix — who says something to whom, out of
+  the chances they had — sharing the taste matrix's denominator and its
+  5-chance minimum, which is where "silent treatment" comes from. The
+  season section follows the Standings player selection exactly like Top
+  Tracks and Voting style; a season with no rounds hides it, so Season 3
+  still renders clean.
+- **Vocabulary richness is a chunked (mean segmental) type-token ratio,
+  not a raw unique/total.** The raw ratio falls as a corpus grows, so
+  ranking on it mostly ranks who wrote least: on this data it put the
+  player with 813 words first and the player with 13,549 last, almost
+  perfectly inverted. It's now measured on 500-word chunks and averaged so
+  everyone is compared over the same amount of text. The raw number is
+  still in the JSON for reference; nothing ranks on it.
+- **Submitter notes are counted separately from vote comments.** A note on
+  your own submission is a different act from reacting to someone else's,
+  and much rarer (60 of 316 submissions in Season 1 against 2,194 vote
+  comments), so mixing them would have quietly distorted every rate.
+- **`scripts/enrich_comments.py`** — a standalone local tool that labels
+  comments *witty / funny / rude / appreciative / storytelling /
+  analytical* via the Claude API. Nothing automatic runs it: not
+  `build.py`, not the Action, which has no API key and must never need
+  one. It writes `data/comment_sentiment.json`; `build.py` merges that
+  file if it exists and builds exactly as before if it doesn't. Labels are
+  never inferred at build time, and an unrecognised label is dropped
+  rather than rendered. `--estimate` prints a measured cost before
+  anything is spent; re-runs only pay for comments that aren't already
+  labelled. Still stdlib-only for the build and dependency-free for the
+  site — the SDK is a local-only install for that one script.
+
 ## 2026-09-17 (follow-up 4)
 
 - **Standing over time is now the default Performance over time metric**,
