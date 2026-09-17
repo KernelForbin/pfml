@@ -615,6 +615,12 @@
     // coasting sits low; someone who started strong and faded shows a
     // rising-then-falling line, which raw cumulative totals can't show
     // because they never go down.
+    //
+    // mode "standing": leaderboard position after each round's points are
+    // added in, by cumulative points (competition ranking: a tie shares
+    // the same place and the next distinct total skips accordingly, e.g.
+    // 1, 1, 3, rather than manufacturing a tiebreak). Rank 1 is best, so
+    // the chart draws it inverted, low at the top.
     var ids = d.standings.map(function (p) { return p.id; });
     var cum = {};
     ids.forEach(function (id) { cum[id] = 0; });
@@ -627,14 +633,20 @@
       r.songs.forEach(function (s) { earned[s.submitterId] = (earned[s.submitterId] || 0) + s.points; });
       var winScore = r.songs.length ? r.songs[0].points : 0;
       cumWinScore += winScore;
-      ids.forEach(function (id) {
-        cum[id] += earned[id] || 0;
-        if (mode === "ratio") {
-          series[id].push(cumWinScore > 0 ? (cum[id] / cumWinScore) * 100 : 0);
-        } else {
-          series[id].push(cum[id]);
-        }
-      });
+      ids.forEach(function (id) { cum[id] += earned[id] || 0; });
+
+      if (mode === "standing") {
+        var order = ids.slice().sort(function (a, b) { return cum[b] - cum[a]; });
+        var rankOf = {};
+        order.forEach(function (id, i) {
+          rankOf[id] = (i > 0 && cum[order[i - 1]] === cum[id]) ? rankOf[order[i - 1]] : i + 1;
+        });
+        ids.forEach(function (id) { series[id].push(rankOf[id]); });
+      } else {
+        ids.forEach(function (id) {
+          series[id].push(mode === "ratio" ? (cumWinScore > 0 ? (cum[id] / cumWinScore) * 100 : 0) : cum[id]);
+        });
+      }
     });
 
     return ids.map(function (id, i) {
@@ -648,32 +660,62 @@
     renderTrend(seasonData);
   }
 
-  function buildLineChartSVG(series, roundCount, percent) {
+  function buildLineChartSVG(series, roundCount, mode, fieldSize) {
     var W = 760, H = 320, padL = 44, padR = 16, padT = 16, padB = 30;
     var plotW = W - padL - padR, plotH = H - padT - padB;
+    var percent = mode === "ratio";
+    var standing = mode === "standing";
 
-    var allVals = [0];
-    series.forEach(function (s) { s.values.forEach(function (v) { allVals.push(v); }); });
-    var lo = Math.min.apply(null, allVals), hi = Math.max.apply(null, allVals);
-    if (percent) hi = Math.max(hi, 100); // keep 100% on the axis even if nobody's hit it yet
+    var lo, hi;
+    if (standing) {
+      // The axis is the whole field's rank range, 1..fieldSize, not just
+      // whichever players are toggled on: a filtered view of the middle
+      // of the pack shouldn't stretch to fill 1..k and look like the top.
+      lo = 1; hi = Math.max(fieldSize || 1, 1);
+    } else {
+      var allVals = [0];
+      series.forEach(function (s) { s.values.forEach(function (v) { allVals.push(v); }); });
+      lo = Math.min.apply(null, allVals); hi = Math.max.apply(null, allVals);
+      if (percent) hi = Math.max(hi, 100); // keep 100% on the axis even if nobody's hit it yet
+    }
     if (lo === hi) { hi = lo + 1; }
-    var pad = (hi - lo) * 0.08;
-    lo -= pad; hi += pad;
+    if (!standing) {
+      var pad = (hi - lo) * 0.08;
+      lo -= pad; hi += pad;
+    }
 
     function x(i) { return padL + (roundCount <= 1 ? 0 : (i / (roundCount - 1)) * plotW); }
-    function y(v) { return padT + plotH - ((v - lo) / (hi - lo)) * plotH; }
+    // Rank 1 is best, so standing draws inverted: low value at the top.
+    function y(v) {
+      var t = (v - lo) / (hi - lo);
+      return standing ? (padT + t * plotH) : (padT + plotH - t * plotH);
+    }
 
     var svg = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' +
-      (percent ? "Performance versus field by round" : "Cumulative points by round") + '">';
+      (percent ? "Performance versus field by round" : standing ? "Leaderboard standing by round" : "Cumulative points by round") + '">';
 
     // gridlines + y labels
-    var ticks = 4;
-    for (var t = 0; t <= ticks; t++) {
-      var val = lo + (hi - lo) * (t / ticks);
-      var yy = y(val);
-      svg += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + yy.toFixed(1) + '" y2="' + yy.toFixed(1) + '" class="chart-grid" />';
-      var label = percent ? Math.round(val) + "%" : Math.round(val);
-      svg += '<text x="' + (padL - 8) + '" y="' + (yy + 4).toFixed(1) + '" class="chart-axis-y" text-anchor="end">' + label + "</text>";
+    if (standing) {
+      var rankStep = Math.max(1, Math.round(hi / 6));
+      for (var rr = 1; rr <= hi; rr += rankStep) {
+        var yy2 = y(rr);
+        svg += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + yy2.toFixed(1) + '" y2="' + yy2.toFixed(1) + '" class="chart-grid" />';
+        svg += '<text x="' + (padL - 8) + '" y="' + (yy2 + 4).toFixed(1) + '" class="chart-axis-y" text-anchor="end">#' + rr + "</text>";
+      }
+      if ((hi - 1) % rankStep !== 0) {
+        var yLast = y(hi);
+        svg += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + yLast.toFixed(1) + '" y2="' + yLast.toFixed(1) + '" class="chart-grid" />';
+        svg += '<text x="' + (padL - 8) + '" y="' + (yLast + 4).toFixed(1) + '" class="chart-axis-y" text-anchor="end">#' + hi + "</text>";
+      }
+    } else {
+      var ticks = 4;
+      for (var t = 0; t <= ticks; t++) {
+        var val = lo + (hi - lo) * (t / ticks);
+        var yy = y(val);
+        svg += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + yy.toFixed(1) + '" y2="' + yy.toFixed(1) + '" class="chart-grid" />';
+        var label = percent ? Math.round(val) + "%" : Math.round(val);
+        svg += '<text x="' + (padL - 8) + '" y="' + (yy + 4).toFixed(1) + '" class="chart-axis-y" text-anchor="end">' + label + "</text>";
+      }
     }
 
     // x labels
@@ -685,7 +727,7 @@
     series.forEach(function (s) {
       var pts = s.values.map(function (v, i) { return x(i).toFixed(1) + "," + y(v).toFixed(1); }).join(" ");
       var lastV = s.values[s.values.length - 1];
-      var lastLabel = percent ? lastV.toFixed(1) + "%" : lastV + " pts";
+      var lastLabel = percent ? lastV.toFixed(1) + "%" : standing ? "#" + lastV : lastV + " pts";
       svg += '<polyline points="' + pts + '" fill="none" stroke="' + s.color + '" stroke-width="2.5" ' +
         'stroke-linejoin="round" stroke-linecap="round"><title>' + esc(s.name) + ": " + lastLabel + "</title></polyline>";
       var lastI = s.values.length - 1;
@@ -713,7 +755,7 @@
     legend.innerHTML = "";
 
     var modeRow = el("div", "chart-mode");
-    [["ratio", "Performance vs field"], ["points", "Cumulative points"]].forEach(function (pair) {
+    [["ratio", "Performance vs field"], ["points", "Cumulative points"], ["standing", "Standing over time"]].forEach(function (pair) {
       var b = el("button", trendMode === pair[0] ? "is-active" : "", esc(pair[1]));
       b.type = "button";
       b.addEventListener("click", function () { setTrendMode(pair[0]); });
@@ -724,6 +766,9 @@
     if (trendMode === "ratio") {
       legend.appendChild(el("p", "block-note chart-mode-note",
         "Cumulative points captured so far, as a percentage of what a player would have if they'd won every round to date. 100% means never off the pace; a falling line means someone who started strong is losing ground."));
+    } else if (trendMode === "standing") {
+      legend.appendChild(el("p", "block-note chart-mode-note",
+        "Each player's place on the leaderboard once that round's points are added in. #1 is the season leader at that point; a tie shares a place. The axis runs #1 at the top, so a rising line is climbing the standings and a falling line is slipping."));
     }
 
     var chipRow = el("div", "trend-chips");
@@ -755,7 +800,7 @@
       chartHost.appendChild(empty("Pick at least one player above to plot."));
       return;
     }
-    chartHost.innerHTML = '<div class="chart-frame">' + buildLineChartSVG(shown, d.rounds.length, trendMode === "ratio") + "</div>";
+    chartHost.innerHTML = '<div class="chart-frame">' + buildLineChartSVG(shown, d.rounds.length, trendMode, all.length) + "</div>";
   }
 
   /* ---- tracks / rounds (filterable) ---- */
