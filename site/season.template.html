@@ -19,6 +19,7 @@
     <a class="wordmark" href="./">PFML</a>
     <nav class="seasons" id="seasonTabs" aria-label="Season"></nav>
   </div>
+  <nav class="shell jumpnav" id="jumpNav" aria-label="Jump to section"></nav>
 </header>
 
 <main>
@@ -45,9 +46,17 @@
     <div id="highlights"></div>
   </section>
 
+  <section class="shell block" id="block-trend">
+    <h2>Points over time</h2>
+    <p class="block-note">Cumulative points after each round. Pick who to show.</p>
+    <div id="trendLegend"></div>
+    <div id="trendChart"></div>
+  </section>
+
   <section class="shell block" id="block-tracks">
     <h2>Top tracks</h2>
     <p class="block-note">Every track opens in Spotify. Artist and album names open a Spotify search for that name.</p>
+    <div class="sort-row" id="tracksSort"></div>
     <div id="topTracks"></div>
   </section>
 

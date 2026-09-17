@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PFML - Career</title>
+<meta name="description" content="Career standings across every PFML Music League season.">
+<meta name="theme-color" content="#9E00C4">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%239E00C4'/><path d='M30 74V26h22a14 14 0 010 28H44v20z' fill='%23F8F9FA'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-page="career">
+
+<header class="topbar">
+  <div class="shell topbar-inner">
+    <a class="wordmark" href="./">PFML</a>
+    <nav class="seasons" id="seasonTabs" aria-label="Season"></nav>
+  </div>
+</header>
+
+<main>
+  <section class="shell hero">
+    <h1>Career</h1>
+    <p class="hero-line" id="heroLine">Loading career data.</p>
+  </section>
+
+  <section class="shell block block-first" id="block-highlights">
+    <h2>Career highlights</h2>
+    <div id="highlights"></div>
+  </section>
+
+  <section class="shell block" id="block-standings">
+    <h2>All-time standings</h2>
+    <p class="block-note">Total points across every season played. Only seasons with at least one closed round count.</p>
+    <div id="standings"></div>
+  </section>
+</main>
+
+<footer class="shell site-footer">
+  <p>Built from Music League's CSV export. No Spotify account, API key or login involved: every link is a plain open.spotify.com URL.</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
