@@ -592,7 +592,7 @@
   /* ---- points-over-time trend chart ---- */
 
   var trendSelected = [];
-  var trendMode = "ratio"; // "ratio" (default) or "points"
+  var trendMode = "standing"; // "standing" (default), "ratio", or "points"
 
   function trendColor(i) {
     var hue = (i * 137.508) % 360;
@@ -660,11 +660,18 @@
     renderTrend(seasonData);
   }
 
-  function buildLineChartSVG(series, roundCount, mode, fieldSize) {
+  function trendValueLabel(mode, v) {
+    if (mode === "ratio") return v.toFixed(1) + "%";
+    if (mode === "standing") return "#" + v;
+    return v + " pts";
+  }
+
+  function buildLineChartSVG(series, roundNames, mode, fieldSize) {
     var W = 760, H = 320, padL = 44, padR = 16, padT = 16, padB = 30;
     var plotW = W - padL - padR, plotH = H - padT - padB;
     var percent = mode === "ratio";
     var standing = mode === "standing";
+    var roundCount = roundNames.length;
 
     var lo, hi;
     if (standing) {
@@ -725,13 +732,29 @@
     }
 
     series.forEach(function (s) {
+      var idAttr = esc(String(s.id));
       var pts = s.values.map(function (v, i) { return x(i).toFixed(1) + "," + y(v).toFixed(1); }).join(" ");
-      var lastV = s.values[s.values.length - 1];
-      var lastLabel = percent ? lastV.toFixed(1) + "%" : standing ? "#" + lastV : lastV + " pts";
-      svg += '<polyline points="' + pts + '" fill="none" stroke="' + s.color + '" stroke-width="2.5" ' +
-        'stroke-linejoin="round" stroke-linecap="round"><title>' + esc(s.name) + ": " + lastLabel + "</title></polyline>";
       var lastI = s.values.length - 1;
-      svg += '<circle cx="' + x(lastI).toFixed(1) + '" cy="' + y(lastV).toFixed(1) + '" r="3.5" fill="' + s.color + '" />';
+      var lastLabel = trendValueLabel(mode, s.values[lastI]);
+
+      svg += '<g class="trend-series">';
+      // Wide, invisible stroke so the line is easy to hover and click
+      // anywhere along its length, not just exactly on the 2.5px path.
+      svg += '<polyline points="' + pts + '" fill="none" stroke="transparent" stroke-width="14" ' +
+        'stroke-linejoin="round" stroke-linecap="round" class="trend-line-hit" data-trend-id="' + idAttr +
+        '"><title>' + esc(s.name) + ": " + lastLabel + "</title></polyline>";
+      svg += '<polyline points="' + pts + '" fill="none" stroke="' + s.color + '" stroke-width="2.5" ' +
+        'stroke-linejoin="round" stroke-linecap="round" class="trend-line-visible" style="pointer-events:none" />';
+      // One hit point per round, so hovering near a point (rather than
+      // between two of them) names that specific round and its value.
+      s.values.forEach(function (v, i) {
+        var roundLabel = roundNames[i] || ("Round " + (i + 1));
+        svg += '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(v).toFixed(1) + '" r="7" fill="transparent" ' +
+          'class="trend-point-hit" data-trend-id="' + idAttr + '"><title>' + esc(s.name) + " — " +
+          esc(roundLabel) + ": " + trendValueLabel(mode, v) + "</title></circle>";
+      });
+      svg += '<circle cx="' + x(lastI).toFixed(1) + '" cy="' + y(s.values[lastI]).toFixed(1) + '" r="3.5" fill="' + s.color + '" style="pointer-events:none" />';
+      svg += "</g>";
     });
 
     svg += "</svg>";
@@ -755,7 +778,7 @@
     legend.innerHTML = "";
 
     var modeRow = el("div", "chart-mode");
-    [["ratio", "Performance vs field"], ["points", "Cumulative points"], ["standing", "Standing over time"]].forEach(function (pair) {
+    [["standing", "Standing over time"], ["ratio", "Performance vs field"], ["points", "Cumulative points"]].forEach(function (pair) {
       var b = el("button", trendMode === pair[0] ? "is-active" : "", esc(pair[1]));
       b.type = "button";
       b.addEventListener("click", function () { setTrendMode(pair[0]); });
@@ -800,7 +823,15 @@
       chartHost.appendChild(empty("Pick at least one player above to plot."));
       return;
     }
-    chartHost.innerHTML = '<div class="chart-frame">' + buildLineChartSVG(shown, d.rounds.length, trendMode, all.length) + "</div>";
+    var roundNames = d.rounds.map(function (r) { return r.name; });
+    chartHost.innerHTML = '<div class="chart-frame">' + buildLineChartSVG(shown, roundNames, trendMode, all.length) + "</div>";
+    // The chart is built as a markup string, so wire up click-to-filter
+    // after the fact: same toggleTrend() the legend chips use, just
+    // triggered from the line (its wide invisible hit-stroke) or one of
+    // its per-round points instead of the chip.
+    Array.prototype.forEach.call(chartHost.querySelectorAll("[data-trend-id]"), function (node) {
+      node.addEventListener("click", function () { toggleTrend(node.getAttribute("data-trend-id")); });
+    });
   }
 
   /* ---- tracks / rounds (filterable) ---- */
@@ -1058,7 +1089,7 @@
         seasonData = d;
         selected = [];
         trendSelected = d.standings.map(function (p) { return p.id; });
-        trendMode = "ratio";
+        trendMode = "standing";
         renderNav(index, key);
         document.title = "PFML - " + d.label;
         renderHero(d);

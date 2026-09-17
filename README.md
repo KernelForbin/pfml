@@ -51,29 +51,32 @@ not templated) that reads `career.json` for all-time standings.
   jump nav too, so it never links to something that isn't there.
 - **Player focus and comparison**: click a name in Standings to filter the
   rest of the page to them, click a second to compare instead, see below.
-- **Performance over time**: defaults to **Performance vs field**, not raw
-  cumulative points. Raw cumulative totals only ever go up, so on a graph
-  everyone's line looks like a similar upward slope regardless of how
-  they're actually doing; it can't show someone fading. Performance vs
-  field is cumulative points captured so far as a percentage of the
-  cumulative *winning* score to that point, i.e. what a player would have
-  if they'd won every round. 100% means never off the pace; a line that
-  rises then falls is someone who started strong and lost ground, exactly
-  the shape raw totals can't produce. Two toggles switch to something
-  else instead: plain Cumulative points for the raw numbers, or Standing
-  over time for leaderboard position, #1 to last, after each round's
-  points are counted (a tie shares a place; competition ranking, so the
-  next distinct total skips accordingly, e.g. 1, 1, 3). The standing
-  chart draws its axis inverted, #1 at the top, since 1 is the best place
-  to be, and it's scaled to the whole field regardless of which players
-  are toggled on, so a filtered view of the middle of the pack doesn't
-  get stretched to look like the top. Whichever mode is active, it
-  defaults to everyone (Select all) and follows the Standings player
-  selection when one is active, clear the scoreboard selection and it goes
-  back to everyone. You can still toggle individual players on the chart's
-  own legend afterward, that's independent of the scoreboard until the
-  scoreboard selection changes again. Colors are assigned by season rank
-  so a given player's color stays consistent across toggles.
+- **Performance over time**: three metrics, left to right. **Standing over
+  time** is the default: leaderboard position, #1 to last, after each
+  round's points are counted (a tie shares a place; competition ranking,
+  so the next distinct total skips accordingly, e.g. 1, 1, 3). Its axis
+  draws inverted, #1 at the top since that's the best place to be, and
+  it's scaled to the whole field regardless of which players are toggled
+  on, so a filtered view of the middle of the pack doesn't get stretched
+  to look like the top. **Performance vs field** is next: cumulative
+  points captured so far, as a percentage of the cumulative *winning*
+  score to that point, i.e. what a player would have if they'd won every
+  round. 100% means never off the pace; a line that rises then falls is
+  someone who started strong and lost ground, a shape raw cumulative
+  totals can't produce (they only ever go up, so on a graph everyone's
+  line looks like a similar upward slope regardless of how they're
+  actually doing). **Cumulative points** is last, the plain raw numbers.
+  Whichever mode is active, hovering a line names the player and the
+  value at that point, a hit point at every round so it's the specific
+  round under the cursor, not just a fixed value for the whole line. A
+  line is also clickable, same effect as its legend chip: toggles that
+  player out of the plotted set. The chart defaults to everyone (Select
+  all) and follows the Standings player selection when one is active,
+  clear the scoreboard selection and it goes back to everyone. You can
+  still toggle individual players on the chart's own legend, or by
+  clicking their line, independent of the scoreboard until the scoreboard
+  selection changes again. Colors are assigned by season rank so a given
+  player's color stays consistent across toggles.
 
 ## Adding a new export
 

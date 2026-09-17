@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-09-17 (follow-up 4)
+
+- **Standing over time is now the default Performance over time metric**,
+  and leftmost of the three (Performance vs field, then Cumulative
+  points).
+- **Chart lines are now clickable**, same effect as clicking a player's
+  legend chip: toggles them out of the plotted set. Each line has a wide
+  invisible hit area so it's easy to click without landing exactly on
+  the 2.5px stroke.
+- **Hovering a line now names the player and shows the value at that
+  point**, not just a fixed tooltip on the whole line: a hit point at
+  every round surfaces that round's own reading (e.g. "Rick D — Pre-Show
+  Party Bus: #2"), while hovering elsewhere on the line still shows the
+  player and their final value.
+
 ## 2026-09-17 (follow-up 3)
 
 - **Points over time is now Performance over time**, and has a third
