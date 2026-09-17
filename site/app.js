@@ -137,7 +137,7 @@
 
   function playlistChip(item) {
     if (item.url) {
-      var a = el("a", "pill");
+      var a = el("a", "pill pill-live");
       a.href = item.url; a.target = "_blank"; a.rel = "noopener";
       a.textContent = item.label;
       return a;
