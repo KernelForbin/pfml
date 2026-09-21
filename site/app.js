@@ -98,6 +98,7 @@
     career.textContent = "Career";
     career.setAttribute("aria-current", String(activeKey === "career"));
     nav.appendChild(career);
+    syncScrollPadding();
   }
 
   var JUMP_SECTIONS = [
@@ -116,7 +117,7 @@
     var nav = $("jumpNav");
     if (!nav) return;
     nav.innerHTML = "";
-    if (!d.rounds.length) { nav.hidden = true; return; }
+    if (!d.rounds.length) { nav.hidden = true; syncScrollPadding(); return; }
     nav.hidden = false;
     JUMP_SECTIONS.forEach(function (pair) {
       var id = pair[0], label = pair[1];
@@ -126,6 +127,26 @@
       a.href = "#" + id;
       nav.appendChild(a);
     });
+    syncScrollPadding();
+  }
+
+  // The sticky top bar is roughly 100px tall on a desktop but about 180px
+  // on a phone, where the season tabs and jump links wrap. No fixed CSS
+  // offset fits both, so a #section link landed its section under the bar:
+  // measured at 418px wide, 154px of the 188px Results by round bar was
+  // hidden. Keep the scroll padding equal to the bar's real height.
+  function syncScrollPadding() {
+    var bar = document.querySelector(".topbar");
+    if (bar) document.documentElement.style.scrollPaddingTop = (bar.offsetHeight + 12) + "px";
+  }
+  window.addEventListener("resize", syncScrollPadding);
+
+  // The browser jumps to a #section on load, before the data has filled
+  // the page in above it, so the target ends up in the wrong place. Jump
+  // again once the page is rendered.
+  function scrollToHash() {
+    var target = location.hash && document.getElementById(location.hash.slice(1));
+    if (target) target.scrollIntoView({ block: "start", behavior: "instant" });
   }
 
   /* =====================================================================
@@ -943,7 +964,7 @@
 
 
   function renderRounds(d) {
-    // The collapsible Round results under the leaderboard: one card per
+    // The collapsible Results by round under the leaderboard: one card per
     // round, each linking to that round's own page (rounds.js).
     var host = $("rounds");
     if (!host || !window.PFMLRounds) return;
@@ -1361,6 +1382,7 @@
         renderComments(d);
         renderArtists(d);
         renderJumpNav(d);
+        scrollToHash();
       })
       .catch(function (err) {
         console.error(err);

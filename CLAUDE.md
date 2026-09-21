@@ -191,10 +191,15 @@ The pages need a signed-in member to show anything, and they read data
 from Supabase, not from local files. To check page code without signing
 in, serve a scratch copy of `site/` with `auth.js` swapped for a stub that
 defines `window.PFML` (`ready`, `loadJSON` reading local `data/`, and an
-in-memory `api`); that's how Round results and the comment layer were
+in-memory `api`); that's how Results by round and the comment layer were
 tested. To test `auth.js` itself, load it with a fake
 `window.supabase.createClient`, which is how the sign-in return path was
 checked. Keep stubs and copied data out of the repo, and delete them after.
+A page stub must also remove the `gated` class from `<body>`, or the page
+stays blank. The browser caches `app.js` and friends between edits, so a
+fix can look like it did nothing: refetch with `fetch(url, {cache:
+"reload"})`, or check `performance` entries, before trusting a
+before/after comparison.
 Python's `http.server` doesn't resolve `/features` to `features.html` the
 way GitHub Pages does; open the `.html` directly, or use a small handler
 that tries `.html`.

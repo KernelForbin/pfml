@@ -119,6 +119,41 @@ class GeneratedPages(unittest.TestCase):
             self.assertEqual(p.read_text(encoding="utf-8"), expected, f"{p.name} is stale: run scripts/build.py")
 
 
+class ResultsByRound(unittest.TestCase):
+    """The most-used section: right under Standings, and its collapsed bar
+    has every element rounds.js fills in (count, latest round, album art)."""
+
+    def setUp(self):
+        self.template = read("season.template.html")
+        self.page = Page(self.template)
+
+    def test_sits_directly_under_the_standings(self):
+        blocks = [a["id"] for a in self.page.find("section") if a.get("id", "").startswith("block-")]
+        self.assertEqual(blocks[blocks.index("block-standings") + 1], "block-rounds")
+
+    def test_collapsed_bar_has_what_rounds_js_fills_in(self):
+        summary = re.search(r"<summary[^>]*>(.*?)</summary>", self.template, re.S)
+        self.assertIsNotNone(summary, "the section is a <details> with a <summary> bar")
+        season_list = read("rounds.js").split("function renderList", 1)[1].split("2. The round page", 1)[0]
+        ids = set(re.findall(r'getElementById\("(\w+)"\)', season_list))
+        self.assertTrue(ids)
+        for i in ids:
+            self.assertIn(f'id="{i}"', summary.group(1), f"rounds.js fills #{i}, which the bar must contain")
+        self.assertRegex(summary.group(1), r"<h2[^>]*>", "the bar carries the section's heading")
+
+
+class CleanText(unittest.TestCase):
+    def test_no_control_characters_in_site_files(self):
+        # A generated CSS edit once turned the escape "\25BE" (the arrow on
+        # Show all) into a control character plus "BE", and the page showed
+        # a broken glyph. Browsers don't complain; this does.
+        control = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+        for f in tracked_files():
+            if f.startswith("site/") and f.endswith((".html", ".css", ".js")):
+                m = control.search((ROOT / f).read_text(encoding="utf-8"))
+                self.assertIsNone(m, f"{f} has a control character {m.group()!r} at {m.start()}" if m else "")
+
+
 class NothingPrivateIsTracked(unittest.TestCase):
     def test_no_league_data_in_the_repo(self):
         for f in tracked_files():

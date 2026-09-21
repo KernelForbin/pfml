@@ -2,8 +2,8 @@
 
    Two views:
 
-   1. renderList(): on a season page, inside the collapsed "Round results"
-      pill under the leaderboard, one card per round (newest first) that
+   1. renderList(): on a season page, inside the collapsed "Results by round"
+      bar under the leaderboard, one card per round (newest first) that
       links to that round's own page.
 
    2. renderRoundPage(): round.html?s=<season key>&r=<round id>. The whole
@@ -128,6 +128,7 @@
 
     var count = document.getElementById("rrCount");
     if (count) count.textContent = selected.length ? shown.length + " of " + plural(d.rounds.length, "round") : plural(d.rounds.length, "round");
+    renderPreview(shown);
 
     if (!d.rounds.length) { host.insertAdjacentHTML("beforeend", '<div class="empty">No rounds posted yet this season.</div>'); return; }
     if (!shown.length) { host.insertAdjacentHTML("beforeend", '<div class="empty">No rounds involve this selection.</div>'); return; }
@@ -145,6 +146,30 @@
         (status ? "" : '<span class="rl-counts">' + plural(c.tracks, "track") + " &middot; " + plural(c.votes, "vote") + " &middot; " + plural(c.comments, "comment") + "</span>") +
         '</span><span class="rl-go" aria-hidden="true">&rarr;</span></a>';
     }).join("") + "</div>");
+  }
+
+  // What the collapsed bar shows, so the section reads as worth opening
+  // before anyone opens it: the newest round (of those listed) and its
+  // winner, and the winning album art of the newest three.
+  function renderPreview(shown) {
+    var latestEl = document.getElementById("rrLatest");
+    var artEl = document.getElementById("rrArt");
+    var newest = shown.slice(-3).reverse();
+    if (latestEl) {
+      var x = newest[0];
+      if (!x) latestEl.textContent = "";
+      else {
+        var status = roundStatus(x.r), top = winners(x.r);
+        latestEl.innerHTML = "Latest: <b>" + esc(x.r.name) + "</b>" +
+          (status ? " &middot; " + esc(status)
+            : top.length > 1 ? " &middot; tied between " + top.map(function (s) { return esc(s.submitterName); }).join(" &amp; ")
+            : top.length ? " &middot; won by " + esc(top[0].submitterName) : "");
+      }
+    }
+    if (artEl) {
+      artEl.innerHTML = newest.map(function (x) { var w = winners(x.r)[0]; return artHtml(w && w.art, "rr-thumb"); }).join("");
+      artEl.hidden = !newest.length;
+    }
   }
 
   /* =====================================================================

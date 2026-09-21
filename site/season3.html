@@ -37,7 +37,14 @@
 
   <section class="shell block rr-block" id="block-rounds">
     <details class="rr">
-      <summary class="rr-pill"><span class="rr-pill-label">Round results</span><span class="rr-count" id="rrCount"></span></summary>
+      <summary class="rr-bar">
+        <span class="rr-art" id="rrArt" aria-hidden="true"></span>
+        <span class="rr-text">
+          <h2 class="rr-title">Results by round</h2>
+          <span class="rr-sub"><span class="rr-count" id="rrCount"></span><span class="rr-latest" id="rrLatest"></span></span>
+        </span>
+        <span class="rr-cta" aria-hidden="true"><span class="rr-cta-show">Show all</span><span class="rr-cta-hide">Hide</span></span>
+      </summary>
       <p class="block-note rr-note-top">Newest first. Open a round for every track, every vote and every comment, where members can vote on comments, react and reply.</p>
       <div id="rounds"></div>
     </details>

@@ -150,10 +150,12 @@ whose default is `localhost:3000`. Fix the Site URL and the
 `https://pfml.fun/**` entry and sign in again. Invite links aren't used up
 by a failed return, so the same link works once it's fixed.
 
-## Round results, and the comments on them
+## Results by round, and the comments on them
 
-On every season page, directly under Standings, a **Round results** pill,
-collapsed by default. Open it for a card per round, newest first, with the
+On every season page, directly under Standings, **Results by round**,
+collapsed by default. It's the most-used section, so even collapsed it's a
+full-width card: the round count, the latest round and its winner, the
+newest three winners' album art, and a Show all button. Open it for a card per round, newest first, with the
 winning track's album art, the winner (or everyone tied for it) and the
 counts. Every round in the export is listed, including one that so far only
 has its prompt, which says so instead of showing results.

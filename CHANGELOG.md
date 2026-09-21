@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-09-21 (follow-up 9)
+
+- **"Round results" is now "Results by round", and it's hard to miss.**
+  It's the section people use most, so even collapsed it's a full-width
+  card with a magenta edge, as large as a section heading: the round count,
+  the latest round and who won it (or who tied), the newest three winners'
+  album art, and a "Show all" button. It follows the Standings filter
+  (count and preview included). Tests pin it directly under Standings and
+  check the bar contains everything `rounds.js` fills in.
+- **Jump links no longer land under the header.** Every `#section` link
+  (the jump bar, and the round page's link back to the results) scrolled
+  its section up behind the sticky top bar. On a phone that header is about
+  180px tall, and 154px of the 188px results bar was hidden (measured at
+  418px wide). The scroll offset now follows the header's real height, and
+  a season page re-jumps to the linked section once its data has loaded.
+- A new test rejects control characters in site files, after an edit
+  briefly turned the arrow's CSS escape into one (caught in the browser
+  before it shipped).
+
 ## 2026-09-21 (follow-up 8)
 
 - **A test suite, and a working agreement.** `tests/` (stdlib `unittest`,

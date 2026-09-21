@@ -612,27 +612,53 @@ body.gated > *:not(#gate) { display: none !important; }
 .cm-send:hover { background: var(--deep); }
 .cm-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-/* ---------- round results (rounds.js) ---------- */
-/* A pill that opens to the round list; each round opens to every track,
-   every vote and the comment layer. */
+/* ---------- results by round (rounds.js) ---------- */
+/* The most-used section, so even collapsed it's a full-width card as loud
+   as a section heading: title, round count, the latest round and its
+   winner, the newest winners' album art, and an explicit "Show all". */
 
-.rr-block { padding-top: 18px; }
+.rr-block { padding-top: 22px; }
 .rr > summary { list-style: none; }
 .rr > summary::-webkit-details-marker { display: none; }
-.rr-pill {
-  display: inline-flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;
-  font-family: "Archivo", sans-serif; font-weight: 700; font-size: 0.95rem;
-  padding: 10px 18px; border: 1px solid var(--border); border-radius: 999px;
-  background: var(--card); color: var(--ink); box-shadow: var(--shadow-sm);
+.rr-bar {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 16px; align-items: center;
+  padding: 14px 16px 14px 14px; cursor: pointer; user-select: none;
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--r);
+  box-shadow: inset 4px 0 0 var(--magenta), var(--shadow-md);
   transition: box-shadow .15s ease, transform .15s ease;
 }
-.rr-pill::after { content: "\25BE"; color: var(--magenta); font-size: 0.8rem; transition: transform .15s ease; }
-.rr[open] > .rr-pill::after { transform: rotate(180deg); }
-.rr-pill:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
-.rr[open] > .rr-pill { background: var(--magenta); border-color: var(--magenta); color: #fff; }
-.rr[open] > .rr-pill::after { color: #fff; }
-.rr-count { font-family: "Inter", sans-serif; font-weight: 500; font-size: 0.8rem; color: var(--muted); }
-.rr[open] > .rr-pill .rr-count { color: rgba(255,255,255,.8); }
+.rr-bar:hover { transform: translateY(-1px); box-shadow: inset 4px 0 0 var(--magenta), 0 22px 44px -22px rgba(22, 17, 26, .45), 0 2px 6px -2px rgba(22, 17, 26, .1); }
+.rr[open] > .rr-bar { background: var(--wash); border-color: rgba(158, 0, 196, 0.25); }
+.rr-art { display: flex; padding-left: 4px; }
+.rr-art[hidden] { display: none; }
+.rr-thumb {
+  width: 52px; height: 52px; border-radius: 10px; object-fit: cover; display: block;
+  border: 2px solid var(--card); box-shadow: var(--shadow-sm);
+}
+.rr-thumb + .rr-thumb { margin-left: -22px; }
+.rr-thumb.is-empty { display: grid; place-items: center; background: var(--wash); color: var(--magenta); font-size: 1.1rem; }
+.rr-text { display: grid; gap: 3px; min-width: 0; }
+.rr-title { margin: 0; font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
+.rr-sub { display: flex; flex-wrap: wrap; gap: 2px 10px; font-size: 0.88rem; color: var(--muted); }
+.rr-count { font-weight: 600; color: var(--deep); }
+.rr-latest { min-width: 0; overflow-wrap: anywhere; }
+.rr-latest b { color: var(--ink); font-weight: 600; }
+.rr-cta {
+  display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+  font-family: "Archivo", sans-serif; font-weight: 700; font-size: 0.9rem;
+  padding: 9px 16px; border-radius: 999px; background: var(--magenta); color: #fff;
+}
+.rr-cta::after { content: "\25BE"; font-size: 0.8rem; transition: transform .15s ease; }
+.rr[open] .rr-cta::after { transform: rotate(180deg); }
+.rr-cta-hide, .rr[open] .rr-cta-show { display: none; }
+.rr[open] .rr-cta-hide { display: inline; }
+@media (max-width: 620px) {
+  .rr-bar { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
+  .rr-art { grid-column: 1 / -1; }
+  .rr-thumb { width: 44px; height: 44px; }
+  .rr-title { font-size: 1.25rem; }
+  .rr-cta { padding: 9px 12px; }
+}
 .rr-note-top { margin: 16px 0 14px; }
 
 
