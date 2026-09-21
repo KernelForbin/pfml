@@ -112,6 +112,13 @@ rewriting the repo's history; that's a separate, deliberate step.
 6. `.env` (copy `.env.example`): the project URL and the secret key.
 7. `python scripts/publish.py`, then `python scripts/invites.py`.
 
+If signing in lands on `http://localhost:3000` (a dead page, with `?code=...`
+in the address), step 4 didn't take: Supabase only returns people to an
+address on its redirect list, and otherwise falls back to the Site URL,
+whose default is `localhost:3000`. Fix the Site URL and the
+`https://pfml.fun/**` entry and sign in again. Invite links aren't used up
+by a failed return, so the same link works once it's fixed.
+
 ## Comments page
 
 `comments.html` shows every vote comment from the exports, one round at a
