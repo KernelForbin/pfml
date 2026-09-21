@@ -25,6 +25,12 @@ jobs:
       # scripts/publish.py, and this public repo holds none of it. What
       # deploys is only the site's HTML, CSS and JS, which contain no league
       # data. A guard fails the deploy if any data file ever slips in.
+      # The offline suite (tests/, stdlib only, made-up data) gates every
+      # deploy: a failing test means nothing ships. The live Spotify test
+      # skips itself here; it needs PFML_LIVE=1.
+      - name: Run tests
+        run: python3 -m unittest discover -s tests -v
+
       - name: Refuse to publish league data
         run: |
           if [ -n "$(find site -name '*.json' -print -quit)" ] || [ -d data ]; then

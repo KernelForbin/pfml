@@ -96,27 +96,108 @@ too. A local `python -m http.server` doesn't resolve the clean `features`
 and `privacy` links the way GitHub Pages does; open `features.html`
 directly when testing locally.
 
-## No automated tests ship in this repo
+## Working agreement
 
-Verification during development was done with disposable Node.js harnesses
-(a mock DOM, no real browser) that were never committed, since they were
-scratch tools, not deliverables. There's no test suite here right now. For
-a nontrivial change to `app.js` or `style.css`, the fastest real check is:
+These standards apply to every change. Anything reported as "done and
+verified" has to be both.
 
-```bash
-python scripts/build.py
-cd site && python -m http.server 8000
-```
+**Project specifics**
+- Test command: `python -m unittest discover -s tests -v` (stdlib only,
+  offline, about 3 seconds). The deploy runs it too, and a failure blocks
+  the deploy.
+- Live test (network): `PFML_LIVE=1 python -m unittest discover -s tests
+  -p test_live_spotify.py -v`. Run it whenever the album-art lookup in
+  `publish.py` changes. Note: `python -m unittest tests.test_x` does not
+  work here, since `tests/` isn't a package on the path; use `discover`.
+- Main branch: `main`. Work on a branch; don't merge or push to `main`
+  without the user's go-ahead. Pushing `main` deploys the site.
+- Never modify without explicit instruction:
+  - `data/` (the real exports) and `site/data/` (built output)
+  - `.env`
+  - `data/season3/daily_doubles.json`, except through the Daily Double
+    review above
+  - `site/seasonN.html`, which are generated: edit `season.template.html`
+    and run `scripts/build.py`
+  - `supabase/schema.sql`, which is applied to the live database by hand
+- Deploys by: push to `main` -> GitHub Actions -> GitHub Pages (pages
+  only). Data goes separately, by `python scripts/publish.py` to Supabase.
+- Docs to keep current: CLAUDE.md, README.md, CHANGELOG.md, and
+  `site/features.html` for anything a member can see.
 
-then actually open a season page and the career page in a browser and
-click around (player selection on Standings, the trend chart legend, the
-Career Score sort), rather than trusting a read-through of the diff. The
-pages need a signed-in member to show anything, and they read data from
-Supabase, not from local files. To check page code without signing in,
-serve a scratch copy of `site/` with `auth.js` swapped for a stub that
+**Before changing anything:** run the full suite and note the result;
+report any failure that was already there, and don't work around it.
+Read the code and the docs that describe it. Follow their conventions.
+
+**Establish the cause with evidence.** Reproduce a bug, or capture the
+real response, before fixing it. When behaviour depends on an outside
+system (Spotify, Supabase, GitHub Pages path rules), check the real thing
+and write down what was measured and when.
+
+**Tests**
+- Every behaviour change ships with a test that fails without it. A bug
+  fix gets a regression test.
+- Test behaviour, not wording: the features page's copy is meant to
+  change, so its tests cover what it loads, the mode switch wiring, and
+  the links.
+- Tests never touch real data. `tests/support.py` builds made-up seasons
+  in a temp directory and points `build.py`/`publish.py` there.
+- Where a fake can't prove it, add a separate, labelled live test that
+  skips unless asked for (see `test_live_spotify.py`).
+- **Prove each new test can fail:** break the code it protects in a
+  scratch clone, never the working tree, and confirm the test fails. When
+  doing this in a loop, set `PYTHONDONTWRITEBYTECODE=1` and clear
+  `__pycache__` between breaks. Gotcha, it happened: two breaks that left
+  `build.py` the same size, written in the same second, made Python reuse
+  the previous break's cached bytecode, and a test that works looked like
+  it let a break through.
+- Not covered by the suite: the browser JavaScript (`app.js`, `rounds.js`,
+  `auth.js`, the features page's switch at runtime). There's no Node here
+  to run it. Check those in a real browser, as below.
+
+**Verify against reality before calling it done:** rerun the full suite
+at the end. Exercise anything members see in a real browser at phone
+(375px) and desktop widths, and measure layout claims (for example
+`scrollWidth` against `innerWidth`) rather than eyeballing a screenshot.
+After a deploy, fetch the live files and compare them with the commit.
+`gh run list` can return the previous run for a moment after a push, so
+match the run to the commit's sha before watching it.
+
+**Code:** match the surrounding code. Comments say why. Keep changes to
+what was asked; flag anything else. Remove code your change makes dead.
+Anything that writes, pushes or deletes gets the plainest control flow.
+
+**Safety:** secrets never appear in code, commits, logs or messages (the
+suite checks tracked files for Supabase secret keys; still look at the
+diff before committing). Treat external input as untrusted. Before
+anything hard to undo (force-push, deleting branches or files, rewriting
+history), show what would be lost and the evidence that it's safe; keep a
+backup bundle outside the repo. Stop background servers and delete
+scratch copies when done.
+
+**Docs:** record decisions, measurements and gotchas in the same change,
+and fix any doc the change makes wrong.
+
+**Commits and shipping:** messages say why, and how it was verified. No
+merge, push to `main`, deploy or publish without the user's go-ahead; when
+waiting on it, make that the bolded last line of the reply.
+
+**Reporting back:** decisions needed come first. Then what changed, how it
+was verified, and anything assumed, skipped or unverified. State failures
+plainly, and correct earlier mistakes plainly.
+
+### Checking page code in a browser
+
+The pages need a signed-in member to show anything, and they read data
+from Supabase, not from local files. To check page code without signing
+in, serve a scratch copy of `site/` with `auth.js` swapped for a stub that
 defines `window.PFML` (`ready`, `loadJSON` reading local `data/`, and an
-in-memory `api`); that's how Round results and the comment layer were tested. Keep such stubs
-out of the repo.
+in-memory `api`); that's how Round results and the comment layer were
+tested. To test `auth.js` itself, load it with a fake
+`window.supabase.createClient`, which is how the sign-in return path was
+checked. Keep stubs and copied data out of the repo, and delete them after.
+Python's `http.server` doesn't resolve `/features` to `features.html` the
+way GitHub Pages does; open the `.html` directly, or use a small handler
+that tries `.html`.
 
 ## Working style for this project
 
@@ -136,7 +217,8 @@ out of the repo.
 GitHub Pages via Actions (`.github/workflows/deploy.yml`), not
 branch-deploy. The workflow deploys only the page files; it no longer
 builds data (there is none in the repo), and it refuses to deploy if any
-JSON or `data/` folder is present. The custom domain (`pfml.fun`) is set in the repo's
+JSON or `data/` folder is present. It runs the test suite first, and a
+failing test stops the deploy. The custom domain (`pfml.fun`) is set in the repo's
 Settings → Pages, not by the `site/CNAME` file, that file only matters if
 this ever switches to branch-deploy. DNS is already configured at
 Namecheap; nothing to redo there.

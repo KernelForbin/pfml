@@ -33,6 +33,7 @@ scripts/invites.py       one-time invite links that link a Google account
                          to a player
 scripts/supa.py          shared helper; reads the secret key from .env
 supabase/schema.sql      tables, access rules and buckets; run once
+tests/                   offline test suite (stdlib unittest, made-up data)
 scripts/enrich_comments.py    standalone, run by hand, calls the Claude API.
                               Never run by build.py or by the Action.
 site/                    everything GitHub Pages serves
@@ -69,6 +70,27 @@ own URL and its own `<title>` ("PFML - Season 1", etc.), generated fresh on
 every build from `season.template.html`, so a new season gets a page with no
 template edits needed. `career.html` is a fixed page (not per-season, so
 not templated) that reads `career.json` for all-time standings.
+
+## Tests
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+Offline and stdlib-only, like the scripts. Every test builds its own tiny
+made-up season in a temp directory (`tests/support.py`), so the suite never
+reads the real exports or writes the real output. It covers the scoring
+rules in `build.py` (zero-point rows are comments, shared places on ties,
+the Daily Double and its failure modes, the blowout rule, album art, CRLF
+handling, identical builds across hash seeds), the album-art lookup in
+`publish.py` (backoff on 429, stopping early and keeping progress), and the
+site's static contracts (the features page loads nothing but its fonts,
+every page links to it, generated season pages match the template, no data
+or secret keys are tracked). The deploy runs it before publishing.
+
+`tests/test_live_spotify.py` calls Spotify's real endpoint and skips unless
+`PFML_LIVE=1` is set. The browser JavaScript isn't covered by the suite
+(there's no Node here); it's checked in a real browser, see CLAUDE.md.
 
 ## Members only
 

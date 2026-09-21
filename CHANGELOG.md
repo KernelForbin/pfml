@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-09-21 (follow-up 8)
+
+- **A test suite, and a working agreement.** `tests/` (stdlib `unittest`,
+  offline, made-up data) covers the build's scoring rules, the album-art
+  lookup and the site's static contracts: 32 tests, plus one live Spotify
+  test that runs only on request. Each test was shown to fail by breaking
+  the code it protects in a scratch clone: 40 breaks, all caught, on two
+  clean runs. The deploy now runs the suite first. CLAUDE.md's "no tests"
+  section is replaced by the working agreement: test command, branch rule,
+  files never to touch, verification and reporting standards, and the
+  gotchas found while building this.
+
 ## 2026-09-21 (follow-up 7)
 
 - **Career is back in the top bar**, after the seasons. Its Home page card
