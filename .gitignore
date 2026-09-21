@@ -2,3 +2,15 @@
 __pycache__/
 *.pyc
 node_modules/
+
+# Members-only: league data never goes in this public repo. The raw exports
+# stay on disk locally (backed up to the private league-exports bucket by
+# scripts/publish.py) and the built JSON is served from the private
+# league-data bucket, readable by linked members only.
+data/
+site/data/
+
+# Supabase secret key for the local scripts. Never commit. Covers copies
+# too (".env - Copy", ".env.local"...); only the template is tracked.
+.env*
+!.env.example

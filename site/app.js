@@ -41,6 +41,11 @@
   function plural(n, one, many) { return n === 1 ? one : (many || one + "s"); }
 
   function fetchJSON(url) {
+    // Members-only: season data comes from the private Supabase bucket via
+    // auth.js, not from a public file next to this page.
+    if (window.PFML && window.PFML.loadJSON) {
+      return window.PFML.loadJSON(url.replace(/^data\//, ""));
+    }
     return fetch(url).then(function (r) {
       if (!r.ok) throw new Error(url + ": HTTP " + r.status);
       return r.json();
@@ -93,6 +98,12 @@
     career.textContent = "Career";
     career.setAttribute("aria-current", String(activeKey === "career"));
     nav.appendChild(career);
+
+    var comments = el("a", "season-tab");
+    comments.href = "comments.html";
+    comments.textContent = "Comments";
+    comments.setAttribute("aria-current", String(activeKey === "comments"));
+    nav.appendChild(comments);
   }
 
   var JUMP_SECTIONS = [
@@ -1593,12 +1604,21 @@
 
   /* ---- boot ---- */
 
-  var page = document.body.getAttribute("data-page");
-  if (page === "home") {
-    initHome();
-  } else if (page === "season") {
-    initSeason(document.body.getAttribute("data-season-key"));
-  } else if (page === "career") {
-    initCareer();
+  function boot() {
+    var page = document.body.getAttribute("data-page");
+    if (page === "home") {
+      initHome();
+    } else if (page === "season") {
+      initSeason(document.body.getAttribute("data-season-key"));
+    } else if (page === "career") {
+      initCareer();
+    } else if (page === "comments") {
+      // comments.js renders the page; app.js only supplies the shared nav
+      fetchJSON(DATA + "/index.json").then(function (index) { renderNav(index, "comments"); });
+    }
   }
+
+  // Wait for auth.js to let a member in before touching any data.
+  if (window.PFML && window.PFML.ready) window.PFML.ready.then(boot);
+  else boot();
 })();

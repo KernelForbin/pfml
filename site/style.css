@@ -526,3 +526,108 @@ button.trend-chip.is-on .dot { opacity: 1; }
   html { scroll-behavior: auto; }
   .season-tab, .pill, .art, .season-card { transition: none; }
 }
+
+/* ---------- members-only gate (auth.js) ---------- */
+/* Pages ship with <body class="gated">, so nothing but the gate card shows
+   until auth.js confirms a linked member. No flash of the site first. */
+body.gated > *:not(#gate) { display: none !important; }
+#gate { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; }
+#gate[hidden] { display: none; }
+.gate-card {
+  width: 100%; max-width: 420px; text-align: center;
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--r);
+  box-shadow: var(--shadow-md); padding: 34px 28px 30px;
+}
+.gate-mark { font-family: "Archivo", sans-serif; font-weight: 800; font-size: 1.05rem; color: var(--magenta); letter-spacing: -0.01em; }
+.gate-card h1 { margin: 10px 0 12px; font-size: 1.55rem; letter-spacing: -0.02em; text-wrap: balance; }
+.gate-card p { margin: 0 0 10px; color: var(--muted); font-size: 0.95rem; }
+.gate-card p b { color: var(--ink); word-break: break-all; }
+.gate-fine { font-size: 0.84rem !important; }
+.gate-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+.gate-btn {
+  font-family: "Archivo", sans-serif; font-weight: 700; font-size: 0.92rem; cursor: pointer;
+  padding: 11px 20px; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--card); color: var(--ink);
+}
+.gate-btn:hover { border-color: rgba(158, 0, 196, 0.35); }
+.gate-btn.is-primary { background: var(--magenta); border-color: var(--magenta); color: #fff; }
+.gate-btn.is-primary:hover { background: var(--deep); }
+
+.whoami { display: flex; align-items: center; gap: 10px; font-size: 0.84rem; color: var(--muted); }
+.whoami-name { font-weight: 600; color: var(--ink); }
+.whoami-out {
+  font: inherit; font-size: 0.82rem; color: var(--deep); background: none; border: none;
+  padding: 2px 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+}
+
+/* ---------- comments page ---------- */
+
+.cm-controls { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 22px; }
+.cm-controls label {
+  display: flex; flex-direction: column; gap: 5px; min-width: 0;
+  font-size: 0.74rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;
+}
+.cm-controls select {
+  font: inherit; font-size: 0.92rem; text-transform: none; letter-spacing: 0; color: var(--ink);
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--r-sm);
+  background: var(--card); max-width: 100%;
+}
+.cm-round h2 { margin: 0 0 5px; font-size: 1.35rem; letter-spacing: -0.02em; }
+.cm-round-meta { margin: 0 0 6px; font-size: 0.85rem; color: var(--muted); }
+
+.cm-track { margin-top: 26px; }
+.cm-track-head { margin: 0 0 10px; font-family: "Inter", sans-serif; font-size: 0.93rem; font-weight: 500; line-height: 1.45; }
+.cm-track-head a { font-weight: 600; }
+.cm-place { font-family: "Archivo", sans-serif; font-weight: 700; color: var(--magenta); }
+.cm-track-pts { color: var(--muted); font-size: 0.82rem; white-space: nowrap; }
+
+.cm-list { display: grid; gap: 10px; }
+.cm {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--r-sm);
+  box-shadow: var(--shadow-sm); padding: 12px 14px;
+}
+.cm-context { margin: 0 0 6px; font-size: 0.8rem; color: var(--muted); }
+.cm-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.cm-who { font-weight: 600; }
+.cm-pts { font-size: 0.78rem; color: var(--muted); }
+.cm-text { margin: 5px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.95rem; }
+
+.cm-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 10px; }
+.cm-vote { display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+.cm-vote button {
+  font: inherit; font-size: 0.72rem; line-height: 1; cursor: pointer;
+  background: none; border: none; color: var(--muted); padding: 7px 10px;
+}
+.cm-vote button:hover { color: var(--magenta); }
+.cm-vote button.is-on { background: var(--magenta); color: #fff; }
+.cm-score { min-width: 22px; text-align: center; font-family: "Archivo", sans-serif; font-weight: 700; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
+.cm-chip {
+  font: inherit; font-size: 0.82rem; line-height: 1; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--card); color: var(--ink); padding: 6px 10px;
+}
+.cm-chip:hover { border-color: rgba(158, 0, 196, 0.35); }
+.cm-chip.is-on { background: var(--wash); border-color: rgba(158, 0, 196, 0.45); }
+.cm-add { color: var(--muted); }
+.cm-picker { display: inline-flex; flex-wrap: wrap; gap: 3px; }
+.cm-pick { font-size: 1.05rem; line-height: 1; cursor: pointer; background: none; border: 1px solid transparent; border-radius: 8px; padding: 4px 5px; }
+.cm-pick:hover, .cm-pick.is-on { background: var(--wash); border-color: rgba(158, 0, 196, 0.3); }
+.cm-link {
+  font: inherit; font-size: 0.82rem; color: var(--deep); background: none; border: none;
+  padding: 4px 2px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+}
+
+.cm-thread { margin-top: 10px; padding-left: 12px; border-left: 2px solid var(--border-soft); display: grid; gap: 10px; }
+.cm-reply-head { font-size: 0.78rem; color: var(--muted); }
+.cm-reply-head b { color: var(--ink); font-weight: 600; }
+.cm-reply-body { margin-top: 2px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.92rem; }
+.cm-form { display: grid; gap: 7px; }
+.cm-form textarea {
+  font: inherit; font-size: 0.92rem; width: 100%; min-height: 64px; resize: vertical;
+  padding: 9px 10px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--paper); color: var(--ink);
+}
+.cm-send {
+  justify-self: start; font-family: "Archivo", sans-serif; font-weight: 700; font-size: 0.85rem; cursor: pointer;
+  background: var(--magenta); color: #fff; border: none; border-radius: 999px; padding: 8px 16px;
+}
+.cm-send:hover { background: var(--deep); }
+.cm-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

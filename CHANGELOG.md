@@ -1,5 +1,22 @@
 # Changelog
 
+## Members-only site and comments page (branch: members-only)
+
+- **The site is members-only.** Every page is behind Google sign-in, and a
+  Google account only gets in once it's linked to a Music League player
+  through a one-time invite link (`scripts/invites.py`). The gate is real:
+  league data is no longer on the public site or in the public repo. It's
+  published by `scripts/publish.py` to a private Supabase bucket that only
+  linked members can read. `data/` and `site/data/` are git-ignored, and
+  the deploy fails if either ever reappears. Commits from before this
+  change still contain the old data.
+- **Comments page** (`comments.html`): every vote comment, one round at a
+  time, with member up/down votes, reactions and flat replies. Keyed by the
+  existing comment id (round + track + voter), so everything stays attached
+  across new exports. The build now writes that id onto each comment.
+- Supabase schema, access rules and buckets in `supabase/schema.sql`.
+  The build is still stdlib-only, and so are the new scripts.
+
 ## 2026-09-21 (follow-up 2)
 
 - **Builds are now deterministic.** Each round's voters were iterated as a

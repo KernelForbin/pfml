@@ -3,8 +3,10 @@
 PFML build step.
 
 Reads the raw Music League CSV exports from data/season*/ and writes the
-JSON the site loads from site/data/. Re-run after every fresh export; the
-GitHub Action does this automatically on push.
+JSON the site loads into site/data/, plus site/seasonN.html. The site is
+members-only, so neither the exports nor the JSON are in the public repo:
+run scripts/publish.py (which runs this) to publish the data to the private
+Supabase bucket the site reads from.
 
 Season folders are discovered by name (season1, season2, season3, ... any
 number, numeric order). A season with only competitors.csv and no rounds
@@ -364,7 +366,8 @@ def build_season(folder: Path, season_key: str, label: str):
         if v.get("Comment", "").strip():
             comments_by_vote.add(key)
             comments_at.setdefault((v["Round ID"], v["Spotify URI"]), []).append(
-                {"voterId": v["Voter ID"], "voterName": names.get(v["Voter ID"], "Unknown"),
+                {"id": comment_id(v["Round ID"], v["Spotify URI"], v["Voter ID"]),
+                 "voterId": v["Voter ID"], "voterName": names.get(v["Voter ID"], "Unknown"),
                  "points": int(v["Points Assigned"]), "comment": v["Comment"].strip()}
             )
         voters_in_round.setdefault(v["Round ID"], set()).add(v["Voter ID"])
