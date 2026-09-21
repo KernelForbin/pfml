@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-09-21 (follow-up 4)
+
+- **Ties are handled everywhere a winner is named.** Standings share
+  places on equal points (T1, T1, 3); the Home page names every co-leader
+  ("Tied for the lead: Dianna Hank & josh storm"); the player focus card
+  and comparison show shared places; and every superlative card lists who
+  it's tied with, from the whole tied group rather than whichever entry
+  `max()` hit first. That changes what the site says in 13 real places,
+  among them Season 3's top track and boldest voter, Season 1's closest
+  round and 4-way coldest shoulder, and an 8-way tie for most likely to
+  comment in Season 3.
+- **Biggest blowout is hidden until it means something**: only once a
+  round has been won by a wider margin than the closest round. Season 3
+  showed "Dianna Hank won by 0 points".
+
 ## 2026-09-21 (follow-up 3)
 
 - **Round results replace the Comments page.** Under the leaderboard on

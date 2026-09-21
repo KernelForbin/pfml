@@ -129,6 +129,48 @@ def is_allcaps_word(w):
     return len(w) >= 3 and w.isupper() and w.isalpha()
 
 
+def best_of(items, key, lowest=False, order=None):
+    """Every item tied for the best value of `key`, not just the first one
+    max() or min() happens to meet.
+
+    Returns a list. The first entry is the one a superlative names; the
+    rest are what it's tied with. The list is sorted by `order`, so which
+    of several tied entries leads is a stable, visible rule (alphabetical
+    for people, date for rounds) rather than an accident of the data's
+    order. Empty in, empty out."""
+    items = list(items)
+    if not items:
+        return []
+    vals = [key(i) for i in items]
+    best = min(vals) if lowest else max(vals)
+    group = [i for i, v in zip(items, vals) if v == best]
+    if order is not None:
+        group.sort(key=order)
+    return group
+
+
+def with_ties(entry, group, label):
+    """The entry a superlative shows, plus "tiedWith": display labels for
+    the rest of its tie. No "tiedWith" key at all when there's no tie."""
+    entry = dict(entry)
+    others = [label(g) for g in group[1:]]
+    if others:
+        entry["tiedWith"] = others
+    return entry
+
+
+def by_name(x):
+    return (x.get("name") or "").lower()
+
+
+def pair_order(x):
+    return ((x.get("voterName") or "").lower(), (x.get("submitterName") or "").lower())
+
+
+def pair_label(x):
+    return f'{x.get("voterName")} \u2192 {x.get("submitterName")}'
+
+
 def comment_id(round_id, uri, voter_id):
     """Stable id for a single voter comment, matching the key
     scripts/enrich_comments.py writes into data/comment_sentiment.json.
@@ -341,6 +383,51 @@ def distinctive_word(player_words, league_counts, league_total, min_uses=3):
         if best is None or key > best[0]:
             best = (key, {"word": w, "uses": c, "vsLeague": round(ratio, 2)})
     return best[1] if best else None
+
+
+def comment_superlatives(eligible):
+    """The per-player comment superlatives, with ties. Used for a season
+    and for a whole career; `eligible` is players with enough comments."""
+    out = {}
+    name = lambda c: c["name"]
+
+    g = best_of(eligible, lambda c: c["commentRate"], order=by_name)
+    out["chattiest"] = with_ties({"name": g[0]["name"], "rate": g[0]["commentRate"],
+                                  "comments": g[0]["comments"]}, g, name)
+    g = best_of(eligible, lambda c: c["commentRate"], lowest=True, order=by_name)
+    out["quietest"] = with_ties({"name": g[0]["name"], "rate": g[0]["commentRate"],
+                                 "comments": g[0]["comments"]}, g, name)
+    g = best_of(eligible, lambda c: c["meanWords"], order=by_name)
+    out["wordiest"] = with_ties({"name": g[0]["name"], "meanWords": g[0]["meanWords"],
+                                 "comments": g[0]["comments"]}, g, name)
+    g = best_of(eligible, lambda c: c["meanWords"], lowest=True, order=by_name)
+    out["tersest"] = with_ties({"name": g[0]["name"], "meanWords": g[0]["meanWords"],
+                                "comments": g[0]["comments"]}, g, name)
+    g = best_of(eligible, lambda c: c["allCapsRate"], order=by_name)
+    if g[0]["allCapsRate"] > 0:
+        out["loudest"] = with_ties({"name": g[0]["name"], "rate": g[0]["allCapsRate"]}, g, name)
+    sampled = [c for c in eligible if c.get("vocabRichnessSampled") is not None]
+    if sampled:
+        g = best_of(sampled, lambda c: c["vocabRichnessSampled"], order=by_name)
+        out["richestVocab"] = with_ties({"name": g[0]["name"], "richness": g[0]["vocabRichnessSampled"],
+                                         "comments": g[0]["comments"], "sampleWords": VOCAB_SAMPLE_WORDS}, g, name)
+    g = best_of(eligible, lambda c: c["zeroPointComments"], order=by_name)
+    if g[0]["zeroPointComments"] > 0:
+        out["mostZeroPoint"] = with_ties({"name": g[0]["name"], "count": g[0]["zeroPointComments"]}, g, name)
+    return out
+
+
+def pair_superlatives(pairs):
+    """Silent treatment and most talked at, with ties. The metric is the
+    comment rate, with more chances ranking higher at the same rate (a zero
+    across 20 chances says more than a zero across 5), so a tie means the
+    same rate AND the same number of chances."""
+    out = {}
+    g = best_of(pairs, lambda p: (p["rate"], -p["chances"]), lowest=True, order=pair_order)
+    out["silentTreatment"] = with_ties(g[0], g, pair_label)
+    g = best_of(pairs, lambda p: (p["rate"], p["chances"]), order=pair_order)
+    out["mostTalkedAt"] = with_ties(g[0], g, pair_label)
+    return out
 
 
 def build_season(folder: Path, season_key: str, label: str):
@@ -612,6 +699,17 @@ def build_season(folder: Path, season_key: str, label: str):
     # ---- standings ----
     standings = [p for p in player.values() if p["submissions"] > 0]
     standings.sort(key=lambda p: (-p["points"], -p["roundsWon"], p["name"]))
+    # Places go by points alone, and equal points share a place (1, 1, 3),
+    # the same competition ranking the rounds and the trend chart use.
+    # Rounds won only orders people within a shared place; it doesn't break
+    # the tie.
+    prev_points, place = None, 0
+    for i, p in enumerate(standings):
+        if p["points"] != prev_points:
+            place, prev_points = i + 1, p["points"]
+        p["rank"] = place
+    for p in standings:
+        p["tied"] = sum(1 for q in standings if q["rank"] == p["rank"]) > 1
     for p in standings:
         # per-submission average reflects what the votes gave, so a Daily
         # Double lifts the total without inflating the average
@@ -818,73 +916,65 @@ def build_season(folder: Path, season_key: str, label: str):
             if longest_overall:
                 comment_summary["longestComment"] = dict(longest_overall["longest"], name=longest_overall["name"])
         if eligible:
-            chattiest = max(eligible, key=lambda c: c["commentRate"])
-            comment_summary["chattiest"] = {"name": chattiest["name"], "rate": chattiest["commentRate"],
-                                            "comments": chattiest["comments"]}
-            quietest = min(eligible, key=lambda c: c["commentRate"])
-            comment_summary["quietest"] = {"name": quietest["name"], "rate": quietest["commentRate"],
-                                           "comments": quietest["comments"]}
-            wordiest = max(eligible, key=lambda c: c["meanWords"])
-            comment_summary["wordiest"] = {"name": wordiest["name"], "meanWords": wordiest["meanWords"]}
-            tersest = min(eligible, key=lambda c: c["meanWords"])
-            comment_summary["tersest"] = {"name": tersest["name"], "meanWords": tersest["meanWords"]}
-            loudest = max(eligible, key=lambda c: c["allCapsRate"])
-            if loudest["allCapsRate"] > 0:
-                comment_summary["loudest"] = {"name": loudest["name"], "rate": loudest["allCapsRate"]}
-            sampled = [c for c in eligible if c.get("vocabRichnessSampled") is not None]
-            if sampled:
-                richest = max(sampled, key=lambda c: c["vocabRichnessSampled"])
-                comment_summary["richestVocab"] = {"name": richest["name"],
-                                                   "richness": richest["vocabRichnessSampled"],
-                                                   "comments": richest["comments"],
-                                                   "sampleWords": VOCAB_SAMPLE_WORDS}
-            most_zero = max(eligible, key=lambda c: c["zeroPointComments"])
-            if most_zero["zeroPointComments"] > 0:
-                comment_summary["mostZeroPoint"] = {"name": most_zero["name"],
-                                                    "count": most_zero["zeroPointComments"]}
+            comment_summary.update(comment_superlatives(eligible))
         if comment_pairs:
-            warmest = max(comment_pairs, key=lambda p: (p["rate"], p["chances"]))
-            comment_summary["mostTalkedAt"] = warmest
-            silent = min(comment_pairs, key=lambda p: (p["rate"], -p["chances"]))
-            comment_summary["silentTreatment"] = silent
+            comment_summary.update(pair_superlatives(comment_pairs))
 
     # ---- highlights ----
     highlights = {}
     if all_songs:
-        top = max(all_songs, key=lambda s: s["points"])
-        highlights["topTrack"] = {k: top[k] for k in
-                                  ("title", "artistText", "album", "submitterName", "points", "spotifyId", "roundName")}
+        track_label = lambda t: f'{t["title"]} ({t["submitterName"]})'
+        track_order = lambda t: (t["title"].lower(), t["submitterName"].lower())
+        g = best_of(all_songs, lambda t: t["points"], order=track_order)
+        highlights["topTrack"] = with_ties({k: g[0][k] for k in
+                                           ("title", "artistText", "album", "submitterName", "points", "spotifyId", "roundName")},
+                                          g, track_label)
 
         contested = [s for s in all_songs if s["backers"] >= 3]
         if contested:
-            divisive = max(contested, key=lambda s: s["spread"])
-            highlights["divisiveTrack"] = {k: divisive[k] for k in
-                                           ("title", "artistText", "submitterName", "spread", "spotifyId", "roundName")}
+            g = best_of(contested, lambda t: t["spread"], order=track_order)
+            highlights["divisiveTrack"] = with_ties({k: g[0][k] for k in
+                                                    ("title", "artistText", "submitterName", "spread", "spotifyId", "roundName")},
+                                                   g, track_label)
 
         shut_out = [s for s in all_songs if s["points"] <= 0]
         highlights["shutOutCount"] = len(shut_out)
 
         decided = [r for r in rounds_out if r["margin"] is not None]
         if decided:
-            closest = min(decided, key=lambda r: r["margin"])
-            blowout = max(decided, key=lambda r: r["margin"])
-            highlights["closestRound"] = {"name": closest["name"], "margin": closest["margin"]}
-            highlights["blowoutRound"] = {"name": blowout["name"], "margin": blowout["margin"],
-                                          "winner": blowout["songs"][0]["submitterName"],
-                                          "title": blowout["songs"][0]["title"]}
+            by_date = lambda r: r["created"] or ""
+            g = best_of(decided, lambda r: r["margin"], lowest=True, order=by_date)
+            highlights["closestRound"] = with_ties({"name": g[0]["name"], "margin": g[0]["margin"]},
+                                                   g, lambda r: r["name"])
+            # A blowout only means something next to a closer round. With
+            # one round (or every round won by the same margin) it would be
+            # the closest round again, and after a tie it read "won by 0
+            # points". So it's left out until some round was won by more
+            # than the closest one.
+            widest = max(r["margin"] for r in decided)
+            if widest > highlights["closestRound"]["margin"]:
+                g = best_of(decided, lambda r: r["margin"], order=by_date)
+                highlights["blowoutRound"] = with_ties({"name": g[0]["name"], "margin": g[0]["margin"],
+                                                        "winner": g[0]["songs"][0]["submitterName"],
+                                                        "title": g[0]["songs"][0]["title"]},
+                                                       g, lambda r: r["name"])
 
         if taste:
-            biggest_fan = max(taste, key=lambda t: t["index"])
-            coldest = min(taste, key=lambda t: t["index"])
-            highlights["biggestFan"] = biggest_fan
-            highlights["coldestShoulder"] = coldest
+            g = best_of(taste, lambda t: t["index"], order=pair_order)
+            highlights["biggestFan"] = with_ties(g[0], g, pair_label)
+            g = best_of(taste, lambda t: t["index"], lowest=True, order=pair_order)
+            highlights["coldestShoulder"] = with_ties(g[0], g, pair_label)
 
         if voters_out:
-            highlights["boldestVoter"] = max(voters_out, key=lambda v: v["avgTopBet"])
-            highlights["hedgiestVoter"] = max(voters_out, key=lambda v: v["avgTracksBacked"])
+            name = lambda v: v["name"]
+            g = best_of(voters_out, lambda v: v["avgTopBet"], order=by_name)
+            highlights["boldestVoter"] = with_ties(g[0], g, name)
+            g = best_of(voters_out, lambda v: v["avgTracksBacked"], order=by_name)
+            highlights["hedgiestVoter"] = with_ties(g[0], g, name)
             eligible = [v for v in voters_out if v["kingmakerRounds"] >= 5]
             if eligible:
-                highlights["bestTastemaker"] = max(eligible, key=lambda v: v["kingmakerRate"])
+                g = best_of(eligible, lambda v: v["kingmakerRate"], order=by_name)
+                highlights["bestTastemaker"] = with_ties(g[0], g, name)
 
         artist_counts = {}
         for s in all_songs:
@@ -1079,45 +1169,21 @@ def build_career_comments(raw_seasons):
         if longest_overall:
             summary["longestComment"] = dict(longest_overall["longest"], name=longest_overall["name"])
         if eligible:
-            talkative = max(eligible, key=lambda p: p["commentRate"])
-            summary["mostTalkative"] = {"name": talkative["name"], "rate": talkative["commentRate"],
-                                        "comments": talkative["comments"]}
-            terse = min(eligible, key=lambda p: p["meanWords"])
-            summary["mostTerse"] = {"name": terse["name"], "meanWords": terse["meanWords"],
-                                    "comments": terse["comments"]}
-            wordiest = max(eligible, key=lambda p: p["meanWords"])
-            summary["wordiest"] = {"name": wordiest["name"], "meanWords": wordiest["meanWords"]}
-            quietest = min(eligible, key=lambda p: p["commentRate"])
-            summary["quietest"] = {"name": quietest["name"], "rate": quietest["commentRate"],
-                                   "comments": quietest["comments"]}
-            sampled = [p for p in eligible if p.get("vocabRichnessSampled") is not None]
-            if sampled:
-                richest = max(sampled, key=lambda p: p["vocabRichnessSampled"])
-                summary["richestVocab"] = {"name": richest["name"],
-                                           "richness": richest["vocabRichnessSampled"],
-                                           "comments": richest["comments"],
-                                           "sampleWords": VOCAB_SAMPLE_WORDS}
-            loudest = max(eligible, key=lambda p: p["allCapsRate"])
-            if loudest["allCapsRate"] > 0:
-                summary["loudest"] = {"name": loudest["name"], "rate": loudest["allCapsRate"]}
-            zero = max(eligible, key=lambda p: p["zeroPointComments"])
-            if zero["zeroPointComments"] > 0:
-                summary["mostZeroPoint"] = {"name": zero["name"], "count": zero["zeroPointComments"]}
+            sup = comment_superlatives(eligible)
+            # the career page calls these two by career-flavoured names
+            sup["mostTalkative"] = sup.pop("chattiest")
+            sup["mostTerse"] = sup.pop("tersest")
+            summary.update(sup)
         if pairs:
             # "silent treatment": the pair with the lowest comment rate over
             # the most chances, i.e. the person you've had every chance to
             # say something to and never have.
-            silent = min(pairs, key=lambda p: (p["rate"], -p["chances"]))
-            summary["silentTreatment"] = silent
-            chatty = max(pairs, key=lambda p: (p["rate"], p["chances"]))
-            summary["mostTalkedAt"] = chatty
+            summary.update(pair_superlatives(pairs))
         if notes:
-            noter = max(notes.items(), key=lambda kv: len(kv[1]))
-            summary["mostSubmitterNotes"] = {
-                "name": names.get(noter[0], "Unknown"),
-                "notes": len(noter[1]),
-                "submissions": subs.get(noter[0], 0),
-            }
+            noters = [{"name": names.get(pid, "Unknown"), "notes": len(lst), "submissions": subs.get(pid, 0)}
+                      for pid, lst in notes.items()]
+            g = best_of(noters, lambda n: n["notes"], order=by_name)
+            summary["mostSubmitterNotes"] = with_ties(g[0], g, lambda n: n["name"])
             summary["submitterNoteCount"] = sum(len(v) for v in notes.values())
 
     return {"players": players, "pairs": pairs, "summary": summary}
@@ -1170,16 +1236,18 @@ def build_career(season_datas, raw_seasons=None):
 
     highlights = {}
     if players:
-        top_score = players[0]
-        highlights["topScore"] = {"name": top_score["name"], "careerScore": top_score["careerScore"]}
-        most_wins = max(players, key=lambda p: p["roundsWon"])
-        highlights["mostWins"] = {"name": most_wins["name"], "roundsWon": most_wins["roundsWon"]}
-        most_podiums = max(players, key=lambda p: p["podiums"])
-        highlights["mostPodiums"] = {"name": most_podiums["name"], "podiums": most_podiums["podiums"]}
-        best_single = max(players, key=lambda p: p["bestSeasonPoints"])
-        season_label = next((d["label"] for d in season_datas if d["key"] == best_single["bestSeasonKey"]), "")
-        highlights["bestSingleSeason"] = {"name": best_single["name"], "points": best_single["bestSeasonPoints"],
-                                          "season": season_label}
+        name = lambda p: p["name"]
+        g = best_of(players, lambda p: p["careerScore"], order=by_name)
+        highlights["topScore"] = with_ties({"name": g[0]["name"], "careerScore": g[0]["careerScore"]}, g, name)
+        g = best_of(players, lambda p: p["roundsWon"], order=by_name)
+        highlights["mostWins"] = with_ties({"name": g[0]["name"], "roundsWon": g[0]["roundsWon"]}, g, name)
+        g = best_of(players, lambda p: p["podiums"], order=by_name)
+        highlights["mostPodiums"] = with_ties({"name": g[0]["name"], "podiums": g[0]["podiums"]}, g, name)
+        labels = {d["key"]: d["label"] for d in season_datas}
+        g = best_of(players, lambda p: p["bestSeasonPoints"], order=by_name)
+        highlights["bestSingleSeason"] = with_ties(
+            {"name": g[0]["name"], "points": g[0]["bestSeasonPoints"], "season": labels.get(g[0]["bestSeasonKey"], "")},
+            g, lambda p: f'{p["name"]} ({labels.get(p["bestSeasonKey"], "")})')
 
     comments = build_career_comments(raw_seasons or [])
 
@@ -1232,6 +1300,8 @@ def main():
             "songCount": data["songCount"],
             "playerCount": len(data["competitors"]),
             "leaderName": leader["name"] if leader else None,
+            # everyone sharing first place, in standings order
+            "leaderNames": [p["name"] for p in data["standings"] if p["rank"] == 1],
             "leaderPoints": leader["points"] if leader else None,
             "startedAt": data["startedAt"],
             "liveRound": data["liveRound"],

@@ -688,3 +688,7 @@ body.gated > *:not(#gate) { display: none !important; }
 
 /* the home page's Career card sits in the season grid */
 .season-card-career .season-card-name { color: var(--deep); }
+
+/* ---------- ties ---------- */
+.hl-tie { margin-top: 7px; font-size: 0.8rem; color: var(--deep); font-weight: 500; }
+.hl-tie[title] { cursor: help; text-decoration: underline dotted; text-underline-offset: 3px; }

@@ -421,6 +421,35 @@ submitter doesn't match the track's submitter is ignored with a warning.
 Seasons without a `daily_doubles.json` file (Seasons 1 and 2) don't use
 the rule at all.
 
+## Ties
+
+Ties are real in this data (Season 3's first round ended with two players
+level on 29), so nothing that names a winner picks one silently:
+
+- **Standings** go by points, and equal points share a place, shown as
+  `T1`, `T1`, `3` (competition ranking, the same rule rounds and the
+  Standing over time chart use). Rounds won orders people within a shared
+  place but doesn't break the tie.
+- **Rounds**: tracks level on points share a finishing place, and every
+  track in first place is credited with a round win (and so a podium, and
+  the Career Score bonuses for both).
+- **Home page**: a season whose top spot is shared says "Tied for the
+  lead" (or "Joint winners" once it's over) and names everyone in it
+  (`leaderNames` in `index.json`).
+- **Every superlative** (season in numbers, comment superlatives, career
+  highlights) is computed with `best_of()` in `build.py`, which returns the
+  whole group tied for the best value rather than whichever one `max()`
+  met first. The card names the first of the group, in a fixed order
+  (alphabetical for people and tracks, earliest first for rounds), and a
+  "Tied with ..." line names the rest (`tiedWith` in the JSON). A long tie
+  shows three names and "and N more", with the full list on hover.
+  "Silent treatment" and "Most talked at" rank on the comment rate and then
+  the number of chances, so a tie there means both are equal.
+- **Biggest blowout** only appears once some round was won by a wider
+  margin than the closest round. With one round, or every round won by the
+  same margin, it would repeat the closest round, and after a tie it read
+  "won by 0 points".
+
 ## Derived metrics
 
 **Taste index** — the share of a voter's points that went to one submitter,
