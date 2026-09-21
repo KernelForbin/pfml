@@ -75,6 +75,27 @@ total. Whenever the user uploads a new Season 3 export, before building:
 The build applies only what the file says. It warns about unreviewed rounds
 and refuses to build on malformed entries. See README, Daily Double.
 
+## Keep the features page true
+
+`site/features.html` (pfml.fun/features) is a plain-language tour of what
+members can see and do, linked from the footer of every members-only page. **Any change that
+adds, removes or visibly alters a feature updates that page in the same
+change.** Every sentence on it has to be true of the code as it ships.
+
+Scope rule, so it never turns into a changelog: it lists only features
+that are current, working and noticeable to an ordinary member, things
+they see on screen or do themselves. No bug fixes, refactors, performance
+work, data pipeline or backend changes, admin-only powers, or anything not
+shipped yet. The test: would a regular member notice if this disappeared?
+If not, it stays off.
+
+It's standalone on purpose: public, no sign-in, no `style.css`, no
+`app.js`, no data, nothing loaded but itself and its fonts. Its colour
+tokens are copied from `style.css`, so a palette change there updates them
+too. A local `python -m http.server` doesn't resolve the clean `features`
+and `privacy` links the way GitHub Pages does; open `features.html`
+directly when testing locally.
+
 ## No automated tests ship in this repo
 
 Verification during development was done with disposable Node.js harnesses

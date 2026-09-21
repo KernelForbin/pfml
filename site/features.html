@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PFML - What this site can do</title>
+<meta name="description" content="A plain-language tour of what you can see and do on PFML, our Music League site.">
+<meta name="theme-color" content="#9E00C4">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%239E00C4'/><path d='M30 74V26h22a14 14 0 010 28H44v20z' fill='%23F8F9FA'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Standalone on purpose: no style.css, no app code, no data. It loads
+     only itself and its fonts, so it is public and needs no sign-in. The
+     tokens below are copied from style.css; keep them in step with it. */
+  :root {
+    --paper: #F8F9FA;
+    --ink: #16111A;
+    --muted: #6A6172;
+    --border: rgba(22, 17, 26, 0.10);
+    --border-soft: rgba(22, 17, 26, 0.06);
+    --magenta: #9E00C4;
+    --deep: #7A0099;
+    --wash: #F4E4FA;
+    --acid: #CCFF3D;
+    --card: #FFFFFF;
+    --neg: #B3261E;
+    --shadow-sm: 0 1px 2px rgba(22, 17, 26, .05);
+    --shadow-md: 0 18px 40px -22px rgba(22, 17, 26, .35), 0 2px 6px -2px rgba(22, 17, 26, .08);
+    --r: 16px;
+    --r-sm: 11px;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 16px/1.55 "Inter", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 { font-family: "Archivo", "Inter", system-ui, sans-serif; }
+  a { color: var(--deep); text-underline-offset: 2px; text-decoration-thickness: 1.5px; }
+  a:hover { color: var(--magenta); }
+  :focus-visible { outline: 3px solid var(--magenta); outline-offset: 2px; border-radius: 4px; }
+  .shell { max-width: 900px; margin: 0 auto; padding-left: 16px; padding-right: 16px; }
+  @media (min-width: 621px) { .shell { padding-left: 20px; padding-right: 20px; } }
+
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(248, 249, 250, 0.86);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar-inner { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding-top: 12px; padding-bottom: 12px; }
+  .wordmark {
+    font-family: "Archivo", sans-serif; font-weight: 800; font-size: 1.3rem;
+    letter-spacing: -0.02em; color: var(--ink); text-decoration: none;
+  }
+  .wordmark:hover { color: var(--magenta); }
+  .back {
+    font-family: "Archivo", sans-serif; font-weight: 600; font-size: 0.86rem; line-height: 1;
+    padding: 7px 15px; border: 1px solid var(--border); border-radius: 999px;
+    background: var(--card); color: var(--ink); text-decoration: none; box-shadow: var(--shadow-sm);
+  }
+  .back:hover { color: var(--ink); box-shadow: var(--shadow-md); }
+
+  .hero { padding-top: 40px; }
+  .hero h1 {
+    margin: 0; font-size: clamp(2.3rem, 8vw, 3.6rem); font-weight: 800;
+    letter-spacing: -0.035em; line-height: 1.02; text-wrap: balance;
+  }
+  .hero p { margin: 12px 0 0; color: var(--muted); font-size: 1.05rem; max-width: 60ch; }
+
+  /* the mode switch: same look as the trend chart's view switch */
+  .modes {
+    display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 26px;
+    border: 1px solid var(--border); border-radius: 999px; overflow: hidden;
+    background: var(--card); box-shadow: var(--shadow-sm); max-width: 520px;
+  }
+  .modes a {
+    display: block; text-align: center; font-size: 0.84rem; font-weight: 500;
+    padding: 9px 6px; color: var(--muted); text-decoration: none; white-space: nowrap;
+  }
+  .modes a:not(:last-child) { border-right: 1px solid var(--border); }
+  .modes a:hover { color: var(--ink); background: var(--wash); }
+  .modes a[aria-current="page"] { background: var(--magenta); color: #fff; }
+  @media (max-width: 380px) { .modes a { font-size: 0.78rem; padding: 9px 4px; } }
+
+  .mode { padding-top: 22px; }
+  .mode > h2 { margin: 0 0 4px; font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; }
+  .mode > .note { margin: 0 0 16px; color: var(--muted); font-size: 0.9rem; max-width: 70ch; }
+  .js .mode[hidden] { display: none; }
+
+  .cards { display: grid; gap: 12px; grid-template-columns: 1fr; }
+  @media (min-width: 621px) { .cards { grid-template-columns: 1fr 1fr; } }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--r);
+    box-shadow: var(--shadow-sm); padding: 17px 19px;
+  }
+  .card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .icon {
+    flex: 0 0 auto; width: 38px; height: 38px; border-radius: 50%;
+    display: grid; place-items: center; background: var(--wash); color: var(--magenta);
+  }
+  .icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .card h3 { margin: 0; font-size: 1.08rem; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
+  .card ul { margin: 0; padding-left: 18px; }
+  .card li { margin: 5px 0 0; font-size: 0.93rem; }
+  .card li::marker { color: var(--magenta); }
+
+  /* key: real badges, drawn the way the site draws them */
+  .key { padding-top: 40px; }
+  .key h2 { margin: 0 0 4px; font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; }
+  .key .note { margin: 0 0 16px; color: var(--muted); font-size: 0.9rem; }
+  .key dl {
+    margin: 0; background: var(--card); border: 1px solid var(--border); border-radius: var(--r);
+    box-shadow: var(--shadow-sm); overflow: hidden;
+  }
+  .key-row { display: grid; grid-template-columns: 112px 1fr; gap: 14px; align-items: center; padding: 12px 16px; }
+  .key-row + .key-row { border-top: 1px solid var(--border-soft); }
+  .key dt { display: flex; align-items: center; }
+  .key dd { margin: 0; font-size: 0.9rem; }
+  .pip { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--magenta); box-shadow: 0 0 0 3px var(--wash); margin-left: 4px; }
+  .rank { font-family: "Archivo", sans-serif; font-weight: 700; color: var(--muted); }
+  .place {
+    display: inline-block; font-family: "Archivo", sans-serif; font-weight: 700; font-size: 0.66rem;
+    text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 9px; border-radius: 999px; white-space: nowrap;
+  }
+  .place.is-1 { background: var(--acid); color: var(--ink); }
+  .place.is-2 { background: var(--wash); color: var(--deep); }
+  .dd {
+    display: inline-block; font-family: "Archivo", sans-serif; font-weight: 700; font-size: 0.64rem;
+    text-transform: uppercase; letter-spacing: 0.05em; line-height: 1;
+    padding: 3px 7px; border-radius: 999px; background: var(--ink); color: var(--acid); white-space: nowrap;
+  }
+  .pts { font-family: "Archivo", sans-serif; font-weight: 700; font-size: 1.2rem; }
+  .pts.is-neg { color: var(--neg); }
+  .pts.is-zero { color: var(--muted); font-size: 1rem; }
+  .noart {
+    display: grid; place-items: center; width: 34px; height: 34px; border-radius: 8px;
+    background: var(--wash); color: var(--magenta); font-size: 1rem;
+  }
+  .ramp { width: 90px; height: 10px; border-radius: 5px; border: 1px solid var(--border); background: linear-gradient(90deg, #fff, var(--magenta)); }
+  @media (max-width: 380px) { .key-row { grid-template-columns: 92px 1fr; gap: 10px; } }
+
+  .foot {
+    margin-top: 46px; padding-top: 24px; padding-bottom: 60px;
+    border-top: 1px solid var(--border); color: var(--muted); font-size: 0.84rem;
+  }
+  .foot p { margin: 0; max-width: 70ch; }
+  .foot p + p { margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-glance" viewBox="0 0 24 24"><path d="M3 20h18M6 20V11M11 20V5M16 20v-6M20 20v-9"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 21h8M10 17h4v4h-4z"/></symbol>
+  <symbol id="i-focus" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><rect x="3" y="4" width="6" height="6" rx="1.5"/><rect x="3" y="14" width="6" height="6" rx="1.5"/><path d="M13 6h8M13 9h5M13 16h8M13 19h5"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l2 5.5L19.5 10.5 14 12.5 12 18l-2-5.5L4.5 10.5 10 8.5z"/><path d="M19 17v4M17 19h4"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 6-7"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-8-4.8-8-10.5A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 8 2.5C20 15.2 12 20 12 20z"/></symbol>
+  <symbol id="i-scale" viewBox="0 0 24 24"><path d="M12 3v18M7 21h10M5 7h14"/><path d="M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/></symbol>
+  <symbol id="i-bubble" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></symbol>
+  <symbol id="i-repeat" viewBox="0 0 24 24"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></symbol>
+  <symbol id="i-page" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></symbol>
+  <symbol id="i-disc" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/></symbol>
+  <symbol id="i-votes" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/><path d="M18 16l2 2 3-4"/></symbol>
+  <symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9.5h.01M15 9.5h.01"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M16 8l-2 6-6 2 2-6z"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3L2 8l10 5 10-5z"/><path d="M2 13l10 5 10-5"/></symbol>
+  <symbol id="i-playlist" viewBox="0 0 24 24"><path d="M3 6h12M3 12h12M3 18h8M19 16V4"/><circle cx="17" cy="16" r="2"/></symbol>
+  <symbol id="i-medal" viewBox="0 0 24 24"><circle cx="12" cy="15" r="6"/><path d="M8 3l3 6M16 3l-3 6M12 13v4"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></symbol>
+</svg>
+
+<header class="topbar">
+  <div class="shell topbar-inner">
+    <a class="wordmark" href="./">PFML</a>
+    <a class="back" href="./">Back to the site</a>
+  </div>
+</header>
+
+<main class="shell">
+  <section class="hero">
+    <h1>What this site can do</h1>
+    <p>Everything from our Music League, all in one place. Here's what you can see and do.</p>
+    <nav class="modes" aria-label="Part of the site">
+      <a href="?mode=seasons" data-mode="seasons">Season pages</a>
+      <a href="?mode=rounds" data-mode="rounds">Round pages</a>
+      <a href="?mode=home" data-mode="home">Home &amp; Career</a>
+    </nav>
+  </section>
+
+  <!-- ============ SEASON PAGES ============ -->
+  <section class="mode" id="mode-seasons" data-mode="seasons">
+    <h2>Season pages</h2>
+    <p class="note">One page per season, from the tabs in the top bar.</p>
+    <div class="cards">
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-trophy"/></svg></span><h3>Standings</h3></div>
+        <ul>
+          <li>Everyone's points for the season, plus their average, rounds won and top-3 finishes.</li>
+          <li>Players on the same points share a place, shown as T1, T2 and so on.</li>
+          <li>A Daily Double bonus shows under the player's name, with the track it came from.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-focus"/></svg></span><h3>Tap a name to focus on it</h3></div>
+        <ul>
+          <li>Tap one name for that player's profile: best and weakest track, biggest fan, who's hardest to win over, and how they vote.</li>
+          <li>Tap more names to compare them side by side, with a head-to-head count of who placed better.</li>
+          <li>Pick exactly two to see how each one rates the other.</li>
+          <li>The rest of the page follows your pick. Tap &times; on a name, or Clear, to go back.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-list"/></svg></span><h3>Round results</h3></div>
+        <ul>
+          <li>Open the Round results button under the standings for a card per round, newest first.</li>
+          <li>Each card shows the winning track's album art, who won (or who tied), and how many votes and comments came in.</li>
+          <li>Tap a card to open the whole round on its own page.</li>
+          <li>With names picked in Standings, you only see the rounds they entered.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-glance"/></svg></span><h3>The season at a glance</h3></div>
+        <ul>
+          <li>The top of the page counts the rounds, tracks, players, artists and votes.</li>
+          <li>The row of links under the top bar jumps straight to any section.</li>
+          <li>Sections with nothing to show yet are left out of that row.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-spark"/></svg></span><h3>The season in numbers</h3></div>
+        <ul>
+          <li>Awards for the season: top track, most divisive track, closest round, biggest fan, coldest shoulder, boldest voter and more.</li>
+          <li>When there's a tie, the card says who else shares it.</li>
+          <li>Tucked away while you're focused on a player, since they're about everyone.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-chart"/></svg></span><h3>Trend chart</h3></div>
+        <ul>
+          <li>Three views: everyone's place after each round, how close each player is to a perfect run, or total points.</li>
+          <li>Tap names above the chart to add or remove people, or use Select all and Clear.</li>
+          <li>Tap a line to hide that player. On a computer, point at a dot to see the round and the number.</li>
+          <li>Shows up once a season has two rounds.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-note"/></svg></span><h3>Top tracks</h3></div>
+        <ul>
+          <li>The season's 20 highest-scoring tracks.</li>
+          <li>Tap a title to play it in Spotify.</li>
+          <li>Tap an artist or album to search for it in Spotify.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-heart"/></svg></span><h3>Who likes whose taste</h3></div>
+        <ul>
+          <li>A grid of how much each voter favours each person's picks, compared with spreading their points evenly.</li>
+          <li>Darker squares mean a bigger share of that voter's points.</li>
+          <li>Focus on one player for two lists: how they rate everyone, and how everyone rates them.</li>
+          <li>Fills in after a few rounds of voting.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-scale"/></svg></span><h3>Voting style</h3></div>
+        <ul>
+          <li>Everyone gets the same points to hand out each round. This shows how each player spends them.</li>
+          <li>Their average biggest bet, how many tracks they back, and how often their top pick won the round.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-bubble"/></svg></span><h3>Comment stats</h3></div>
+        <ul>
+          <li>Awards like most likely to comment, wordiest, tersest and most SHOUTING.</li>
+          <li>A table for each player: how often they comment, how long, and how many ! ? and CAPS.</li>
+          <li>Each player's signature word: the one they reach for more than anyone else.</li>
+          <li>The season's longest comment, in full.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-repeat"/></svg></span><h3>Repeat artists</h3></div>
+        <ul>
+          <li>Artists who've been submitted more than once, with a count.</li>
+          <li>Tap one to find them in Spotify.</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============ ROUND PAGES ============ -->
+  <section class="mode" id="mode-rounds" data-mode="rounds">
+    <h2>Round pages</h2>
+    <p class="note">Every round gets its own full page. Open one from Round results on a season page.</p>
+    <div class="cards">
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-page"/></svg></span><h3>The whole round, full size</h3></div>
+        <ul>
+          <li>The prompt, the date, who won, and the round's playlist, all at the top.</li>
+          <li>Jump to the previous or next round, or back to the season.</li>
+          <li>Counts of tracks, votes and comments for the round.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-disc"/></svg></span><h3>Track by track</h3></div>
+        <ul>
+          <li>Every track in finishing order, with its album art, place, points and how many people voted for it.</li>
+          <li>Tap the title to play it in Spotify.</li>
+          <li>Who submitted it, and their note about it if they left one.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-votes"/></svg></span><h3>Every vote and comment</h3></div>
+        <ul>
+          <li>Everyone who voted for a track, with their points, biggest first.</li>
+          <li>Their comment in full, in big, easy-to-read text.</li>
+          <li>People who commented without giving points come last, with a grey 0.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-smile"/></svg></span><h3>Join the conversation</h3></div>
+        <ul>
+          <li>Vote any comment up or down.</li>
+          <li>React with &#x1F525; &#x1F602; &#x1F4AF; &#x1F440; &#x1F62C; or &#x2764;&#xFE0F;. On a computer, point at a reaction to see who left it.</li>
+          <li>Reply to a comment, and delete your own replies.</li>
+          <li>Other members see your replies and reactions with your name. Votes only show as the comment's score.</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============ HOME & CAREER ============ -->
+  <section class="mode" id="mode-home" data-mode="home">
+    <h2>Home &amp; Career</h2>
+    <p class="note">Getting in, finding your way around, and the all-time view.</p>
+    <div class="cards">
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-layers"/></svg></span><h3>Season cards</h3></div>
+        <ul>
+          <li>One card per season on the Home page: rounds, tracks, players and who won.</li>
+          <li>The season in progress shows who's leading, the current round and what stage it's at.</li>
+          <li>If there's a tie, it names everyone who shares the lead.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-medal"/></svg></span><h3>Career</h3></div>
+        <ul>
+          <li>Open it from its card on the Home page.</li>
+          <li>Standings across every season: points per season, total, rounds won, top-3 finishes, and a Career Score that rewards wins and podiums.</li>
+          <li>Tap any column heading to sort by it. Tap again to flip the order.</li>
+          <li>Awards for the highest Career Score, most round wins, most podiums and best single season.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-history"/></svg></span><h3>Comments, all-time</h3></div>
+        <ul>
+          <li>The comment awards and the per-player table, across every season.</li>
+          <li>Everyone's all-time signature word.</li>
+          <li>The longest comment ever written, in full.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-playlist"/></svg></span><h3>Playlists</h3></div>
+        <ul>
+          <li>League-wide and per-season playlists, on the Home page. They open in Spotify.</li>
+          <li>Playlists that aren't built yet say "coming soon".</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-compass"/></svg></span><h3>Getting around</h3></div>
+        <ul>
+          <li>The top bar has Home and a tab for every season.</li>
+          <li>A dot marks the season that's in progress.</li>
+          <li>Tap PFML at the top left to get back Home from anywhere.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-lock"/></svg></span><h3>Signing in</h3></div>
+        <ul>
+          <li>The site is for league members only. You sign in with Google.</li>
+          <li>The first time, use the personal invite link from the league organizer. It connects your Google account to your player, once.</li>
+          <li>Your name and a Sign out button sit in the top bar.</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============ KEY ============ -->
+  <section class="key" aria-labelledby="key-title">
+    <h2 id="key-title">What the badges mean</h2>
+    <p class="note">The same colours and marks, wherever they show up.</p>
+    <dl>
+      <div class="key-row"><dt><span class="pip" aria-hidden="true"></span></dt><dd>This season is in progress. On the Home page its card says Live.</dd></div>
+      <div class="key-row"><dt><span class="rank">T2</span></dt><dd>A shared place: these players are tied on points.</dd></div>
+      <div class="key-row"><dt><span class="place is-1">&#9733; 1st place</span></dt><dd>The round's winner. 2nd and 3rd get a soft purple badge, and "&middot; tie" means the place is shared.</dd></div>
+      <div class="key-row"><dt><span class="dd">Daily Double</span></dt><dd>This track counts twice toward its submitter's season total. In Season 3, each player can ask for one, once per season, in their note when they submit.</dd></div>
+      <div class="key-row"><dt><span class="pts is-neg">&minus;2</span></dt><dd>A downvote: points taken away. Only seasons that allow downvotes have them (so far, Season 1).</dd></div>
+      <div class="key-row"><dt><span class="pts is-zero">0</span></dt><dd>A comment that came without any points.</dd></div>
+      <div class="key-row"><dt><span class="noart" aria-hidden="true">&#9835;</span></dt><dd>No album art was found for this track.</dd></div>
+      <div class="key-row"><dt><span class="ramp" aria-hidden="true"></span></dt><dd>In the taste grid, darker means a bigger share of that voter's points.</dd></div>
+    </dl>
+  </section>
+
+  <footer class="foot">
+    <p><a href="./">Back to PFML</a> &middot; <a href="privacy">Privacy</a></p>
+    <p>Nothing on this page is league data. The standings, tracks and comments are only on the site itself, for signed-in members.</p>
+  </footer>
+</main>
+
+<script>
+  /* The mode switch. Without JavaScript every section shows, one after
+     another; with it, one shows at a time and the URL says which
+     (?mode=seasons|rounds|home), so a link opens straight to it. */
+  (function () {
+    var MODES = ["seasons", "rounds", "home"];
+    var DEFAULT = "seasons";
+    document.documentElement.classList.add("js");
+
+    function current() {
+      var m = new URLSearchParams(location.search).get("mode");
+      return MODES.indexOf(m) === -1 ? DEFAULT : m;
+    }
+
+    function show(mode) {
+      document.querySelectorAll("section.mode").forEach(function (s) {
+        s.hidden = s.getAttribute("data-mode") !== mode;
+      });
+      document.querySelectorAll(".modes a").forEach(function (a) {
+        if (a.getAttribute("data-mode") === mode) a.setAttribute("aria-current", "page");
+        else a.removeAttribute("aria-current");
+      });
+    }
+
+    document.querySelector(".modes").addEventListener("click", function (ev) {
+      var a = ev.target.closest("a[data-mode]");
+      if (!a || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.button) return;
+      ev.preventDefault();
+      var mode = a.getAttribute("data-mode");
+      var params = new URLSearchParams(location.search);
+      params.set("mode", mode);
+      history.pushState(null, "", location.pathname + "?" + params.toString() + location.hash);
+      show(mode);
+    });
+    window.addEventListener("popstate", function () { show(current()); });
+    show(current());
+  })();
+</script>
+</body>
+</html>

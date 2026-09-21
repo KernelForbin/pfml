@@ -39,6 +39,9 @@ site/                    everything GitHub Pages serves
   career.html            cross-season standings, static, not templated
   season.template.html   template build.py fills in per season
   round.html             one round, full width: every track, vote and comment
+  features.html          "What this site can do", public and standalone;
+                         kept current with every visible change (CLAUDE.md)
+  privacy.html           public privacy page
   rounds.js              the round cards on season pages and the round page,
                          with member votes, reactions and replies
   auth.js                the members-only gate, loaded by every page

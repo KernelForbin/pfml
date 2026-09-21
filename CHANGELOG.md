@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-09-21 (follow-up 6)
+
+- **"What this site can do"** at pfml.fun/features: a plain-language tour
+  of every feature members can see or use, split into Season pages, Round
+  pages and Home & Career (`?mode=` in the URL opens straight to one),
+  with a key to the badges and colours. Public and standalone: no sign-in,
+  no data, nothing loaded but the page and its fonts. Linked from every
+  page's footer. CLAUDE.md now requires it to be updated alongside any
+  visible feature change.
+- **Privacy page correction**: it said a comments page remembered the last
+  round you viewed. That page is gone and nothing like that is stored; it
+  now says what the browser does keep (the sign-in session, and an invite
+  code only until the account is linked).
+
 ## 2026-09-21 (follow-up 5)
 
 - **Every round gets its own full-width page** (`round.html`), laid out
