@@ -94,7 +94,7 @@ pages need a signed-in member to show anything, and they read data from
 Supabase, not from local files. To check page code without signing in,
 serve a scratch copy of `site/` with `auth.js` swapped for a stub that
 defines `window.PFML` (`ready`, `loadJSON` reading local `data/`, and an
-in-memory `api`); that's how the comments page was tested. Keep such stubs
+in-memory `api`); that's how Round results and the comment layer were tested. Keep such stubs
 out of the repo.
 
 ## Working style for this project

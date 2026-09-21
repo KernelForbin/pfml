@@ -631,3 +631,60 @@ body.gated > *:not(#gate) { display: none !important; }
 }
 .cm-send:hover { background: var(--deep); }
 .cm-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- round results (rounds.js) ---------- */
+/* A pill that opens to the round list; each round opens to every track,
+   every vote and the comment layer. */
+
+.rr-block { padding-top: 18px; }
+.rr > summary { list-style: none; }
+.rr > summary::-webkit-details-marker { display: none; }
+.rr-pill {
+  display: inline-flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;
+  font-family: "Archivo", sans-serif; font-weight: 700; font-size: 0.95rem;
+  padding: 10px 18px; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--card); color: var(--ink); box-shadow: var(--shadow-sm);
+  transition: box-shadow .15s ease, transform .15s ease;
+}
+.rr-pill::after { content: "\25BE"; color: var(--magenta); font-size: 0.8rem; transition: transform .15s ease; }
+.rr[open] > .rr-pill::after { transform: rotate(180deg); }
+.rr-pill:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.rr[open] > .rr-pill { background: var(--magenta); border-color: var(--magenta); color: #fff; }
+.rr[open] > .rr-pill::after { color: #fff; }
+.rr-count { font-family: "Inter", sans-serif; font-weight: 500; font-size: 0.8rem; color: var(--muted); }
+.rr[open] > .rr-pill .rr-count { color: rgba(255,255,255,.8); }
+.rr-note-top { margin: 16px 0 14px; }
+
+.round .round-sub b { font-weight: 600; }
+.rr-counts { display: block; margin-top: 3px; font-size: 0.8rem; color: var(--muted); }
+
+.rr-tracks { display: grid; gap: 14px; margin-top: 16px; }
+.rr-track { border: 1px solid var(--border-soft); border-radius: var(--r-sm); padding: 12px 14px; background: var(--card); }
+.rr-track.is-hl { border-color: rgba(158, 0, 196, 0.4); box-shadow: inset 4px 0 0 var(--magenta); }
+.rr-track-head { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: start; }
+.rr-place { font-family: "Archivo", sans-serif; font-weight: 700; color: var(--magenta); font-variant-numeric: tabular-nums; padding-top: 1px; }
+.rr-track-title { font-weight: 600; }
+.rr-track-title a { color: var(--ink); text-decoration-color: var(--magenta); }
+.rr-track-title a:hover { color: var(--magenta); }
+.rr-track-meta { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
+.rr-track-meta b { color: var(--ink); font-weight: 600; }
+.rr-track-pts { font-family: "Archivo", sans-serif; font-weight: 700; color: var(--magenta); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rr-track-pts small { font-weight: 600; font-size: 0.72rem; }
+.rr-note { margin: 10px 0 0; padding: 8px 11px; background: var(--wash); border-radius: var(--r-sm); font-size: 0.88rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.rr-note span { display: block; font-size: 0.72rem; font-weight: 600; color: var(--deep); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
+.rr-none { margin: 12px 0 0; color: var(--muted); font-size: 0.9rem; }
+
+.rr-ballots { margin-top: 10px; border-top: 1px solid var(--border-soft); }
+.rr-ballot { padding: 8px 2px; border-bottom: 1px solid var(--border-soft); }
+.rr-ballot:last-child { border-bottom: none; }
+.rr-ballot.is-hl { background: rgba(158, 0, 196, 0.045); box-shadow: inset 3px 0 0 var(--magenta); padding-left: 10px; }
+.rr-ballot-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.rr-voter { font-weight: 600; font-size: 0.9rem; }
+.rr-pts { font-family: "Archivo", sans-serif; font-weight: 700; font-size: 0.85rem; color: var(--magenta); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rr-pts.is-zero { font-family: "Inter", sans-serif; font-weight: 500; font-size: 0.74rem; color: var(--muted); }
+.rr-pts.is-neg { color: #B3261E; }
+.rr-ballot .cm-text { margin-top: 3px; }
+.rr-ballot .cm-bar { margin-top: 7px; }
+
+/* the home page's Career card sits in the season grid */
+.season-card-career .season-card-name { color: var(--deep); }

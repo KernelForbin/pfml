@@ -487,6 +487,10 @@ def build_season(folder: Path, season_key: str, label: str):
                 "topVote": received[0]["points"] if received else 0,
                 "spread": round(statistics.pstdev([r["points"] for r in received]), 2) if len(received) > 1 else 0,
                 "comments": comments_at.get((rid, uri), []),
+                # every scoring vote, compact: [voter id, points], biggest
+                # first. Zero-point rows aren't votes (they're comments,
+                # already in "comments"); names come from "competitors".
+                "votes": [[r["voterId"], r["points"]] for r in received],
             }
             songs.append(song)
             all_songs.append(song)

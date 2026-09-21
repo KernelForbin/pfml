@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-09-21 (follow-up 3)
+
+- **Round results replace the Comments page.** Under the leaderboard on
+  every season page, a collapsed "Round results" pill opens to the season's
+  rounds, and each round opens to every track with every vote (voter and
+  points) and every comment, where members can vote, react and reply. It
+  replaces both the standalone Comments page and the old Rounds section
+  further down the page. The build now writes each song's scoring votes
+  (`votes`: `[voter id, points]`) so the page can show every vote, not only
+  the ones with a comment.
+- **The top bar is Home and the seasons only.** Comments is gone (its
+  content moved into Round results) and Career moved to a card on the Home
+  page.
+
 ## Members-only site and comments page (branch: members-only)
 
 - **The site is members-only.** Every page is behind Google sign-in, and a

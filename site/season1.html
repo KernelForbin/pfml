@@ -35,6 +35,14 @@
     <div id="standings"></div>
   </section>
 
+  <section class="shell block rr-block" id="block-rounds">
+    <details class="rr">
+      <summary class="rr-pill"><span class="rr-pill-label">Round results</span><span class="rr-count" id="rrCount"></span></summary>
+      <p class="block-note rr-note-top">Newest first. Open a round for every track, every vote and every comment. Members can vote on comments, react and reply.</p>
+      <div id="rounds"></div>
+    </details>
+  </section>
+
   <section class="shell block" id="block-focus" hidden>
     <h2 id="focusTitle">Player focus</h2>
     <p class="block-note" id="focusNote"></p>
@@ -57,12 +65,6 @@
     <h2>Top tracks</h2>
     <p class="block-note">Every track opens in Spotify. Artist and album names open a Spotify search for that name.</p>
     <div id="topTracks"></div>
-  </section>
-
-  <section class="shell block" id="block-rounds">
-    <h2>Rounds</h2>
-    <p class="block-note">Newest first. Open a round for the full result and its playlist.</p>
-    <div id="rounds"></div>
   </section>
 
   <section class="shell block" id="block-taste">
@@ -96,6 +98,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
 <script src="auth.js"></script>
+<script src="rounds.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -93,25 +93,14 @@
       nav.appendChild(a);
     });
 
-    var career = el("a", "season-tab");
-    career.href = "career.html";
-    career.textContent = "Career";
-    career.setAttribute("aria-current", String(activeKey === "career"));
-    nav.appendChild(career);
-
-    var comments = el("a", "season-tab");
-    comments.href = "comments.html";
-    comments.textContent = "Comments";
-    comments.setAttribute("aria-current", String(activeKey === "comments"));
-    nav.appendChild(comments);
   }
 
   var JUMP_SECTIONS = [
     ["block-standings", "Standings"],
+    ["block-rounds", "Results"],
     ["block-highlights", "Numbers"],
     ["block-trend", "Trend"],
     ["block-tracks", "Tracks"],
-    ["block-rounds", "Rounds"],
     ["block-taste", "Taste"],
     ["block-voters", "Voting"],
     ["block-comments", "Comments"],
@@ -180,6 +169,19 @@
     return a;
   }
 
+  // Career isn't a season, so it isn't in the top bar; it gets a card here.
+  function careerCard(index) {
+    var played = index.seasons.filter(function (s) { return s.roundCount > 0; }).length;
+    var a = el("a", "season-card season-card-career");
+    a.href = "career.html";
+    a.innerHTML =
+      '<div class="season-card-top"><div class="season-card-name-wrap"><span class="season-card-name">Career</span></div>' +
+      '<span class="season-card-arrow">&rarr;</span></div>' +
+      '<div class="season-card-stats">All-time standings across ' + played + " " + plural(played, "season") + "</div>" +
+      '<div class="season-card-round">Career Score, every season side by side, all-time comment stats</div>';
+    return a;
+  }
+
   function playlistChip(item) {
     if (item.url) {
       var a = el("a", "pill pill-live");
@@ -228,6 +230,7 @@
           var isLive = s.key === index.currentSeason && s.roundCount > 0;
           grid.appendChild(seasonCard(s, isLive));
         });
+        grid.appendChild(careerCard(index));
         setBlock("seasonCards", grid);
       }
       return fetchJSON(DATA + "/playlists.json").catch(function () { return null; });
@@ -909,44 +912,14 @@
 
 
   function renderRounds(d) {
+    // The collapsible Round results under the leaderboard, with every vote
+    // and the comment layer, lives in rounds.js.
     var host = $("rounds");
-    host.innerHTML = "";
-    attachFilterTag(host, seasonData);
-
-    var idSet = null;
-    if (selected.length) { idSet = {}; selected.forEach(function (id) { idSet[id] = true; }); }
-    var rounds = d.rounds;
-    if (idSet) rounds = rounds.filter(function (r) { return r.songs.some(function (s) { return idSet[s.submitterId]; }); });
-
-    if (!d.rounds.length) { host.appendChild(empty("No rounds posted yet this season.")); return; }
-    if (!rounds.length) { host.appendChild(empty("No rounds involve this selection.")); return; }
-
-    var wrap = el("div", "rounds-list");
-    rounds.slice().reverse().forEach(function (r) {
-      var det = el("details", "round");
-      var win = r.songs[0];
-      var sum = el("summary");
-      sum.innerHTML =
-        '<span><span class="round-title">' + esc(r.name) + "</span>" +
-        (win ? ' <span class="round-sub">&mdash; <b>' + esc(win.submitterName) + "</b> took it with " + esc(win.title) + "</span>" : "") + "</span>" +
-        '<span class="round-open">' + r.songs.length + " " + plural(r.songs.length, "track") + " &darr;</span>";
-      det.appendChild(sum);
-
-      var body = el("div", "round-body");
-      var bodyHtml = "";
-      if (r.description) bodyHtml += '<p class="round-desc">' + esc(r.description) + "</p>";
-      body.innerHTML = bodyHtml;
-      if (r.playlistUrl) {
-        body.insertAdjacentHTML("beforeend",
-          '<a class="pill" href="' + esc(r.playlistUrl) + '" target="_blank" rel="noopener">Open the round playlist &nearr;</a>');
-      }
-      var list = el("div", "inner-list");
-      r.songs.forEach(function (s, i) { list.appendChild(trackRow(s, s.place || i + 1, false, idSet)); });
-      body.appendChild(list);
-      det.appendChild(body);
-      wrap.appendChild(det);
+    if (!host || !window.PFMLRounds) return;
+    window.PFMLRounds.render(host, d, {
+      selected: selected.slice(),
+      filterTag: function (h) { attachFilterTag(h, seasonData); }
     });
-    host.appendChild(wrap);
   }
 
   /* ---- taste matrix (filterable) ---- */
@@ -1612,9 +1585,6 @@
       initSeason(document.body.getAttribute("data-season-key"));
     } else if (page === "career") {
       initCareer();
-    } else if (page === "comments") {
-      // comments.js renders the page; app.js only supplies the shared nav
-      fetchJSON(DATA + "/index.json").then(function (index) { renderNav(index, "comments"); });
     }
   }
 

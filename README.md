@@ -37,8 +37,8 @@ site/                    everything GitHub Pages serves
   index.html             home page: season cards + playlists, pfml.fun
   career.html            cross-season standings, static, not templated
   season.template.html   template build.py fills in per season
-  comments.html          every vote comment, with votes, reactions, replies
-  comments.js            that page's logic
+  rounds.js              Round results on season pages: every vote and
+                         comment, with member votes, reactions and replies
   auth.js                the members-only gate, loaded by every page
   config.js              Supabase URL + publishable key (public by design)
   season1.html           generated, one page per season, own URL
@@ -119,24 +119,39 @@ whose default is `localhost:3000`. Fix the Site URL and the
 `https://pfml.fun/**` entry and sign in again. Invite links aren't used up
 by a failed return, so the same link works once it's fixed.
 
-## Comments page
+## Round results, and the comments on them
 
-`comments.html` shows every vote comment from the exports, one round at a
-time, grouped by track (or sorted by top voted or most replies). Members
-can vote each comment up or down, add reactions, and reply. Each comment is
-identified by the same id the build uses everywhere,
+On every season page, directly under Standings, a **Round results** pill,
+collapsed by default. Open it for the season's rounds, newest first; every
+round in the export is listed, including one that so far only has its
+prompt, which says so instead of showing results. Open a round for its
+prompt, its playlist, and every track in finishing order with every vote
+cast on it (voter and points, biggest first) and the comment that came with
+it. Rows that gave no points are the comment-only votes, listed last.
+Submitters' own notes on their tracks show under the track.
+
+Members can vote each comment up or down, add reactions, and reply. Each
+comment is identified by the id the build uses everywhere,
 `<round id>|<spotify uri>|<voter id>`, so votes and replies stay attached
-across new exports. The comment text itself comes from the season JSON; the
-votes, reactions and replies live in Supabase tables. Votes show as a net
-score with the up/down split on hover. Everything members add is visible to
-every member, including who voted which way, at the data level. Replies are
-flat (no nested threads) and can be deleted by their author or an admin,
-not edited.
+across new exports. The vote rows come from the season JSON (`votes` on
+each song: `[voter id, points]`, scoring votes only); the member votes,
+reactions and replies live in Supabase tables and are fetched per round,
+the first time that round is opened. Votes show as a net score with the
+up/down split on hover. Everything members add is visible to every member,
+including who voted which way, at the data level. Replies are flat (no
+nested threads) and can be deleted by their author or an admin, not edited.
+
+It follows the Standings player selection: only rounds the selected
+players submitted to are listed, their tracks and the votes they cast are
+highlighted, and rounds already open stay open.
+
+The top bar holds Home and the seasons only. Career is reached from its
+card on the Home page, next to the season cards.
 
 ## Season page features
 
 - **Jump nav**: a second row in the sticky top bar links to each section on
-  the page (Standings, Numbers, Trend, Tracks, Rounds, Taste, Voting,
+  the page (Standings, Results, Numbers, Trend, Tracks, Taste, Voting,
   Comments, Artists). A section that's currently hidden (Numbers while a
   player filter is active, Comments on a season with no rounds yet, Trend
   until a season has at least two rounds) drops out of the jump nav too,
