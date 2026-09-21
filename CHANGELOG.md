@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-09-21 (follow-up 12)
+
+- **Season pages lead with Standings.** The summary line and the five stat
+  cards under the title are gone (members' request). The build stops
+  writing the two fields only those cards read (`highlights.uniqueArtists`,
+  `highlights.scoringVotes`); they drop out of the data on the next
+  publish.
+- **Podium places are gold, silver and bronze**, not the acid green: the
+  Standings bar's top three, the Standings list's places 1-3 (new), the
+  leader's points bar, and a round's 1st/2nd/3rd badges. Ties share the
+  colour. Acid stays for the live season and the Daily Double only. Tests
+  pin every placement badge to the medal colours, and check the features
+  page's copied colour tokens still match `style.css`.
+
 ## 2026-09-21 (follow-up 11)
 
 - **The Standings bar shows which players the page is filtered to**, open

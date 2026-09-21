@@ -357,7 +357,7 @@
     var podium = d.standings.filter(function (p) { return p.rank <= 3; });
     var shown = podium.length > 4 ? podium.slice(0, 3) : podium;
     top.innerHTML = shown.map(function (p) {
-      return '<span class="stand-top-chip' + (p.rank === 1 ? " is-1" : "") + '"' + (p.tied ? ' title="Tied on points"' : "") + ">" +
+      return '<span class="stand-top-chip is-' + p.rank + '"' + (p.tied ? ' title="Tied on points"' : "") + ">" +
         '<span class="pl">' + placeLabel(p) + '</span><span class="nm">' + esc(p.name) + '</span><span class="pt">' + p.points + "</span></span>";
     }).join("") + (podium.length > shown.length
       ? '<span class="stand-top-more">+' + (podium.length - shown.length) + " more</span>" : "");
@@ -419,7 +419,7 @@
       row.setAttribute("aria-pressed", String(on));
       row.title = on ? "Click to remove " + p.name + " from comparison" : "Click to compare " + p.name;
       row.innerHTML =
-        '<div class="stand-rank"' + (p.tied ? ' title="Tied on points"' : "") + ">" + placeLabel(p) + "</div>" +
+        '<div class="stand-rank' + (p.rank <= 3 ? " is-" + p.rank : "") + '"' + (p.tied ? ' title="Tied on points"' : "") + ">" + placeLabel(p) + "</div>" +
         '<div><div class="stand-name">' + esc(p.name) + "</div>" +
         '<div class="bar"><i style="width:' + pct + '%"></i></div>' + dailyDoubleLine(p) + "</div>" +
         '<div class="stand-score"><b>' + p.points + "</b><span>" +
@@ -1398,31 +1398,16 @@
 
   /* ---- hero (season-wide, unfiltered) ---- */
 
+  // The page leads with Standings: the title, then straight into it. The
+  // line under the title (and the stat cards that used to follow it) went
+  // at the members' request; the line now only speaks up when there's
+  // nothing below it yet, or while loading or failing.
   function renderHero(d) {
     $("heroTitle").textContent = d.label;
-    var h = d.highlights || {};
-    var rounds = d.rounds.length;
-
-    $("heroLine").textContent = rounds
-      ? rounds + " " + plural(rounds, "round") + ", " + d.songCount + " tracks, " +
-        d.scoringVoteCount + " scoring votes from " + d.competitors.length + " players."
+    var line = $("heroLine");
+    line.hidden = d.rounds.length > 0;
+    line.textContent = d.rounds.length ? ""
       : d.competitors.length + " players are signed up. No rounds have been posted yet, so the boards below fill in as results come through.";
-
-    var stats = [
-      ["Rounds", rounds],
-      ["Tracks", d.songCount],
-      ["Players", d.competitors.length],
-      ["Artists", h.uniqueArtists || 0],
-      ["Scoring votes", h.scoringVotes || 0],
-    ];
-    var dl = $("scoreline");
-    dl.innerHTML = "";
-    stats.forEach(function (s) {
-      var wrap = el("div");
-      wrap.appendChild(el("dt", null, esc(s[0])));
-      wrap.appendChild(el("dd", null, esc(s[1])));
-      dl.appendChild(wrap);
-    });
   }
 
   function initSeason(key) {
@@ -1455,7 +1440,7 @@
         var t = $("heroTitle");
         if (t) t.textContent = "PFML";
         var l = $("heroLine");
-        if (l) l.textContent = "Season data didn't load. Check that site/data/*.json was built and deployed next to this page.";
+        if (l) { l.hidden = false; l.textContent = "Season data didn't load. Check that site/data/*.json was built and deployed next to this page."; }
       });
   }
 

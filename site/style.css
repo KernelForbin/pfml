@@ -3,11 +3,14 @@
 
    Palette   paper  #F8F9FA   ink    #16111A   magenta #9E00C4
              deep   #7A0099   wash   #F4E4FA   acid    #CCFF3D
+             gold   #E3B12C   silver #C4CAD3   bronze  #C98B55
    Type      Archivo (headings, numerals) / Inter (body)
    Devices   soft 1px borders + a low, wide shadow instead of
               heavy black rules; generous whitespace does the
               separating. Magenta stays reserved for scores,
-              links and the live season; acid marks the leader.
+              links and the live season. Podium places are gold, silver and
+              bronze (members asked: not the acid green, which now marks
+              only the live season and the Daily Double).
    ========================================================== */
 
 :root {
@@ -20,6 +23,9 @@
   --deep: #7A0099;
   --wash: #F4E4FA;
   --acid: #CCFF3D;
+  --gold: #E3B12C;
+  --silver: #C4CAD3;
+  --bronze: #C98B55;
   --card: #FFFFFF;
   --shadow-sm: 0 1px 2px rgba(22, 17, 26, .05);
   --shadow-md: 0 18px 40px -22px rgba(22, 17, 26, .35), 0 2px 6px -2px rgba(22, 17, 26, .08);
@@ -106,21 +112,6 @@ a:hover { color: var(--magenta); }
 }
 .hero-line { margin: 12px 0 0; color: var(--muted); font-size: 1.05rem; max-width: 60ch; }
 
-.scoreline {
-  margin: 26px 0 0; padding: 0;
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
-  gap: 12px;
-}
-.scoreline > div {
-  background: var(--card); padding: 14px 16px;
-  border: 1px solid var(--border); border-radius: var(--r-sm); box-shadow: var(--shadow-sm);
-}
-.scoreline dt { margin: 0 0 3px; font-size: 0.78rem; color: var(--muted); }
-.scoreline dd {
-  margin: 0; font-family: "Archivo", sans-serif; font-weight: 700;
-  font-size: 1.5rem; letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
-}
-
 /* ---------- blocks ---------- */
 
 .block { padding-top: 44px; padding-bottom: 6px; }
@@ -148,11 +139,17 @@ a:hover { color: var(--magenta); }
 .stand-row + .stand-row { border-top: 1px solid var(--border-soft); }
 .stand-row:first-child { background: var(--wash); }
 .stand-rank { font-family: "Archivo", sans-serif; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
-.stand-row:first-child .stand-rank { color: var(--magenta); }
+.stand-rank.is-1, .stand-rank.is-2, .stand-rank.is-3 {
+  display: inline-grid; place-items: center; min-width: 30px; height: 26px; padding: 0 6px;
+  border-radius: 999px; color: var(--ink); font-size: 0.8rem;
+}
+.stand-rank.is-1 { background: var(--gold); }
+.stand-rank.is-2 { background: var(--silver); }
+.stand-rank.is-3 { background: var(--bronze); }
 .stand-name { font-weight: 600; }
 .bar { margin-top: 6px; height: 7px; border-radius: 4px; background: var(--wash); overflow: hidden; }
 .bar > i { display: block; height: 100%; background: var(--magenta); border-radius: 4px; }
-.stand-row:first-child .bar > i { background: linear-gradient(90deg, var(--magenta), var(--acid)); }
+.stand-row:first-child .bar > i { background: linear-gradient(90deg, var(--magenta), var(--gold)); }
 .stand-score { text-align: right; white-space: nowrap; }
 .stand-score b { font-family: "Archivo", sans-serif; font-weight: 700; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
 .stand-score span { display: block; font-size: 0.74rem; color: var(--muted); }
@@ -496,7 +493,6 @@ button.trend-chip.is-on .dot { opacity: 1; }
 
 @media (max-width: 620px) {
   .hero { padding-top: 32px; }
-  .scoreline dd { font-size: 1.3rem; }
   .vrow { grid-template-columns: 1fr 4.2rem 4.2rem; }
   .vrow > :nth-child(4) { display: none; }
   .stand-row, .trk { padding-left: 14px; padding-right: 14px; }
@@ -659,7 +655,9 @@ body.gated > *:not(#gate) { display: none !important; }
   font-family: "Archivo", sans-serif; font-weight: 700; font-size: 0.72rem; min-width: 22px; text-align: center;
   padding: 2px 6px; border-radius: 999px; background: var(--wash); color: var(--deep);
 }
-.stand-top-chip.is-1 .pl { background: var(--acid); color: var(--ink); }
+.stand-top-chip.is-1 .pl { background: var(--gold); color: var(--ink); }
+.stand-top-chip.is-2 .pl { background: var(--silver); color: var(--ink); }
+.stand-top-chip.is-3 .pl { background: var(--bronze); color: var(--ink); }
 .stand-top-chip .nm { font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .stand-top-chip .pt { font-family: "Archivo", sans-serif; font-weight: 700; color: var(--magenta); font-variant-numeric: tabular-nums; }
 .stand-top-more { align-self: center; font-size: 0.84rem; color: var(--muted); }
@@ -785,8 +783,9 @@ body.gated > *:not(#gate) { display: none !important; }
   font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;
   padding: 4px 10px; border-radius: 999px; background: var(--paper); color: var(--muted); border: 1px solid var(--border);
 }
-.rp-place.is-1 { background: var(--acid); color: var(--ink); border-color: transparent; }
-.rp-place.is-2, .rp-place.is-3 { background: var(--wash); color: var(--deep); border-color: transparent; }
+.rp-place.is-1 { background: var(--gold); color: var(--ink); border-color: transparent; }
+.rp-place.is-2 { background: var(--silver); color: var(--ink); border-color: transparent; }
+.rp-place.is-3 { background: var(--bronze); color: var(--ink); border-color: transparent; }
 .rp-title { margin: 0; font-size: clamp(1.25rem, 3.4vw, 1.6rem); font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
 .rp-title a { color: var(--magenta); text-decoration: none; }
 .rp-title a:hover { text-decoration: underline; }

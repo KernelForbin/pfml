@@ -188,6 +188,74 @@ class FoldingSections(unittest.TestCase):
             self.assertNotRegex(summary, r"<(button|a)\b")
 
 
+class LeadsWithStandings(unittest.TestCase):
+    def test_title_then_straight_into_standings(self):
+        # Members asked for the stat cards and the summary line to go: the
+        # title, then Standings. The line stays only for loading/errors.
+        template = read("season.template.html")
+        sections = Page(template).find("section")
+        self.assertIn("hero", sections[0].get("class", ""))
+        self.assertEqual(sections[1].get("id"), "block-standings")
+        hero = re.search(r'<section class="[^"]*\bhero\b[^"]*"[^>]*>(.*?)</section>', template, re.S).group(1)
+        self.assertNotRegex(hero, r"<dl\b", "no stat cards under the title")
+
+    def test_stat_card_code_is_gone(self):
+        for name in ("app.js", "style.css", "season.template.html"):
+            self.assertNotIn("scoreline", read(name), name)
+
+
+def css_rules(css, selector):
+    """The declaration blocks of every rule whose selector list includes
+    `selector` exactly."""
+    out = []
+    for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
+        if selector in [s.strip() for s in sel.split(",")]:
+            out.append(body)
+    return out
+
+
+class PodiumColours(unittest.TestCase):
+    # every badge that shows a 1st/2nd/3rd place, per page
+    PLACES = {
+        "style.css": [".rp-place.is-{n}", ".stand-top-chip.is-{n} .pl", ".stand-rank.is-{n}"],
+        "features.html": [".place.is-{n}"],
+    }
+    MEDAL = {1: "--gold", 2: "--silver", 3: "--bronze"}
+
+    def test_places_are_gold_silver_bronze_not_acid(self):
+        for name, selectors in self.PLACES.items():
+            css = read(name)
+            for pattern in selectors:
+                for n, medal in self.MEDAL.items():
+                    sel = pattern.format(n=n)
+                    with self.subTest(file=name, selector=sel):
+                        rules = css_rules(css, sel)
+                        self.assertTrue(rules, "no rule found")
+                        backgrounds = re.findall(r"background:\s*([^;]+)", " ".join(rules))
+                        self.assertTrue(any(f"var({medal})" in b for b in backgrounds), backgrounds)
+                        self.assertNotIn("--acid", " ".join(rules))
+
+    def test_leader_bar_is_gold_not_acid(self):
+        rule = " ".join(css_rules(read("style.css"), ".stand-row:first-child .bar > i"))
+        self.assertIn("var(--gold)", rule)
+        self.assertNotIn("--acid", rule)
+
+
+class FeaturesPageTokens(unittest.TestCase):
+    def test_copied_tokens_match_the_site(self):
+        # features.html copies style.css's tokens rather than loading it; a
+        # palette change there has to reach here too.
+        def tokens(text):
+            root = re.search(r":root\s*\{([^}]*)\}", text).group(1)
+            return dict(re.findall(r"(--[\w-]+):\s*([^;]+);", root))
+        site, page = tokens(read("style.css")), tokens(read("features.html"))
+        for name, value in page.items():
+            if name in site:
+                self.assertEqual(value.strip(), site[name].strip(), name)
+        for name in ("--gold", "--silver", "--bronze", "--magenta", "--ink", "--paper"):
+            self.assertIn(name, page, f"features.html is missing {name}")
+
+
 class CleanText(unittest.TestCase):
     def test_no_control_characters_in_site_files(self):
         # A generated CSS edit once turned the escape "\25BE" (the arrow on

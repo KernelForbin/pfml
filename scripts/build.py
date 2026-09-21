@@ -991,9 +991,7 @@ def build_season(folder: Path, season_key: str, label: str):
         repeats = sorted([a for a in artist_counts.values() if a["count"] > 1],
                          key=lambda a: (-a["count"], -a["points"]))
         highlights["repeatArtists"] = repeats[:10]
-        highlights["uniqueArtists"] = len(artist_counts)
 
-        highlights["scoringVotes"] = scoring_votes
         highlights["commentOnlyVotes"] = comment_only_votes
         highlights["downvotes"] = downvotes
 

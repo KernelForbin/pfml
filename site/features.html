@@ -24,6 +24,9 @@
     --deep: #7A0099;
     --wash: #F4E4FA;
     --acid: #CCFF3D;
+    --gold: #E3B12C;
+    --silver: #C4CAD3;
+    --bronze: #C98B55;
     --card: #FFFFFF;
     --neg: #B3261E;
     --shadow-sm: 0 1px 2px rgba(22, 17, 26, .05);
@@ -126,8 +129,10 @@
     display: inline-block; font-family: "Archivo", sans-serif; font-weight: 700; font-size: 0.66rem;
     text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 9px; border-radius: 999px; white-space: nowrap;
   }
-  .place.is-1 { background: var(--acid); color: var(--ink); }
-  .place.is-2 { background: var(--wash); color: var(--deep); }
+  .place.is-1 { background: var(--gold); color: var(--ink); }
+  .place.is-2 { background: var(--silver); color: var(--ink); }
+  .place.is-3 { background: var(--bronze); color: var(--ink); }
+  .places { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
   .dd {
     display: inline-block; font-family: "Archivo", sans-serif; font-weight: 700; font-size: 0.64rem;
     text-transform: uppercase; letter-spacing: 0.05em; line-height: 1;
@@ -231,9 +236,9 @@
       </article>
 
       <article class="card">
-        <div class="card-head"><span class="icon"><svg><use href="#i-glance"/></svg></span><h3>The season at a glance</h3></div>
+        <div class="card-head"><span class="icon"><svg><use href="#i-glance"/></svg></span><h3>Getting around a season</h3></div>
         <ul>
-          <li>The top of the page counts the rounds, tracks, players, artists and votes.</li>
+          <li>Each season page opens with Standings, then Results by round.</li>
           <li>The row of links under the top bar jumps straight to any section.</li>
           <li>Sections with nothing to show yet are left out of that row.</li>
         </ul>
@@ -418,7 +423,7 @@
     <dl>
       <div class="key-row"><dt><span class="pip" aria-hidden="true"></span></dt><dd>This season is in progress. On the Home page its card says Live.</dd></div>
       <div class="key-row"><dt><span class="rank">T2</span></dt><dd>A shared place: these players are tied on points.</dd></div>
-      <div class="key-row"><dt><span class="place is-1">&#9733; 1st place</span></dt><dd>The round's winner. 2nd and 3rd get a soft purple badge, and "&middot; tie" means the place is shared.</dd></div>
+      <div class="key-row"><dt class="places"><span class="place is-1">&#9733; 1st</span><span class="place is-2">2nd</span><span class="place is-3">3rd</span></dt><dd>Gold, silver and bronze mark 1st, 2nd and 3rd, in a round and in the standings. "&middot; tie" or a T means the place is shared.</dd></div>
       <div class="key-row"><dt><span class="dd">Daily Double</span></dt><dd>This track counts twice toward its submitter's season total. In Season 3, each player can ask for one, once per season, in their note when they submit.</dd></div>
       <div class="key-row"><dt><span class="pts is-neg">&minus;2</span></dt><dd>A downvote: points taken away. Only seasons that allow downvotes have them (so far, Season 1).</dd></div>
       <div class="key-row"><dt><span class="pts is-zero">0</span></dt><dd>A comment that came without any points.</dd></div>

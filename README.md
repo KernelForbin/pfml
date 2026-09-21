@@ -203,6 +203,12 @@ it back once the session exists, before any page code runs.
 
 ## Season page features
 
+- The page is the title, then straight into Standings: no summary line or
+  stat cards (the line under the title only appears while loading, on an
+  error, or for a season with no rounds yet). Podium places are gold,
+  silver and bronze everywhere a 1st/2nd/3rd shows (the Standings bar, the
+  Standings list, a round's place badges); ties share the colour. Text on
+  them measures 9.4:1, 11.3:1 and 6.5:1 contrast.
 - **Standings** and **Results by round** open the page, in that order,
   both collapsed by default into a full-width bar with a summary and a Show
   all button. Standings' bar shows the player count and everyone placed
