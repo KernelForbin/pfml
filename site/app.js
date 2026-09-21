@@ -363,8 +363,50 @@
       ? '<span class="stand-top-more">+' + (podium.length - shown.length) + " more</span>" : "");
   }
 
+  // The filters in use, in the Standings bar so they show open or closed:
+  // tap a name to take it off, or Clear all.
+  function renderStandingsFilters(d) {
+    var host = $("standFilters");
+    if (!host) return;
+    host.innerHTML = "";
+    host.hidden = !selected.length;
+    if (!selected.length) return;
+    host.appendChild(el("span", "stand-filters-label", "Filtered to"));
+    selected.forEach(function (id) {
+      var name = nameOf(d, id);
+      var chip = el("button", "stand-filter",
+        '<span class="nm">' + esc(name) + '</span><span class="x" aria-hidden="true">&times;</span>');
+      chip.type = "button";
+      chip.setAttribute("aria-label", "Remove " + name + " from the filter");
+      // Stop here: removing a filter re-renders this row, detaching the
+      // button before the click reaches the bar, so the bar could no longer
+      // tell it came from a filter and would fold the section.
+      chip.addEventListener("click", function (ev) { ev.stopPropagation(); toggleSelected(id); });
+      host.appendChild(chip);
+    });
+    var clear = el("button", "stand-filters-clear", "Clear all");
+    clear.type = "button";
+    clear.addEventListener("click", function (ev) { ev.stopPropagation(); clearSelected(); });
+    host.appendChild(clear);
+  }
+
+  // Standings opens and closes from its bar. Its filter buttons live in
+  // that bar too, so clicks on them are left out of the toggle.
+  function initStandingsFold() {
+    var fold = $("standFold"), bar = $("standBar"), btn = $("standToggle"), panel = $("standPanel");
+    if (!fold || !bar || !btn || !panel) return;
+    bar.addEventListener("click", function (ev) {
+      if (ev.target.closest && ev.target.closest("#standFilters")) return;
+      var open = panel.hidden;
+      panel.hidden = !open;
+      fold.classList.toggle("is-open", open);
+      btn.setAttribute("aria-expanded", String(open));
+    });
+  }
+
   function renderStandings(d) {
     renderStandingsSummary(d);
+    renderStandingsFilters(d);
     if (!d.standings.length) { setBlock("standings", empty("No submissions yet. Standings appear once the first round closes.")); return; }
     var max = Math.max.apply(null, d.standings.map(function (p) { return p.points; }).concat([1]));
     var box = el("div", "framed");
@@ -1393,6 +1435,7 @@
         trendMode = "standing";
         renderNav(index, key);
         document.title = "PFML - " + d.label;
+        initStandingsFold();
         renderHero(d);
         renderStandings(d);
         renderFocus(d);

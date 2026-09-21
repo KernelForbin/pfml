@@ -208,7 +208,15 @@ it back once the session exists, before any page code runs.
   all button. Standings' bar shows the player count and everyone placed
   3rd or better with their points (ties share a place, so that can be more
   than three people; past four it shows three and "+N more"). Open it for
-  the full clickable list.
+  the full clickable list. While players are picked, the bar also shows a
+  "Filtered to" row, open or closed: tap a name to drop it, or Clear all.
+  Standings is a bar plus a real toggle button rather than a `<details>`,
+  because its bar holds buttons, and a button inside a `<summary>` would
+  also fold the section (and reads badly in screen readers). While players are picked, the bar also shows a
+  "Filtered to" row, open or closed: tap a name to drop it, or Clear all.
+  Standings is a bar plus a real toggle button rather than a `<details>`,
+  because its bar holds buttons, and a button inside a `<summary>` would
+  also fold the section (and reads badly in screen readers).
 
 - **Jump nav**: a second row in the sticky top bar links to each section on
   the page (Standings, Results, Numbers, Trend, Tracks, Taste, Voting,

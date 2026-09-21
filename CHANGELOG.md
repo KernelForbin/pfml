@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-09-21 (follow-up 11)
+
+- **The Standings bar shows which players the page is filtered to**, open
+  or closed: a "Filtered to" row with a chip per player (tap to drop them)
+  and Clear all. Standings now opens with a real toggle button instead of
+  a `<details>`, since its bar holds buttons. A bug found and fixed on the
+  way: removing a filter re-rendered the row and detached the tapped chip
+  before the click reached the bar, so the bar folded open. Reproduced in
+  a browser without the fix, then stopped at the chip.
+
 ## 2026-09-21 (follow-up 10)
 
 - **Standings folds like Results by round.** Both now open the season page

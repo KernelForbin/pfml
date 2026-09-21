@@ -121,21 +121,37 @@ class GeneratedPages(unittest.TestCase):
 
 class FoldingSections(unittest.TestCase):
     """Standings and Results by round, the two most-used sections: first on
-    the page in that order, each a <details> whose collapsed bar holds the
-    heading and every element the code fills in for its summary."""
+    the page in that order, each collapsed into a bar that holds the
+    heading and every element the code fills in for its summary.
+
+    Results by round folds as a <details>. Standings can't: its bar holds
+    buttons (the active filters), so it's a bar plus a real toggle button
+    controlling a hidden panel."""
 
     # section id -> (script, the stretch of it that fills that section's bar)
     FILLERS = {
-        "block-standings": ("app.js", "function renderStandingsSummary", "function renderStandings("),
+        "block-standings": ("app.js", "function renderStandingsSummary", "function initStandingsFold"),
         "block-rounds": ("rounds.js", "function renderList", "2. The round page"),
     }
 
     def setUp(self):
-        self.template = read("season.template.html")
+        # comments can mention tags (the one explaining why Standings isn't
+        # a <details> does), so look at the markup without them
+        self.template = re.sub(r"<!--.*?-->", "", read("season.template.html"), flags=re.S)
 
     def section(self, section_id):
         m = re.search(r'<section[^>]*id="%s"[^>]*>(.*?)</section>' % section_id, self.template, re.S)
         self.assertIsNotNone(m, section_id)
+        return m.group(1)
+
+    def bar(self, section_id):
+        body = self.section(section_id)
+        if section_id == "block-standings":
+            m = re.search(r'id="standBar"(.*?)id="standPanel"', body, re.S)
+        else:
+            self.assertRegex(body, r"<details[^>]*>", "Results by round folds as a <details>")
+            m = re.search(r"<summary[^>]*>(.*?)</summary>", body, re.S)
+        self.assertIsNotNone(m, f"{section_id} has a collapsed bar")
         return m.group(1)
 
     def test_standings_then_results_come_first(self):
@@ -145,16 +161,31 @@ class FoldingSections(unittest.TestCase):
     def test_each_collapsed_bar_has_its_heading_and_what_the_code_fills_in(self):
         for section_id, (script, start, end) in self.FILLERS.items():
             with self.subTest(section_id):
-                body = self.section(section_id)
-                self.assertRegex(body, r"<details[^>]*>", "the section folds")
-                summary = re.search(r"<summary[^>]*>(.*?)</summary>", body, re.S)
-                self.assertIsNotNone(summary, "the folded section has a summary bar")
-                self.assertRegex(summary.group(1), r"<h2[^>]*>", "the bar carries the section's heading")
+                bar = self.bar(section_id)
+                self.assertRegex(bar, r"<h2[^>]*>", "the bar carries the section's heading")
                 code = read(script).split(start, 1)[1].split(end, 1)[0]
                 ids = set(re.findall(r'(?:getElementById\("|\$\(")(\w+)"\)', code))
                 self.assertTrue(ids, f"no ids found in {script}")
                 for i in ids:
-                    self.assertIn(f'id="{i}"', summary.group(1), f"{script} fills #{i}; the bar must contain it")
+                    self.assertIn(f'id="{i}"', bar, f"{script} fills #{i}; the bar must contain it")
+
+    def test_standings_toggle_controls_a_panel_that_starts_closed(self):
+        page = Page(self.template)
+        toggle = page.find("button", id="standToggle")
+        self.assertEqual(len(toggle), 1, "Standings has a real toggle button")
+        self.assertEqual(toggle[0].get("aria-expanded"), "false")
+        panel_id = toggle[0].get("aria-controls")
+        panel = page.find(id=panel_id)
+        self.assertEqual(len(panel), 1, "aria-controls points at the panel")
+        self.assertIn("hidden", panel[0], "the panel starts closed")
+        after_panel = self.section("block-standings").split('id="%s"' % panel_id, 1)[1]
+        self.assertIn('id="standings"', after_panel, "the full list is inside the panel")
+
+    def test_no_buttons_inside_a_summary(self):
+        # A button inside <summary> also folds its section when clicked, and
+        # screen readers announce it badly: why Standings isn't a <details>.
+        for summary in re.findall(r"<summary[^>]*>(.*?)</summary>", self.template, re.S):
+            self.assertNotRegex(summary, r"<(button|a)\b")
 
 
 class CleanText(unittest.TestCase):

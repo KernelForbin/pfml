@@ -162,6 +162,14 @@ After a deploy, fetch the live files and compare them with the commit.
 `gh run list` can return the previous run for a moment after a push, so
 match the run to the commit's sha before watching it.
 
+**Editing files from a script:** backslashes and quotes get mangled when
+file content passes through a shell heredoc into a Python string. It
+happened four times in one session: CSS `\25BE` became a control
+character, a regex `\b` became a backspace, a `\(` warned, and escaped
+quotes split a call's arguments. Use the Edit tool, or a script file with
+raw strings, for anything containing backslashes or quotes. The suite's
+control-character test catches the CSS case.
+
 **Code:** match the surrounding code. Comments say why. Keep changes to
 what was asked; flag anything else. Remove code your change makes dead.
 Anything that writes, pushes or deletes gets the plainest control flow.
