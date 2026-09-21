@@ -48,7 +48,7 @@
 
 - **Ties are handled everywhere a winner is named.** Standings share
   places on equal points (T1, T1, 3); the Home page names every co-leader
-  ("Tied for the lead: Dianna Hank & josh storm"); the player focus card
+  ("Tied for the lead: A & B"); the player focus card
   and comparison show shared places; and every superlative card lists who
   it's tied with, from the whole tied group rather than whichever entry
   `max()` hit first. That changes what the site says in 13 real places,
@@ -57,7 +57,7 @@
   comment in Season 3.
 - **Biggest blowout is hidden until it means something**: only once a
   round has been won by a wider margin than the closest round. Season 3
-  showed "Dianna Hank won by 0 points".
+  showed its winner "won by 0 points".
 
 ## 2026-09-21 (follow-up 3)
 
@@ -131,14 +131,13 @@
 - **Season 3, round 1 loaded** (New Heat: 19 tracks, 317 vote rows, 246
   comments, 4 submitter notes). Season 3 is now the live season on the
   home page and counts as a played season on the Career page, which gains
-  an S3 column and three new players (David Simon, Easton Fong, Gary
-  Nuzzi). Checked against the raw export before loading rather than
+  an S3 column and three new players. Checked against the raw export before loading rather than
   assumed: every returning player kept the same competitor id and name
   (16 of 21), so the career join is safe; there are no self-votes with
   points, no negative votes, and every zero-point row carries a comment.
-  Clavenna Vision and Scott Menke are on the roster but haven't
+  Two players are on the roster but haven't
   submitted, so they have no standings or career entry yet. The round
-  ended in a tie at the top (Dianna Hank and josh storm, 29 each), and
+  ended in a two-way tie at the top, and
   both are credited with the win.
 - **The point budget is per season, not always 16.** Every Season 3 voter
   spends exactly 19, against 16 in Seasons 1 and 2. The Voting style copy
@@ -198,8 +197,7 @@
   the 2.5px stroke.
 - **Hovering a line now names the player and shows the value at that
   point**, not just a fixed tooltip on the whole line: a hit point at
-  every round surfaces that round's own reading (e.g. "Rick D — Pre-Show
-  Party Bus: #2"), while hovering elsewhere on the line still shows the
+  every round surfaces that round's own reading (e.g. "Player — Round name: #2"), while hovering elsewhere on the line still shows the
   player and their final value.
 
 ## 2026-09-17 (follow-up 3)

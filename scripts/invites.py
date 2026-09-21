@@ -2,9 +2,9 @@
 """Make one-time invite links that tie a Google account to a player.
 
     python scripts/invites.py                  links for every unlinked player
-    python scripts/invites.py --player "Rick D"
+    python scripts/invites.py --player "Player Name"
     python scripts/invites.py --list           show who's linked, who isn't
-    python scripts/invites.py --admin "Rick D" make that (linked) player an
+    python scripts/invites.py --admin "Player Name" make that (linked) player an
                                                admin, who can delete any reply
 
 A link looks like https://pfml.fun/?invite=CODE. Whoever opens it and signs
