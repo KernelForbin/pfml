@@ -300,10 +300,13 @@
 
   /* ---- actions ---- */
 
-  function refreshAfter(promise, id) {
+  // Takes a function, not a promise, so nothing is sent while an earlier
+  // action is still saving. (Passing an already-started promise meant a
+  // second click went out regardless, and if it failed, nobody was told.)
+  function refreshAfter(action, id) {
     if (state.busy) return;
     state.busy = true;
-    promise.then(loadSocial).then(function () { rerenderComment(id); })
+    Promise.resolve().then(action).then(loadSocial).then(function () { rerenderComment(id); })
       .catch(function (err) { alert("That didn't save: " + (err && err.message ? err.message : err)); })
       .then(function () { state.busy = false; });
   }
@@ -319,12 +322,12 @@
     if (act === "vote") {
       var want = parseInt(btn.getAttribute("data-v"), 10);
       var mine = votesFor(id).mine;
-      refreshAfter(window.PFML.api.setVote(id, mine === want ? 0 : want), id);
+      refreshAfter(function () { return window.PFML.api.setVote(id, mine === want ? 0 : want); }, id);
     } else if (act === "react") {
       var key = btn.getAttribute("data-r");
       var on = reactionsFor(id)[key];
       state.picker = null;
-      refreshAfter(window.PFML.api.toggleReaction(id, key, !(on && on.mine)), id);
+      refreshAfter(function () { return window.PFML.api.toggleReaction(id, key, !(on && on.mine)); }, id);
     } else if (act === "picker") {
       state.picker = state.picker === id ? null : id;
       rerenderComment(id);
@@ -337,7 +340,8 @@
       }
     } else if (act === "delete") {
       if (!confirm("Delete this reply?")) return;
-      refreshAfter(window.PFML.api.deleteReply(parseInt(btn.getAttribute("data-reply"), 10)), id);
+      var replyId = parseInt(btn.getAttribute("data-reply"), 10);
+      refreshAfter(function () { return window.PFML.api.deleteReply(replyId); }, id);
     }
   }
 
@@ -350,7 +354,7 @@
     var text = form.querySelector("textarea").value.trim();
     if (!text) return;
     state.open[id] = true;
-    refreshAfter(window.PFML.api.addReply(id, text), id);
+    refreshAfter(function () { return window.PFML.api.addReply(id, text); }, id);
   }
 
   /* ---- boot ---- */

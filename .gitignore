@@ -10,5 +10,7 @@ node_modules/
 data/
 site/data/
 
-# Supabase secret key for the local scripts. Never commit.
-.env
+# Supabase secret key for the local scripts. Never commit. Covers copies
+# too (".env - Copy", ".env.local"...); only the template is tracked.
+.env*
+!.env.example
