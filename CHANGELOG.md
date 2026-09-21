@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-09-21 (follow-up)
+
+- **Daily Double (Season 3).** A submitter can ask, once per season, in
+  their note on a submission, to have that track's points doubled toward
+  their season total. Requests are judged by reading the notes, not
+  keyword-matched, and recorded in `data/season3/daily_doubles.json`; the
+  build applies only accepted decisions. The standings row shows the bonus
+  with its track and round, the player focus tile repeats it, and the
+  doubled track carries a badge in the round's results. It feeds the
+  season total, the charts and the Career page; the round's own placings,
+  wins, podiums and the per-submission average stay vote-only. The build
+  refuses a malformed file, a request that matches no submission, or two
+  requests on one track, and warns about rounds nobody has reviewed yet.
+  Round 1 (New Heat) reviewed: 4 notes, no requests.
+
 ## 2026-09-21
 
 - **Season 3, round 1 loaded** (New Heat: 19 tracks, 317 vote rows, 246

@@ -100,7 +100,11 @@ not templated) that reads `career.json` for all-time standings.
    brand new season, make a new `data/seasonN/` folder; the build discovers
    season folders by name and orders them numerically, generates its JSON
    and its `seasonN.html` page, and adds it to the home page automatically.
-3. Commit and push. The Action rebuilds everything and redeploys.
+3. **Season 3 only:** review the new round's submitter notes for Daily
+   Double requests and record the decision in
+   `data/season3/daily_doubles.json` (see Daily Double below). The build
+   prints a warning for any round that hasn't been reviewed.
+4. Commit and push. The Action rebuilds everything and redeploys.
 
 ## The "live" season on the home page
 
@@ -261,6 +265,52 @@ of them are not obvious:
 Because the budget is fixed, "average points given" measures nothing:
 everyone gives exactly the same budget a round. The voting stats measure
 *where* a voter puts their points instead.
+
+## Daily Double (Season 3)
+
+Season 3 adds a rule: once per season, a submitter can ask, in their own
+note on a submission (`submissions.csv` "Comment"), to have that track's
+points doubled toward their season total. A second request from the same
+person is disregarded.
+
+**Decisions are recorded, not detected.** A note can mention the prop
+without invoking it ("no daily double this week", a joke about someone
+else's), so whether a note is a request is a judgement about intent. The
+build never parses notes for it. Each round's notes are read when that
+round's export arrives, and the outcome goes in
+`data/season3/daily_doubles.json`, a hand-maintained file that
+Music League exports never touch:
+
+- `reviewedRounds`: one entry per round whose notes have been checked,
+  including rounds with no requests, so "reviewed, nothing found" is
+  distinguishable from "never looked". The build warns about any round
+  missing from this list.
+- `requests`: one entry per note that reads as a request, with the round
+  id, Spotify URI, submitter id, the note, `decision` (`accepted` or
+  `rejected`) and a reason. Only `accepted` entries affect scores.
+
+**What it changes.** The track's points count twice toward the
+submitter's season total: a track that earned 23 adds 46, and the
+standings row shows the +23 with the track and round it came from. The
+bonus flows everywhere the season total does: standings order, the home
+page leader, the Standing over time and Cumulative points charts, and the
+Career page's season column, total and Career Score.
+
+**What it doesn't.** The track's own score is still what the votes gave
+it, so the round's placings, round wins, podiums, Top tracks and the
+per-submission average are all unaffected. Doubling is literal: a track
+that scored 0 adds nothing, and the Daily Double is still used up.
+
+**Safety checks.** Rounds are applied in the order they were created, so
+if two accepted requests from one person ever made it into the file, the
+earlier round counts and the later one is ignored with a printed reason.
+The build refuses to run, rather than quietly dropping a bonus, if the file
+is unreadable, if an accepted request doesn't match a real submission, or
+if two accepted requests point at the same track. A request whose
+submitter doesn't match the track's submitter is ignored with a warning.
+
+Seasons without a `daily_doubles.json` file (Seasons 1 and 2) don't use
+the rule at all.
 
 ## Derived metrics
 

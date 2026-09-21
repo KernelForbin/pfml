@@ -162,6 +162,35 @@ def load_sentiment():
     return out
 
 
+# Season 3 rule: once per season, a submitter can ask in their own note on
+# a submission to have that track's points doubled toward their total. Which
+# notes are real requests is a judgement about intent (a note can mention the
+# prop without invoking it), so nothing here parses notes. The decisions are
+# made by reading them and recorded by hand in data/seasonN/daily_doubles.json;
+# this build only applies what that file says, and only where it exists.
+DAILY_DOUBLE_FILE = "daily_doubles.json"
+
+
+def load_daily_doubles(folder):
+    """The recorded Daily Double decisions for one season, or None when the
+    season doesn't use the rule (no file). A broken file stops the build
+    rather than being skipped: it's a scoring input, and silently ignoring
+    it would publish someone's total without their bonus."""
+    path = folder / DAILY_DOUBLE_FILE
+    if not path.exists():
+        return None
+    try:
+        with open(path, encoding="utf-8") as f:
+            raw = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        raise SystemExit(f"{path}: unreadable ({e}). Fix it before building; it changes totals.")
+    requests = raw.get("requests", [])
+    return {
+        "reviewed": {r["roundId"] for r in raw.get("reviewedRounds", []) if r.get("roundId")},
+        "accepted": [r for r in requests if r.get("decision") == "accepted"],
+    }
+
+
 def read_csv(path):
     if not path.exists():
         return []
@@ -329,7 +358,7 @@ def build_season(folder: Path, season_key: str, label: str):
         voters_in_round.setdefault(v["Round ID"], set()).add(v["Voter ID"])
 
     # accumulators
-    player = {cid: {"id": cid, "name": name, "points": 0, "submissions": 0,
+    player = {cid: {"id": cid, "name": name, "points": 0, "votePoints": 0, "submissions": 0,
                      "roundsWon": 0, "bestFinish": None, "podiums": 0}
               for cid, name in names.items()}
     voter = {cid: {"id": cid, "name": name, "roundsVoted": 0, "pointsSpent": 0,
@@ -383,6 +412,20 @@ def build_season(folder: Path, season_key: str, label: str):
     comment_only_votes = 0
     downvotes = 0
 
+    daily = load_daily_doubles(folder)
+    dd_by_track = {}
+    for r in (daily["accepted"] if daily else []):
+        key = (r["roundId"], r["spotifyUri"])
+        if key in dd_by_track:
+            # two accepted decisions for one track would otherwise collapse
+            # to whichever came last, silently
+            raise SystemExit(f"{folder / DAILY_DOUBLE_FILE}: more than one accepted request for the "
+                             f"same track {key}. Keep one.")
+        dd_by_track[key] = r
+    dd_matched = set()
+    dd_used = {}        # submitter -> the Daily Double actually applied
+    dd_ignored = []
+
     for rnd in sorted(round_rows, key=lambda r: r.get("Created", "")):
         rid = rnd["ID"]
         round_subs = subs_by_round.get(rid, [])
@@ -429,9 +472,32 @@ def build_season(folder: Path, season_key: str, label: str):
             songs.append(song)
             all_songs.append(song)
 
+            # Daily Double: the track's points count twice toward the season
+            # total. The track's own score, and so the round's placings,
+            # wins and podiums, stay what the votes said.
+            bonus = 0
+            req = dd_by_track.get((rid, uri))
+            if req:
+                dd_matched.add((rid, uri))
+                if req.get("submitterId") != submitter:
+                    dd_ignored.append(f"{rnd['Name']} / {s['Title']}: recorded submitter doesn't match the track's")
+                elif submitter in dd_used:
+                    dd_ignored.append(f"{rnd['Name']} / {s['Title']}: {names.get(submitter)} already used theirs "
+                                      f"in {dd_used[submitter]['roundName']}")
+                else:
+                    bonus = total
+                    dd_used[submitter] = {
+                        "roundId": rid, "roundName": rnd["Name"], "trackTitle": s["Title"],
+                        "spotifyId": track_id(uri), "basePoints": total, "bonus": bonus,
+                    }
+                    song["dailyDouble"] = {"bonus": bonus}
+
             if submitter in player:
-                player[submitter]["points"] += total
+                player[submitter]["points"] += total + bonus
+                player[submitter]["votePoints"] += total
                 player[submitter]["submissions"] += 1
+                if submitter in dd_used and dd_used[submitter]["roundId"] == rid:
+                    player[submitter]["dailyDouble"] = dd_used[submitter]
 
         songs.sort(key=lambda x: x["points"], reverse=True)
 
@@ -524,7 +590,27 @@ def build_season(folder: Path, season_key: str, label: str):
     standings = [p for p in player.values() if p["submissions"] > 0]
     standings.sort(key=lambda p: (-p["points"], -p["roundsWon"], p["name"]))
     for p in standings:
-        p["avgPerSubmission"] = round(p["points"] / p["submissions"], 1)
+        # per-submission average reflects what the votes gave, so a Daily
+        # Double lifts the total without inflating the average
+        p["avgPerSubmission"] = round(p["votePoints"] / p["submissions"], 1)
+
+    daily_double = None
+    if daily is not None:
+        missing = [k for k in dd_by_track if k not in dd_matched]
+        if missing:
+            raise SystemExit(f"{folder / DAILY_DOUBLE_FILE}: accepted request(s) match no submission "
+                             f"(round id + Spotify URI): {missing}. A typo here would silently drop a bonus.")
+        for msg in dd_ignored:
+            print(f"  ! {season_key} Daily Double ignored: {msg}")
+        unreviewed = [r.get("Name", r["ID"]) for r in sorted(round_rows, key=lambda r: r.get("Created", ""))
+                      if r["ID"] not in daily["reviewed"]]
+        if unreviewed:
+            print(f"  ! {season_key}: submitter notes not yet reviewed for Daily Double in: {', '.join(unreviewed)}")
+        daily_double = {
+            "used": [dict(v, playerId=k, playerName=names.get(k, "Unknown")) for k, v in dd_used.items()],
+            "reviewedRounds": sum(1 for r in round_rows if r["ID"] in daily["reviewed"]),
+            "unreviewedRounds": unreviewed,
+        }
 
     # ---- season timeline ----
     # startedAt: the Created timestamp of the first round, straight from
@@ -826,6 +912,7 @@ def build_season(folder: Path, season_key: str, label: str):
         "voteRowCount": len(vote_rows),
         "scoringVoteCount": scoring_votes,
         "pointBudget": point_budget,
+        "dailyDouble": daily_double,
         "startedAt": started_at,
         "liveRound": live_round,
     }

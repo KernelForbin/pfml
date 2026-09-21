@@ -284,6 +284,18 @@
     host.appendChild(tag);
   }
 
+  /* ---- Daily Double (Season 3 rule) ----
+     A submitter's one doubled track per season. The bonus is in their
+     total; the line says how much of it came from the Daily Double and
+     from which track and round, so the total never looks unexplained. */
+
+  function dailyDoubleLine(p) {
+    var dd = p && p.dailyDouble;
+    if (!dd) return "";
+    return '<div class="stand-dd"><span class="dd-badge">Daily Double</span>+' + dd.bonus +
+      " pts &middot; " + esc(dd.trackTitle) + " &middot; " + esc(dd.roundName) + "</div>";
+  }
+
   /* ---- standings (clickable) ---- */
 
   function renderStandings(d) {
@@ -301,7 +313,7 @@
       row.innerHTML =
         '<div class="stand-rank">' + (i + 1) + "</div>" +
         '<div><div class="stand-name">' + esc(p.name) + "</div>" +
-        '<div class="bar"><i style="width:' + pct + '%"></i></div></div>' +
+        '<div class="bar"><i style="width:' + pct + '%"></i></div>' + dailyDoubleLine(p) + "</div>" +
         '<div class="stand-score"><b>' + p.points + "</b><span>" +
         p.avgPerSubmission + " avg &middot; " + p.roundsWon + " won &middot; " + p.podiums + " top-3</span></div>";
       row.addEventListener("click", function () { toggleSelected(p.id); });
@@ -347,7 +359,11 @@
 
     g.appendChild(tile("Season standing", "#" + rank + " of " + d.standings.length,
       standing.points + " points &middot; " + standing.roundsWon + " round" + (standing.roundsWon === 1 ? "" : "s") +
-      " won &middot; " + standing.podiums + " top-3 finishes"));
+      " won &middot; " + standing.podiums + " top-3 finishes" +
+      (standing.dailyDouble
+        ? "<br>includes +" + standing.dailyDouble.bonus + " Daily Double (" + esc(standing.dailyDouble.trackTitle) +
+          ", " + esc(standing.dailyDouble.roundName) + ")"
+        : "")));
 
     if (songs.length) {
       var best = songs.reduce(function (a, b) { return b.points > a.points ? b : a; });
@@ -416,7 +432,7 @@
         row.innerHTML =
           '<div class="stand-rank">#' + overallRank + "</div>" +
           '<div><div class="stand-name">' + esc(r.name) + "</div>" +
-          '<div class="bar"><i style="width:' + pct + '%"></i></div></div>' +
+          '<div class="bar"><i style="width:' + pct + '%"></i></div>' + dailyDoubleLine(r.standing) + "</div>" +
           '<div class="stand-score"><b>' + r.standing.points + "</b><span>" +
           r.standing.avgPerSubmission + " avg &middot; " + r.standing.roundsWon + " won &middot; " +
           r.standing.podiums + " top-3</span></div>";
@@ -632,7 +648,10 @@
 
     d.rounds.forEach(function (r) {
       var earned = {};
-      r.songs.forEach(function (s) { earned[s.submitterId] = (earned[s.submitterId] || 0) + s.points; });
+      r.songs.forEach(function (s) {
+        var bonus = s.dailyDouble ? s.dailyDouble.bonus : 0;   // counts toward totals, not the round's own score
+        earned[s.submitterId] = (earned[s.submitterId] || 0) + s.points + bonus;
+      });
       var winScore = r.songs.length ? r.songs[0].points : 0;
       cumWinScore += winScore;
       ids.forEach(function (id) { cum[id] += earned[id] || 0; });
@@ -851,7 +870,9 @@
     if (showRound) meta += " &middot; " + esc(s.roundName);
     row.innerHTML =
       '<div class="trk-pos">' + pos + "</div>" +
-      '<div class="trk-body"><div class="trk-title">' + extLink(trackLink(s.spotifyId), s.title) + "</div>" +
+      '<div class="trk-body"><div class="trk-title">' + extLink(trackLink(s.spotifyId), s.title) +
+      (s.dailyDouble ? ' <span class="dd-badge" title="Counts twice toward ' + esc(s.submitterName) +
+        '&#39;s season total: +' + s.dailyDouble.bonus + ' pts">Daily Double</span>' : "") + "</div>" +
       '<div class="trk-meta">' + meta + "</div></div>" +
       '<div class="trk-pts">' + s.points + " <small>pts</small></div>";
     return row;

@@ -416,6 +416,16 @@ button.trend-chip.is-on .dot { opacity: 1; }
 .trend-line-hit, .trend-point-hit { cursor: pointer; }
 .trend-series:hover .trend-line-visible { stroke-width: 4; }
 
+/* ---------- Daily Double ---------- */
+.dd-badge {
+  display: inline-block; vertical-align: middle; margin-right: 6px;
+  font-family: "Archivo", sans-serif; font-weight: 700; font-size: 0.66rem;
+  text-transform: uppercase; letter-spacing: 0.05em; line-height: 1;
+  padding: 3px 7px; border-radius: 999px; background: var(--ink); color: var(--acid);
+}
+.trk-title .dd-badge { margin: 0 0 0 6px; }
+.stand-dd { margin-top: 6px; font-size: 0.8rem; color: var(--muted); }
+
 /* ---------- comments ---------- */
 /* .crow mirrors .vrow (voting style) but carries more numeric columns, so
    it gets its own grid template rather than overloading that one. */

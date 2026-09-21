@@ -34,6 +34,24 @@ not just documented, but nothing stops it recurring, so keep the habits:
   above it
 - Never run `git init` anywhere but the project folder you mean to track
 
+## Season 3: review every new export for Daily Double requests
+
+Season 3 has a Daily Double rule: once per season, a submitter can ask in
+their own submission note to have that track's points doubled toward their
+total. Whenever the user uploads a new Season 3 export, before building:
+
+1. Read the submitter notes (`submissions.csv` "Comment") for the new
+   round(s). Judge intent: a request, not a mention of the prop or a joke.
+   When a note is genuinely ambiguous, ask the user rather than guess.
+2. Record the outcome in `data/season3/daily_doubles.json`: add the round
+   to `reviewedRounds` even when nothing was found, and add any request to
+   `requests` as `accepted`, or as `rejected` with a reason (a second
+   request from the same person is rejected).
+3. Tell the user what you found, including "no requests this round".
+
+The build applies only what the file says. It warns about unreviewed rounds
+and refuses to build on malformed entries. See README, Daily Double.
+
 ## No automated tests ship in this repo
 
 Verification during development was done with disposable Node.js harnesses
