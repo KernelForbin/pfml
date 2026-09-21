@@ -29,23 +29,32 @@
     <dl class="scoreline" id="scoreline"></dl>
   </section>
 
-  <section class="shell block" id="block-standings">
-    <h2>Standings</h2>
-    <p class="block-note">Total points a player's submissions earned across the season. Click a name to filter everything below to them, click more than one to compare.</p>
-    <div id="standings"></div>
+  <section class="shell block fold-block" id="block-standings">
+    <details class="fold">
+      <summary class="fold-bar">
+        <span class="fold-text">
+          <h2 class="fold-title">Standings</h2>
+          <span class="fold-sub"><span class="fold-count" id="standCount"></span></span>
+          <span class="stand-top" id="standTop"></span>
+        </span>
+        <span class="fold-cta" aria-hidden="true"><span class="fold-cta-show">Show all</span><span class="fold-cta-hide">Hide</span></span>
+      </summary>
+      <p class="block-note fold-note">Total points a player's submissions earned across the season. Click a name to filter everything below to them, click more than one to compare.</p>
+      <div id="standings"></div>
+    </details>
   </section>
 
-  <section class="shell block rr-block" id="block-rounds">
-    <details class="rr">
-      <summary class="rr-bar">
+  <section class="shell block fold-block" id="block-rounds">
+    <details class="fold">
+      <summary class="fold-bar">
         <span class="rr-art" id="rrArt" aria-hidden="true"></span>
-        <span class="rr-text">
-          <h2 class="rr-title">Results by round</h2>
-          <span class="rr-sub"><span class="rr-count" id="rrCount"></span><span class="rr-latest" id="rrLatest"></span></span>
+        <span class="fold-text">
+          <h2 class="fold-title">Results by round</h2>
+          <span class="fold-sub"><span class="fold-count" id="rrCount"></span><span class="rr-latest" id="rrLatest"></span></span>
         </span>
-        <span class="rr-cta" aria-hidden="true"><span class="rr-cta-show">Show all</span><span class="rr-cta-hide">Hide</span></span>
+        <span class="fold-cta" aria-hidden="true"><span class="fold-cta-show">Show all</span><span class="fold-cta-hide">Hide</span></span>
       </summary>
-      <p class="block-note rr-note-top">Newest first. Open a round for every track, every vote and every comment, where members can vote on comments, react and reply.</p>
+      <p class="block-note fold-note">Newest first. Open a round for every track, every vote and every comment, where members can vote on comments, react and reply.</p>
       <div id="rounds"></div>
     </details>
   </section>

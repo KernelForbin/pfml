@@ -119,27 +119,42 @@ class GeneratedPages(unittest.TestCase):
             self.assertEqual(p.read_text(encoding="utf-8"), expected, f"{p.name} is stale: run scripts/build.py")
 
 
-class ResultsByRound(unittest.TestCase):
-    """The most-used section: right under Standings, and its collapsed bar
-    has every element rounds.js fills in (count, latest round, album art)."""
+class FoldingSections(unittest.TestCase):
+    """Standings and Results by round, the two most-used sections: first on
+    the page in that order, each a <details> whose collapsed bar holds the
+    heading and every element the code fills in for its summary."""
+
+    # section id -> (script, the stretch of it that fills that section's bar)
+    FILLERS = {
+        "block-standings": ("app.js", "function renderStandingsSummary", "function renderStandings("),
+        "block-rounds": ("rounds.js", "function renderList", "2. The round page"),
+    }
 
     def setUp(self):
         self.template = read("season.template.html")
-        self.page = Page(self.template)
 
-    def test_sits_directly_under_the_standings(self):
-        blocks = [a["id"] for a in self.page.find("section") if a.get("id", "").startswith("block-")]
-        self.assertEqual(blocks[blocks.index("block-standings") + 1], "block-rounds")
+    def section(self, section_id):
+        m = re.search(r'<section[^>]*id="%s"[^>]*>(.*?)</section>' % section_id, self.template, re.S)
+        self.assertIsNotNone(m, section_id)
+        return m.group(1)
 
-    def test_collapsed_bar_has_what_rounds_js_fills_in(self):
-        summary = re.search(r"<summary[^>]*>(.*?)</summary>", self.template, re.S)
-        self.assertIsNotNone(summary, "the section is a <details> with a <summary> bar")
-        season_list = read("rounds.js").split("function renderList", 1)[1].split("2. The round page", 1)[0]
-        ids = set(re.findall(r'getElementById\("(\w+)"\)', season_list))
-        self.assertTrue(ids)
-        for i in ids:
-            self.assertIn(f'id="{i}"', summary.group(1), f"rounds.js fills #{i}, which the bar must contain")
-        self.assertRegex(summary.group(1), r"<h2[^>]*>", "the bar carries the section's heading")
+    def test_standings_then_results_come_first(self):
+        blocks = [a["id"] for a in Page(self.template).find("section") if a.get("id", "").startswith("block-")]
+        self.assertEqual(blocks[:2], ["block-standings", "block-rounds"])
+
+    def test_each_collapsed_bar_has_its_heading_and_what_the_code_fills_in(self):
+        for section_id, (script, start, end) in self.FILLERS.items():
+            with self.subTest(section_id):
+                body = self.section(section_id)
+                self.assertRegex(body, r"<details[^>]*>", "the section folds")
+                summary = re.search(r"<summary[^>]*>(.*?)</summary>", body, re.S)
+                self.assertIsNotNone(summary, "the folded section has a summary bar")
+                self.assertRegex(summary.group(1), r"<h2[^>]*>", "the bar carries the section's heading")
+                code = read(script).split(start, 1)[1].split(end, 1)[0]
+                ids = set(re.findall(r'(?:getElementById\("|\$\(")(\w+)"\)', code))
+                self.assertTrue(ids, f"no ids found in {script}")
+                for i in ids:
+                    self.assertIn(f'id="{i}"', summary.group(1), f"{script} fills #{i}; the bar must contain it")
 
 
 class CleanText(unittest.TestCase):

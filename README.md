@@ -153,7 +153,8 @@ by a failed return, so the same link works once it's fixed.
 ## Results by round, and the comments on them
 
 On every season page, directly under Standings, **Results by round**,
-collapsed by default. It's the most-used section, so even collapsed it's a
+collapsed by default. Standings folds the same way (see Season page
+features). It's the most-used section, so even collapsed it's a
 full-width card: the round count, the latest round and its winner, the
 newest three winners' album art, and a Show all button. Open it for a card per round, newest first, with the
 winning track's album art, the winner (or everyone tied for it) and the
@@ -201,6 +202,13 @@ rest of the link (`?s=...&r=...`) in this tab's sessionStorage and puts
 it back once the session exists, before any page code runs.
 
 ## Season page features
+
+- **Standings** and **Results by round** open the page, in that order,
+  both collapsed by default into a full-width bar with a summary and a Show
+  all button. Standings' bar shows the player count and everyone placed
+  3rd or better with their points (ties share a place, so that can be more
+  than three people; past four it shows three and "+N more"). Open it for
+  the full clickable list.
 
 - **Jump nav**: a second row in the sticky top bar links to each section on
   the page (Standings, Results, Numbers, Trend, Tracks, Taste, Voting,
@@ -329,7 +337,7 @@ its 5-chance minimum, which takes five rounds.
 
 ## Player focus and comparison
 
-Click a name in the Standings on any season page to filter everything below
+Open Standings on any season page and click a name to filter everything below
 (top tracks, rounds, taste matrix, voters, artists) to just that person, and
 a Player Focus panel appears with stats scoped to them: best and weakest
 submission, most divisive submission, biggest fan, hardest to win over,

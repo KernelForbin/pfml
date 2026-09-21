@@ -341,7 +341,30 @@
 
   /* ---- standings (clickable) ---- */
 
+  // The collapsed Standings bar: player count and everyone placed 3rd or
+  // better. Ties share a place, so that can be more than three people
+  // (Season 3 opened with two tied for 1st); past four it shows three and
+  // says how many more, so a big tie can't flood the bar.
+  function renderStandingsSummary(d) {
+    var count = $("standCount"), top = $("standTop");
+    if (count) {
+      count.textContent = d.standings.length
+        ? d.standings.length + " " + plural(d.standings.length, "player") + " · after " +
+          d.rounds.length + " " + plural(d.rounds.length, "round")
+        : "No standings yet";
+    }
+    if (!top) return;
+    var podium = d.standings.filter(function (p) { return p.rank <= 3; });
+    var shown = podium.length > 4 ? podium.slice(0, 3) : podium;
+    top.innerHTML = shown.map(function (p) {
+      return '<span class="stand-top-chip' + (p.rank === 1 ? " is-1" : "") + '"' + (p.tied ? ' title="Tied on points"' : "") + ">" +
+        '<span class="pl">' + placeLabel(p) + '</span><span class="nm">' + esc(p.name) + '</span><span class="pt">' + p.points + "</span></span>";
+    }).join("") + (podium.length > shown.length
+      ? '<span class="stand-top-more">+' + (podium.length - shown.length) + " more</span>" : "");
+  }
+
   function renderStandings(d) {
+    renderStandingsSummary(d);
     if (!d.standings.length) { setBlock("standings", empty("No submissions yet. Standings appear once the first round closes.")); return; }
     var max = Math.max.apply(null, d.standings.map(function (p) { return p.points; }).concat([1]));
     var box = el("div", "framed");

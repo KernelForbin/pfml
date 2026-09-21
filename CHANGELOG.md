@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-09-21 (follow-up 10)
+
+- **Standings folds like Results by round.** Both now open the season page
+  as full-width collapsed bars with a Show all button. Collapsed, Standings
+  shows the player count and everyone placed 3rd or better with their
+  points (shared places as T1; past four names it shows three and "+N
+  more"). Open, it's the same clickable list for focusing and comparing
+  players. The two bars share one set of styles (`fold-*`, renamed from the
+  results-only `rr-*`).
+
 ## 2026-09-21 (follow-up 9)
 
 - **"Round results" is now "Results by round", and it's hard to miss.**
