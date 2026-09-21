@@ -1,22 +1,23 @@
-/* PFML — Round results, on every season page.
+/* PFML — rounds.
 
-   A collapsed "Round results" pill under the leaderboard. Open it for the
-   season's rounds, newest first; open a round for every track with every
-   vote cast on it, and the comments that came with them. Comments can be
-   voted on, reacted to and replied to by members.
+   Two views:
 
-   Every round in the export is listed, including one that so far only has
-   its prompt: that shows the prompt and says voting hasn't started.
+   1. renderList(): on a season page, inside the collapsed "Round results"
+      pill under the leaderboard, one card per round (newest first) that
+      links to that round's own page.
 
-   The track and vote data comes from the season JSON. The member layer
-   (comment votes, reactions, replies) comes from the comment_* tables via
-   window.PFML.api in auth.js, loaded per round the first time that round
-   is opened. Comments are keyed by "<round id>|<spotify uri>|<voter id>",
-   the id build.py writes onto each one.
+   2. renderRoundPage(): round.html?s=<season key>&r=<round id>. The whole
+      round on its own full-width page, modelled on how Music League itself
+      shows a finished round: a card per track with its album art, place,
+      points and voter count, who submitted it, then every voter's points
+      and comment. Comments carry the member layer: up/down votes,
+      reactions and replies.
 
-   app.js calls PFMLRounds.render() whenever the season or the Standings
-   player selection changes. Which rounds and reply threads are open, and
-   the social data already loaded, survive those re-renders. */
+   Track and vote data comes from the season JSON; album art is an optional
+   "art" URL per track (cached by scripts/publish.py). The member layer
+   comes from the comment_* tables through window.PFML.api (auth.js).
+   Comments are keyed "<round id>|<spotify uri>|<voter id>", the id build.py
+   writes on each one. */
 
 (function () {
   "use strict";
@@ -26,18 +27,17 @@
   var REACT_ORDER = ["fire", "laugh", "hundred", "eyes", "grimace", "heart"];
 
   var state = {
-    host: null,
-    d: null,               // season JSON
+    host: null,            // element holding the round page's tracks
     names: {},             // competitor id -> name
-    selected: [],          // Standings player filter
-    open: {},              // round id -> expanded
-    social: {},            // round id -> { votes, reactions, replies }, each grouped by comment id
+    social: null,          // { votes, reactions, replies }, each grouped by comment id
     people: null,          // member user_id -> { name }
     threads: {},           // comment id -> reply thread open
     picker: null,          // comment id with the reaction picker open
-    index: {},             // comment id -> ballot row
+    index: {},             // comment id -> vote row
     busy: false
   };
+
+  /* ---- small helpers ---- */
 
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
@@ -50,6 +50,11 @@
   function isAdmin() { return !!(window.PFML && window.PFML.member && window.PFML.member.role === "admin"); }
   function cssEscape(s) { return window.CSS && CSS.escape ? CSS.escape(s) : String(s).replace(/["\\]/g, "\\$&"); }
 
+  function ordinal(n) {
+    var s = ["th", "st", "nd", "rd"], v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+
   function when(iso) {
     var d = new Date(iso);
     if (isNaN(d.getTime())) return "";
@@ -60,17 +65,95 @@
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   }
 
+  function dateOf(iso) {
+    var d = new Date(iso);
+    return isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  }
+
   function groupBy(rows) {
     var out = {};
     rows.forEach(function (r) { (out[r.comment_id] = out[r.comment_id] || []).push(r); });
     return out;
   }
 
-  function roundIdOf(commentId) { return String(commentId).split("|")[0]; }
+  // Initials in a coloured circle, standing in for the profile photos
+  // Music League has and the export doesn't. The colour is fixed per
+  // player (from their id), so the same person always looks the same.
+  function avatar(id, name) {
+    var words = String(name || "?").trim().split(/\s+/);
+    var initials = (words.length > 1 ? words[0][0] + words[words.length - 1][0] : String(name || "?").slice(0, 2)).toUpperCase();
+    var h = 0;
+    String(id || name).split("").forEach(function (c) { h = (h * 31 + c.charCodeAt(0)) % 360; });
+    return '<span class="av" style="background:hsl(' + h + ',48%,42%)" aria-hidden="true">' + esc(initials) + "</span>";
+  }
 
-  /* ---- the ballots on one track: every vote, plus comment-only rows ---- */
+  function artHtml(url, cls) {
+    return url
+      ? '<img class="' + cls + '" src="' + esc(url) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+      : '<span class="' + cls + ' is-empty" aria-hidden="true">&#9835;</span>';
+  }
 
-  function ballots(song) {
+  function winners(r) { return r.songs.filter(function (s) { return s.place === 1; }); }
+
+  function roundStatus(r) {
+    if (!r.songs.length) return "Prompt posted, no submissions yet";
+    if (!r.hasVotingActivity) return "Submissions in, voting hasn\u2019t started";
+    return null;
+  }
+
+  function roundCounts(r) {
+    var votes = 0, comments = 0;
+    r.songs.forEach(function (s) { votes += (s.votes || []).length; comments += (s.comments || []).length; });
+    return { tracks: r.songs.length, votes: votes, comments: comments };
+  }
+
+  function roundUrl(seasonKey, roundId) {
+    return "round.html?s=" + encodeURIComponent(seasonKey) + "&r=" + encodeURIComponent(roundId);
+  }
+
+  /* =====================================================================
+     1. Season page: the list of rounds
+     ===================================================================== */
+
+  function renderList(host, d, opts) {
+    opts = opts || {};
+    var selected = opts.selected || [];
+    host.innerHTML = "";
+    if (opts.filterTag) opts.filterTag(host);
+
+    var numbered = d.rounds.map(function (r, i) { return { r: r, n: i + 1 }; });
+    var shown = !selected.length ? numbered : numbered.filter(function (x) {
+      return x.r.songs.some(function (s) { return selected.indexOf(s.submitterId) !== -1; });
+    });
+
+    var count = document.getElementById("rrCount");
+    if (count) count.textContent = selected.length ? shown.length + " of " + plural(d.rounds.length, "round") : plural(d.rounds.length, "round");
+
+    if (!d.rounds.length) { host.insertAdjacentHTML("beforeend", '<div class="empty">No rounds posted yet this season.</div>'); return; }
+    if (!shown.length) { host.insertAdjacentHTML("beforeend", '<div class="empty">No rounds involve this selection.</div>'); return; }
+
+    host.insertAdjacentHTML("beforeend", '<div class="rl">' + shown.slice().reverse().map(function (x) {
+      var r = x.r, status = roundStatus(r), c = roundCounts(r), top = winners(r);
+      var sub = status ? esc(status)
+        : top.length > 1 ? "Tied: " + top.map(function (s) { return "<b>" + esc(s.submitterName) + "</b>"; }).join(" &amp; ")
+        : top.length ? "<b>" + esc(top[0].submitterName) + "</b> won with " + esc(top[0].title) : "";
+      return '<a class="rl-card" href="' + roundUrl(d.key, r.id) + '">' +
+        artHtml(top[0] && top[0].art, "rl-art") +
+        '<span class="rl-text"><span class="rl-num">Round ' + x.n + (r.created ? " &middot; " + esc(dateOf(r.created)) : "") + "</span>" +
+        '<span class="rl-name">' + esc(r.name) + "</span>" +
+        (sub ? '<span class="rl-sub">' + sub + "</span>" : "") +
+        (status ? "" : '<span class="rl-counts">' + plural(c.tracks, "track") + " &middot; " + plural(c.votes, "vote") + " &middot; " + plural(c.comments, "comment") + "</span>") +
+        '</span><span class="rl-go" aria-hidden="true">&rarr;</span></a>';
+    }).join("") + "</div>");
+  }
+
+  /* =====================================================================
+     2. The round page
+     ===================================================================== */
+
+  /* ---- the voters on one track: every vote, then comment-only rows ---- */
+
+  function voteRows(song) {
     var byVoter = {};
     (song.comments || []).forEach(function (c) { byVoter[c.voterId] = c; });
     var seen = {};
@@ -92,19 +175,15 @@
 
   /* ---- member layer for one comment ---- */
 
-  function socialOf(commentId) { return state.social[roundIdOf(commentId)] || null; }
-
   function votesFor(id) {
-    var soc = socialOf(id);
-    var rows = (soc && soc.votes[id]) || [];
+    var rows = (state.social && state.social.votes[id]) || [];
     var up = 0, down = 0, mine = 0, uid = me();
     rows.forEach(function (v) { if (v.value > 0) up++; else down++; if (v.user_id === uid) mine = v.value; });
     return { up: up, down: down, score: up - down, mine: mine };
   }
 
   function reactionsFor(id) {
-    var soc = socialOf(id);
-    var rows = (soc && soc.reactions[id]) || [];
+    var rows = (state.social && state.social.reactions[id]) || [];
     var uid = me(), by = {};
     rows.forEach(function (r) {
       var e = by[r.reaction] = by[r.reaction] || { count: 0, mine: false, who: [] };
@@ -115,25 +194,11 @@
     return by;
   }
 
-  function repliesFor(id) {
-    var soc = socialOf(id);
-    return (soc && soc.replies[id]) || [];
-  }
-
-  function memberName(userId) {
-    return (state.people && state.people[userId] && state.people[userId].name) || "A member";
-  }
-
-  /* ---- rendering ---- */
-
-  function pointsLabel(p) {
-    if (p > 0) return "+" + p;
-    if (p < 0) return "\u2212" + Math.abs(p);
-    return "comment";
-  }
+  function repliesFor(id) { return (state.social && state.social.replies[id]) || []; }
+  function memberName(uid) { return (state.people && state.people[uid] && state.people[uid].name) || "A member"; }
 
   function socialHtml(c) {
-    if (!state.social[roundIdOf(c.id)]) return "";
+    if (!state.social) return "";
     var v = votesFor(c.id), reacts = reactionsFor(c.id), replies = repliesFor(c.id);
     var open = !!state.threads[c.id], uid = me(), admin = isAdmin();
 
@@ -178,117 +243,140 @@
       "</div>" + thread;
   }
 
-  function ballotHtml(row) {
-    var hl = state.selected.indexOf(row.voterId) !== -1;
+  /* ---- rendering ---- */
+
+  function pointsLabel(p) {
+    if (p > 0) return "+" + p;
+    if (p < 0) return "\u2212" + Math.abs(p);
+    return "0";
+  }
+
+  function voteHtml(row) {
     var c = row.comment;
-    return '<div class="rr-ballot' + (hl ? " is-hl" : "") + (c ? " has-comment" : "") + '"' +
-      (c ? ' data-id="' + esc(c.id) + '"' : "") + ">" +
-      '<div class="rr-ballot-head"><span class="rr-voter">' + esc(row.name) + "</span>" +
-      '<span class="rr-pts' + (row.points === 0 ? " is-zero" : row.points < 0 ? " is-neg" : "") + '">' +
-      pointsLabel(row.points) + "</span></div>" +
-      (c ? '<p class="cm-text">' + esc(c.comment) + "</p>" + socialHtml(c) : "") +
+    return '<div class="rp-vote' + (c ? " has-comment" : "") + '"' + (c ? ' data-id="' + esc(c.id) + '"' : "") + ">" +
+      '<div class="rp-vote-head">' + avatar(row.voterId, row.name) +
+      '<span class="rp-voter">' + esc(row.name) + "</span>" +
+      '<span class="rp-pts' + (row.points === 0 ? " is-zero" : row.points < 0 ? " is-neg" : "") + '"' +
+      (row.points === 0 ? ' title="Commented without giving points"' : "") + ">" + pointsLabel(row.points) + "</span></div>" +
+      (c ? '<p class="rp-comment">' + esc(c.comment) + "</p>" + socialHtml(c) : "") +
       "</div>";
   }
 
-  function trackHtml(s) {
-    var hl = state.selected.indexOf(s.submitterId) !== -1;
-    var link = s.spotifyId
+  function placeBadge(s, tiedPlaces) {
+    if (!s.place) return "";
+    var tied = tiedPlaces[s.place] > 1;
+    return '<span class="rp-place' + (s.place <= 3 ? " is-" + s.place : "") + '">' +
+      (s.place === 1 ? "&#9733; " : "") + ordinal(s.place) + " place" + (tied ? " &middot; tie" : "") + "</span>";
+  }
+
+  function trackHtml(s, tiedPlaces) {
+    var rows = voteRows(s);
+    var voters = (s.votes || []).length;
+    var title = s.spotifyId
       ? '<a href="https://open.spotify.com/track/' + esc(s.spotifyId) + '" target="_blank" rel="noopener">' + esc(s.title) + "</a>"
       : esc(s.title);
-    var rows = ballots(s);
-    var voteCount = (s.votes || []).length;
-    var commentCount = (s.comments || []).length;
-    return '<section class="rr-track' + (hl ? " is-hl" : "") + '">' +
-      '<div class="rr-track-head"><span class="rr-place">#' + (s.place || "") + "</span>" +
-      '<div class="rr-track-info"><div class="rr-track-title">' + link +
-      (s.dailyDouble ? ' <span class="dd-badge">Daily Double</span>' : "") + "</div>" +
-      '<div class="rr-track-meta">' + esc(s.artistText) + " &middot; submitted by <b>" + esc(s.submitterName) + "</b>" +
-      " &middot; " + plural(voteCount, "vote") + (commentCount ? " &middot; " + plural(commentCount, "comment") : "") + "</div></div>" +
-      '<span class="rr-track-pts">' + s.points + " <small>pts</small></span></div>" +
-      (s.note ? '<p class="rr-note"><span>Submitter\u2019s note</span>' + esc(s.note) + "</p>" : "") +
-      (rows.length ? '<div class="rr-ballots">' + rows.map(ballotHtml).join("") + "</div>"
-                   : '<p class="rr-none">No votes or comments on this one.</p>') +
-      "</section>";
+    return '<article class="rp-track" id="t-' + esc(s.spotifyId || s.title) + '">' +
+      '<div class="rp-track-main">' + artHtml(s.art, "rp-art") +
+        '<div class="rp-track-info">' + placeBadge(s, tiedPlaces) +
+          '<h2 class="rp-title">' + title + "</h2>" +
+          '<p class="rp-artist">' + esc(s.artistText) + "</p>" +
+          (s.album ? '<p class="rp-album">' + esc(s.album) + "</p>" : "") +
+        "</div>" +
+        '<div class="rp-score"><b>' + pointsLabel(s.points) + "</b><span>" + plural(voters, "voter") + "</span></div>" +
+      "</div>" +
+      '<div class="rp-submitter">' + avatar(s.submitterId, s.submitterName) +
+        "<span>Submitted by <b>" + esc(s.submitterName) + "</b></span>" +
+        (s.dailyDouble ? '<span class="dd-badge">Daily Double +' + s.dailyDouble.bonus + "</span>" : "") + "</div>" +
+      (s.note ? '<p class="rp-note"><span>Their note</span>' + esc(s.note) + "</p>" : "") +
+      (rows.length ? '<div class="rp-votes">' + rows.map(voteHtml).join("") + "</div>"
+                   : '<p class="rp-empty">No votes or comments on this one.</p>') +
+      "</article>";
   }
 
-  function winnersLine(r) {
-    var top = r.songs.filter(function (s) { return s.place === 1; });
-    if (!top.length) return "";
-    if (top.length === 1) return "<b>" + esc(top[0].submitterName) + "</b> took it with " + esc(top[0].title);
-    return "tie at the top: " + top.map(function (s) { return "<b>" + esc(s.submitterName) + "</b>"; }).join(" &amp; ");
+  function navHtml(d, i, where) {
+    var prev = d.rounds[i - 1], next = d.rounds[i + 1];
+    return '<nav class="rp-nav rp-nav-' + where + '" aria-label="Other rounds">' +
+      (prev ? '<a class="rp-nav-link" href="' + roundUrl(d.key, prev.id) + '">&larr; Round ' + i + '<span>' + esc(prev.name) + "</span></a>" : "<span></span>") +
+      (next ? '<a class="rp-nav-link is-next" href="' + roundUrl(d.key, next.id) + '">Round ' + (i + 2) + ' &rarr;<span>' + esc(next.name) + "</span></a>" : "<span></span>") +
+      "</nav>";
   }
 
-  function roundStatus(r) {
-    if (!r.songs.length) return "prompt posted, no submissions yet";
-    if (!r.hasVotingActivity) return "submissions in, voting hasn\u2019t started";
-    return null;
-  }
-
-  function summaryHtml(r, number) {
-    var status = roundStatus(r);
-    var votes = 0, comments = 0;
-    r.songs.forEach(function (s) { votes += (s.votes || []).length; comments += (s.comments || []).length; });
-    var sub = status ? esc(status) : winnersLine(r);
-    var counts = status ? "" : plural(r.songs.length, "track") + " &middot; " + plural(votes, "vote") + " &middot; " + plural(comments, "comment");
-    return '<span><span class="round-title">Round ' + number + ": " + esc(r.name) + "</span>" +
-      (sub ? ' <span class="round-sub">&mdash; ' + sub + "</span>" : "") +
-      (counts ? '<span class="rr-counts">' + counts + "</span>" : "") + "</span>" +
-      '<span class="round-open">' + (state.open[r.id] ? "Hide" : "Open") + "</span>";
-  }
-
-  function bodyHtml(r) {
-    var head = (r.description ? '<p class="round-desc">' + esc(r.description) + "</p>" : "") +
-      (r.playlistUrl ? '<a class="pill" href="' + esc(r.playlistUrl) + '" target="_blank" rel="noopener">Open the round playlist &nearr;</a>' : "");
-    var status = roundStatus(r);
-    if (status) return head + '<p class="rr-none">Nothing to show yet: ' + esc(status) + ".</p>";
-    if (!state.social[r.id]) return head + '<p class="rr-none">Loading votes and comments\u2026</p>';
+  function renderTracks(r) {
     var songs = r.songs.slice().sort(function (a, b) { return (a.place || 99) - (b.place || 99); });
-    return head + '<div class="rr-tracks">' + songs.map(trackHtml).join("") + "</div>";
+    var tiedPlaces = {};
+    songs.forEach(function (s) { if (s.place) tiedPlaces[s.place] = (tiedPlaces[s.place] || 0) + 1; });
+    state.index = {};
+    state.host.innerHTML = songs.map(function (s) { return trackHtml(s, tiedPlaces); }).join("");
   }
 
-  function roundNode(id) {
-    return state.host ? state.host.querySelector('.round[data-round="' + cssEscape(id) + '"]') : null;
-  }
+  function renderRoundPage(d, roundId) {
+    var page = document.getElementById("roundPage");
+    var i = -1;
+    for (var k = 0; k < d.rounds.length; k++) if (d.rounds[k].id === roundId) i = k;
+    if (i === -1) {
+      page.innerHTML = '<section class="shell rp-head"><a class="rp-back" href="' + esc(d.key) + '.html">&larr; ' + esc(d.label) + "</a>" +
+        "<h1>Round not found</h1><p class=\"hero-line\">That round isn\u2019t in " + esc(d.label) + ". It may be from an older link.</p></section>";
+      return;
+    }
+    var r = d.rounds[i], c = roundCounts(r), status = roundStatus(r), top = winners(r);
+    state.names = {};
+    (d.competitors || []).forEach(function (p) { state.names[p.id] = p.name; });
+    document.title = "PFML - " + r.name;
 
-  function renderRoundBody(r) {
-    var det = roundNode(r.id);
-    if (!det) return;
-    det.querySelector(".round-body").innerHTML = bodyHtml(r);
-  }
+    var winLine = status ? "" : top.length > 1
+      ? "Tied at the top: " + top.map(function (s) { return "<b>" + esc(s.submitterName) + "</b>"; }).join(" &amp; ")
+      : top.length ? "<b>" + esc(top[0].submitterName) + "</b> won it with " + esc(top[0].title) : "";
 
-  /* ---- loading ---- */
+    page.innerHTML =
+      '<section class="shell rp-head">' +
+        '<a class="rp-back" href="' + esc(d.key) + '.html#block-rounds">&larr; ' + esc(d.label) + "</a>" +
+        '<p class="rp-kicker">Round ' + (i + 1) + " of " + d.rounds.length + (r.created ? " &middot; " + esc(dateOf(r.created)) : "") + "</p>" +
+        "<h1>" + esc(r.name) + "</h1>" +
+        (r.description ? '<p class="rp-prompt">' + esc(r.description) + "</p>" : "") +
+        (winLine ? '<p class="rp-winner">' + winLine + "</p>" : "") +
+        '<div class="rp-meta">' +
+          (status ? '<span class="rp-chip">' + esc(status) + "</span>"
+                  : '<span class="rp-chip">' + plural(c.tracks, "track") + '</span><span class="rp-chip">' + plural(c.votes, "vote") +
+                    '</span><span class="rp-chip">' + plural(c.comments, "comment") + "</span>") +
+          (r.playlistUrl ? '<a class="pill" href="' + esc(r.playlistUrl) + '" target="_blank" rel="noopener">Round playlist &nearr;</a>' : "") +
+        "</div>" + navHtml(d, i, "top") +
+      "</section>" +
+      '<section class="shell rp-body"><div id="rpTracks"></div></section>' +
+      '<section class="shell rp-foot">' + navHtml(d, i, "bottom") + "</section>";
 
-  function loadPeople() {
-    if (state.people || !api()) return Promise.resolve();
-    return api().people().then(function (p) { state.people = p; });
+    state.host = document.getElementById("rpTracks");
+    if (status) { state.host.innerHTML = '<p class="rp-empty">Nothing to show yet: ' + esc(status.toLowerCase()) + ".</p>"; return; }
+
+    // Tracks and votes render straight away; the member layer fills in when
+    // it arrives, so a slow connection still shows the round immediately.
+    renderTracks(r);
+    state.host.addEventListener("click", onClick);
+    state.host.addEventListener("submit", onSubmit);
+    if (!api()) return;
+    Promise.all([api().people(), loadSocial(r.id)]).then(function (res) {
+      state.people = res[0];
+      renderTracks(r);
+    }).catch(function (err) {
+      state.host.insertAdjacentHTML("afterbegin",
+        '<p class="rp-empty">Couldn\u2019t load member votes and replies: ' + esc(err && err.message ? err.message : err) + "</p>");
+    });
+    state.roundId = r.id;
   }
 
   function loadSocial(roundId) {
-    if (!api()) return Promise.resolve();
     return api().loadRound(roundId).then(function (res) {
-      state.social[roundId] = { votes: groupBy(res.votes), reactions: groupBy(res.reactions), replies: groupBy(res.replies) };
+      state.social = { votes: groupBy(res.votes), reactions: groupBy(res.reactions), replies: groupBy(res.replies) };
     });
-  }
-
-  function openRound(r) {
-    if (roundStatus(r) || state.social[r.id]) { renderRoundBody(r); return; }
-    renderRoundBody(r);   // "Loading..."
-    Promise.all([loadPeople(), loadSocial(r.id)]).then(function () { renderRoundBody(r); })
-      .catch(function (err) {
-        var det = roundNode(r.id);
-        if (det) det.querySelector(".round-body").insertAdjacentHTML("beforeend",
-          '<p class="rr-none">Couldn\u2019t load member votes and replies: ' + esc(err && err.message ? err.message : err) + "</p>");
-      });
   }
 
   /* ---- actions ---- */
 
-  function rerenderBallot(id) {
-    var node = state.host.querySelector('.rr-ballot[data-id="' + cssEscape(id) + '"]');
+  function rerenderVote(id) {
+    var node = state.host.querySelector('.rp-vote[data-id="' + cssEscape(id) + '"]');
     var row = state.index[id];
     if (!node || !row) return;
     var wrap = document.createElement("div");
-    wrap.innerHTML = ballotHtml(row);
+    wrap.innerHTML = voteHtml(row);
     node.replaceWith(wrap.firstChild);
   }
 
@@ -297,8 +385,8 @@
   function refreshAfter(action, id) {
     if (state.busy) return;
     state.busy = true;
-    Promise.resolve().then(action).then(function () { return loadSocial(roundIdOf(id)); })
-      .then(function () { rerenderBallot(id); })
+    Promise.resolve().then(action).then(function () { return loadSocial(state.roundId); })
+      .then(function () { rerenderVote(id); })
       .catch(function (err) { alert("That didn\u2019t save: " + (err && err.message ? err.message : err)); })
       .then(function () { state.busy = false; });
   }
@@ -306,8 +394,8 @@
   function onClick(ev) {
     var btn = ev.target.closest("[data-act]");
     if (!btn || btn.tagName === "FORM") return;
-    var card = btn.closest(".rr-ballot[data-id]");
-    if (!card) return;
+    var card = btn.closest(".rp-vote[data-id]");
+    if (!card || !state.social) return;
     var id = card.getAttribute("data-id");
     var act = btn.getAttribute("data-act");
 
@@ -322,12 +410,12 @@
       refreshAfter(function () { return api().toggleReaction(id, key, !(on && on.mine)); }, id);
     } else if (act === "picker") {
       state.picker = state.picker === id ? null : id;
-      rerenderBallot(id);
+      rerenderVote(id);
     } else if (act === "thread") {
       state.threads[id] = !state.threads[id];
-      rerenderBallot(id);
+      rerenderVote(id);
       if (state.threads[id]) {
-        var ta = state.host.querySelector('.rr-ballot[data-id="' + cssEscape(id) + '"] textarea');
+        var ta = state.host.querySelector('.rp-vote[data-id="' + cssEscape(id) + '"] textarea');
         if (ta) ta.focus();
       }
     } else if (act === "delete") {
@@ -341,72 +429,12 @@
     var form = ev.target.closest('form[data-act="reply"]');
     if (!form) return;
     ev.preventDefault();
-    var id = form.closest(".rr-ballot[data-id]").getAttribute("data-id");
+    var id = form.closest(".rp-vote[data-id]").getAttribute("data-id");
     var text = form.querySelector("textarea").value.trim();
     if (!text) return;
     state.threads[id] = true;
     refreshAfter(function () { return api().addReply(id, text); }, id);
   }
 
-  /* ---- entry point ---- */
-
-  function render(host, d, opts) {
-    opts = opts || {};
-    if (state.d && state.d.key !== d.key) { state.open = {}; state.social = {}; state.threads = {}; state.picker = null; }
-    state.host = host;
-    state.d = d;
-    state.selected = opts.selected || [];
-    state.names = {};
-    (d.competitors || []).forEach(function (c) { state.names[c.id] = c.name; });
-
-    if (!host.__rrBound) {
-      host.addEventListener("click", onClick);
-      host.addEventListener("submit", onSubmit);
-      host.__rrBound = true;
-    }
-
-    host.innerHTML = "";
-    if (opts.filterTag) opts.filterTag(host);
-
-    var numbered = d.rounds.map(function (r, i) { return { r: r, n: i + 1 }; });
-    var shown = numbered;
-    if (state.selected.length) {
-      shown = numbered.filter(function (x) {
-        return x.r.songs.some(function (s) { return state.selected.indexOf(s.submitterId) !== -1; });
-      });
-    }
-
-    var count = document.getElementById("rrCount");
-    if (count) {
-      count.textContent = state.selected.length
-        ? shown.length + " of " + plural(d.rounds.length, "round")
-        : plural(d.rounds.length, "round");
-    }
-
-    if (!d.rounds.length) { host.insertAdjacentHTML("beforeend", '<div class="empty">No rounds posted yet this season.</div>'); return; }
-    if (!shown.length) { host.insertAdjacentHTML("beforeend", '<div class="empty">No rounds involve this selection.</div>'); return; }
-
-    var list = document.createElement("div");
-    list.className = "rounds-list";
-    shown.slice().reverse().forEach(function (x) {
-      var r = x.r;
-      var det = document.createElement("details");
-      det.className = "round";
-      det.setAttribute("data-round", r.id);
-      det.innerHTML = "<summary>" + summaryHtml(r, x.n) + '</summary><div class="round-body"></div>';
-      if (state.open[r.id]) det.open = true;
-      det.addEventListener("toggle", function () {
-        state.open[r.id] = det.open;
-        det.querySelector(".round-open").textContent = det.open ? "Hide" : "Open";
-        if (det.open) openRound(r);
-      });
-      list.appendChild(det);
-    });
-    host.appendChild(list);
-
-    // re-render any round that was already open (selection changed, etc.)
-    shown.forEach(function (x) { if (state.open[x.r.id]) openRound(x.r); });
-  }
-
-  window.PFMLRounds = { render: render };
+  window.PFMLRounds = { renderList: renderList, renderRoundPage: renderRoundPage, roundUrl: roundUrl };
 })();

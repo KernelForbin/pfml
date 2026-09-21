@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-09-21 (follow-up 5)
+
+- **Every round gets its own full-width page** (`round.html`), laid out
+  like Music League's round view: a card per track with album art, its
+  place, points and voter count, the submitter and their note, and every
+  vote with its comment in full, where members vote, react and reply as
+  before. The Round results pill on season pages now lists a card per
+  round linking there, instead of expanding rounds and tracks inside the
+  pill three levels deep. Rounds link to the previous and next round.
+- **Album art** from Spotify's public oEmbed endpoint, looked up by
+  `publish.py` for new tracks only and cached in `data/track_art.json`
+  (git-ignored); the build stays offline. The privacy page now lists
+  Spotify's image servers.
+
 ## 2026-09-21 (follow-up 4)
 
 - **Ties are handled everywhere a winner is named.** Standings share

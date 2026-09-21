@@ -937,11 +937,11 @@
 
 
   function renderRounds(d) {
-    // The collapsible Round results under the leaderboard, with every vote
-    // and the comment layer, lives in rounds.js.
+    // The collapsible Round results under the leaderboard: one card per
+    // round, each linking to that round's own page (rounds.js).
     var host = $("rounds");
     if (!host || !window.PFMLRounds) return;
-    window.PFMLRounds.render(host, d, {
+    window.PFMLRounds.renderList(host, d, {
       selected: selected.slice(),
       filterTag: function (h) { attachFilterTag(h, seasonData); }
     });
@@ -1600,6 +1600,28 @@
   }
 
 
+  /* ---- round page (round.html?s=<season key>&r=<round id>) ---- */
+
+  function initRound() {
+    var params = new URLSearchParams(location.search);
+    var key = params.get("s") || "";
+    var roundId = params.get("r") || "";
+    var page = $("roundPage");
+    if (!/^season\d+$/.test(key)) {
+      page.innerHTML = '<section class="shell rp-head"><h1>Round not found</h1><p class="hero-line">This link is missing its season. <a href="./">Back to the home page</a>.</p></section>';
+      return;
+    }
+    Promise.all([fetchJSON(DATA + "/index.json"), fetchJSON(DATA + "/" + key + ".json")])
+      .then(function (res) {
+        renderNav(res[0], key);
+        window.PFMLRounds.renderRoundPage(res[1], roundId);
+      })
+      .catch(function (err) {
+        console.error(err);
+        page.innerHTML = '<section class="shell rp-head"><h1>Couldn’t load this round</h1><p class="hero-line">' + esc(err.message || err) + "</p></section>";
+      });
+  }
+
   /* ---- boot ---- */
 
   function boot() {
@@ -1610,6 +1632,8 @@
       initSeason(document.body.getAttribute("data-season-key"));
     } else if (page === "career") {
       initCareer();
+    } else if (page === "round") {
+      initRound();
     }
   }
 

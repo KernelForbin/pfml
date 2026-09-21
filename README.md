@@ -23,6 +23,7 @@ from before the site went members-only; see Members only below.
 data/season1/            raw Music League export (4 CSVs)       LOCAL ONLY
 data/season2/                                                    (git-ignored)
 data/season3/            ...plus daily_doubles.json
+data/track_art.json      album art URLs, cached by publish.py, read by build.py
 data/comment_sentiment.json   optional, written by enrich_comments.py, read
                               by build.py if present. Not required to build.
 scripts/build.py         CSV -> JSON + season1.html, season2.html, ...
@@ -37,8 +38,9 @@ site/                    everything GitHub Pages serves
   index.html             home page: season cards + playlists, pfml.fun
   career.html            cross-season standings, static, not templated
   season.template.html   template build.py fills in per season
-  rounds.js              Round results on season pages: every vote and
-                         comment, with member votes, reactions and replies
+  round.html             one round, full width: every track, vote and comment
+  rounds.js              the round cards on season pages and the round page,
+                         with member votes, reactions and replies
   auth.js                the members-only gate, loaded by every page
   config.js              Supabase URL + publishable key (public by design)
   season1.html           generated, one page per season, own URL
@@ -122,13 +124,28 @@ by a failed return, so the same link works once it's fixed.
 ## Round results, and the comments on them
 
 On every season page, directly under Standings, a **Round results** pill,
-collapsed by default. Open it for the season's rounds, newest first; every
-round in the export is listed, including one that so far only has its
-prompt, which says so instead of showing results. Open a round for its
-prompt, its playlist, and every track in finishing order with every vote
-cast on it (voter and points, biggest first) and the comment that came with
-it. Rows that gave no points are the comment-only votes, listed last.
-Submitters' own notes on their tracks show under the track.
+collapsed by default. Open it for a card per round, newest first, with the
+winning track's album art, the winner (or everyone tied for it) and the
+counts. Every round in the export is listed, including one that so far only
+has its prompt, which says so instead of showing results.
+
+Each card opens that round on its own full-width page,
+`round.html?s=season3&r=<round id>`, laid out like Music League's own round
+view: the prompt, the winner and the round playlist up top, previous/next
+round links, then a card per track in finishing order with its album art,
+place (shared places marked as ties), points and voter count, who submitted
+it and their note, and every vote cast on it (voter and points, biggest
+first) with the comment that came with it in full. Rows that gave no points
+are the comment-only votes, listed last.
+
+**Album art** comes from Spotify's public oEmbed endpoint (no key or
+account). `publish.py` looks up art only for tracks it hasn't seen before
+and caches the image URLs in `data/track_art.json` (git-ignored), so
+`build.py` stays offline and just copies each URL into the song's `art`.
+Spotify rate limits bursts; when it does, the lookup stops early and the
+next publish picks up the rest. A track with no art gets a placeholder. The
+images themselves load from Spotify's image servers in the reader's
+browser.
 
 Members can vote each comment up or down, add reactions, and reply. Each
 comment is identified by the id the build uses everywhere,
@@ -141,9 +158,8 @@ up/down split on hover. Everything members add is visible to every member,
 including who voted which way, at the data level. Replies are flat (no
 nested threads) and can be deleted by their author or an admin, not edited.
 
-It follows the Standings player selection: only rounds the selected
-players submitted to are listed, their tracks and the votes they cast are
-highlighted, and rounds already open stay open.
+The list follows the Standings player selection: only rounds the selected
+players submitted to are listed.
 
 The top bar holds Home and the seasons only. Career is reached from its
 card on the Home page, next to the season cards.

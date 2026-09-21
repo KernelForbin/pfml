@@ -482,6 +482,11 @@ def build_season(folder: Path, season_key: str, label: str):
 
     sentiment = load_sentiment()
 
+    # Album art, cached by scripts/publish.py from Spotify's public oEmbed
+    # endpoint. Optional: without the file, tracks just have no art.
+    art_path = DATA_DIR / "track_art.json"
+    track_art = json.loads(art_path.read_text(encoding="utf-8")) if art_path.exists() else {}
+
     for v in vote_rows:
         vid = v["Voter ID"]
         vote_rows_by_voter[vid] = vote_rows_by_voter.get(vid, 0) + 1
@@ -574,6 +579,7 @@ def build_season(folder: Path, season_key: str, label: str):
                 "topVote": received[0]["points"] if received else 0,
                 "spread": round(statistics.pstdev([r["points"] for r in received]), 2) if len(received) > 1 else 0,
                 "comments": comments_at.get((rid, uri), []),
+                "art": track_art.get(track_id(uri)),
                 # every scoring vote, compact: [voter id, points], biggest
                 # first. Zero-point rows aren't votes (they're comments,
                 # already in "comments"); names come from "competitors".
