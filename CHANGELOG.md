@@ -10,6 +10,16 @@
   by building repeatedly under different forced hash seeds: every output
   file is byte-identical. The tied highlights resolve to the same pairs
   the live site shows today, so nothing visible changes.
+- **Builds now match across Windows and Linux.** Git stores the CSVs with
+  LF line endings, but a Windows checkout converts Seasons 1 and 2 to CRLF,
+  and the build kept line breaks inside quoted comments as-is, so a local
+  Windows build wrote multi-line comments with CRLF while the Linux runner
+  that deploys the site wrote LF. The build now normalises line breaks
+  inside CSV cells to LF when it reads them. A Windows build now matches the
+  live site file for file. This corrects the 2026-09-17 JSON refresh
+  (`4ddbd18`), which blamed the CRLF on the Music League export: it came
+  from the Windows checkout. The live site was never affected, since the
+  deploy always rebuilds on Linux.
 
 ## 2026-09-21 (follow-up)
 

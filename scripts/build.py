@@ -192,10 +192,22 @@ def load_daily_doubles(folder):
 
 
 def read_csv(path):
+    """Rows as dicts, with line breaks inside cells normalised to LF.
+
+    Git stores these CSVs with LF, but a Windows checkout (core.autocrlf)
+    hands the build CRLF, and newline="" rightly keeps whatever is inside a
+    quoted cell, so a multi-line comment came out as CRLF on Windows and LF
+    on the Linux runner that deploys the site: two different builds from
+    one commit. Normalising here makes the output the same everywhere."""
     if not path.exists():
         return []
     with open(path, newline="", encoding="utf-8-sig") as f:
-        return list(csv.DictReader(f))
+        rows = list(csv.DictReader(f))
+    for row in rows:
+        for k, v in row.items():
+            if isinstance(v, str) and "\r" in v:
+                row[k] = v.replace("\r\n", "\n").replace("\r", "\n")
+    return rows
 
 
 def track_id(uri):
