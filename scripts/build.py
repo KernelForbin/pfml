@@ -12,20 +12,22 @@ yet still builds, with empty stats, so Season 3 renders cleanly from day
 one and fills in as you re-export.
 
 SCORING MODEL (verified against the real exports, not assumed):
-  - Each voter gets a fixed 16-point budget per round to spread across
-    other people's tracks. A handful of Season 1 voter-rounds total 11
-    instead of 16.
+  - Each voter gets a fixed point budget per round to spread across
+    other people's tracks: 16 in Seasons 1 and 2, 19 in Season 3. The build
+    reads it from the votes (`pointBudget`, the most common per-voter
+    round total) rather than assuming it. A handful of Season 1
+    voter-rounds total 11 instead of 16.
   - A votes.csv row with 0 points is a comment, not a vote. Every single
     zero-point row in both seasons carries a comment. They are counted as
     commentary, never as scoring.
   - Self-voting is blocked. The only rows where voter == submitter are
     zero-point comments on your own track.
   - Season 1 allowed negative points (35 downvotes, -5 to -1). Season 2
-    did not. Downvotes net against the same 16-point budget.
+    did not. Downvotes net against the same budget.
 
 Because the budget is fixed, "average points given" is not a measure of
-generosity: everyone gives exactly 16 a round. The stats below measure
-where a voter puts their 16 instead.
+generosity: everyone gives exactly the same budget a round. The stats
+below measure where a voter puts their points instead.
 """
 import csv
 import json
@@ -790,6 +792,23 @@ def build_season(folder: Path, season_key: str, label: str):
         highlights["commentOnlyVotes"] = comment_only_votes
         highlights["downvotes"] = downvotes
 
+    # ---- point budget ----
+    # Every voter spends the same fixed budget each round, but it isn't the
+    # same number in every season (16 in Seasons 1 and 2, 19 in Season 3),
+    # so the page copy can't hard-code it. It's the most common per-voter
+    # round total; a voter who only left zero-point comments totals 0 and
+    # says nothing about the budget, so those are ignored, and the few
+    # Season 1 voter-rounds that total 11 lose the vote to the 16s. Ties
+    # take the larger number so the answer never depends on dict order.
+    round_totals = {}
+    for (rid_, _uri, vid_), pts_ in points_at.items():
+        round_totals[(rid_, vid_)] = round_totals.get((rid_, vid_), 0) + pts_
+    total_counts = {}
+    for t_ in round_totals.values():
+        if t_ > 0:
+            total_counts[t_] = total_counts.get(t_, 0) + 1
+    point_budget = max(total_counts, key=lambda t_: (total_counts[t_], t_)) if total_counts else None
+
     data = {
         "key": season_key,
         "label": label,
@@ -806,6 +825,7 @@ def build_season(folder: Path, season_key: str, label: str):
         "songCount": len(all_songs),
         "voteRowCount": len(vote_rows),
         "scoringVoteCount": scoring_votes,
+        "pointBudget": point_budget,
         "startedAt": started_at,
         "liveRound": live_round,
     }

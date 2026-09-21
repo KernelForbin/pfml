@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-09-21
+
+- **Season 3, round 1 loaded** (New Heat: 19 tracks, 317 vote rows, 246
+  comments, 4 submitter notes). Season 3 is now the live season on the
+  home page and counts as a played season on the Career page, which gains
+  an S3 column and three new players (David Simon, Easton Fong, Gary
+  Nuzzi). Checked against the raw export before loading rather than
+  assumed: every returning player kept the same competitor id and name
+  (16 of 21), so the career join is safe; there are no self-votes with
+  points, no negative votes, and every zero-point row carries a comment.
+  Clavenna Vision and Scott Menke are on the roster but haven't
+  submitted, so they have no standings or career entry yet. The round
+  ended in a tie at the top (Dianna Hank and josh storm, 29 each), and
+  both are credited with the win.
+- **The point budget is per season, not always 16.** Every Season 3 voter
+  spends exactly 19, against 16 in Seasons 1 and 2. The Voting style copy
+  hard-coded 16, which would have been wrong on the Season 3 page, so the
+  build now reads the budget from the votes (`pointBudget`, the most
+  common per-voter round total) and the page shows each season's real
+  number. README and the build docstring updated to match.
+- **The trend chart is hidden until a season has two rounds.** With one
+  round every line is a single dot, so the chart was a column of dots on
+  its left edge over an empty plot: correct, but it looked broken. It and
+  its jump-nav link come back at round two.
+
 ## 2026-09-17 (follow-up 5)
 
 - **Comment stats, season and career.** A new Comments section on every

@@ -51,9 +51,9 @@ not templated) that reads `career.json` for all-time standings.
 - **Jump nav**: a second row in the sticky top bar links to each section on
   the page (Standings, Numbers, Trend, Tracks, Rounds, Taste, Voting,
   Comments, Artists). A section that's currently hidden (Numbers while a
-  player filter is active, Trend or Comments on a season with no rounds
-  yet) drops out of the jump nav too, so it never links to something that
-  isn't there.
+  player filter is active, Comments on a season with no rounds yet, Trend
+  until a season has at least two rounds) drops out of the jump nav too,
+  so it never links to something that isn't there.
 - **Player focus and comparison**: click a name in Standings to filter the
   rest of the page to them, click a second to compare instead, see below.
 - **Comments**: a section after Voting style with per-player comment counts
@@ -117,7 +117,10 @@ it blindly:
   a row in `votes.csv` for that round yet, since a voter only appears there
   once voting has opened, even a zero-point comment-only vote counts. There
   is no field in the export for phase or for submission/voting deadlines,
-  so this is the best signal available, not a fact the CSV states.
+  so this is the best signal available, not a fact the CSV states. It
+  never moves past "Voting" on its own: a round where everyone has voted
+  looks identical in the export to one still taking votes, so a finished
+  round keeps reading "Voting" until the next round appears.
 
 A season with zero rounds in its CSVs (a freshly created `data/seasonN/`
 with only `competitors.csv`) shows "not started yet" instead, no LIVE badge,
@@ -150,8 +153,14 @@ The site fetches JSON, so opening `index.html` from the filesystem will not
 work. Use the local server.
 
 A season with a `competitors.csv` and nothing else builds fine and renders
-empty states throughout, which is how Season 3 looks until its first round
-closes.
+empty states throughout, which is how Season 3 looked before its first
+round was exported.
+
+A season with exactly one round renders too, minus whatever needs more
+history: the trend chart stays hidden until there are two rounds (with one,
+every line is a single dot and the chart is a column of dots over an empty
+plot), and the taste and comment matrices stay empty until a pair reaches
+its 5-chance minimum, which takes five rounds.
 
 ## Player focus and comparison
 
@@ -236,18 +245,22 @@ constants to change in `build.py` if the weighting should shift.
 These were verified against the real exports rather than assumed, and a few
 of them are not obvious:
 
-- Each voter gets a fixed 16-point budget per round. A handful of Season 1
-  voter-rounds total 11 instead.
+- Each voter gets a fixed point budget per round, but not the same one
+  every season: 16 in Seasons 1 and 2, 19 in Season 3. The build reads it
+  from the votes (`pointBudget`, the most common per-voter round total)
+  rather than assuming it, and the Voting style copy shows each season's
+  real number. A handful of Season 1 voter-rounds total 11 instead.
 - A row in `votes.csv` with 0 points is a comment, not a vote. Every
-  zero-point row in both seasons carries a comment. The build counts these
-  as commentary and never as scoring.
+  zero-point row in all three seasons carries a comment. The build counts
+  these as commentary and never as scoring.
 - Self-voting is blocked. The only rows where voter equals submitter are
   zero-point comments on your own track.
-- Season 1 allowed negative votes (35 of them, -5 to -1). Season 2 did not.
+- Season 1 allowed negative votes (35 of them, -5 to -1). Seasons 2 and 3
+  did not.
 
 Because the budget is fixed, "average points given" measures nothing:
-everyone gives exactly 16 a round. The voting stats measure *where* a voter
-puts their 16 instead.
+everyone gives exactly the same budget a round. The voting stats measure
+*where* a voter puts their points instead.
 
 ## Derived metrics
 

@@ -771,7 +771,11 @@
 
   function renderTrend(d) {
     var section = document.getElementById("block-trend");
-    if (!d.rounds.length || !d.standings.length) { if (section) section.hidden = true; return; }
+    // A trend needs at least two points. With a single round every line is
+    // one dot, so the chart is a column of dots on its left edge over a big
+    // empty plot: correct, but it reads as broken. Hidden until round two,
+    // and its jump-nav link drops out with it.
+    if (d.rounds.length < 2 || !d.standings.length) { if (section) section.hidden = true; return; }
     if (section) section.hidden = false;
 
     var all = computeTrendSeries(d, trendMode);
@@ -1002,6 +1006,14 @@
   function renderVoters(d) {
     var host = $("voters");
     host.innerHTML = "";
+    // The budget isn't the same number every season (16 in Seasons 1 and 2,
+    // 19 in Season 3), so the copy takes it from the data instead of
+    // hard-coding one. Without it the template's neutral wording stands.
+    var note = $("votersNote");
+    if (note && d.pointBudget) {
+      note.textContent = "Everyone spends the same " + d.pointBudget +
+        " points a round, so what separates voters is where they put them: a few big bets, or a point on everything.";
+    }
     attachFilterTag(host, d);
     var rows = selected.length ? d.voters.filter(function (v) { return selected.indexOf(v.id) !== -1; }) : d.voters;
     if (!rows.length) { host.appendChild(empty(selected.length ? "No votes from this selection." : "No votes cast yet.")); return; }
