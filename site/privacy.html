@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PFML - Privacy</title>
+<meta name="description" content="What PFML collects when you sign in, and what it does with it.">
+<meta name="theme-color" content="#9E00C4">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%239E00C4'/><path d='M30 74V26h22a14 14 0 010 28H44v20z' fill='%23F8F9FA'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  /* Public page: no sign-in, no scripts, no league data. */
+  .privacy { max-width: 68ch; padding-bottom: 40px; }
+  .privacy h2 { margin: 30px 0 8px; font-size: 1.15rem; letter-spacing: -0.01em; }
+  .privacy p, .privacy li { color: var(--ink); font-size: 0.97rem; }
+  .privacy ul { padding-left: 20px; margin: 8px 0; }
+  .privacy li { margin: 4px 0; }
+  .privacy .updated { color: var(--muted); font-size: 0.88rem; }
+</style>
+</head>
+<body data-page="privacy">
+
+<header class="topbar">
+  <div class="shell topbar-inner">
+    <a class="wordmark" href="./">PFML</a>
+  </div>
+</header>
+
+<main class="shell privacy">
+  <section class="hero">
+    <h1>Privacy</h1>
+    <p class="hero-line">PFML is a private site for the players in our Music League. It is run by a league member, not a company, and it has no ads.</p>
+  </section>
+
+  <h2>When you sign in with Google</h2>
+  <p>Signing in shares three things from your Google account: your name, your email address, and Google's ID for your account. PFML uses them only to recognise you and to link you to your player in the league, which happens once, through a personal invite link.</p>
+  <p>PFML doesn't ask for, and can't see, anything else in your Google account: no Gmail, contacts, Drive, calendar or YouTube. Sign-in is handled by Supabase, the service that stores PFML's accounts and data.</p>
+
+  <h2>What you add on the site</h2>
+  <p>Votes, reactions and replies you leave on comments are stored with your account and shown to other members, with your player name.</p>
+
+  <h2>League data</h2>
+  <p>Standings, submitted tracks, votes and comments come from the league's own Music League exports. They're shown to signed-in members of the league.</p>
+
+  <h2>What PFML doesn't do</h2>
+  <ul>
+    <li>No advertising, and no analytics or tracking scripts.</li>
+    <li>Nothing is sold or shared with anyone outside the league.</li>
+    <li>No Spotify account is involved. Links to songs are ordinary open.spotify.com links.</li>
+  </ul>
+
+  <h2>Services the site loads from</h2>
+  <p>Like most websites, PFML loads some pieces from other services, which see a normal web request from your browser (including your IP address): GitHub Pages hosts the site, Google Fonts serves the fonts, jsDelivr serves the sign-in library, and Supabase handles sign-in and data.</p>
+
+  <h2>Stored in your browser</h2>
+  <p>Your browser keeps your sign-in session so you stay signed in, and the comments page remembers the last round you looked at. Signing out clears the session.</p>
+
+  <h2>Removing your account</h2>
+  <p>Ask the league organizer and your account will be deleted, along with the votes, reactions and replies you added. Your Music League results stay in the league's history, since they come from Music League's own export.</p>
+
+  <p class="updated">Last updated September 21, 2026.</p>
+</main>
+
+</body>
+</html>
