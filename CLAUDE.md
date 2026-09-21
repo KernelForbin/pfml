@@ -14,6 +14,27 @@ have to be told by hand.
   blocked).
 - `CHANGELOG.md` — what's shipped, in order, and why.
 
+## The site is members-only: data never goes in this repo
+
+pfml.fun is behind Google sign-in, and the league data (the CSVs in
+`data/`, the JSON in `site/data/`) is served from a private Supabase bucket
+that only linked members can read. The repo is public, so:
+
+- `data/` and `site/data/` are git-ignored. Never force-add them, and
+  never commit a CSV, a season/career JSON, `daily_doubles.json` or `.env`.
+  The deploy workflow fails if a JSON file or `data/` shows up in `site/`.
+- Publish data with `python scripts/publish.py` (builds, then uploads).
+  Data changes need no commit; only a new `site/seasonN.html` does.
+- The Supabase secret key lives only in the git-ignored `.env`. It bypasses
+  every access rule. Don't print it, don't paste it anywhere, don't put it
+  in `site/config.js` (that file holds the *publishable* key, which is
+  public by design).
+- Invite links (`python scripts/invites.py`) each link a Google account to
+  a player permanently. Hand them to the user to send privately; don't
+  send them anywhere yourself.
+
+See README, Members only, for the setup and the access model.
+
 ## Before you push, check this
 
 `git init` once ran in a parent folder (`Downloads`) instead of inside the
@@ -46,8 +67,10 @@ total. Whenever the user uploads a new Season 3 export, before building:
 2. Record the outcome in `data/season3/daily_doubles.json`: add the round
    to `reviewedRounds` even when nothing was found, and add any request to
    `requests` as `accepted`, or as `rejected` with a reason (a second
-   request from the same person is rejected).
-3. Tell the user what you found, including "no requests this round".
+   request from the same person is rejected). This file is local-only
+   (git-ignored); `publish.py` backs it up with the exports.
+3. Run `python scripts/publish.py` to build and publish.
+4. Tell the user what you found, including "no requests this round".
 
 The build applies only what the file says. It warns about unreviewed rounds
 and refuses to build on malformed entries. See README, Daily Double.
@@ -66,7 +89,13 @@ cd site && python -m http.server 8000
 
 then actually open a season page and the career page in a browser and
 click around (player selection on Standings, the trend chart legend, the
-Career Score sort), rather than trusting a read-through of the diff.
+Career Score sort), rather than trusting a read-through of the diff. The
+pages need a signed-in member to show anything, and they read data from
+Supabase, not from local files. To check page code without signing in,
+serve a scratch copy of `site/` with `auth.js` swapped for a stub that
+defines `window.PFML` (`ready`, `loadJSON` reading local `data/`, and an
+in-memory `api`); that's how the comments page was tested. Keep such stubs
+out of the repo.
 
 ## Working style for this project
 
@@ -84,7 +113,9 @@ Career Score sort), rather than trusting a read-through of the diff.
 ## Deploy
 
 GitHub Pages via Actions (`.github/workflows/deploy.yml`), not
-branch-deploy. The custom domain (`pfml.fun`) is set in the repo's
+branch-deploy. The workflow deploys only the page files; it no longer
+builds data (there is none in the repo), and it refuses to deploy if any
+JSON or `data/` folder is present. The custom domain (`pfml.fun`) is set in the repo's
 Settings → Pages, not by the `site/CNAME` file, that file only matters if
 this ever switches to branch-deploy. DNS is already configured at
 Namecheap; nothing to redo there.

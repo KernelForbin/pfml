@@ -1,34 +1,52 @@
 # PFML
 
-Season tracker for our Music League games. Static site, GitHub Pages, built
-from Music League's own CSV exports. Live at https://pfml.fun
+Season tracker for our Music League games, built from Music League's own
+CSV exports. Members only, at https://pfml.fun: you sign in with Google, and
+your Google account is linked to your Music League player.
 
 ## How it works
 
-Raw CSV exports go in `data/seasonN/`. A Python script turns them into JSON
-and a static HTML page per season, and the site reads that JSON. There is no
-database, no backend, and no Spotify API: every Spotify link is a plain
-`open.spotify.com` URL built from IDs already present in the export.
+Raw CSV exports go in `data/seasonN/` on your machine. `scripts/build.py`
+turns them into JSON plus a static HTML page per season, and
+`scripts/publish.py` uploads the JSON to a private Supabase storage bucket.
+The pages themselves are static files on GitHub Pages, but they hold no
+league data: after sign-in they download it from that bucket, which only
+linked members can read. There is no Spotify API: every Spotify link is a
+plain `open.spotify.com` URL built from IDs already present in the export.
+
+**None of the league data is in this repo.** `data/` and `site/data/` are
+git-ignored, and the deploy refuses to run if a JSON file or a `data/`
+folder ever turns up in it. Older commits still contain the CSVs and JSON
+from before the site went members-only; see Members only below.
 
 ```
-data/season1/            raw Music League export (4 CSVs)
-data/season2/
-data/season3/
+data/season1/            raw Music League export (4 CSVs)       LOCAL ONLY
+data/season2/                                                    (git-ignored)
+data/season3/            ...plus daily_doubles.json
 data/comment_sentiment.json   optional, written by enrich_comments.py, read
                               by build.py if present. Not required to build.
 scripts/build.py         CSV -> JSON + season1.html, season2.html, ...
+scripts/publish.py       build, then upload the JSON to Supabase (private)
+scripts/invites.py       one-time invite links that link a Google account
+                         to a player
+scripts/supa.py          shared helper; reads the secret key from .env
+supabase/schema.sql      tables, access rules and buckets; run once
 scripts/enrich_comments.py    standalone, run by hand, calls the Claude API.
                               Never run by build.py or by the Action.
 site/                    everything GitHub Pages serves
   index.html             home page: season cards + playlists, pfml.fun
   career.html            cross-season standings, static, not templated
   season.template.html   template build.py fills in per season
+  comments.html          every vote comment, with votes, reactions, replies
+  comments.js            that page's logic
+  auth.js                the members-only gate, loaded by every page
+  config.js              Supabase URL + publishable key (public by design)
   season1.html           generated, one page per season, own URL
   season2.html
   season3.html
   style.css
   app.js                 shared by the home page, career page, and every season page
-  data/
+  data/                  LOCAL ONLY (git-ignored), published to Supabase
     index.json           generated: season list + each leader
     career.json           generated: cross-season standings and highlights
     season1.json          generated
@@ -45,6 +63,68 @@ own URL and its own `<title>` ("PFML - Season 1", etc.), generated fresh on
 every build from `season.template.html`, so a new season gets a page with no
 template edits needed. `career.html` is a fixed page (not per-season, so
 not templated) that reads `career.json` for all-time standings.
+
+## Members only
+
+Every page is behind a Google sign-in, and a Google account only gets in
+once it's linked to a Music League player. The gate isn't cosmetic: the
+league data isn't on the public site at all, only in a private Supabase
+bucket that the database lets linked members read and nobody else.
+
+**Accounts and invites.** `members` pairs one Google account with one
+player, one to one. The pairing is made by a one-time invite link:
+`python scripts/invites.py` prints a `https://pfml.fun/?invite=...` link
+for every player who isn't linked yet. Whoever opens a link and signs in
+with Google becomes that player for good, and the link stops working, so
+send each one privately to the right person. `--list` shows who has
+joined; `--player "Name"` makes one link; `--admin "Name"` lets a linked
+player delete anyone's replies. Google blocks sign-in inside some apps'
+built-in browsers (Instagram, Facebook Messenger and similar): if someone's
+link seems to do nothing, have them open it in Safari or Chrome.
+
+**What's public and what isn't.** Public: the page shells (HTML, CSS, JS),
+`site/config.js` (the Supabase URL and *publishable* key, which only allow
+what the access rules allow), and `supabase/schema.sql`. Private: every
+CSV, every season/career JSON, comments, votes, reactions and replies. The
+Supabase *secret* key lives only in the git-ignored `.env` used by the
+local scripts; it bypasses every access rule, so it never goes in the site
+or in a commit.
+
+**History.** Commits from before the site went members-only still contain
+the CSVs and the built JSON, so anyone browsing the repo's history can
+still read Seasons 1 to 3 as they stood then. Removing them for good means
+rewriting the repo's history; that's a separate, deliberate step.
+
+**One-time setup** (done once, recorded here for a rebuild from scratch):
+
+1. Supabase: run `supabase/schema.sql` in the SQL Editor.
+2. Google Cloud Console: create an OAuth client (type: Web application)
+   with the authorized redirect URI
+   `https://<project-ref>.supabase.co/auth/v1/callback`. Publish the
+   OAuth consent screen (basic scopes need no Google review), otherwise
+   only listed test users can sign in.
+3. Supabase, Authentication > Sign In / Providers > Google: enable it and
+   paste in the client ID and secret from step 2.
+4. Supabase, Authentication > URL Configuration: Site URL
+   `https://pfml.fun`; redirect URLs `https://pfml.fun/**` and
+   `http://localhost:8000/**`.
+5. `site/config.js`: the project URL and the publishable key.
+6. `.env` (copy `.env.example`): the project URL and the secret key.
+7. `python scripts/publish.py`, then `python scripts/invites.py`.
+
+## Comments page
+
+`comments.html` shows every vote comment from the exports, one round at a
+time, grouped by track (or sorted by top voted or most replies). Members
+can vote each comment up or down, add reactions, and reply. Each comment is
+identified by the same id the build uses everywhere,
+`<round id>|<spotify uri>|<voter id>`, so votes and replies stay attached
+across new exports. The comment text itself comes from the season JSON; the
+votes, reactions and replies live in Supabase tables. Votes show as a net
+score with the up/down split on hover. Everything members add is visible to
+every member, including who voted which way, at the data level. Replies are
+flat (no nested threads) and can be deleted by their author or an admin,
+not edited.
 
 ## Season page features
 
@@ -104,7 +184,10 @@ not templated) that reads `career.json` for all-time standings.
    Double requests and record the decision in
    `data/season3/daily_doubles.json` (see Daily Double below). The build
    prints a warning for any round that hasn't been reviewed.
-4. Commit and push. The Action rebuilds everything and redeploys.
+4. `python scripts/publish.py`. That builds and uploads, and the new data
+   is live for members straight away; there's nothing to commit for data.
+5. Only if the build created or changed a `site/seasonN.html` page (a new
+   season), commit and push that page so GitHub Pages serves it.
 
 ## The "live" season on the home page
 
@@ -141,20 +224,24 @@ per-season playlist links shown on the home page. Each entry looks like:
 ```
 
 `url: null` renders as a "coming soon" chip with no link. Fill in a real
-`https://open.spotify.com/playlist/...` URL and it becomes a live link on
-the next deploy. Adding a Season 4 group here is manual, since these are
+`https://open.spotify.com/playlist/...` URL and it becomes a live link the
+next time you run `scripts/publish.py`. The file is git-ignored like the
+rest of `site/data/`, and publish uploads it with the other data. Adding a Season 4 group here is manual, since these are
 curated meta-playlists you build yourself, not something derivable from the
 CSV export the way round playlists are.
 
-To preview locally before pushing:
+To preview locally before publishing or pushing:
 
 ```bash
 python scripts/build.py
 cd site && python -m http.server 8000
 ```
 
-The site fetches JSON, so opening `index.html` from the filesystem will not
-work. Use the local server.
+then open `http://localhost:8000` and sign in as usual (localhost is on the
+sign-in allowlist, see Members only). The local pages still read the data
+from Supabase, not from your local `site/data/`, so a data change shows
+up locally only after `publish.py`. Opening `index.html` from the
+filesystem will not work.
 
 A season with a `competitors.csv` and nothing else builds fine and renders
 empty states throughout, which is how Season 3 looked before its first
