@@ -429,7 +429,11 @@ def build_season(folder: Path, season_key: str, label: str):
     for rnd in sorted(round_rows, key=lambda r: r.get("Created", "")):
         rid = rnd["ID"]
         round_subs = subs_by_round.get(rid, [])
-        electorate = voters_in_round.get(rid, set())
+        # sorted, not the raw set: a set of strings iterates in an order that
+        # changes with Python's per-process hash seed, and that order used to
+        # leak into the taste list (and so into which of several tied pairs
+        # won Biggest fan / Coldest shoulder), making every build different
+        electorate = sorted(voters_in_round.get(rid, set()))
 
         songs = []
         for s in round_subs:

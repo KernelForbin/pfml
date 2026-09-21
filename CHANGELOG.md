@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-09-21 (follow-up 2)
+
+- **Builds are now deterministic.** Each round's voters were iterated as a
+  Python set, whose order changes with the per-process hash seed, so every
+  build wrote the taste list in a different order, and where several pairs
+  tied (Season 1's Coldest shoulder is a 4-way tie at 0.46) which one
+  showed depended on that order. Voters are now iterated sorted. Checked
+  by building repeatedly under different forced hash seeds: every output
+  file is byte-identical. The tied highlights resolve to the same pairs
+  the live site shows today, so nothing visible changes.
+
 ## 2026-09-21 (follow-up)
 
 - **Daily Double (Season 3).** A submitter can ask, once per season, in
