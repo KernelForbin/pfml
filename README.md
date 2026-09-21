@@ -16,8 +16,9 @@ plain `open.spotify.com` URL built from IDs already present in the export.
 
 **None of the league data is in this repo.** `data/` and `site/data/` are
 git-ignored, and the deploy refuses to run if a JSON file or a `data/`
-folder ever turns up in it. Older commits still contain the CSVs and JSON
-from before the site went members-only; see Members only below.
+folder ever turns up in it. The repo's history was rewritten on
+2026-09-21 to take out the CSVs and JSON older commits carried; see
+Members only below.
 
 ```
 data/season1/            raw Music League export (4 CSVs)       LOCAL ONLY
@@ -95,10 +96,13 @@ Supabase *secret* key lives only in the git-ignored `.env` used by the
 local scripts; it bypasses every access rule, so it never goes in the site
 or in a commit.
 
-**History.** Commits from before the site went members-only still contain
-the CSVs and the built JSON, so anyone browsing the repo's history can
-still read Seasons 1 to 3 as they stood then. Removing them for good means
-rewriting the repo's history; that's a separate, deliberate step.
+**History.** Until 2026-09-21, commits from before the site went
+members-only still carried the CSVs and built JSON. The history was
+rewritten that day (`git filter-branch` removing `data/` and `site/data/`
+from every commit, then a force-push), so no commit on GitHub holds league
+data. Commit ids from before that date no longer match. Anyone with an
+older clone should re-clone rather than pull. A full pre-rewrite backup is
+kept outside the repo, locally, as a git bundle.
 
 **One-time setup** (done once, recorded here for a rebuild from scratch):
 

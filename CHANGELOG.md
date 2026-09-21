@@ -9,6 +9,10 @@
   return trip dropped `?s=...&r=...`. The rest of the link is now kept in
   the tab while they sign in and restored before the page loads. The
   features and privacy pages say so.
+- **League data purged from git history.** Every commit was rewritten
+  without `data/` and `site/data/` and force-pushed (`main` and
+  `members-only`); the code at each point is unchanged. Commit ids before
+  today changed.
 - **Standings ties stay as shared places** (T1, T1, 3), decided; no
   tie-break by round wins.
 
