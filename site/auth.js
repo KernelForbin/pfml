@@ -115,7 +115,29 @@
   });
   PFML.client = client;
 
+  /* ---- where to land after sign-in ----
+     Google sends people back to the bare page (location.pathname), the
+     address Supabase's redirect list is known to accept, so a round link's
+     ?s=...&r=... would be lost on the way. Keep it for this tab instead and
+     put it back once the session exists, before any page code runs. */
+
+  var RETURN_KEY = "pfml.return";
+
+  function stashReturn() {
+    var rest = location.search + location.hash;
+    if (!rest) return;
+    try { sessionStorage.setItem(RETURN_KEY, JSON.stringify({ path: location.pathname, rest: rest })); } catch (e) { /* no storage: lands on the bare page */ }
+  }
+  function restoreReturn() {
+    var saved = null;
+    try { saved = JSON.parse(sessionStorage.getItem(RETURN_KEY) || "null"); sessionStorage.removeItem(RETURN_KEY); } catch (e) { return; }
+    if (!saved || saved.path !== location.pathname || typeof saved.rest !== "string") return;
+    if (location.search || location.hash) return;   // the address already says where to go
+    history.replaceState(null, "", location.pathname + saved.rest);
+  }
+
   function signIn() {
+    stashReturn();
     client.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: location.origin + location.pathname }
@@ -192,6 +214,7 @@
       if (!session) { showSignIn(); return; }
       var user = session.user;
       sessionUserId = user.id;   // the API needs it before any auth event fires
+      restoreReturn();
       return membership(user.id).then(function (member) {
         var code = pendingInvite();
         if (member) { if (code) clearInvite(); letIn(member); return; }

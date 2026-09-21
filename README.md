@@ -164,8 +164,13 @@ nested threads) and can be deleted by their author or an admin, not edited.
 The list follows the Standings player selection: only rounds the selected
 players submitted to are listed.
 
-The top bar holds Home and the seasons only. Career is reached from its
-card on the Home page, next to the season cards.
+The top bar holds Home, the seasons, then Career. Career also has a card
+on the Home page, next to the season cards.
+
+A round link survives sign-in: Google returns people to the bare page
+address (the one on Supabase's redirect list), so `auth.js` keeps the
+rest of the link (`?s=...&r=...`) in this tab's sessionStorage and puts
+it back once the session exists, before any page code runs.
 
 ## Season page features
 

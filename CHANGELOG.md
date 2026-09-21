@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-09-21 (follow-up 7)
+
+- **Career is back in the top bar**, after the seasons. Its Home page card
+  stays.
+- **Round links survive sign-in.** A signed-out member opening a round
+  link used to land on "Round not found" after Google sign-in, because the
+  return trip dropped `?s=...&r=...`. The rest of the link is now kept in
+  the tab while they sign in and restored before the page loads. The
+  features and privacy pages say so.
+- **Standings ties stay as shared places** (T1, T1, 3), decided; no
+  tie-break by round wins.
+
 ## 2026-09-21 (follow-up 6)
 
 - **"What this site can do"** at pfml.fun/features: a plain-language tour

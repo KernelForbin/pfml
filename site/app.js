@@ -93,6 +93,11 @@
       nav.appendChild(a);
     });
 
+    var career = el("a", "season-tab");
+    career.href = "career.html";
+    career.textContent = "Career";
+    career.setAttribute("aria-current", String(activeKey === "career"));
+    nav.appendChild(career);
   }
 
   var JUMP_SECTIONS = [
@@ -171,7 +176,8 @@
     return a;
   }
 
-  // Career isn't a season, so it isn't in the top bar; it gets a card here.
+  // Career is also the last tab in the top bar; the card here gives it a
+  // one-line summary next to the season cards.
   function careerCard(index) {
     var played = index.seasons.filter(function (s) { return s.roundCount > 0; }).length;
     var a = el("a", "season-card season-card-career");
