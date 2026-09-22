@@ -485,23 +485,48 @@ column regardless of direction, rather than sorting as a zero.
 
 ### Career Score
 
-Default sort is Career Score, not raw total points. The formula:
+Default sort. Chosen by the league on 2026-09-22 after comparing options
+against the real data:
 
 ```
-Career Score = Total Points + 10 x Rounds Won + 5 x Podium Finishes
+Score = Avg season + Round finishes + Season podiums
+  Avg season      = 20 x points per round played
+  Round finishes  = 3 per 1st, 2 per 2nd, 1 per 3rd place in a round
+  Season podiums  = 6 / 4 / 2 for finishing a finished season 1st / 2nd / 3rd
+Scored only after 10 rounds played.
 ```
 
-Podium finishes include the win itself, so a round win adds both bonuses:
-+15 on top of the points that round actually scored. The 10 and 5 aren't
-arbitrary: across the real data, a round winner scores about 10 points
-above the field average (26.0 vs 15.8 in Season 1, 25.6 vs 15.7 in Season
-2), and a podium finisher scores about 7-8 points above average. The
-weights round those measured premiums to clean numbers. Raw points alone
-rewards volume; this rewards actually winning and placing on top of that,
-which is why the ranking can differ from a plain points sort, someone with
-fewer total points but more wins can outrank someone who racked up points
-without ever taking a round. `WIN_BONUS` and `PODIUM_BONUS` are the two
-constants to change in `build.py` if the weighting should shift.
+Why each piece:
+
+- **An average, not a total.** The old score (total points + 10 per round
+  won + 5 per podium) punished anyone who missed a season. "Rounds" is
+  tracks submitted, one per round played; points include any Daily Double
+  bonus, as the season totals do. The x20 makes it read as a typical
+  20-round season's worth.
+- **Per round, not per season.** Dividing by seasons played counted Season
+  3, one round in, as a whole season, so sitting it out *raised* your score
+  (measured: a Season-1-only player jumped from 15th to 1st).
+- **10-round minimum.** One round of 23 points would otherwise average 460
+  and top the table. Unscored players are listed last with "needs 10", and
+  have no score parts to sort by, so they can't top "Avg season" either.
+- **A season's podium counts once a newer season exists.** The export never
+  says a season is over (CLAUDE.md), and the newest season may be a round
+  in. Seasons 1 and 2 count now; Season 3 will when Season 4 starts.
+- **Ties share places**, in rounds and in seasons, and both get the bonus.
+- **The bonuses are deliberately small** at these weights: round finishes
+  add 3-27 and season podiums 0-6 on the real data, under 10% of anyone's
+  score, so they mostly break near-ties. Considered and not taken: a higher
+  minimum (30 rounds kept a one-season player out of the top 3) and
+  shrinking averages toward the league mean (didn't move the one-season
+  player, and lifted short weak careers).
+
+The table's columns are the pieces, so each row adds up: Score, Avg
+season, Round finishes (with the 1st/2nd/3rd counts), Season podiums
+(with which seasons), Rounds. `PER_ROUND_SCALE`, `ROUND_BONUS`,
+`SEASON_BONUS` and `MIN_SCORED_ROUNDS` in `build.py` are the knobs; the
+note above the table and the profile read them from `careerScoreFormula`
+in `career.json`, so they follow any change. A profile's Career Score
+ranks among scored players only.
 
 ## Profiles, the inbox and the account menu
 
@@ -605,7 +630,7 @@ submitter's season total: a track that earned 23 adds 46, and the
 standings row shows the +23 with the track and round it came from. The
 bonus flows everywhere the season total does: standings order, the home
 page leader, the Standing over time and Cumulative points charts, and the
-Career page's season column, total and Career Score.
+All-Time page's Career Score (through points per round).
 
 **What it doesn't.** The track's own score is still what the votes gave
 it, so the round's placings, round wins, podiums, Top tracks and the
@@ -634,7 +659,7 @@ level on 29), so nothing that names a winner picks one silently:
   place but doesn't break the tie.
 - **Rounds**: tracks level on points share a finishing place, and every
   track in first place is credited with a round win (and so a podium, and
-  the Career Score bonuses for both).
+  the Career Score's round-finish bonus).
 - **Home page**: a season whose top spot is shared says "Tied for the
   lead" (or "Joint winners" once it's over) and names everyone in it
   (`leaderNames` in `index.json`).

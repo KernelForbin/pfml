@@ -507,8 +507,9 @@ class ProfilePage(unittest.TestCase):
         self.assertIn('get("p") || myId', init)
 
     def test_career_names_link_to_profiles(self):
-        standings = js_function(read("app.js"), "function renderCareerStandings(c)")
-        self.assertIn("who(p.name, p.id)", standings)
+        js = read("app.js")
+        self.assertIn("careerRowHtml(p)", js_function(js, "function renderCareerStandings(c)"))
+        self.assertIn("who(p.name, p.id)", js_function(js, "function careerRowHtml(p)"))
 
 
 def phone_rules(css, selector):
@@ -656,6 +657,31 @@ class NamesLinkToProfiles(unittest.TestCase):
         css = read("style.css")
         base = css_rules(css, ".plink:hover")
         self.assertTrue(any("color: inherit" in b and "text-decoration: none" in b for b in base))
+
+
+class CareerScoreTable(unittest.TestCase):
+    def test_columns_add_up_to_the_score(self):
+        cols = js_function(read("app.js"), "function careerColumns()")
+        self.assertEqual(re.findall(r'key: "(\w+)"', cols),
+                         ["name", "careerScore", "avgSeason", "roundBonus", "seasonBonus", "rounds"])
+
+    def test_unscored_players_have_no_parts_to_sort_by(self):
+        # One round would otherwise top "Avg season" at 400-odd.
+        value = js_function(read("app.js"), "function careerFieldValue(p, key)")
+        self.assertIn('if (key === "rounds") return p.rounds;', value)
+        self.assertIn("if (!p.rated) return null;", value)
+        row = js_function(read("app.js"), "function careerRowHtml(p)")
+        self.assertIn("if (!p.rated)", row)
+        self.assertIn("needs ", row)
+
+    def test_note_and_profile_use_the_formula_from_the_data(self):
+        js = read("app.js")
+        init = js_function(js, "function initCareer()")
+        for part in ("f.perRoundScale", 'f.roundBonus.join("/")', 'f.seasonBonus.join("/")', "f.minRounds"):
+            self.assertIn(part, init)
+        rank = js_function(js, "function careerRank(players, p)")
+        self.assertIn("if (!p.rated) return null;", rank)
+        self.assertIn("var rated = players.filter(function (x) { return x.rated; });", rank)
 
 
 class AllTimeTables(unittest.TestCase):

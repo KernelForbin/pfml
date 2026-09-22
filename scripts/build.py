@@ -61,11 +61,15 @@ VOCAB_SAMPLE_WORDS = 500
 # exclamation mark would read as a 33% exclamation rate.
 MIN_COMMENTS_FOR_RATES = 10
 
-# Career Score = total points + WIN_BONUS per round won + PODIUM_BONUS per
-# podium finish (podiums include the win itself). See build_career() for
-# where these numbers come from.
-WIN_BONUS = 10
-PODIUM_BONUS = 5
+# Career Score (chosen by the league, 2026-09-22; README, Career Score):
+#   PER_ROUND_SCALE x points per round played    ("Avg season")
+# + ROUND_BONUS for each 1st / 2nd / 3rd place in a round
+# + SEASON_BONUS for finishing a finished season 1st / 2nd / 3rd
+# Only players with MIN_SCORED_ROUNDS rounds or more get a score.
+PER_ROUND_SCALE = 20
+ROUND_BONUS = {1: 3, 2: 2, 3: 1}
+SEASON_BONUS = {1: 6, 2: 4, 3: 2}
+MIN_SCORED_ROUNDS = 10
 
 # Optional, produced by scripts/enrich_comments.py, never by this build.
 # Absent is the normal case: the site just omits sentiment-based stats.
@@ -1213,6 +1217,7 @@ def build_career(season_datas, raw_seasons=None):
                 "id": p["id"], "name": p["name"], "totalPoints": 0,
                 "roundsWon": 0, "podiums": 0, "submissions": 0,
                 "seasonsPlayed": 0, "bySeasson": {}, "bestSeasonPoints": None, "bestSeasonKey": None,
+                "roundFinishes": {"first": 0, "second": 0, "third": 0}, "seasonPodiums": [],
             })
             t["totalPoints"] += p["points"]
             t["roundsWon"] += p["roundsWon"]
@@ -1223,28 +1228,50 @@ def build_career(season_datas, raw_seasons=None):
             if t["bestSeasonPoints"] is None or p["points"] > t["bestSeasonPoints"]:
                 t["bestSeasonPoints"] = p["points"]
                 t["bestSeasonKey"] = d["key"]
+        # 1st/2nd/3rd in each round, from the tracks' own places (a tie
+        # shares the place, so both tracks count)
+        for r in d["rounds"]:
+            for s in r["songs"]:
+                slot = {1: "first", 2: "second", 3: "third"}.get(s.get("place"))
+                if slot and s["submitterId"] in totals:
+                    totals[s["submitterId"]]["roundFinishes"][slot] += 1
+
+    # A season's final podium counts once a newer season exists: the export
+    # never says a season is over (CLAUDE.md), and the newest one may be a
+    # round in, with a leader who hasn't won anything yet.
+    finished = [d for d in season_datas[:-1] if d["rounds"]]
+    for d in finished:
+        for p in d["standings"]:
+            if p["rank"] in SEASON_BONUS and p["id"] in totals:
+                totals[p["id"]]["seasonPodiums"].append({"key": d["key"], "label": d["label"], "place": p["rank"]})
 
     players = []
     for t in totals.values():
         t["avgPointsPerSeason"] = round(t["totalPoints"] / t["seasonsPlayed"], 1) if t["seasonsPlayed"] else 0
         t["bySeason"] = t.pop("bySeasson")
-        # Career Score = total points + a bonus for rounds won + a bonus for
-        # podium finishes. The weights aren't arbitrary: across the real
-        # data, a round winner scores about 10 points above the field
-        # average (26.0 vs 15.8 in Season 1, 25.6 vs 15.7 in Season 2), and
-        # a podium finisher scores about 7-8 points above average. WIN_BONUS
-        # and PODIUM_BONUS below round those premiums to 10 and 5. Podiums
-        # already include the win itself (a round win is a podium finish
-        # too), so a win earns both bonuses: +15 on top of its raw points.
-        t["careerScore"] = t["totalPoints"] + WIN_BONUS * t["roundsWon"] + PODIUM_BONUS * t["podiums"]
+        # Career Score: an average rather than a total, so a missed season
+        # (or round) doesn't count against anyone, plus bonuses for finishing
+        # on top. "Rounds" is tracks submitted: one per round played. Points
+        # include any Daily Double bonus, as the season totals do.
+        t["rounds"] = t["submissions"]
+        f = t["roundFinishes"]
+        t["avgSeason"] = round(PER_ROUND_SCALE * t["totalPoints"] / t["rounds"], 1) if t["rounds"] else 0
+        t["roundBonus"] = ROUND_BONUS[1] * f["first"] + ROUND_BONUS[2] * f["second"] + ROUND_BONUS[3] * f["third"]
+        t["seasonBonus"] = sum(SEASON_BONUS[s["place"]] for s in t["seasonPodiums"])
+        t["rated"] = t["rounds"] >= MIN_SCORED_ROUNDS
+        # rounded to one decimal, so equal scores compare equal (ties)
+        t["careerScore"] = round(t["avgSeason"] + t["roundBonus"] + t["seasonBonus"], 1) if t["rated"] else None
         players.append(t)
-    players.sort(key=lambda p: (-p["careerScore"], -p["totalPoints"], p["name"]))
+    # rated players by score; the rest after them, most rounds first
+    players.sort(key=lambda p: (not p["rated"], -(p["careerScore"] or 0), -p["rounds"], p["name"]))
 
     highlights = {}
     if players:
         name = lambda p: p["name"]
-        g = best_of(players, lambda p: p["careerScore"], order=by_name)
-        highlights["topScore"] = with_ties({"name": g[0]["name"], "careerScore": g[0]["careerScore"]}, g, name)
+        rated = [p for p in players if p["rated"]]
+        if rated:
+            g = best_of(rated, lambda p: p["careerScore"], order=by_name)
+            highlights["topScore"] = with_ties({"name": g[0]["name"], "careerScore": g[0]["careerScore"]}, g, name)
         g = best_of(players, lambda p: p["roundsWon"], order=by_name)
         highlights["mostWins"] = with_ties({"name": g[0]["name"], "roundsWon": g[0]["roundsWon"]}, g, name)
         g = best_of(players, lambda p: p["podiums"], order=by_name)
@@ -1262,7 +1289,9 @@ def build_career(season_datas, raw_seasons=None):
         "highlights": highlights,
         "seasons": [{"key": d["key"], "label": d["label"]} for d in played_seasons],
         "totalSeasons": len(played_seasons),
-        "careerScoreFormula": {"winBonus": WIN_BONUS, "podiumBonus": PODIUM_BONUS},
+        "careerScoreFormula": {"perRoundScale": PER_ROUND_SCALE, "roundBonus": [ROUND_BONUS[1], ROUND_BONUS[2], ROUND_BONUS[3]],
+                               "seasonBonus": [SEASON_BONUS[1], SEASON_BONUS[2], SEASON_BONUS[3]],
+                               "minRounds": MIN_SCORED_ROUNDS},
         "commenters": comments["players"],
         "commentSummary": comments["summary"],
     }

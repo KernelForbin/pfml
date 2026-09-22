@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-09-22
+
+- **New Career Score**, chosen by the league after comparing options on
+  the real data: 20 x points per round played, plus 3/2/1 for each
+  1st/2nd/3rd in a round, plus 6/4/2 for a finished season's podium;
+  scored after 10 rounds played. Replaces total points + 10 per round win
+  + 5 per podium, which punished missed seasons. A season's podium counts
+  once a newer season exists (Seasons 1 and 2 now). Top of the table:
+  Rick D 403, Kris Brinker 394, Justin Mendelsohn 376, josh storm 375.
+- **All-time standings columns show the score's parts**: Score (now second),
+  Avg season, Round finishes (with 1st/2nd/3rd counts), Season podiums
+  (with which seasons), Rounds. The per-season points and total moved off
+  this table (profiles show them). Players under 10 rounds are listed last
+  with "needs 10". The note, profile rank (among scored players) and the
+  "Highest career score" highlight follow the new formula.
+
 ## 2026-09-23 (follow-up 5)
 
 - **Season page tables scroll sideways on phones too.** Voting style and

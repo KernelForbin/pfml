@@ -6,6 +6,7 @@ import sys
 import textwrap
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from support import ROOT, build, make_season, quiet, sandbox, uri
 
@@ -153,6 +154,77 @@ class Main(unittest.TestCase):
             index = json.loads((root / "site" / "data" / "index.json").read_text(encoding="utf-8"))
         self.assertEqual(index["seasons"][0]["liveRound"],
                          {"number": 2, "name": "Round Two", "submissionCount": 2})
+
+
+class CareerScore(unittest.TestCase):
+    """Score = 20 x points per round played + 3/2/1 per round finish +
+    6/4/2 per finished season's podium; scored from 10 rounds played.
+    Season 1 here is TIE_ROUND + SECOND_ROUND; Season 2 (the newest, so
+    not finished) repeats SECOND_ROUND."""
+
+    def career(self, min_rounds=None):
+        with sandbox() as root, quiet():
+            s1, _ = build.build_season(make_season(root / "data" / "season1", [TIE_ROUND, SECOND_ROUND]), "season1", "Season 1")
+            s2, _ = build.build_season(make_season(root / "data" / "season2", [SECOND_ROUND]), "season2", "Season 2")
+        if min_rounds is None:
+            return build.build_career([s1, s2])
+        with mock.patch.object(build, "MIN_SCORED_ROUNDS", min_rounds):
+            return build.build_career([s1, s2])
+
+    def player(self, c, pid):
+        return next(p for p in c["players"] if p["id"] == pid)
+
+    def test_score_adds_its_three_parts(self):
+        ann = self.player(self.career(min_rounds=1), "p1")
+        # 9 points over 3 rounds; won a, e and e again (ties share 1st);
+        # tied 1st in Season 1
+        self.assertEqual(ann["rounds"], 3)
+        self.assertEqual(ann["avgSeason"], 60.0)
+        self.assertEqual(ann["roundFinishes"], {"first": 3, "second": 0, "third": 0})
+        self.assertEqual(ann["roundBonus"], 9)
+        self.assertEqual(ann["seasonBonus"], 6)
+        self.assertEqual(ann["careerScore"], 75.0)
+
+    def test_third_places_and_a_season_bronze(self):
+        cat = self.player(self.career(min_rounds=1), "p3")
+        # 2 points in 1 round, 3rd in it, 3rd in Season 1
+        self.assertEqual((cat["avgSeason"], cat["roundBonus"], cat["seasonBonus"], cat["careerScore"]), (40.0, 1, 2, 43.0))
+
+    def test_the_newest_season_podium_does_not_count_yet(self):
+        # Ann and Ben also share 1st in Season 2, which is still the newest.
+        ann = self.player(self.career(min_rounds=1), "p1")
+        self.assertEqual([s["key"] for s in ann["seasonPodiums"]], ["season1"])
+
+    def test_too_few_rounds_means_no_score_and_the_bottom_of_the_table(self):
+        c = self.career(min_rounds=2)
+        order = [(p["id"], p["rated"], p["careerScore"]) for p in c["players"]]
+        self.assertEqual(order[:2], [("p1", True, 75.0), ("p2", True, 75.0)])
+        self.assertEqual({(pid, rated, score) for pid, rated, score in order[2:]},
+                         {("p3", False, None), ("p4", False, None)})
+        self.assertEqual(c["highlights"]["topScore"]["careerScore"], 75.0)
+        self.assertEqual(c["highlights"]["topScore"]["tiedWith"], ["Ben"])
+
+    def test_ranked_by_score_not_by_rounds_played(self):
+        # Built by hand so more rounds and a higher score point opposite
+        # ways: Xan 10 rounds / 200 points, Yul 12 rounds / 120 points,
+        # Zed 3 rounds (unscored). No places or podiums, just the average.
+        def standing(pid, name, pts, subs):
+            return {"id": pid, "name": name, "points": pts, "roundsWon": 0, "podiums": 0,
+                    "submissions": subs, "rank": 9, "tied": False}
+        season = {"key": "season1", "label": "Season 1", "rounds": [{"songs": []}],
+                  "competitors": [{"id": "x", "name": "Xan"}, {"id": "y", "name": "Yul"}, {"id": "z", "name": "Zed"}],
+                  "standings": [standing("y", "Yul", 120, 12), standing("x", "Xan", 200, 10), standing("z", "Zed", 90, 3)]}
+        with quiet():
+            c = build.build_career([season])
+        self.assertEqual([(p["name"], p["careerScore"]) for p in c["players"]],
+                         [("Xan", 400.0), ("Yul", 200.0), ("Zed", None)])
+
+    def test_default_minimum_is_ten_rounds(self):
+        c = self.career()
+        self.assertFalse(any(p["rated"] for p in c["players"]), "nobody here has 10 rounds")
+        self.assertNotIn("topScore", c["highlights"])
+        self.assertEqual(c["careerScoreFormula"],
+                         {"perRoundScale": 20, "roundBonus": [3, 2, 1], "seasonBonus": [6, 4, 2], "minRounds": 10})
 
 
 class Profiles(unittest.TestCase):

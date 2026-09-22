@@ -503,6 +503,9 @@ button.trend-chip.is-on .dot { opacity: 1; }
 .career-sort-btn:hover { color: var(--acid); }
 .career-sort-btn.is-active { color: var(--acid); }
 .career-sort-btn .arrow { font-size: 0.7rem; }
+/* The small print under a Score part: 1st/2nd/3rd counts, which season
+   podiums, or how many rounds a player still needs to be scored. */
+.cs-sub { display: block; margin-top: 1px; font-family: "Inter", sans-serif; font-size: 0.7rem; font-weight: 500; color: var(--muted); white-space: nowrap; }
 
 /* All-Time tables (standings, comments): every column always, scrolling
    sideways inside the box when the screen is too narrow, with the Player

@@ -264,7 +264,7 @@
       '<div class="season-card-top"><div class="season-card-name-wrap"><span class="season-card-name">All-Time</span></div>' +
       '<span class="season-card-arrow">&rarr;</span></div>' +
       '<div class="season-card-stats">All-time standings across ' + played + " " + plural(played, "season") + "</div>" +
-      '<div class="season-card-round">Career Score, every season side by side, all-time comment stats</div>';
+      '<div class="season-card-round">Career Score, League Highlights, all-time comment stats</div>';
     return a;
   }
 
@@ -1688,30 +1688,55 @@
   function renderCareerHighlights(c) {
     var h = c.highlights || {};
     var g = el("div", "hl-grid hl-pair");
-    if (h.topScore) g.appendChild(careerTile("Highest career score", who(h.topScore.name), h.topScore.careerScore + " career score", h.topScore.tiedWith));
+    if (h.topScore) g.appendChild(careerTile("Highest career score", who(h.topScore.name), Math.round(h.topScore.careerScore) + " career score", h.topScore.tiedWith));
     if (h.mostWins) g.appendChild(careerTile("Most rounds won", who(h.mostWins.name), h.mostWins.roundsWon + " round wins", h.mostWins.tiedWith));
     if (h.mostPodiums) g.appendChild(careerTile("Most podiums", who(h.mostPodiums.name), h.mostPodiums.podiums + " top-3 finishes", h.mostPodiums.tiedWith));
     if (h.bestSingleSeason) g.appendChild(careerTile("Best single season", who(h.bestSingleSeason.name), h.bestSingleSeason.points + " points in " + esc(h.bestSingleSeason.season), h.bestSingleSeason.tiedWith));
     setBlock("highlights", g);
   }
 
-  function careerColumns(c) {
-    var cols = [{ key: "name", label: "Player", align: "left" }];
-    c.seasons.forEach(function (s) { cols.push({ key: s.key, label: s.label.replace("Season ", "S") }); });
-    cols.push({ key: "totalPoints", label: "Total" });
-    cols.push({ key: "roundsWon", label: "Won" });
-    cols.push({ key: "podiums", label: "Top-3" });
-    cols.push({ key: "careerScore", label: "Score" });
-    return cols;
+  // Columns that add up to the Score, left to right: Score = Avg season +
+  // Round finishes + Season podiums. Rounds says why a short career can
+  // rank high, and who hasn't played enough to be scored yet.
+  function careerColumns() {
+    return [
+      { key: "name", label: "Player", align: "left" },
+      { key: "careerScore", label: "Score" },
+      { key: "avgSeason", label: "Avg season" },
+      { key: "roundBonus", label: "Round finishes" },
+      { key: "seasonBonus", label: "Season podiums" },
+      { key: "rounds", label: "Rounds" }
+    ];
   }
 
+  // Unscored players (too few rounds) have no score parts: null, so they
+  // sink to the bottom of any sort rather than topping "Avg season" on the
+  // strength of one round.
   function careerFieldValue(p, key) {
     if (key === "name") return p.name;
-    if (key === "totalPoints") return p.totalPoints;
-    if (key === "roundsWon") return p.roundsWon;
-    if (key === "podiums") return p.podiums;
-    if (key === "careerScore") return p.careerScore;
-    return (key in p.bySeason) ? p.bySeason[key] : null;
+    if (key === "rounds") return p.rounds;
+    if (!p.rated) return null;
+    return p[key];
+  }
+
+  var PLACE_NAMES = { 1: "1st", 2: "2nd", 3: "3rd" };
+
+  function careerRowHtml(p) {
+    var f = p.roundFinishes || {};
+    var dash = '<div class="num">&ndash;</div>';
+    var html = '<div class="vname">' + who(p.name, p.id) + "</div>";
+    if (!p.rated) {
+      return html + dash + dash + dash + dash +
+        '<div class="num">' + p.rounds + '<small class="cs-sub">needs ' + careerData.careerScoreFormula.minRounds + "</small></div>";
+    }
+    var podiums = (p.seasonPodiums || []).map(function (s) { return PLACE_NAMES[s.place] + " " + s.label.replace("Season ", "S"); }).join(", ");
+    return html +
+      '<div class="num"><b>' + Math.round(p.careerScore) + "</b></div>" +
+      '<div class="num">' + Math.round(p.avgSeason) + "</div>" +
+      '<div class="num">' + p.roundBonus + '<small class="cs-sub" title="1st / 2nd / 3rd in a round">' +
+        (f.first || 0) + "/" + (f.second || 0) + "/" + (f.third || 0) + "</small></div>" +
+      '<div class="num">' + p.seasonBonus + (podiums ? '<small class="cs-sub">' + esc(podiums) + "</small>" : "") + "</div>" +
+      '<div class="num">' + p.rounds + "</div>";
   }
 
   function sortCareerPlayers(players, field, dir) {
@@ -1744,7 +1769,7 @@
     host.innerHTML = "";
     if (!c.players.length) { host.appendChild(empty("No completed seasons yet.")); return; }
 
-    var cols = careerColumns(c);
+    var cols = careerColumns();
     var gridStyle = "grid-template-columns:1.6fr repeat(" + (cols.length - 1) + ",1fr);";
 
     var head = el("div", "vrow head career-head");
@@ -1764,14 +1789,7 @@
     sorted.forEach(function (p, i) {
       var row = el("div", "vrow" + (i === 0 && careerSort.field === "careerScore" && careerSort.dir === "desc" ? " is-leader" : ""));
       row.setAttribute("style", gridStyle);
-      var rowHtml = '<div class="vname">' + who(p.name, p.id) + "</div>";
-      c.seasons.forEach(function (s) {
-        var pts = p.bySeason[s.key];
-        rowHtml += '<div class="num">' + (pts == null ? "&ndash;" : pts) + "</div>";
-      });
-      rowHtml += '<div class="num">' + p.totalPoints + "</div><div class=\"num\">" + p.roundsWon +
-        '</div><div class="num">' + p.podiums + '</div><div class="num"><b>' + p.careerScore + "</b></div>";
-      row.innerHTML = rowHtml;
+      row.innerHTML = careerRowHtml(p);
       box.appendChild(row);
     });
     host.appendChild(tableHint(true));
@@ -1796,9 +1814,11 @@
         var note = $("standingsNote");
         if (note && c.careerScoreFormula) {
           var f = c.careerScoreFormula;
-          note.textContent = "Total points across every season played, plus " + f.winBonus +
-            " for every round won and " + f.podiumBonus + " for every top-3 finish (a win counts as both). " +
-            "Click any column to sort by it.";
+          note.textContent = "Score = Avg season + Round finishes + Season podiums. Avg season is points per round played \u00d7 " +
+            f.perRoundScale + ", a typical season's worth, so missed rounds don't count against anyone. Round finishes: " +
+            f.roundBonus.join("/") + " for each 1st/2nd/3rd in a round. Season podiums: " + f.seasonBonus.join("/") +
+            " for finishing a season 1st/2nd/3rd (once it's over). Scored after " + f.minRounds +
+            " rounds played. Tap any column to sort by it.";
         }
         renderCareerStandings(c);
       })
@@ -1826,11 +1846,19 @@
     return window.PFML && window.PFML.avatar ? window.PFML.avatar(id, name, cls) : "";
   }
 
-  // Career Score rank with ties, the way Standings shares places.
+  // Career Score rank with ties, the way Standings shares places, among
+  // scored players only. null for someone with too few rounds to score.
   function careerRank(players, p) {
-    var above = players.filter(function (x) { return x.careerScore > p.careerScore; }).length;
-    var tied = players.filter(function (x) { return x.careerScore === p.careerScore; }).length > 1;
-    return { rank: above + 1, tied: tied };
+    if (!p.rated) return null;
+    var rated = players.filter(function (x) { return x.rated; });
+    var above = rated.filter(function (x) { return x.careerScore > p.careerScore; }).length;
+    var tied = rated.filter(function (x) { return x.careerScore === p.careerScore; }).length > 1;
+    return { rank: above + 1, tied: tied, of: rated.length };
+  }
+
+  function rankLine(c, p, r) {
+    return r ? (r.tied ? "Tied " : "") + ordinal(r.rank) + " of " + r.of + " scored players"
+             : "Scored after " + c.careerScoreFormula.minRounds + " rounds: " + p.rounds + " so far";
   }
 
   function renderProfileSwitch(c, id, myId) {
@@ -1852,8 +1880,7 @@
     // Six tiles: two rows of three, or three rows of two on a phone (.pf-tiles).
     var g = el("div", "hl-grid hl-pair pf-tiles");
     var r = careerRank(c.players, p);
-    g.appendChild(careerTile("Career Score", String(p.careerScore),
-      (r.tied ? "Tied " : "") + ordinal(r.rank) + " of " + c.players.length + " all-time"));
+    g.appendChild(careerTile("Career Score", p.rated ? String(Math.round(p.careerScore)) : "&ndash;", rankLine(c, p, r)));
     g.appendChild(careerTile("Total points", String(p.totalPoints),
       p.seasonsPlayed + " " + plural(p.seasonsPlayed, "season") + ", " + p.avgPointsPerSeason + " a season"));
     g.appendChild(careerTile("Rounds won", String(p.roundsWon),
@@ -1997,8 +2024,8 @@
       $("pfId").innerHTML = avatarOf(p.id, p.name, "pf-av") + "<h1>" + esc(p.name) + "</h1>";
       var r = careerRank(c.players, p);
       $("heroLine").textContent = (p.id === myId ? "Your profile. " : "") +
-        (r.tied ? "Tied " : "") + ordinal(r.rank) + " of " + c.players.length + " all-time, across " +
-        p.seasonsPlayed + " " + plural(p.seasonsPlayed, "season") + ".";
+        (r ? (r.tied ? "Tied " : "") + ordinal(r.rank) + " of " + r.of + " by Career Score" : "Not scored yet (" + p.rounds + " of " + c.careerScoreFormula.minRounds + " rounds)") +
+        ", across " + p.seasonsPlayed + " " + plural(p.seasonsPlayed, "season") + ".";
       renderProfileCareer(c, p, prof);
       renderProfileSeasons(prof);
       renderProfileTracks(prof);
