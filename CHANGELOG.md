@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-09-22 (follow-up 12): playlist sizes on the Home page
+
+- **Each playlist tile shows its track count and running time** ("99
+  tracks · 7 hr 55 min"), stacked on phones. "Open in Spotify" gave way
+  to a small &nearr; in the tile's corner; screen readers still hear
+  "opens in Spotify". `publish.py` looks the numbers up from Spotify's
+  public playlist and embed pages (no key) into
+  `site/data/playlist_stats.json`. The embed lists only 100 tracks, so the
+  three larger playlists (316 to 648 tracks) show an estimate, "about
+  21 hr"; the other five are exact.
+- **Season 2 All Submissions** now links to the new playlist (319 tracks).
+
 ## 2026-09-22 (follow-up 11): Privacy link, reply drafts
 
 - **Privacy is linked everywhere.** Every page's footer now reads "What

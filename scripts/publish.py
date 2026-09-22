@@ -10,7 +10,9 @@ What it does:
   0. looks up album art for any track it hasn't seen before (Spotify's
      public oEmbed endpoint, no key or account) and caches it in
      data/track_art.json, so the build itself stays offline
-  1. runs scripts/build.py (site/data/*.json + site/seasonN.html)
+  1. runs scripts/build.py (site/data/*.json + site/seasonN.html), then
+     writes site/data/playlist_stats.json: each home-page playlist's track
+     count and running time, from Spotify's public pages (no key)
   2. uploads site/data/*.json to the private `league-data` bucket
   3. upserts every competitor into the `players` table, so invites can
      name them
@@ -131,6 +133,72 @@ def refresh_art():
     print(f"Album art: found {found} of {len(missing)}; {len(missing) - found} left for next publish.")
 
 
+# ---- playlist tiles: track count and running time ----
+# No key needed, but neither source is a documented API, so every step
+# degrades to "no stats" rather than failing a publish. Measured
+# 2026-09-22: the playlist page's <meta name="music:song_count"> is the
+# full count (319 for a 319-track playlist); the embed page's __NEXT_DATA__
+# lists each track's duration, but only the first 100 tracks, and ignores
+# ?offset=. So up to 100 tracks the running time is exact; past that it's
+# the first 100's average times the count, and marked as an estimate.
+
+PLAYLIST_STATS = "playlist_stats.json"
+
+
+def fetch_page(url):
+    req = urllib.request.Request(url, headers={"User-Agent": "pfml-publish"})
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return r.read().decode("utf-8", "replace")
+    except Exception:  # noqa: BLE001 - decoration; never block a publish on it
+        return None
+
+
+def parse_track_count(page_html):
+    m = re.search(r'<meta name="music:song_count" content="(\d+)"', page_html or "")
+    return int(m.group(1)) if m else None
+
+
+def parse_embed_durations(embed_html):
+    m = re.search(r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>', embed_html or "", re.S)
+    try:
+        tracks = json.loads(m.group(1))["props"]["pageProps"]["state"]["data"]["entity"]["trackList"]
+        return [int(t["duration"]) for t in tracks]
+    except (AttributeError, KeyError, TypeError, ValueError):
+        return None
+
+
+def playlist_stats(pid):
+    """{"tracks", "durationMs", "exact"} for one public playlist, or None."""
+    count = parse_track_count(fetch_page(f"https://open.spotify.com/playlist/{pid}"))
+    durations = parse_embed_durations(fetch_page(f"https://open.spotify.com/embed/playlist/{pid}"))
+    if count is None or not durations:
+        return None
+    if len(durations) >= count:
+        return {"tracks": count, "durationMs": sum(durations[:count]), "exact": True}
+    return {"tracks": count, "durationMs": round(sum(durations) / len(durations) * count), "exact": False}
+
+
+def refresh_playlist_stats():
+    """site/data/playlist_stats.json, keyed by playlist id, for every link in
+    the hand-kept playlists.json. A lookup that fails keeps the last good
+    numbers, so a bad day at Spotify doesn't blank the tiles."""
+    src, out = build.OUT_DIR / "playlists.json", build.OUT_DIR / PLAYLIST_STATS
+    if not src.exists():
+        return
+    pl = json.loads(src.read_text(encoding="utf-8"))
+    items = list(pl.get("leagueWide", [])) + [i for g in pl.get("seasons", []) for i in g.get("items", [])]
+    ids = [pid for pid in (build.playlist_id(i.get("url") or "") for i in items) if pid]
+    old = json.loads(out.read_text(encoding="utf-8")) if out.exists() else {}
+    stats = {}
+    for pid in ids:
+        stats[pid] = playlist_stats(pid) or old.get(pid)
+        time.sleep(0.35)
+    stats = {k: v for k, v in stats.items() if v}
+    out.write_text(json.dumps(stats, indent=0, sort_keys=True), encoding="utf-8")
+    print(f"Playlists: stats for {len(stats)} of {len(ids)}.")
+
+
 def main():
     ap = argparse.ArgumentParser(description="Build and publish PFML data to Supabase.")
     ap.add_argument("--dry-run", action="store_true", help="build and list uploads, send nothing")
@@ -139,6 +207,7 @@ def main():
     refresh_art()
     print("Building...")
     build.main()
+    refresh_playlist_stats()
 
     json_files = sorted(build.OUT_DIR.glob("*.json"))
     exports = backup_files()

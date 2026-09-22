@@ -419,7 +419,23 @@ newest first), its name with the repeated "PFML - S1 - " prefix dropped.
 `url: null` renders as a dashed "Coming soon" tile with no link. Fill in a real
 `https://open.spotify.com/playlist/...` URL and it becomes a live link the
 next time you run `scripts/publish.py`. The file is git-ignored like the
-rest of `site/data/`, and publish uploads it with the other data. Adding a Season 4 group here is manual, since these are
+rest of `site/data/`, and publish uploads it with the other data.
+
+**Track count and running time.** Each tile shows its playlist's size
+("319 tracks · about 21 hr"; stacked on a phone). `publish.py` looks them
+up after the build (`refresh_playlist_stats()`) and writes
+`site/data/playlist_stats.json`, keyed by playlist id; the page shows
+"Open in Spotify" instead for any playlist missing from it. There's no
+key, and no documented API: measured 2026-09-22, the public playlist page
+carries the full count in `<meta name="music:song_count">`, and the embed
+page (`/embed/playlist/<id>`) lists each track's duration in its
+`__NEXT_DATA__` JSON, but only the first 100 tracks, whatever `?offset=`
+says. So a playlist of up to 100 tracks gets its exact time; a longer one
+gets the first 100's average times the count, rounded to the hour and
+shown as "about". Exact times for those would need Spotify's Web API and a
+developer key. A failed lookup keeps the last good numbers, and
+`tests/test_live_spotify.py` checks both pages still carry what's parsed.
+A playlist's numbers change only when you next publish. Adding a Season 4 group here is manual, since these are
 curated meta-playlists you build yourself, not something derivable from the
 CSV export the way round playlists are.
 

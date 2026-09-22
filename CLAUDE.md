@@ -114,8 +114,9 @@ verified" has to be both.
   offline, about 3 seconds). The deploy runs it too, and a failure blocks
   the deploy.
 - Live tests (network): `PFML_LIVE=1 python -m unittest discover -s tests
-  -p test_live_spotify.py -v` whenever the album-art lookup in `publish.py`
-  changes, and `-p test_live_emoji_data.py` whenever
+  -p test_live_spotify.py -v` whenever the album-art or playlist-stats
+  lookup in `publish.py` changes (the playlist one reads undocumented
+  Spotify pages, so also when tiles lose their numbers), and `-p test_live_emoji_data.py` whenever
   `scripts/update_emoji_data.py` or its pinned version changes (it also
   checks the committed `site/emoji-data.js` is what that version builds).
   Note: `python -m unittest tests.test_x` does not work here, since

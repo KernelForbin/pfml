@@ -367,18 +367,24 @@ table.taste td.nil { color: #C6BDCC; font-weight: 400; }
   transition: box-shadow .15s ease, transform .15s ease, border-color .15s ease;
   -webkit-tap-highlight-color: transparent;
 }
+.pl-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; }
 .pl-icon {
-  display: grid; place-items: center; width: 38px; height: 38px; margin-bottom: 8px;
+  display: grid; place-items: center; width: 38px; height: 38px;
   border-radius: 10px; background: var(--wash); color: var(--magenta);
 }
+/* the ↗ that says "opens in Spotify", in place of the words */
+.pl-out { font-size: 0.95rem; line-height: 1; color: var(--muted); }
 .pl-kicker { font-size: 0.72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
 .pl-name { font-family: "Archivo", sans-serif; font-weight: 700; font-size: 1rem; line-height: 1.25; overflow-wrap: anywhere; }
-.pl-cta { margin-top: auto; padding-top: 8px; font-size: 0.8rem; font-weight: 600; color: var(--deep); }
+.pl-cta { margin-top: auto; padding-top: 8px; font-size: 0.8rem; font-weight: 600; color: var(--deep); font-variant-numeric: tabular-nums; }
+.pl-stat { white-space: nowrap; }
+.pl-stat + .pl-stat::before { content: " · "; }
 .pl-tile.is-soon { border-style: dashed; box-shadow: none; color: var(--muted); }
 .pl-tile.is-soon .pl-icon { background: var(--paper); color: var(--muted); }
 .pl-tile.is-soon .pl-cta { color: var(--muted); }
 @media (hover: hover) {
   a.pl-tile:hover { color: var(--ink); border-color: rgba(158, 0, 196, 0.35); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+  a.pl-tile:hover .pl-out { color: var(--magenta); }
 }
 @media (max-width: 900px) {
   .pl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -387,6 +393,9 @@ table.taste td.nil { color: #C6BDCC; font-weight: 400; }
   .pl-grid { gap: 10px; }
   .pl-tile { padding: 12px 12px 11px; }
   .pl-name { font-size: 0.92rem; }
+  /* stacked on phones: "648 tracks" over "about 43 hr" */
+  .pl-stat { display: block; }
+  .pl-stat + .pl-stat::before { content: none; }
 }
 
 /* ---------- points-over-time trend chart ---------- */

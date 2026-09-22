@@ -1,5 +1,6 @@
-"""scripts/publish.py: the album-art lookup and cache. Offline: Spotify's
-endpoint is faked here. tests/test_live_spotify.py checks the real one."""
+"""scripts/publish.py: the album-art lookup and cache, the playlist stats,
+and the backup. Offline: Spotify's pages are faked here.
+tests/test_live_spotify.py checks the real ones."""
 import io
 import json
 import unittest
@@ -114,6 +115,52 @@ class Backup(unittest.TestCase):
             backed_up = self.run_publish()
         self.assertNotIn("comment_sentiment.json", backed_up)
         self.assertIn("season1/votes.csv", backed_up)
+
+
+def playlist_page(count):
+    # the one tag publish.py reads from open.spotify.com/playlist/<id>
+    return f'<html><head><meta name="music:song_count" content="{count}"/></head></html>'
+
+
+def embed_page(durations):
+    # open.spotify.com/embed/playlist/<id>: __NEXT_DATA__, at most 100 tracks
+    data = {"props": {"pageProps": {"state": {"data": {"entity": {
+        "trackList": [{"uri": f"spotify:track:t{i}", "duration": d} for i, d in enumerate(durations)]}}}}}}
+    return f'<script id="__NEXT_DATA__" type="application/json">{json.dumps(data)}</script>'
+
+
+class PlaylistStats(unittest.TestCase):
+    def stats(self, count, durations):
+        pages = {"https://open.spotify.com/playlist/p1": playlist_page(count) if count is not None else "<html></html>",
+                 "https://open.spotify.com/embed/playlist/p1": embed_page(durations) if durations is not None else "<html></html>"}
+        with mock.patch.object(publish, "fetch_page", side_effect=pages.get):
+            return publish.playlist_stats("p1")
+
+    def test_up_to_100_tracks_the_running_time_is_exact(self):
+        self.assertEqual(self.stats(3, [60000, 120000, 180000]), {"tracks": 3, "durationMs": 360000, "exact": True})
+
+    def test_past_100_tracks_it_is_an_estimate_from_the_average(self):
+        self.assertEqual(self.stats(300, [200000] * 100), {"tracks": 300, "durationMs": 60000000, "exact": False})
+
+    def test_a_page_that_changed_shape_means_no_stats_not_a_crash(self):
+        self.assertIsNone(self.stats(None, [60000]))
+        self.assertIsNone(self.stats(3, None))
+        self.assertIsNone(publish.parse_embed_durations('<script id="__NEXT_DATA__" type="application/json">{"props": {}}</script>'))
+
+    def test_refresh_keeps_the_last_good_numbers_when_a_lookup_fails(self):
+        with sandbox() as root, quiet():
+            out = root / "site" / "data"
+            (out / "playlists.json").write_text(json.dumps({
+                "leagueWide": [{"label": "A", "url": "https://open.spotify.com/playlist/aaa?si=x"}],
+                "seasons": [{"season": "Season 1", "items": [{"label": "B", "url": "https://open.spotify.com/playlist/bbb"},
+                                                             {"label": "C", "url": None}]}]}))
+            (out / "playlist_stats.json").write_text(json.dumps({"bbb": {"tracks": 9, "durationMs": 1, "exact": True}}))
+            fresh = {"aaa": {"tracks": 2, "durationMs": 5, "exact": True}}
+            with mock.patch.object(publish, "playlist_stats", side_effect=fresh.get), mock.patch("time.sleep"):
+                publish.refresh_playlist_stats()
+            stats = json.loads((out / "playlist_stats.json").read_text())
+        self.assertEqual(stats, {"aaa": {"tracks": 2, "durationMs": 5, "exact": True},
+                                 "bbb": {"tracks": 9, "durationMs": 1, "exact": True}})
 
 
 if __name__ == "__main__":

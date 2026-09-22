@@ -826,16 +826,39 @@ class AvatarStaysCentred(unittest.TestCase):
 
 class PlaylistTiles(unittest.TestCase):
     def test_league_wide_first_then_newest_season_first(self):
-        render = js_function(read("app.js"), "function renderPlaylists(pl)")
+        render = js_function(read("app.js"), "function renderPlaylists(pl, stats)")
         league, seasons = render.index("pl.leagueWide"), render.index("(pl.seasons || []).slice().reverse()")
         self.assertLess(league, seasons)
         self.assertIn('el("div", "pl-grid")', render)
 
     def test_tile_shortens_the_name_and_only_links_when_there_is_a_url(self):
-        tile = js_function(read("app.js"), "function playlistTile(item, group)")
+        tile = js_function(read("app.js"), "function playlistTile(item, group, stats)")
         self.assertIn(r'.replace(/^PFML\s*-\s*(S\d+\s*-\s*)?/i, "")', tile)
         self.assertIn('el("div", "pl-tile is-soon", inner)', tile, "no url: a tile that isn't a link")
         self.assertIn('a.target = "_blank"; a.rel = "noopener"', tile)
+
+    def test_tile_shows_track_count_and_running_time_when_known(self):
+        js = read("app.js")
+        tile = js_function(js, "function playlistTile(item, group, stats)")
+        self.assertIn("var st = idm && stats && stats[idm[1]];", tile)
+        self.assertIn('!st ? "Open in Spotify" :', tile, "no stats: the old line")
+        self.assertIn('<span class="pl-stat">', tile)
+        self.assertIn('<span class="pl-out" aria-hidden="true">&nearr;</span>', tile)
+        self.assertIn('", opens in Spotify"', tile)
+        line = js_function(js, "function playlistStatsParts(st)")
+        self.assertIn('plural(st.tracks, "track")', line)
+        self.assertIn("runTime(st.durationMs, st.exact)", line)
+        run = js_function(js, "function runTime(ms, exact)")
+        self.assertIn('if (!exact) return "about "', run, "an estimate says so")
+        self.assertIn('fetchJSON(DATA + "/playlist_stats.json").catch(', js_function(js, "function initHome()"))
+
+    def test_phones_stack_the_count_over_the_time(self):
+        # side by side, "648 tracks ·" / "about 43 hr" wrapped mid-phrase at 375px
+        css = read("style.css")
+        phone = [b for block in re.findall(r"@media \(max-width: 620px\) \{(.*?)\n\}", css, re.S)
+                 for b in css_rules(block, ".pl-stat")]
+        self.assertTrue(any("display: block" in b for b in phone))
+        self.assertIn("white-space: nowrap", " ".join(css_rules(css, ".pl-stat")))
 
     def test_old_chip_styles_are_gone(self):
         css = read("style.css")

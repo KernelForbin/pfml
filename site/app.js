@@ -274,15 +274,36 @@
     all: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><circle cx="10" cy="13" r="7" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="10" cy="13" r="1.8" fill="currentColor"/><path d="M14.5 5.6A7 7 0 0 1 20.8 13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>'
   };
 
+  // "47 min", "4 hr 43 min"; an estimate (a playlist past the 100 tracks
+  // publish.py can time) is rounded to the hour and says so.
+  function runTime(ms, exact) {
+    var mins = Math.round(ms / 60000);
+    if (!exact) return "about " + Math.max(1, Math.round(mins / 60)) + " hr";
+    if (mins < 60) return mins + " min";
+    return Math.floor(mins / 60) + " hr" + (mins % 60 ? " " + (mins % 60) + " min" : "");
+  }
+
+  // Two parts, so a phone can stack them rather than wrap mid-phrase.
+  function playlistStatsParts(st) {
+    return [st.tracks.toLocaleString("en-US") + " " + plural(st.tracks, "track"), runTime(st.durationMs, st.exact)];
+  }
+
   // One playlist as a tile: which group it belongs to, its name without
-  // the "PFML - S1 - " prefix every label repeats, and where it goes.
-  function playlistTile(item, group) {
+  // the "PFML - S1 - " prefix every label repeats, its size (from
+  // playlist_stats.json, keyed by playlist id, when publish.py could get
+  // it), and where it goes. The ↗ in the corner marks it as leaving the
+  // site for Spotify; the full words are in its aria-label.
+  function playlistTile(item, group, stats) {
     var name = String(item.label || "").replace(/^PFML\s*-\s*(S\d+\s*-\s*)?/i, "");
     var icon = /podium/i.test(item.label) ? PLAYLIST_ICONS.podium : PLAYLIST_ICONS.all;
-    var inner = '<span class="pl-icon">' + icon + "</span>" +
+    var idm = /playlist\/([A-Za-z0-9]+)/.exec(item.url || "");
+    var st = idm && stats && stats[idm[1]];
+    var inner = '<span class="pl-top"><span class="pl-icon">' + icon + "</span>" +
+        (item.url ? '<span class="pl-out" aria-hidden="true">&nearr;</span>' : "") + "</span>" +
       '<span class="pl-kicker">' + esc(group) + "</span>" +
       '<span class="pl-name">' + esc(name) + "</span>" +
-      '<span class="pl-cta">' + (item.url ? "Open in Spotify &nearr;" : "Coming soon") + "</span>";
+      '<span class="pl-cta">' + (!item.url ? "Coming soon" : !st ? "Open in Spotify" :
+        playlistStatsParts(st).map(function (x) { return '<span class="pl-stat">' + x + "</span>"; }).join("")) + "</span>";
     if (!item.url) {
       var soon = el("div", "pl-tile is-soon", inner);
       soon.setAttribute("aria-label", item.label + ", coming soon");
@@ -290,20 +311,20 @@
     }
     var a = el("a", "pl-tile", inner);
     a.href = item.url; a.target = "_blank"; a.rel = "noopener";
-    a.setAttribute("aria-label", item.label + ", opens in Spotify");
+    a.setAttribute("aria-label", item.label + (st ? ", " + playlistStatsParts(st).join(", ") : "") + ", opens in Spotify");
     return a;
   }
 
   // League-wide first, then seasons newest first, like the season menu.
-  function renderPlaylists(pl) {
+  function renderPlaylists(pl, stats) {
     var host = $("playlists");
     if (!host) return;
     host.innerHTML = "";
     if (!pl) { host.appendChild(empty("Playlists haven't been added yet.")); return; }
     var grid = el("div", "pl-grid");
-    (pl.leagueWide || []).forEach(function (item) { grid.appendChild(playlistTile(item, "League-wide")); });
+    (pl.leagueWide || []).forEach(function (item) { grid.appendChild(playlistTile(item, "League-wide", stats)); });
     (pl.seasons || []).slice().reverse().forEach(function (group) {
-      group.items.forEach(function (item) { grid.appendChild(playlistTile(item, group.season)); });
+      group.items.forEach(function (item) { grid.appendChild(playlistTile(item, group.season, stats)); });
     });
     host.appendChild(grid);
   }
@@ -322,8 +343,12 @@
         grid.appendChild(careerCard(index));
         setBlock("seasonCards", grid);
       }
-      return fetchJSON(DATA + "/playlists.json").catch(function () { return null; });
-    }).then(renderPlaylists).catch(function (err) {
+      // Stats are optional: without them the tiles just say "Open in Spotify".
+      return Promise.all([
+        fetchJSON(DATA + "/playlists.json").catch(function () { return null; }),
+        fetchJSON(DATA + "/playlist_stats.json").catch(function () { return null; })
+      ]);
+    }).then(function (res) { renderPlaylists(res[0], res[1]); }).catch(function (err) {
       console.error(err);
       setBlock("seasonCards", empty("Couldn't load season data."));
     });

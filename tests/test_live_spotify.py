@@ -24,5 +24,19 @@ class LiveSpotifyOembed(unittest.TestCase):
         self.assertTrue(art.startswith("https://"), art)
 
 
+@unittest.skipUnless(os.environ.get("PFML_LIVE") == "1", "live network test; set PFML_LIVE=1 to run")
+class LiveSpotifyPlaylistPages(unittest.TestCase):
+    """The home page's playlist tiles read two undocumented pages; this is
+    the check that they still carry what publish.py parses. Run it whenever
+    the playlist stats lookup changes."""
+
+    def test_count_and_durations_are_still_on_the_public_pages(self):
+        pid = "37i9dQZF1DXcBWIGoYBM5M"   # Spotify's own Today's Top Hits, public and about 50 tracks
+        stats = publish.playlist_stats(pid)
+        self.assertIsNotNone(stats, "count meta or embed __NEXT_DATA__ trackList missing: a page changed")
+        self.assertGreater(stats["tracks"], 0)
+        self.assertGreater(stats["durationMs"], stats["tracks"] * 30000, "durations look wrong")
+
+
 if __name__ == "__main__":
     unittest.main()
