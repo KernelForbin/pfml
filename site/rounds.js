@@ -250,6 +250,24 @@
     '<path d="M15.3 13.5v3.6M13.5 15.3h3.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>' +
     "</svg>";
 
+  // A speech bubble for the replies pill, and a paper plane for sending:
+  // drawn, like ADD_REACTION_ICON, so they match on every device.
+  var REPLY_ICON =
+    '<svg class="cm-reply-icon" viewBox="0 0 20 20" width="15" height="15" aria-hidden="true" focusable="false">' +
+    '<path d="M4.5 3.5h11a2 2 0 0 1 2 2v6.5a2 2 0 0 1-2 2H9l-3.8 3v-3H4.5a2 2 0 0 1-2-2V5.5a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>' +
+    "</svg>";
+  var SEND_ICON =
+    '<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false">' +
+    '<path d="M3 10 17 3.5 13.5 17l-3.2-5.3z M10.3 11.7 17 3.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/>' +
+    "</svg>";
+
+  // A person's name as a link to their profile, looking exactly like the
+  // text it replaces (.plink inherits colour and weight, no underline).
+  function personLink(id, name) {
+    if (!id) return "<span>" + esc(name) + "</span>";
+    return '<a class="plink" href="profile.html?p=' + encodeURIComponent(id) + '">' + esc(name) + "</a>";
+  }
+
   // Every emoji beyond the 6 quick ones, for the "More" panel.
   // site/emoji-data.js (script tag, not a fetch: no request at open time)
   // sets these; empty arrays if it somehow didn't load, so the panel
@@ -417,17 +435,23 @@
 
     var thread = "";
     if (open) {
+      var self = window.PFML && window.PFML.member;
       thread = '<div class="cm-thread">' + replies.map(function (r) {
         var canDelete = r.user_id === uid || admin;
-        return '<div class="cm-reply"><div class="cm-reply-head"><b>' + esc(memberName(r.user_id)) + "</b> &middot; " +
-          esc(when(r.created_at)) +
-          (canDelete ? ' &middot; <button type="button" class="cm-link" data-act="delete" data-reply="' + r.id + '">Delete</button>' : "") +
-          '</div><div class="cm-reply-body">' + esc(r.body) + "</div></div>";
+        var who = (state.people && state.people[r.user_id]) || {};
+        return '<div class="cm-reply">' + avatar(who.competitorId, memberName(r.user_id)) +
+          '<div class="cm-bubble"><div class="cm-reply-head">' + personLink(who.competitorId, memberName(r.user_id)) +
+            '<span class="cm-when">' + esc(when(r.created_at)) + "</span>" +
+            (canDelete ? '<button type="button" class="cm-del" data-act="delete" data-reply="' + r.id + '">Delete</button>' : "") +
+          '</div><div class="cm-reply-body">' + esc(r.body) + "</div></div></div>";
       }).join("") +
         '<form class="cm-form" data-act="reply">' +
-        '<label class="cm-sr" for="r-' + esc(c.id) + '">Reply to ' + esc(c.voterName) + "</label>" +
-        '<textarea id="r-' + esc(c.id) + '" maxlength="2000" placeholder="Reply to ' + esc(c.voterName) + '"></textarea>' +
-        '<button type="submit" class="cm-send">Reply</button></form></div>';
+        (self ? avatar(self.competitorId, self.name) : "") +
+        '<div class="cm-compose">' +
+          '<label class="cm-sr" for="r-' + esc(c.id) + '">Reply to ' + esc(c.voterName) + "</label>" +
+          '<textarea id="r-' + esc(c.id) + '" rows="1" maxlength="2000" placeholder="Reply to ' + esc(c.voterName) + '…"></textarea>' +
+          '<button type="submit" class="cm-send" aria-label="Send reply" disabled>' + SEND_ICON + "</button>" +
+        "</div></form></div>";
     }
 
     return '<div class="cm-bar">' +
@@ -440,8 +464,9 @@
         '<button type="button" class="cm-chip cm-add" data-act="picker" aria-label="Add a reaction" aria-expanded="' + (state.picker === c.id) + '">' +
           (state.picker === c.id ? "&times;" : ADD_REACTION_ICON) + "</button>" + picker +
       "</span>" +
-      '<button type="button" class="cm-link" data-act="thread">' +
-        (open ? "Hide replies" : replies.length ? plural(replies.length, "reply", "replies") : "Reply") + "</button>" +
+      '<button type="button" class="cm-chip cm-reply-btn' + (open ? " is-on" : "") + '" data-act="thread" aria-expanded="' + open + '" ' +
+        'aria-label="' + (open ? "Hide replies" : replies.length ? plural(replies.length, "reply", "replies") + ", show" : "Reply") + '">' +
+        REPLY_ICON + "<span>" + (replies.length ? replies.length : "Reply") + "</span></button>" +
       "</div>" + thread;
   }
 
@@ -457,7 +482,7 @@
     var c = row.comment;
     return '<div class="rp-vote' + (c ? " has-comment" : "") + '"' + (c ? ' data-id="' + esc(c.id) + '"' : "") + ">" +
       '<div class="rp-vote-head">' + avatar(row.voterId, row.name) +
-      '<span class="rp-voter">' + esc(row.name) + "</span>" +
+      '<span class="rp-voter">' + personLink(row.voterId, row.name) + "</span>" +
       '<span class="rp-pts' + (row.points === 0 ? " is-zero" : row.points < 0 ? " is-neg" : "") + '"' +
       (row.points === 0 ? ' title="Commented without giving points"' : "") + ">" + pointsLabel(row.points) + "</span></div>" +
       (c ? '<p class="rp-comment">' + esc(c.comment) + "</p>" + socialHtml(c) : "") +
@@ -487,7 +512,7 @@
         '<div class="rp-score"><b>' + pointsLabel(s.points) + "</b><span>" + plural(voters, "voter") + "</span></div>" +
       "</div>" +
       '<div class="rp-submitter">' + avatar(s.submitterId, s.submitterName) +
-        "<span>Submitted by <b>" + esc(s.submitterName) + "</b></span>" +
+        "<span>Submitted by <b>" + personLink(s.submitterId, s.submitterName) + "</b></span>" +
         (s.dailyDouble ? '<span class="dd-badge">Daily Double +' + s.dailyDouble.bonus + "</span>" : "") + "</div>" +
       (s.note ? '<p class="rp-note"><span>Their note</span>' + esc(s.note) + "</p>" : "") +
       (rows.length ? '<div class="rp-votes">' + rows.map(voteHtml).join("") + "</div>"
@@ -540,8 +565,8 @@
     document.title = "PFML - " + r.name;
 
     var winLine = status ? "" : top.length > 1
-      ? "Tied at the top: " + top.map(function (s) { return "<b>" + esc(s.submitterName) + "</b>"; }).join(" &amp; ")
-      : top.length ? "<b>" + esc(top[0].submitterName) + "</b> won it with " + esc(top[0].title) : "";
+      ? "Tied at the top: " + top.map(function (s) { return "<b>" + personLink(s.submitterId, s.submitterName) + "</b>"; }).join(" &amp; ")
+      : top.length ? "<b>" + personLink(top[0].submitterId, top[0].submitterName) + "</b> won it with " + esc(top[0].title) : "";
 
     page.innerHTML =
       '<section class="shell rp-head">' +
@@ -582,6 +607,8 @@
     state.host.addEventListener("click", onClick);
     state.host.addEventListener("submit", onSubmit);
     state.host.addEventListener("input", onEmojiSearch);
+    state.host.addEventListener("input", onReplyInput);
+    state.host.addEventListener("keydown", onReplyKey);
     document.addEventListener("click", closePickerFromOutside);
     document.addEventListener("keydown", closePickerOnEscape);
     if (window.visualViewport) {
@@ -722,6 +749,28 @@
       var replyId = parseInt(btn.getAttribute("data-reply"), 10);
       refreshAfter(function () { return api().deleteReply(replyId); }, id);
     }
+  }
+
+  // The reply box grows with what's typed (up to its CSS max-height, then
+  // scrolls), and Send stays disabled until there's something to send.
+  function onReplyInput(ev) {
+    var ta = ev.target;
+    if (ta.tagName !== "TEXTAREA" || !ta.closest('form[data-act="reply"]')) return;
+    ta.style.height = "auto";
+    ta.style.height = ta.scrollHeight + "px";
+    var send = ta.closest("form").querySelector(".cm-send");
+    if (send) send.disabled = !ta.value.trim();
+  }
+
+  // Ctrl/Cmd+Enter sends; plain Enter is a new line, as in any chat box
+  // that allows more than one line.
+  function onReplyKey(ev) {
+    if (ev.key !== "Enter" || !(ev.ctrlKey || ev.metaKey)) return;
+    var form = ev.target.closest && ev.target.closest('form[data-act="reply"]');
+    if (!form) return;
+    ev.preventDefault();
+    if (form.requestSubmit) form.requestSubmit();
+    else form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
   }
 
   function onSubmit(ev) {

@@ -249,8 +249,11 @@ save.
 The list follows the Standings player selection: only rounds the selected
 players submitted to are listed.
 
-The top bar holds Home, the seasons, then Career. Career also has a card
-on the Home page, next to the season cards.
+The top bar holds Home, one season button, then All-Time (the Career page,
+`career.html`, titled All-Time League Stats). The season button names the
+season being viewed, or the one in progress on any other page, and opens
+a list of every season, newest first (`seasonPicker` in `app.js`). All-Time
+also has a card on the Home page, next to the season cards.
 
 A round link survives sign-in: Google returns people to the bare page
 address (the one on Supabase's redirect list), so `auth.js` keeps the
@@ -450,8 +453,9 @@ join taking the first name it saw for that id; `build_career()` in
 `career.html` also carries an all-time Comments section: the same
 per-player table aggregated across every season played, plus career
 superlatives (most talkative, most terse, wordiest, quietest, biggest
-silent treatment, widest vocabulary, most all-talk, most notes on their
-own picks) and the longest comment anyone has ever written, with the
+silent treatment, most SHOUTING, widest vocabulary, most notes on their
+own picks: eight, so they fill even rows of two or four; most all-talk
+was dropped here, though season pages keep it) and the longest comment anyone has ever written, with the
 season it came from.
 
 Two of those numbers cannot be recombined from the per-season summaries

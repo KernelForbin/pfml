@@ -497,12 +497,10 @@ class ProfilePage(unittest.TestCase):
         labels = re.findall(r'^\s*(?:if \(prof\) )?g\.appendChild\(careerTile\("([^"]+)"', career, re.M)
         self.assertEqual(labels, ["Career Score", "Total points", "Rounds won", "Top-3 rate",
                                   "Tracks submitted", "Points given"], "two full rows of three, three of two")
-        self.assertIn('el("div", "hl-grid pf-tiles")', career)
+        self.assertIn('el("div", "hl-grid hl-pair pf-tiles")', career)
         css = read("style.css")
         self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr))", " ".join(css_rules(css, ".pf-tiles")))
-        blocks = [b.split("\n}", 1)[0] for b in re.split(r"@media \(max-width: 620px\)\s*\{", css)[1:]]
-        phone = [r for b in blocks for r in re.findall(r"\.pf-tiles\s*\{([^}]*)\}", b)]
-        self.assertTrue(phone and "repeat(2, minmax(0, 1fr))" in phone[0])
+        # two per row on phones comes from .hl-pair (TwoPerRowOnPhones)
 
     def test_profile_defaults_to_the_signed_in_member(self):
         init = js_function(read("app.js"), "function initProfile()")
@@ -511,6 +509,111 @@ class ProfilePage(unittest.TestCase):
     def test_career_names_link_to_profiles(self):
         standings = js_function(read("app.js"), "function renderCareerStandings(c)")
         self.assertIn('href="profile.html?p=\' + encodeURIComponent(p.id)', standings)
+
+
+def phone_rules(css, selector):
+    """Declaration blocks for `selector` inside the max-width: 620px blocks."""
+    blocks = [b.split("\n}", 1)[0] for b in re.split(r"@media \(max-width: 620px\)\s*\{", css.replace("\r\n", "\n"))[1:]]
+    return [r for b in blocks for r in re.findall(re.escape(selector) + r"\s*\{([^}]*)\}", b)]
+
+
+class TwoPerRowOnPhones(unittest.TestCase):
+    GRIDS = {
+        "function renderProfileCareer(c, p, prof)": "profile Career",
+        "function renderProfileComments(cm, id)": "profile Comments",
+        "function renderCareerHighlights(c)": "League Highlights",
+        "function renderCareerComments(c)": "all-time comment awards",
+    }
+
+    def test_these_tile_grids_are_marked_two_per_row(self):
+        js = read("app.js")
+        for sig, label in self.GRIDS.items():
+            with self.subTest(label):
+                self.assertRegex(js_function(js, sig), r'el\("div", "hl-grid hl-pair[" ]')
+
+    def test_phone_rule_makes_them_two_columns(self):
+        rules = phone_rules(read("style.css"), ".hl-pair")
+        self.assertTrue(rules and "repeat(2, minmax(0, 1fr))" in rules[0])
+
+    def test_all_talk_award_is_gone_from_the_all_time_page(self):
+        # Asked for: not needed, and it leaves 8 awards, four even rows of two.
+        comments = js_function(read("app.js"), "function renderCareerComments(c)")
+        self.assertNotIn("all-talk", comments)
+        awards = re.findall(r'g\.appendChild\(careerTile\("([^"]+)"', comments)
+        self.assertEqual(len(awards), 8, awards)
+
+
+class HeaderNav(unittest.TestCase):
+    """Home | one season pill | All-Time."""
+
+    def test_order_is_home_season_pill_all_time(self):
+        nav = js_function(read("app.js"), "function renderNav(index, activeKey)")
+        home, pill, alltime = nav.index('home.textContent = "Home"'), nav.index("seasonPicker(index, activeKey)"), nav.index('"All-Time"')
+        self.assertLess(home, pill)
+        self.assertLess(pill, alltime)
+        self.assertNotIn("index.seasons.forEach", nav, "no tab per season any more")
+
+    def test_pill_shows_this_season_or_the_live_one_and_lists_newest_first(self):
+        pick = js_function(read("app.js"), "function seasonPicker(index, activeKey)")
+        self.assertIn("var shownKey = onSeason ? activeKey : index.currentSeason", pick)
+        self.assertIn("index.seasons.slice().reverse().map", pick)
+        self.assertIn('ev.key === "Escape"', pick)
+
+    def test_menu_hides_despite_its_display_rule(self):
+        css = read("style.css")
+        self.assertTrue(any("display" in b for b in css_rules(css, ".season-menu")))
+        self.assertTrue(any("display: none" in b for b in css_rules(css, ".season-menu[hidden]")))
+
+    def test_all_time_page_names(self):
+        page = read("career.html")
+        self.assertIn("<h1>All-Time League Stats</h1>", page)
+        self.assertIn("<h2>League Highlights</h2>", page)
+        self.assertNotIn("Career highlights", page)
+
+
+class Replies(unittest.TestCase):
+    def test_reply_is_a_pill_not_underlined_link_text(self):
+        js = read("rounds.js")
+        social = js_function(js, "function socialHtml(c)")
+        self.assertIn('class="cm-chip cm-reply-btn', social)
+        self.assertIn("REPLY_ICON", social)
+        self.assertNotIn("cm-link", js)
+        self.assertNotIn(".cm-link", read("style.css"))
+
+    def test_composer_sends_only_with_text_and_grows(self):
+        js = read("rounds.js")
+        social = js_function(js, "function socialHtml(c)")
+        self.assertIn('class="cm-send" aria-label="Send reply" disabled', social)
+        self.assertIn('rows="1"', social)
+        self.assertIn('addEventListener("input", onReplyInput)', js)
+        self.assertIn('addEventListener("keydown", onReplyKey)', js)
+        grow = js_function(js, "function onReplyInput(ev)")
+        self.assertIn('ta.style.height = ta.scrollHeight + "px"', grow)
+        self.assertIn("send.disabled = !ta.value.trim()", grow)
+        self.assertIn("(ev.ctrlKey || ev.metaKey)", js_function(js, "function onReplyKey(ev)"))
+
+    def test_reply_box_does_not_make_ios_zoom(self):
+        sizes = [m for b in css_rules(read("style.css"), ".cm-compose textarea") for m in re.findall(r"font-size:\s*(\d+)px", b)]
+        self.assertTrue(sizes and all(int(s) >= 16 for s in sizes), sizes)
+
+
+class NamesLinkToProfiles(unittest.TestCase):
+    def test_round_page_names_are_profile_links(self):
+        js = read("rounds.js")
+        self.assertIn("personLink(row.voterId, row.name)", js_function(js, "function voteHtml(row)"))
+        self.assertIn("personLink(s.submitterId, s.submitterName)", js_function(js, "function trackHtml(s, tiedPlaces)"))
+        page = js_function(js, "function renderRoundPage(d, roundId)")
+        self.assertIn("personLink(top[0].submitterId, top[0].submitterName)", page)
+        self.assertIn("personLink(who.competitorId, memberName(r.user_id))", js_function(js, "function socialHtml(c)"))
+        link = js_function(js, "function personLink(id, name)")
+        self.assertIn('\'<a class="plink" href="profile.html?p=\' + encodeURIComponent(id)', link)
+
+    def test_links_look_like_the_text_they_replace(self):
+        # Not obvious: same colour and no underline, even on hover, which
+        # sticks after a tap on touch screens.
+        css = read("style.css")
+        base = css_rules(css, ".plink:hover")
+        self.assertTrue(any("color: inherit" in b and "text-decoration: none" in b for b in base))
 
 
 class InboxSchema(unittest.TestCase):

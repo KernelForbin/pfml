@@ -83,23 +83,60 @@
     home.textContent = "Home";
     home.setAttribute("aria-current", String(!activeKey));
     nav.appendChild(home);
-
-    index.seasons.forEach(function (s) {
-      var live = s.key === index.currentSeason;
-      var a = el("a", "season-tab");
-      a.href = s.key + ".html";
-      a.setAttribute("aria-current", String(s.key === activeKey));
-      a.innerHTML = (live ? '<span class="pip" aria-hidden="true"></span>' : "") + esc(s.label);
-      if (live) a.title = "Season in progress";
-      nav.appendChild(a);
-    });
+    nav.appendChild(seasonPicker(index, activeKey));
 
     var career = el("a", "season-tab");
     career.href = "career.html";
-    career.textContent = "Career";
+    career.textContent = "All-Time";
     career.setAttribute("aria-current", String(activeKey === "career"));
     nav.appendChild(career);
     syncScrollPadding();
+  }
+
+  // Every season in one pill: it names the season you're on, or the one in
+  // progress anywhere else, and opens a list of all of them, newest first.
+  function seasonPicker(index, activeKey) {
+    var onSeason = index.seasons.some(function (s) { return s.key === activeKey; });
+    var shownKey = onSeason ? activeKey : index.currentSeason;
+    var shown = index.seasons.filter(function (s) { return s.key === shownKey; })[0] || index.seasons[index.seasons.length - 1];
+    var pip = '<span class="pip" aria-hidden="true"></span>';
+
+    var wrap = el("div", "season-pick");
+    var btn = el("button", "season-tab season-pick-btn");
+    btn.type = "button";
+    btn.id = "seasonPickBtn";
+    btn.setAttribute("aria-haspopup", "true");
+    btn.setAttribute("aria-expanded", "false");
+    btn.setAttribute("aria-controls", "seasonMenu");
+    btn.setAttribute("aria-current", String(onSeason));
+    btn.innerHTML = (shown && shown.key === index.currentSeason ? pip : "") + esc(shown ? shown.label : "Seasons") +
+      '<svg class="season-caret" viewBox="0 0 12 12" width="10" height="10" aria-hidden="true" focusable="false">' +
+      '<path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+    var menu = el("div", "season-menu");
+    menu.id = "seasonMenu";
+    menu.hidden = true;
+    menu.innerHTML = index.seasons.slice().reverse().map(function (s) {
+      var live = s.key === index.currentSeason;
+      return '<a class="season-menu-item" href="' + esc(s.key) + '.html" aria-current="' + (s.key === activeKey) + '">' +
+        (live ? pip : '<span class="pip-gap" aria-hidden="true"></span>') + "<span>" + esc(s.label) + "</span>" +
+        (live ? '<small>In progress</small>' : "") + "</a>";
+    }).join("");
+
+    function setOpen(open) {
+      menu.hidden = !open;
+      btn.setAttribute("aria-expanded", String(open));
+    }
+    btn.addEventListener("click", function () { setOpen(menu.hidden); });
+    document.addEventListener("click", function (ev) {
+      if (!menu.hidden && ev.target.closest && !ev.target.closest(".season-pick")) setOpen(false);
+    });
+    document.addEventListener("keydown", function (ev) {
+      if (ev.key === "Escape" && !menu.hidden) { setOpen(false); btn.focus(); }
+    });
+    wrap.appendChild(btn);
+    wrap.appendChild(menu);
+    return wrap;
   }
 
   var JUMP_SECTIONS = [
@@ -209,7 +246,7 @@
     var a = el("a", "season-card season-card-career");
     a.href = "career.html";
     a.innerHTML =
-      '<div class="season-card-top"><div class="season-card-name-wrap"><span class="season-card-name">Career</span></div>' +
+      '<div class="season-card-top"><div class="season-card-name-wrap"><span class="season-card-name">All-Time</span></div>' +
       '<span class="season-card-arrow">&rarr;</span></div>' +
       '<div class="season-card-stats">All-time standings across ' + played + " " + plural(played, "season") + "</div>" +
       '<div class="season-card-round">Career Score, every season side by side, all-time comment stats</div>';
@@ -1496,7 +1533,8 @@
     if (!rows.length || !s.totalComments) { if (section) section.hidden = true; return; }
     if (section) section.hidden = false;
 
-    var g = el("div", "hl-grid");
+    // Two per row on a phone (.hl-pair): 8 awards, four even rows.
+    var g = el("div", "hl-grid hl-pair");
     if (s.mostTalkative) {
       g.appendChild(careerTile("Most talkative", esc(s.mostTalkative.name),
         pct(s.mostTalkative.rate) + " of their votes carry a comment &middot; " +
@@ -1527,10 +1565,6 @@
       g.appendChild(careerTile("Widest vocabulary", esc(s.richestVocab.name),
         s.richestVocab.richness.toFixed(2) + " unique words per word over " +
         s.richestVocab.sampleWords + "-word samples", s.richestVocab.tiedWith));
-    }
-    if (s.mostZeroPoint) {
-      g.appendChild(careerTile("Most all-talk", esc(s.mostZeroPoint.name),
-        s.mostZeroPoint.count + " comments awarding zero points", s.mostZeroPoint.tiedWith));
     }
     if (s.mostSubmitterNotes) {
       g.appendChild(careerTile("Most notes on their own picks", esc(s.mostSubmitterNotes.name),
@@ -1588,7 +1622,7 @@
 
   function renderCareerHighlights(c) {
     var h = c.highlights || {};
-    var g = el("div", "hl-grid");
+    var g = el("div", "hl-grid hl-pair");
     if (h.topScore) g.appendChild(careerTile("Highest career score", esc(h.topScore.name), h.topScore.careerScore + " career score", h.topScore.tiedWith));
     if (h.mostWins) g.appendChild(careerTile("Most rounds won", esc(h.mostWins.name), h.mostWins.roundsWon + " round wins", h.mostWins.tiedWith));
     if (h.mostPodiums) g.appendChild(careerTile("Most podiums", esc(h.mostPodiums.name), h.mostPodiums.podiums + " top-3 finishes", h.mostPodiums.tiedWith));
@@ -1746,7 +1780,7 @@
 
   function renderProfileCareer(c, p, prof) {
     // Six tiles: two rows of three, or three rows of two on a phone (.pf-tiles).
-    var g = el("div", "hl-grid pf-tiles");
+    var g = el("div", "hl-grid hl-pair pf-tiles");
     var r = careerRank(c.players, p);
     g.appendChild(careerTile("Career Score", String(p.careerScore),
       (r.tied ? "Tied " : "") + ordinal(r.rank) + " of " + c.players.length + " all-time"));
@@ -1829,7 +1863,7 @@
     var host = $("pfComments");
     host.innerHTML = "";
     if (!cm || !cm.comments) { host.appendChild(empty("No vote comments yet.")); return; }
-    var g = el("div", "hl-grid");
+    var g = el("div", "hl-grid hl-pair");
     g.appendChild(careerTile("Comments left", String(cm.comments),
       cm.commentRate != null ? "on " + pct(cm.commentRate) + " of their votes" : ""));
     g.appendChild(careerTile("Average length", cm.meanWords + " words", "median " + cm.medianWords));

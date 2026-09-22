@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-09-23 (follow-up 2)
+
+- **Top bar: Home | Season ▾ | All-Time.** One season button replaces a tab
+  per season: it names the season you're on (or the one in progress) and
+  lists every season newest first. "Career" is now **All-Time**; its page
+  is titled All-Time League Stats, and Career highlights are **League
+  Highlights**.
+- **Tiles two per row on phones** for a profile's Comments, and the
+  All-Time page's League Highlights and comment awards (`.hl-pair`). On
+  desktop those grids are four across, so they come out in even rows.
+- **Most all-talk dropped** from the All-Time comment awards, leaving 8
+  (season pages keep it).
+- **Replies redone.** The underlined "Reply" text is a pill with a speech
+  bubble and the reply count. Replies are chat bubbles with avatars; the
+  composer is a rounded box that grows as you type, with a round send
+  button, disabled until there's text; Ctrl/Cmd+Enter sends. 16px text so
+  iOS doesn't zoom.
+- **Names link to profiles** on round pages (voters, submitters, the
+  winner line, reply authors), looking exactly as before.
+
 ## 2026-09-23 (follow-up)
 
 - **Profile tiles fit phones.** The six Career tiles sit three rows of two
