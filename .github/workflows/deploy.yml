@@ -5,20 +5,33 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Read-only by default. Only the deploy job, which runs no repo code, gets
+# the Pages and token permissions; the build job runs the test suite.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
+# One deploy at a time. A newer push waits rather than cancelling a deploy
+# already under way (GitHub's own Pages template does the same).
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
+# Actions are pinned to a commit, with the release tag alongside, so a
+# moved tag can't change what runs with a Pages token. Bump both together.
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The suite is stdlib-only; this pins the version it runs on rather
+      # than whatever python3 the runner image ships that month.
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
 
       # No data build here, on purpose. The site is members-only: season
       # data is built locally and published to a private Supabase bucket by
@@ -26,31 +39,39 @@ jobs:
       # deploys is only the site's HTML, CSS and JS, which contain no league
       # data. A guard fails the deploy if any data file ever slips in.
       # The offline suite (tests/, stdlib only, made-up data) gates every
-      # deploy: a failing test means nothing ships. The live Spotify test
-      # skips itself here; it needs PFML_LIVE=1.
+      # deploy: a failing test means nothing ships. The live tests skip
+      # themselves here; they need PFML_LIVE=1.
       - name: Run tests
-        run: python3 -m unittest discover -s tests -v
+        run: python -m unittest discover -s tests -v
 
-      - name: Refuse to publish league data
+      - name: Refuse to publish league data or secrets
         run: |
-          if [ -n "$(find site -name '*.json' -print -quit)" ] || [ -d data ]; then
-            echo "League data found in the deploy (site/**/*.json or data/). It must not be public."
-            find site -name '*.json'; ls -d data 2>/dev/null
+          found="$(find site \( -name '*.json' -o -name '*.csv' -o -name '.env*' \) -print)"
+          if [ -n "$found" ] || [ -d data ]; then
+            echo "League data or secrets found in the deploy (site/**/*.json, *.csv, .env*, or data/). They must not be public."
+            echo "$found"; ls -d data 2>/dev/null
             exit 1
           fi
 
-      - uses: actions/configure-pages@v5
-
-      - uses: actions/upload-pages-artifact@v3
+      # No configure-pages step: it only reports the site's base URL for
+      # static site generators, which plain HTML doesn't need, and it would
+      # want Pages access in this job, the one that runs repo code.
+      # Leaves out dotfiles (site/.nojekyll among them, which only matters
+      # to branch deploys; Actions deploys never run Jekyll).
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: ./site
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

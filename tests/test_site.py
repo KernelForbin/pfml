@@ -1169,6 +1169,41 @@ class JumpMenus(unittest.TestCase):
         self.assertTrue(any("font-size: 16px" in r for r in rules))
 
 
+class DeployWorkflow(unittest.TestCase):
+    """What the deploy may do. Text checks: there's no YAML parser in the
+    stdlib, and the file is short and flat enough for them."""
+
+    def setUp(self):
+        self.yml = read_root(".github/workflows/deploy.yml")
+        self.build, self.deploy = self.yml.split("\n  deploy:\n", 1)
+
+    def test_only_the_deploy_job_can_write_pages(self):
+        top = self.yml.split("\njobs:", 1)[0]
+        self.assertNotIn("pages: write", top)
+        self.assertNotIn("id-token: write", top)
+        self.assertNotIn("pages:", self.build.split("\njobs:", 1)[1])
+        self.assertIn("pages: write", self.deploy)
+        self.assertIn("id-token: write", self.deploy)
+
+    def test_actions_are_pinned_to_commits(self):
+        uses = re.findall(r"uses:\s*(\S+)", self.yml)
+        self.assertTrue(uses)
+        for u in uses:
+            self.assertRegex(u, r"@[0-9a-f]{40}$", u)
+
+    def test_the_guard_refuses_data_and_secrets(self):
+        for pattern in ("'*.json'", "'*.csv'", "'.env*'", "[ -d data ]"):
+            self.assertIn(pattern, self.build)
+
+    def test_a_newer_push_doesnt_cancel_a_deploy(self):
+        self.assertIn("cancel-in-progress: false", self.yml)
+
+    def test_tests_gate_the_deploy_on_a_pinned_python(self):
+        self.assertRegex(self.build, r'python-version: "3\.\d+"')
+        self.assertIn("python -m unittest discover -s tests", self.build)
+        self.assertIn("needs: build", self.deploy)
+
+
 class CleanText(unittest.TestCase):
     def test_no_control_characters_in_site_files(self):
         # A generated CSS edit once turned the escape "\25BE" (the arrow on

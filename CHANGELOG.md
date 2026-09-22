@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-09-22 (follow-up 9): deploy workflow
+
+- **Permissions:** the workflow is read-only by default; only the deploy
+  job (which runs no repo code) can write Pages or mint a token. The job
+  that runs the tests had both.
+- **Actions updated and pinned to commits:** checkout v7.0.1,
+  upload-pages-artifact v5.0.0, deploy-pages v5.0.1, plus setup-python
+  v7.0.0 so the tests run on Python 3.12 rather than whatever the runner
+  ships. Release notes read for each major jump; the one that applies,
+  upload-pages-artifact leaving out dotfiles, only drops `.nojekyll`, which
+  Actions deploys don't use. configure-pages removed: plain HTML doesn't
+  use its output, and it needed Pages access in the test job.
+- **Guard** now also refuses CSV and `.env*` files in `site/` (was JSON and
+  `data/` only). Checked by running the guard script on a clean copy of
+  `site/` (passes) and with a stray `.env.local` or CSV (blocked).
+- A new push no longer cancels a deploy in progress; both jobs time out
+  after 10 minutes.
+
 ## 2026-09-22 (follow-up 8): review pass
 
 A full review of the site, scripts and docs; the low-risk fixes, each with

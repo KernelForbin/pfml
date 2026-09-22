@@ -15,8 +15,8 @@ linked members can read. There is no Spotify API: every Spotify link is a
 plain `open.spotify.com` URL built from IDs already present in the export.
 
 **None of the league data is in this repo.** `data/` and `site/data/` are
-git-ignored, and the deploy refuses to run if a JSON file or a `data/`
-folder ever turns up in it. The repo's history was rewritten on
+git-ignored, and the deploy refuses to run if a JSON, CSV or `.env*` file
+turns up in `site/`, or a `data/` folder in the repo. The repo's history was rewritten on
 2026-09-21 to take out the CSVs and JSON older commits carried, though
 GitHub still serves the old commits by id until the repo is recreated; see
 Members only below.

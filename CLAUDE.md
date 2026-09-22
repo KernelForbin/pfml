@@ -22,7 +22,8 @@ that only linked members can read. The repo is public, so:
 
 - `data/` and `site/data/` are git-ignored. Never force-add them, and
   never commit a CSV, a season/career JSON, `daily_doubles.json` or `.env`.
-  The deploy workflow fails if a JSON file or `data/` shows up in `site/`.
+  The deploy workflow fails if a JSON, CSV or `.env*` file shows up in
+  `site/`, or a `data/` folder in the repo.
 - Publish data with `python scripts/publish.py` (builds, then uploads).
   Data changes need no commit; only a new `site/seasonN.html` does.
 - The Supabase secret key lives only in the git-ignored `.env`. It bypasses
@@ -281,8 +282,17 @@ doesn't resolve them, so serve local copies with `python scripts/serve.py`
 GitHub Pages via Actions (`.github/workflows/deploy.yml`), not
 branch-deploy. The workflow deploys only the page files; it no longer
 builds data (there is none in the repo), and it refuses to deploy if any
-JSON or `data/` folder is present. It runs the test suite first, and a
-failing test stops the deploy. The custom domain (`pfml.fun`) is set in the repo's
+JSON, CSV or `.env*` file is in `site/`, or a `data/` folder in the repo.
+It runs the test suite first (on a pinned Python), and a failing test
+stops the deploy. Only the deploy job has Pages and token permissions;
+the job that runs the tests is read-only. Actions are pinned to commit
+SHAs with the release tag in a comment: to update one, look up the new
+tag's commit (`gh api repos/<owner>/<action>/commits/<tag> --jq .sha`),
+read its release notes, and change both. `upload-pages-artifact` leaves
+out dotfiles, so `site/.nojekyll` isn't uploaded; that's fine, since an
+Actions deploy never runs Jekyll. A new push waits for a deploy in
+progress rather than cancelling it. `tests/test_site.py` (DeployWorkflow)
+pins all of this. The custom domain (`pfml.fun`) is set in the repo's
 Settings → Pages, not by the `site/CNAME` file, that file only matters if
 this ever switches to branch-deploy. DNS is already configured at
 Namecheap; nothing to redo there.
