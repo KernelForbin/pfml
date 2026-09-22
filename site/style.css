@@ -488,9 +488,10 @@ button.trend-chip.is-on .dot { opacity: 1; }
 .cmt-foot { margin-top: 12px; }
 
 @media (max-width: 720px) {
-  /* the four style-rate columns are the first to go when there's no room */
-  .crow { grid-template-columns: minmax(90px, 1.4fr) repeat(4, minmax(38px, 0.5fr)); font-size: 0.84rem; }
-  .crow > :nth-child(n + 6) { display: none; }
+  /* the four style-rate columns are the first to go when there's no room
+     (season pages; the All-Time table scrolls sideways instead) */
+  .framed:not(.table-wide) > .crow { grid-template-columns: minmax(90px, 1.4fr) repeat(4, minmax(38px, 0.5fr)); font-size: 0.84rem; }
+  .framed:not(.table-wide) > .crow > :nth-child(n + 6) { display: none; }
 }
 
 /* ---------- career table ---------- */
@@ -508,6 +509,39 @@ button.trend-chip.is-on .dot { opacity: 1; }
 .career-sort-btn:hover { color: var(--acid); }
 .career-sort-btn.is-active { color: var(--acid); }
 .career-sort-btn .arrow { font-size: 0.7rem; }
+
+/* All-Time tables (standings, comments): every column always, scrolling
+   sideways inside the box when the screen is too narrow, with the Player
+   column pinned on the left so a row can still be read. */
+.table-wide { overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+.table-wide > :where(.vrow, .crow) { background: var(--card); }
+.career-table.table-wide > .vrow { min-width: 600px; }
+.cmt-table-box > .crow { min-width: 700px; }
+.table-wide > * > :first-child { position: sticky; left: 0; z-index: 1; background: inherit; }
+.cmt-table { margin-top: 18px; }
+.table-hint { display: none; }
+
+/* A column heading that sorts (the All-Time comment table) */
+.sort-btn {
+  font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit;
+  background: none; border: none; padding: 0; cursor: pointer; text-align: right;
+  -webkit-tap-highlight-color: transparent;
+}
+.sort-btn.is-left { text-align: left; }
+.sort-btn.is-active { color: var(--magenta); }
+.sort-btn .arrow { font-size: 0.7rem; }
+@media (hover: hover) {
+  .sort-btn:hover { color: var(--magenta); }
+}
+@media (max-width: 620px) {
+  .table-hint { display: block; margin: 0 0 8px; font-size: 0.8rem; color: var(--muted); }
+  .hl-grid + .table-hint { margin-top: 18px; }
+  .table-hint + .cmt-table { margin-top: 0; }
+  .table-wide > * > :first-child { box-shadow: 8px 0 10px -8px rgba(22, 17, 26, 0.22); }
+  .career-sort-btn { padding: 11px 12px; }
+  .career-table.table-wide > .vrow:not(.head) { padding-left: 12px; padding-right: 12px; }
+  .cmt-table-box > .crow { padding-left: 12px; padding-right: 12px; }
+}
 
 /* ---------- footer ---------- */
 
@@ -544,8 +578,10 @@ button.trend-chip.is-on .dot { opacity: 1; }
 
 @media (max-width: 620px) {
   .hero { padding-top: 32px; }
-  .vrow { grid-template-columns: 1fr 4.2rem 4.2rem; }
-  .vrow > :nth-child(4) { display: none; }
+  /* the season Voting table only: .career-table grids (All-time standings,
+     a profile's seasons) set their own columns and must keep them all */
+  .framed:not(.career-table) > .vrow { grid-template-columns: 1fr 4.2rem 4.2rem; }
+  .framed:not(.career-table) > .vrow > :nth-child(4) { display: none; }
   .stand-row, .trk { padding-left: 14px; padding-right: 14px; }
 }
 

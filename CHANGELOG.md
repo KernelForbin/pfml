@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-09-23 (follow-up 4)
+
+- **All-Time tables on phones.** All-time standings and the comment table
+  keep every column and scroll sideways inside their box, with names
+  pinned on the left and a "swipe sideways" line on phones. Measured at
+  390px: 600px and 700px wide in a 333px box, nothing cut off.
+- **Fixed: Season 3 was hidden from All-time standings on phones**, and
+  "Won" from a profile's Season by season. A phone rule meant for the
+  season Voting table hid the 4th column of every such table; it's now
+  scoped to that one table, as is the comment table's column trimming.
+- **The all-time comment table sorts by any column**, like the standings
+  (starts by comments, most first).
+- **Standard spacing** between the comment awards and that table.
+
 ## 2026-09-23 (follow-up 3)
 
 - **Names link to profiles almost everywhere**, looking exactly as before:

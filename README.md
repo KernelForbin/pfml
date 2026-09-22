@@ -439,6 +439,14 @@ its jump-nav link disappears along with it.
 
 ## Career page
 
+Shown as All-Time in the top bar. Both of its tables (standings and
+comments) keep every column on a phone and scroll sideways inside their
+box (`.table-wide`), with the Player column pinned (`position: sticky`,
+opaque) and a "swipe sideways" line shown on phones only. The phone rules
+that trim columns elsewhere are scoped away from them: one written for the
+season Voting table used to hide every `.vrow`'s 4th cell, which here was
+Season 3 (and "Won" on a profile's seasons).
+
 `career.json`, built once per `build.py` run from all seasons' standings,
 joins players across seasons by competitor id. This relies on Music
 League reusing the same id for the same person across separate CSV
@@ -451,7 +459,8 @@ join taking the first name it saw for that id; `build_career()` in
 `build.py` is where to change that if it comes up.
 
 `career.html` also carries an all-time Comments section: the same
-per-player table aggregated across every season played, plus career
+per-player table aggregated across every season played (sortable by any
+column, like the standings: `renderCareerCommentTable`), plus career
 superlatives (most talkative, most terse, wordiest, quietest, biggest
 silent treatment, most SHOUTING, widest vocabulary, most notes on their
 own picks: eight, so they fill even rows of two or four; most all-talk

@@ -1588,25 +1588,11 @@
     }
     host.appendChild(g);
 
-    var box = el("div", "framed");
-    box.insertAdjacentHTML("beforeend",
-      '<div class="crow head"><div>Player</div><div class="num">Comments</div>' +
-      '<div class="num">Rate</div><div class="num">Avg words</div>' +
-      '<div class="num">Median</div><div class="num">Zero-pt</div>' +
-      '<div class="num">!</div><div class="num">?</div><div class="num">CAPS</div></div>');
-    rows.forEach(function (p) {
-      box.insertAdjacentHTML("beforeend",
-        '<div class="crow"><div class="vname">' + who(p.name, p.id) + "</div>" +
-        '<div class="num">' + p.comments + "</div>" +
-        '<div class="num">' + pct(p.commentRate) + "</div>" +
-        '<div class="num">' + p.meanWords + "</div>" +
-        '<div class="num">' + p.medianWords + "</div>" +
-        '<div class="num">' + p.zeroPointComments + "</div>" +
-        '<div class="num">' + pct(p.exclamationRate) + "</div>" +
-        '<div class="num">' + pct(p.questionRate) + "</div>" +
-        '<div class="num">' + pct(p.allCapsRate) + "</div></div>");
-    });
-    host.appendChild(box);
+    host.appendChild(tableHint());
+    var tableHost = el("div", "cmt-table");
+    tableHost.id = "careerCommentTable";
+    host.appendChild(tableHost);
+    renderCareerCommentTable(rows);
 
     if (s.longestComment) {
       host.appendChild(commentQuote(s.longestComment, "Longest comment ever written"));
@@ -1634,6 +1620,66 @@
       (s.submitterNoteCount ? ", " + s.submitterNoteCount + " submitter notes" : "") +
       ". Rates over fewer than " + s.minCommentsForRates +
       " comments are left out of the superlatives above.</p>");
+  }
+
+  // At phone widths the All-Time tables scroll sideways inside their box
+  // (.table-wide) rather than dropping columns; this says so, on phones only.
+  function tableHint() {
+    return el("p", "table-hint", "Swipe the table sideways for every column. Tap a heading to sort.");
+  }
+
+  // The all-time comment table, sortable by any column like All-time
+  // standings: tap a heading to sort by it, again to flip the order.
+  var COMMENT_COLUMNS = [
+    { key: "name", label: "Player", left: true },
+    { key: "comments", label: "Comments" },
+    { key: "commentRate", label: "Rate", pct: true },
+    { key: "meanWords", label: "Avg words" },
+    { key: "medianWords", label: "Median" },
+    { key: "zeroPointComments", label: "Zero-pt" },
+    { key: "exclamationRate", label: "!", title: "Share of comments with an exclamation mark", pct: true },
+    { key: "questionRate", label: "?", title: "Share of comments with a question mark", pct: true },
+    { key: "allCapsRate", label: "CAPS", title: "Share of comments with an all-caps word", pct: true }
+  ];
+  var commentSort = { field: "comments", dir: "desc" };
+
+  function renderCareerCommentTable(rows) {
+    var host = $("careerCommentTable");
+    if (!host) return;
+    var f = commentSort.field, asc = commentSort.dir === "asc";
+    var sorted = rows.slice().sort(function (a, b) {
+      if (f === "name") return asc ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
+      var av = a[f] == null ? -Infinity : a[f], bv = b[f] == null ? -Infinity : b[f];
+      return (asc ? av - bv : bv - av) || a.name.localeCompare(b.name);
+    });
+    var box = el("div", "framed table-wide cmt-table-box");
+    var head = el("div", "crow head");
+    COMMENT_COLUMNS.forEach(function (col) {
+      var active = f === col.key;
+      var b = el("button", "sort-btn" + (active ? " is-active" : "") + (col.left ? " is-left" : ""));
+      b.type = "button";
+      if (col.title) b.title = col.title;
+      b.setAttribute("aria-label", "Sort by " + (col.title || col.label));
+      b.innerHTML = esc(col.label) + (active ? '<span class="arrow">' + (asc ? " ↑" : " ↓") + "</span>" : "");
+      b.addEventListener("click", function () {
+        if (commentSort.field === col.key) commentSort.dir = commentSort.dir === "desc" ? "asc" : "desc";
+        else { commentSort.field = col.key; commentSort.dir = col.key === "name" ? "asc" : "desc"; }
+        renderCareerCommentTable(rows);
+      });
+      head.appendChild(b);
+    });
+    box.appendChild(head);
+    sorted.forEach(function (p) {
+      box.insertAdjacentHTML("beforeend", '<div class="crow"><div class="vname">' + who(p.name, p.id) + "</div>" +
+        COMMENT_COLUMNS.slice(1).map(function (col) {
+          return '<div class="num">' + (col.pct ? pct(p[col.key]) : p[col.key]) + "</div>";
+        }).join("") + "</div>");
+    });
+    // keep the sideways scroll where it was across a re-sort
+    var old = host.querySelector(".table-wide"), x = old ? old.scrollLeft : 0;
+    host.innerHTML = "";
+    host.appendChild(box);
+    box.scrollLeft = x;
   }
 
   function renderCareerHighlights(c) {
@@ -1690,6 +1736,8 @@
 
   function renderCareerStandings(c) {
     var host = $("standings");
+    // keep the sideways scroll where it was across a re-sort
+    var old = host.querySelector(".table-wide"), x = old ? old.scrollLeft : 0;
     host.innerHTML = "";
     if (!c.players.length) { host.appendChild(empty("No completed seasons yet.")); return; }
 
@@ -1706,7 +1754,7 @@
       b.addEventListener("click", function () { setCareerSort(col.key); });
       head.appendChild(b);
     });
-    var box = el("div", "framed career-table");
+    var box = el("div", "framed career-table table-wide");
     box.appendChild(head);
 
     var sorted = sortCareerPlayers(c.players, careerSort.field, careerSort.dir);
@@ -1723,7 +1771,9 @@
       row.innerHTML = rowHtml;
       box.appendChild(row);
     });
+    host.appendChild(tableHint());
     host.appendChild(box);
+    box.scrollLeft = x;
   }
 
   function initCareer() {

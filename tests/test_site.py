@@ -658,6 +658,58 @@ class NamesLinkToProfiles(unittest.TestCase):
         self.assertTrue(any("color: inherit" in b and "text-decoration: none" in b for b in base))
 
 
+class AllTimeTables(unittest.TestCase):
+    """All-time standings and the all-time comment table on phones: every
+    column, scrolling sideways in their box, Player pinned; both sortable."""
+
+    def test_both_tables_scroll_sideways_with_player_pinned(self):
+        js = read("app.js")
+        self.assertIn('el("div", "framed career-table table-wide")', js_function(js, "function renderCareerStandings(c)"))
+        self.assertIn('el("div", "framed table-wide cmt-table-box")', js_function(js, "function renderCareerCommentTable(rows)"))
+        css = read("style.css")
+        self.assertIn("overflow-x: auto", " ".join(css_rules(css, ".table-wide")))
+        pinned = " ".join(css_rules(css, ".table-wide > * > :first-child"))
+        self.assertIn("position: sticky", pinned)
+        self.assertIn("left: 0", pinned)
+        self.assertIn("background: inherit", pinned, "opaque, or scrolled numbers show through the names")
+        self.assertIn("min-width: 600px", " ".join(css_rules(css, ".career-table.table-wide > .vrow")))
+        self.assertIn("min-width: 700px", " ".join(css_rules(css, ".cmt-table-box > .crow")))
+
+    def test_no_column_is_hidden_from_them(self):
+        # Regression: a phone rule for the season Voting table hid every
+        # .vrow's 4th cell, which on All-time standings was Season 3 (and
+        # "Won" on a profile's seasons); the comment table dropped 4 columns.
+        css = read("style.css").replace("\r\n", "\n")
+        self.assertNotRegex(css, r"(^|\n)\s*\.vrow > :nth-child\(4\)")
+        self.assertIn(".framed:not(.career-table) > .vrow > :nth-child(4) { display: none; }", css)
+        self.assertNotRegex(css, r"(^|\n)\s*\.crow > :nth-child\(n \+ 6\)")
+        self.assertIn(".framed:not(.table-wide) > .crow > :nth-child(n + 6) { display: none; }", css)
+
+    def test_hint_only_on_phones(self):
+        css = read("style.css")
+        self.assertTrue(any("display: none" in b for b in css_rules(css, ".table-hint")))
+        self.assertTrue(any("display: block" in b for b in phone_rules(css, ".table-hint")))
+        js = read("app.js")
+        self.assertIn("tableHint()", js_function(js, "function renderCareerStandings(c)"))
+        self.assertIn("tableHint()", js_function(js, "function renderCareerComments(c)"))
+
+    def test_comment_table_sorts_by_every_column(self):
+        js = read("app.js")
+        cols = re.search(r"var COMMENT_COLUMNS = \[(.*?)\];", js, re.S).group(1)
+        self.assertEqual(re.findall(r'key: "(\w+)"', cols),
+                         ["name", "comments", "commentRate", "meanWords", "medianWords", "zeroPointComments",
+                          "exclamationRate", "questionRate", "allCapsRate"])
+        table = js_function(js, "function renderCareerCommentTable(rows)")
+        self.assertIn("COMMENT_COLUMNS.forEach", table, "every column's heading is a sort button")
+        self.assertIn('commentSort.dir = commentSort.dir === "desc" ? "asc" : "desc"', table, "tap again to flip")
+        self.assertIn("renderCareerCommentTable(rows);", table)
+        self.assertIn('var commentSort = { field: "comments", dir: "desc" }', js, "starts in today's order")
+
+    def test_standard_space_above_the_comment_table(self):
+        css = read("style.css")
+        self.assertIn("margin-top: 18px", " ".join(css_rules(css, ".cmt-table")))
+
+
 class InboxSchema(unittest.TestCase):
     """schema.sql (new projects) and the migration (the live one) must add
     the same column and function."""
