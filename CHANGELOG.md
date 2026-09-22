@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-22 (follow-up 4)
+
+- **All-Time page order**: League Highlights, then All-time standings, then
+  Comments, all-time (standings used to come last). The note under the
+  standings, shown while the page loads, now describes the Career Score
+  rather than the old total-points formula.
+
 ## 2026-09-22 (follow-up 3)
 
 - **All 8 playlists are live**: All Podium Tracks, S2 Podium Tracks, S3 All

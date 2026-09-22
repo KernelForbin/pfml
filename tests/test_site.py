@@ -565,6 +565,11 @@ class HeaderNav(unittest.TestCase):
         self.assertTrue(any("display" in b for b in css_rules(css, ".season-menu")))
         self.assertTrue(any("display: none" in b for b in css_rules(css, ".season-menu[hidden]")))
 
+    def test_all_time_page_order(self):
+        # League Highlights, then All-time standings, then the comments
+        sections = [a.get("id") for a in Page(read("career.html")).find("section") if a.get("id")]
+        self.assertEqual(sections, ["block-highlights", "block-standings", "block-comments"])
+
     def test_all_time_page_names(self):
         page = read("career.html")
         self.assertIn("<h1>All-Time League Stats</h1>", page)
