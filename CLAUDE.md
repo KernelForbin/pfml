@@ -191,6 +191,17 @@ layout shifts that Safari (no scroll anchoring) shows. Measure with
 screens `:hover` sticks to whatever a finger touched, so hover styling on
 tappable lists belongs inside `@media (hover: hover)`. Resize the viewport
 *after* the tab has a page loaded; resizing a blank tab silently fails.
+If the app window is minimized, the page reports `innerWidth` 0 and
+screenshots time out; load the page in an `<iframe>` of fixed width (375
+or 1280px) and measure inside that instead.
+
+**Measure what's on screen, not what the code set.** Setting the `hidden`
+attribute does nothing to an element whose CSS gives it a `display`
+value; the author rule wins. The emoji search shipped like that, and the
+check counted `el.hidden` rather than `getComputedStyle(el).display` or
+a non-zero `getBoundingClientRect()`, so it passed. Likewise, time
+rendering with a forced layout (`getBoundingClientRect()` after the
+change), not just the script: 9ms of script was about a second of layout.
 
 **Break-checks need a passing baseline:** run the suite in the scratch copy
 before breaking anything. If a test already fails there, every break looks

@@ -45,6 +45,8 @@
     people: null,          // member user_id -> { name }
     threads: {},           // comment id -> reply thread open
     picker: null,          // comment id with the reaction picker open
+    pickerMore: false,     // that picker showing the full "More" panel, not just the quick row
+    emojiGroup: 0,         // category the "More" panel shows when nothing's searched
     index: {},             // comment id -> vote row
     busy: false
   };
@@ -248,49 +250,157 @@
     '<path d="M15.3 13.5v3.6M13.5 15.3h3.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>' +
     "</svg>";
 
-  // Every emoji beyond the 6 quick ones, for the picker's search grid.
+  // Every emoji beyond the 6 quick ones, for the "More" panel.
   // site/emoji-data.js (script tag, not a fetch: no request at open time)
-  // sets these; empty arrays if it somehow didn't load, so the picker
-  // still works with just the quick row rather than breaking.
+  // sets these; empty arrays if it somehow didn't load, so the panel
+  // still offers the 6 quick ones rather than breaking.
   function emojiData() { return window.PFML_EMOJI_DATA || []; }
   function emojiGroups() { return window.PFML_EMOJI_GROUPS || []; }
 
-  function emojiPickerHtml(c, reacts) {
+  // The 6 quick reactions are left out of emoji-data.js (they're stored by
+  // name), so they're put back here, at the front of the category they
+  // belong to, so browsing Smileys still shows 😂 and a search for "fire"
+  // still finds 🔥, storing the same old name the quick row does.
+  var LEGACY_META = { fire: ["fire", "Travel & Places"], laugh: ["face with tears of joy", "Smileys & Emotion"],
+                      hundred: ["hundred points", "Symbols"], eyes: ["eyes", "People & Body"],
+                      grimace: ["grimacing face", "Smileys & Emotion"], heart: ["red heart", "Smileys & Emotion"] };
+
+  // One entry per emoji, built on first use of the "More" panel, never at
+  // page load or when the quick row opens:
+  // { glyph, value (what's stored), name, lower, words, group }.
+  var emojiIndexCache = null;
+  function emojiIndex() {
+    if (emojiIndexCache) return emojiIndexCache;
+    function entry(glyph, value, name, group) {
+      var lower = name.toLowerCase();
+      return { glyph: glyph, value: value, name: name, lower: lower, words: lower.split(/[\s:,.’'()-]+/), group: group };
+    }
+    var groups = emojiGroups(), legacy = [];
+    LEGACY_REACT_ORDER.forEach(function (k) {
+      var g = groups.indexOf(LEGACY_META[k][1]);
+      if (g === -1) return;
+      var e = entry(LEGACY_REACT[k], k, LEGACY_META[k][0], g);
+      e.words.push(k);   // PFML's own name for it too, so "laugh" finds 😂
+      legacy.push(e);
+    });
+    var rest = emojiData().map(function (row) { return entry(row[0], row[0], row[1], row[2]); });
+    emojiIndexCache = [];
+    groups.forEach(function (_, g) {
+      legacy.concat(rest).forEach(function (e) { if (e.group === g) emojiIndexCache.push(e); });
+    });
+    return emojiIndexCache;
+  }
+
+  // Ranked name search: the whole name first; then names that start with
+  // the query or contain every word typed as a whole word; then every word
+  // typed matching the start of a word ("red h" finds "red heart"); then
+  // anywhere in the name. Within a rank the shortest name comes first, so
+  // "heart" leads with red heart rather than "heart with arrow".
+  var SEARCH_LIMIT = 150;
+  var FIRST_SCREEN = 64;   // a few rows more than the grid shows at once
+  function searchEmoji(query) {
+    var terms = query.split(/\s+/).filter(Boolean), ranked = [];
+    function everyTerm(words, test) {
+      return terms.every(function (t) { return words.some(function (w) { return test(w, t); }); });
+    }
+    function isWord(w, t) { return w === t; }
+    function startsWord(w, t) { return w.indexOf(t) === 0; }
+    emojiIndex().forEach(function (e, pos) {
+      var rank;
+      if (e.lower === query) rank = 0;
+      else if (e.lower.indexOf(query) === 0 || everyTerm(e.words, isWord)) rank = 1;
+      else if (everyTerm(e.words, startsWord)) rank = 2;
+      else if (terms.every(function (t) { return e.lower.indexOf(t) !== -1; })) rank = 3;
+      else return;
+      ranked.push({ e: e, rank: rank, pos: pos });
+    });
+    ranked.sort(function (a, b) { return a.rank - b.rank || a.e.name.length - b.e.name.length || a.pos - b.pos; });
+    return ranked.map(function (x) { return x.e; });
+  }
+
+  // What tapping "add a reaction" opens: the 6 quick reactions and "More",
+  // nothing else. The full set used to be built here on every open, all
+  // ~1,900 buttons, which took about a second (measured, desktop Chrome).
+  function quickPickerHtml(reacts) {
     var quick = LEGACY_REACT_ORDER.map(function (k) {
       var on = reacts[k] && reacts[k].mine;
       return '<button type="button" class="cm-pick' + (on ? " is-on" : "") + '" data-act="react" data-r="' + k +
         '" aria-label="' + k + '" aria-pressed="' + !!on + '">' + LEGACY_REACT[k] + "</button>";
     }).join("");
-
-    var lastGroup = -1, grid = [];
-    emojiData().forEach(function (row) {
-      var emoji = row[0], name = row[1], groupIndex = row[2];
-      if (groupIndex !== lastGroup) {
-        lastGroup = groupIndex;
-        grid.push('<div class="cm-emoji-group" data-group="' + groupIndex + '">' + esc(emojiGroups()[groupIndex] || "") + "</div>");
-      }
-      var on = reacts[emoji] && reacts[emoji].mine;
-      grid.push('<button type="button" class="cm-emoji-btn' + (on ? " is-on" : "") + '" data-act="react" data-r="' + esc(emoji) +
-        '" data-name="' + esc(name.toLowerCase()) + '" data-group="' + groupIndex + '" title="' + esc(name) +
-        '" aria-label="' + esc(name) + '" aria-pressed="' + !!on + '">' + emoji + "</button>");
-    });
-
-    // Its own close button: on a phone the picker is a bottom sheet that
-    // covers the comment it belongs to, including the "add a reaction"
-    // button that also closes it (measured at 375px: that button sat right
-    // under the sheet), so without this the only way out was picking one.
     return '<div class="cm-picker" role="dialog" aria-label="Add a reaction">' +
       '<div class="cm-picker-quick">' + quick +
+        '<button type="button" class="cm-more" data-act="more" aria-label="More emoji">More</button>' +
+      "</div></div>";
+  }
+
+  // The "More" panel's frame. Its grid starts empty and is filled by
+  // fillEmojiGrid() with one category, or the search matches, at a time.
+  function morePickerHtml(c) {
+    var tabs = emojiGroups().map(function (name, g) {
+      var first = emojiIndex().filter(function (e) { return e.group === g; })[0];
+      return '<button type="button" class="cm-emoji-tab" data-act="emoji-group" data-g="' + g + '" title="' + esc(name) +
+        '" aria-label="' + esc(name) + '" aria-pressed="false">' + (first ? first.glyph : "") + "</button>";
+    }).join("");
+    // Its own close button: on a phone this is a bottom sheet that covers
+    // the comment it belongs to, "add a reaction" button included, so
+    // without it the only way out would be picking one.
+    return '<div class="cm-picker is-more" role="dialog" aria-label="Choose an emoji">' +
+      '<div class="cm-picker-head">' +
+        '<label class="cm-sr" for="es-' + esc(c.id) + '">Search emoji</label>' +
+        '<input type="search" id="es-' + esc(c.id) + '" class="cm-emoji-search" placeholder="Search emoji" enterkeyhint="search" ' +
+          'autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">' +
         '<button type="button" class="cm-picker-close" data-act="picker" aria-label="Close">&times;</button>' +
       "</div>" +
-      '<div class="cm-picker-search">' +
-        '<label class="cm-sr" for="es-' + esc(c.id) + '">Search emoji</label>' +
-        '<input type="search" id="es-' + esc(c.id) + '" class="cm-emoji-search" placeholder="Search emoji…" autocomplete="off" autocapitalize="off" spellcheck="false">' +
-      "</div>" +
-      '<div class="cm-emoji-grid">' + grid.join("") +
-        '<p class="cm-emoji-empty" hidden>No emoji match that.</p>' +
-      "</div>" +
+      (tabs ? '<div class="cm-emoji-tabs">' + tabs + "</div>" : "") +
+      '<p class="cm-emoji-caption" aria-live="polite"></p>' +
+      '<div class="cm-emoji-grid"></div>' +
     "</div>";
+  }
+
+  // Draws the panel's grid: the search matches if there's a query, else
+  // the current category. Only the grid (and caption, tab states) is
+  // rewritten, never the search box, so it keeps focus and its cursor.
+  function fillEmojiGrid(picker, id) {
+    var grid = picker.querySelector(".cm-emoji-grid");
+    var caption = picker.querySelector(".cm-emoji-caption");
+    var input = picker.querySelector(".cm-emoji-search");
+    if (!grid) return;
+    var query = input ? input.value.trim().toLowerCase() : "";
+    var list, text;
+    if (query) {
+      var found = searchEmoji(query);
+      list = found.slice(0, SEARCH_LIMIT);
+      text = !found.length ? "No emoji match “" + input.value.trim() + "”."
+        : found.length > SEARCH_LIMIT ? "Top " + SEARCH_LIMIT + " of " + found.length + " matches"
+        : plural(found.length, "match", "matches");
+    } else {
+      list = emojiIndex().filter(function (e) { return e.group === state.emojiGroup; });
+      text = emojiGroups()[state.emojiGroup] || "";
+    }
+    var reacts = reactionsFor(id);
+    function buttons(part) {
+      return part.map(function (e) {
+        var on = reacts[e.value] && reacts[e.value].mine;
+        return '<button type="button" class="cm-emoji-btn' + (on ? " is-on" : "") + '" data-act="react" data-r="' + esc(e.value) +
+          '" title="' + esc(e.name) + '" aria-label="' + esc(e.name) + '" aria-pressed="' + !!on + '">' + e.glyph + "</button>";
+      }).join("");
+    }
+    // The first screenful now, the rest a moment later: the first draw of
+    // a big category (People & Body has ~390) took ~260ms in one go,
+    // almost all of it the browser rendering emoji glyphs for the first
+    // time. A newer fill (another keystroke or tab) cancels the rest.
+    var token = grid.fillToken = (grid.fillToken || 0) + 1;
+    grid.innerHTML = buttons(list.slice(0, FIRST_SCREEN));
+    grid.scrollTop = 0;
+    if (list.length > FIRST_SCREEN) setTimeout(function () {
+      if (grid.fillToken === token) grid.insertAdjacentHTML("beforeend", buttons(list.slice(FIRST_SCREEN)));
+    }, 0);
+    if (caption) caption.textContent = text;
+    Array.prototype.forEach.call(picker.querySelectorAll(".cm-emoji-tab"), function (tab) {
+      var on = !query && +tab.getAttribute("data-g") === state.emojiGroup;
+      tab.classList.toggle("is-on", on);
+      tab.setAttribute("aria-pressed", on);
+    });
   }
 
   function socialHtml(c) {
@@ -303,7 +413,7 @@
       return '<button type="button" class="cm-chip' + (r.mine ? " is-on" : "") + '" data-act="react" data-r="' + esc(k) +
         '" title="' + esc(r.who.join(", ")) + '" aria-pressed="' + r.mine + '">' + reactionGlyph(k) + " " + r.count + "</button>";
     }).join("");
-    var picker = state.picker === c.id ? emojiPickerHtml(c, reacts) : "";
+    var picker = state.picker !== c.id ? "" : state.pickerMore ? morePickerHtml(c) : quickPickerHtml(reacts);
 
     var thread = "";
     if (open) {
@@ -467,6 +577,10 @@
     state.host.addEventListener("input", onEmojiSearch);
     document.addEventListener("click", closePickerFromOutside);
     document.addEventListener("keydown", closePickerOnEscape);
+    if (window.visualViewport) {
+      visualViewport.addEventListener("resize", fitSheetToViewport);
+      visualViewport.addEventListener("scroll", fitSheetToViewport);
+    }
     if (!api()) return;
     Promise.all([api().people(), loadSocial(r.id)]).then(function (res) {
       state.people = res[0];
@@ -492,7 +606,37 @@
     if (!node || !row) return;
     var wrap = document.createElement("div");
     wrap.innerHTML = voteHtml(row);
-    node.replaceWith(wrap.firstChild);
+    var fresh = wrap.firstChild;
+    node.replaceWith(fresh);
+    var picker = state.picker === id && fresh.querySelector(".cm-picker");
+    if (picker) {
+      if (state.pickerMore) fillEmojiGrid(picker, id);
+      placePicker(picker);
+    }
+  }
+
+  // Keeps the popover on screen: it opens from the "add a reaction"
+  // button's left edge, which can sit near the right of a wrapped row.
+  // The phone-width bottom sheet is position: fixed and needs no nudge,
+  // just fitSheetToViewport().
+  function placePicker(picker) {
+    if (getComputedStyle(picker).position === "fixed") { fitSheetToViewport(); return; }
+    var width = document.documentElement.clientWidth;
+    var over = picker.getBoundingClientRect().right - (width - 8);
+    if (width && over > 0) picker.style.left = -over + "px";
+  }
+
+  // iOS doesn't shrink the layout viewport for its keyboard, so a sheet
+  // pinned to bottom: 12px sits behind the keyboard while a member types
+  // a search. visualViewport says how much is actually visible; lift the
+  // sheet above that, and shrink it to fit.
+  function fitSheetToViewport() {
+    var sheet = state.host && state.host.querySelector(".cm-picker.is-more");
+    var vv = window.visualViewport;
+    if (!sheet || !vv || getComputedStyle(sheet).position !== "fixed") return;
+    var hidden = Math.max(0, window.innerHeight - (vv.height + vv.offsetTop));
+    sheet.style.bottom = hidden + 12 + "px";
+    sheet.style.maxHeight = Math.max(160, vv.height - 24) + "px";
   }
 
   // Takes a function, not a promise, so nothing is sent while an earlier
@@ -522,10 +666,31 @@
       var key = btn.getAttribute("data-r");
       var on = reactionsFor(id)[key];
       state.picker = null;
+      state.pickerMore = false;
       refreshAfter(function () { return api().toggleReaction(id, key, !(on && on.mine)); }, id);
     } else if (act === "picker") {
-      state.picker = state.picker === id ? null : id;
+      if (state.picker === id) { closePicker(); return; }
+      var was = state.picker;
+      state.picker = id;
+      state.pickerMore = false;
+      if (was) rerenderVote(was);
       rerenderVote(id);
+    } else if (act === "more") {
+      state.pickerMore = true;
+      rerenderVote(id);
+      // Straight into the search box where there's a real keyboard; on a
+      // touch screen that would throw up the on-screen keyboard over the
+      // grid before the member has decided to search rather than browse.
+      if (window.matchMedia && matchMedia("(hover: hover) and (pointer: fine)").matches) {
+        var box = state.host.querySelector('.rp-vote[data-id="' + cssEscape(id) + '"] .cm-emoji-search');
+        if (box) box.focus();
+      }
+    } else if (act === "emoji-group") {
+      var picker = btn.closest(".cm-picker");
+      state.emojiGroup = parseInt(btn.getAttribute("data-g"), 10) || 0;
+      var input = picker.querySelector(".cm-emoji-search");
+      if (input) input.value = "";
+      fillEmojiGrid(picker, id);
     } else if (act === "thread") {
       state.threads[id] = !state.threads[id];
       rerenderVote(id);
@@ -555,6 +720,7 @@
     var id = state.picker;
     if (!id) return;
     state.picker = null;
+    state.pickerMore = false;
     rerenderVote(id);
     var btn = state.host.querySelector('.rp-vote[data-id="' + cssEscape(id) + '"] .cm-add');
     if (btn) btn.focus();
@@ -573,31 +739,16 @@
     if (ev.key === "Escape" && state.picker) closePicker();
   }
 
-  // Filters the open picker's emoji grid as a member types, by toggling
-  // `hidden` on the existing buttons rather than rebuilding the grid's
-  // HTML, so the search box never loses focus or its cursor position
-  // mid-keystroke. The quick row above the search box isn't filtered.
+  // Redraws the "More" panel's grid as a member types. This used to set
+  // `hidden` on ~1,900 existing buttons, which did nothing on screen: the
+  // buttons' own `display` rule beats the `hidden` attribute, so every
+  // emoji stayed visible (measured: 1,907 "hidden", 1,908 displayed).
+  // Drawing only the matches can't fail that way, and is far less work.
   function onEmojiSearch(ev) {
     if (!ev.target.classList.contains("cm-emoji-search")) return;
     var picker = ev.target.closest(".cm-picker");
-    var grid = picker && picker.querySelector(".cm-emoji-grid");
-    if (!grid) return;
-    var query = ev.target.value.trim().toLowerCase();
-    var groupLabel = null, groupHasMatch = false, anyMatch = false;
-    Array.prototype.forEach.call(grid.children, function (el) {
-      if (el.classList.contains("cm-emoji-group")) {
-        if (groupLabel) groupLabel.hidden = !groupHasMatch;
-        groupLabel = el;
-        groupHasMatch = false;
-      } else if (el.classList.contains("cm-emoji-btn")) {
-        var match = !query || el.getAttribute("data-name").indexOf(query) !== -1;
-        el.hidden = !match;
-        if (match) { groupHasMatch = true; anyMatch = true; }
-      }
-    });
-    if (groupLabel) groupLabel.hidden = !groupHasMatch;
-    var empty = picker.querySelector(".cm-emoji-empty");
-    if (empty) empty.hidden = anyMatch;
+    var card = picker && picker.closest(".rp-vote[data-id]");
+    if (card) fillEmojiGrid(picker, card.getAttribute("data-id"));
   }
 
   window.PFMLRounds = { renderList: renderList, renderRoundPage: renderRoundPage, roundUrl: roundUrl };

@@ -208,13 +208,24 @@ nested threads) and can be deleted by their author or an admin, not edited.
 A dropdown at the top of every round page jumps to any other round in that
 season, alongside the previous/next links.
 
+Each voter's name and points row sits on a faint magenta gradient running
+the card's full width, so voters read as separate blocks.
+
 **Reactions.** The "add a reaction" button (a drawn outline icon, not a
-smiley character, which phones render as a full-colour yellow face) opens a
-picker: the original 6 as a one-tap row, then a search box over the rest of
-Unicode's emoji (1,908, grouped as Unicode groups them). On a phone it's a
-bottom sheet with its own close button; tapping outside it or pressing
-Escape also closes it. Search hides non-matching buttons rather than
-redrawing, so the box keeps focus as you type.
+smiley character, which phones render as a full-colour yellow face) opens
+just the original 6 as a one-tap row, plus **More**. More opens a panel
+over the rest of Unicode's emoji (1,908): a search box, 9 category tabs
+(Unicode's groups) and a grid. The grid only ever holds one category or
+the search matches (`fillEmojiGrid` in `rounds.js`), never all 1,908:
+laying those out took about a second the first time. Search is by name,
+ranked whole name, whole words, word starts, then anywhere, shortest name
+first within a rank, capped at 150. Typing redraws only the grid, so the
+box keeps focus. The 6 are also in More, under their Unicode names plus
+their stored name ("laugh" finds 😂). On a phone More is a bottom sheet with
+its own close button, kept above the iOS keyboard via `visualViewport`;
+tapping outside or pressing Escape also closes it. Don't filter it by
+setting `hidden` on buttons: any CSS `display` rule on them beats the
+attribute, which is exactly how the first search silently did nothing.
 
 Storage: the original 6 are stored by name (`fire`, `laugh`, `hundred`,
 `eyes`, `grimace`, `heart`), which is what every reaction added before the

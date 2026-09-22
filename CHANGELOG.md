@@ -1,5 +1,33 @@
 # Changelog
 
+## 2026-09-22 (follow-up 3)
+
+- **Emoji search didn't filter at all.** It set `hidden` on non-matching
+  buttons, but the buttons' own CSS `display: inline-grid` beats the
+  `hidden` attribute, so nothing ever disappeared (measured: "pizza" left
+  1,907 buttons marked hidden and all 1,908 on screen). On desktop only the
+  category headings vanished, which looked like partial filtering; on iOS
+  it looked like nothing happened. The earlier check counted the attribute,
+  not what was displayed, so it passed wrongly.
+- **The picker was slow to open.** Correction to follow-up 2: "about 9ms"
+  timed only the script building the HTML. The browser then had to lay out
+  all 1,908 buttons, which took about a second on a desktop the first time.
+- **Reaction picker rebuilt.** Tapping add now shows only the 6 quick
+  reactions and **More**. More opens a search box, 9 category tabs and a
+  grid that draws one category, or only the search matches (ranked: whole
+  name, then whole words, then word starts, then anywhere; top 150), first
+  screenful immediately and the rest a moment later. Measured in desktop
+  Chrome: quick row 10ms, More 7ms, a category tab 4ms, a keystroke 1-22ms.
+  The 6 quick ones are findable in More under their old names too
+  ("laugh" finds 😂) and still store the old name. Only the grid is redrawn
+  while typing, so the box keeps focus. On a phone More is a fixed-height
+  bottom sheet, lifted above the iOS keyboard via `visualViewport`; the
+  search box is 16px so iOS doesn't zoom the page into it; the keyboard
+  isn't raised automatically on a touch screen.
+- **Voter names on a faint magenta band.** On a round page, each voter's
+  name and points sit on a subtle full-width magenta gradient, so it's
+  clear where one voter's comment ends and the next begins.
+
 ## 2026-09-22 (follow-up 2)
 
 - **"Standings" is now "Season Standings"** on season pages, so it reads

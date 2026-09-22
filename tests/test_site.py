@@ -272,25 +272,77 @@ class ReactionPicker(unittest.TestCase):
         self.assertIn('class="cm-add-icon"', js)
         self.assertIn("<svg", js)
 
+    @staticmethod
+    def function(js, signature):
+        return js.split(signature, 1)[1].split("\n  }\n", 1)[0]
+
     def test_picker_can_always_be_closed(self):
-        # At 375px the bottom sheet covers its own comment, "add a reaction"
-        # button included, so the picker needs a way out of its own.
+        # At 375px the "More" bottom sheet covers its own comment, "add a
+        # reaction" button included, so it needs a way out of its own.
         js = read("rounds.js")
-        picker = js.split("function emojiPickerHtml(c, reacts)", 1)[1].split("\n  }\n", 1)[0]
-        self.assertIn('class="cm-picker-close" data-act="picker"', picker)
+        more = self.function(js, "function morePickerHtml(c)")
+        self.assertIn('class="cm-picker-close" data-act="picker"', more)
         self.assertIn('document.addEventListener("click", closePickerFromOutside)', js)
         self.assertIn('document.addEventListener("keydown", closePickerOnEscape)', js)
         self.assertIn('ev.key === "Escape"', js)
 
-    def test_search_filters_by_toggling_hidden_not_by_redrawing(self):
-        # Rebuilding the grid's HTML on every keystroke would reset the
-        # search box's focus and cursor position mid-type.
+    def test_add_button_opens_only_the_quick_six_and_more(self):
+        # Building all ~1,900 emoji on every tap took about a second
+        # (measured, desktop Chrome). The quick row must not touch them.
         js = read("rounds.js")
-        self.assertIn("function onEmojiSearch(ev)", js)
-        self.assertIn('addEventListener("input", onEmojiSearch)', js)
-        search_fn = js.split("function onEmojiSearch(ev)", 1)[1].split("\n\n", 1)[0]
-        self.assertIn(".hidden =", search_fn)
-        self.assertNotIn(".innerHTML", search_fn)
+        quick = self.function(js, "function quickPickerHtml(reacts)")
+        self.assertIn("LEGACY_REACT_ORDER.map", quick)
+        self.assertIn('data-act="more"', quick)
+        for heavy in ("emojiData(", "emojiIndex(", "cm-emoji-btn", "cm-emoji-grid"):
+            self.assertNotIn(heavy, quick)
+        self.assertIn('act === "more"', js)
+        self.assertIn("state.pickerMore ? morePickerHtml(c) : quickPickerHtml(reacts)", js)
+
+    def test_search_draws_only_the_matches_and_never_touches_the_box(self):
+        # Regression: the search used to set `hidden` on every button, which
+        # the buttons' own CSS `display` overrode, so nothing ever vanished
+        # (measured: 1,907 "hidden", all 1,908 still shown). Drawing only
+        # the matches can't be undone by CSS. The search box itself must
+        # never be redrawn, or it loses focus and the cursor mid-type.
+        js = read("rounds.js")
+        search = self.function(js, "function onEmojiSearch(ev)")
+        self.assertIn("fillEmojiGrid(", search)
+        fill = self.function(js, "function fillEmojiGrid(picker, id)")
+        self.assertIn("searchEmoji(query)", fill)
+        self.assertIn("grid.innerHTML =", fill)
+        self.assertNotIn("picker.innerHTML", fill)
+        self.assertNotIn("input.value =", fill)
+        picker_code = js.split("function emojiData()", 1)[1].split("function socialHtml(c)", 1)[0]
+        picker_code += search
+        self.assertNotIn(".hidden =", picker_code, "hiding with the hidden attribute loses to CSS display rules")
+
+    def test_search_and_categories_draw_a_bounded_amount(self):
+        js = read("rounds.js")
+        fill = self.function(js, "function fillEmojiGrid(picker, id)")
+        self.assertIn("found.slice(0, SEARCH_LIMIT)", fill)
+        self.assertIn("e.group === state.emojiGroup", fill, "no query: one category, not all of them")
+        self.assertIn("list.slice(0, FIRST_SCREEN)", fill)
+        self.assertIn("grid.fillToken === token", fill, "a newer keystroke cancels the rest of an older draw")
+
+    def test_quick_six_can_be_found_in_the_more_panel_under_their_old_names(self):
+        # They're left out of emoji-data.js; LEGACY_META puts them back into
+        # a real category, still storing the old name.
+        js = read("rounds.js")
+        meta = re.search(r"var LEGACY_META = \{(.*?)\};", js, re.S).group(1)
+        entries = re.findall(r'(\w+): \["([^"]+)", "([^"]+)"\]', meta)
+        self.assertEqual([k for k, _, _ in entries], self.LEGACY)
+        groups = set(re.findall(r'"([^"]+)"', read("emoji-data.js").split("window.PFML_EMOJI_GROUPS = [", 1)[1].split("];", 1)[0]))
+        for key, _name, group in entries:
+            self.assertIn(group, groups, key)
+        index = self.function(js, "function emojiIndex()")
+        self.assertIn("entry(LEGACY_REACT[k], k,", index, "stored by its old name, not the glyph")
+
+    def test_search_box_does_not_make_ios_zoom(self):
+        # iOS Safari/Chrome zoom the whole page into any input under 16px.
+        bodies = css_rules(read("style.css"), ".cm-emoji-search")
+        sizes = [m for b in bodies for m in re.findall(r"font-size:\s*(\d+)px", b)]
+        self.assertTrue(sizes, "the search box needs an explicit px font size")
+        self.assertTrue(all(int(s) >= 16 for s in sizes), sizes)
 
     def test_data_file_is_a_large_deduplicated_set_without_the_quick_six(self):
         data = read("emoji-data.js")
@@ -316,7 +368,22 @@ class ReactionPicker(unittest.TestCase):
         for sel, _ in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
             for part in sel.split(","):
                 if ":hover" in part:
-                    self.assertNotRegex(part, r"cm-pick|cm-emoji-btn", f"{part.strip()} applies on touch screens too")
+                    self.assertNotRegex(part, r"cm-pick|cm-emoji-btn|cm-emoji-tab|cm-more",
+                                        f"{part.strip()} applies on touch screens too")
+
+
+class VoterBands(unittest.TestCase):
+    def test_each_voter_heading_sits_on_a_magenta_band(self):
+        # Members couldn't tell where one voter's comment and replies ended
+        # and the next voter began; the name/points row carries a faint
+        # magenta gradient across the card's full width.
+        css = read("style.css")
+        base = [b for b in css_rules(css, ".rp-vote-head") if "background" in b]
+        self.assertEqual(len(base), 1)
+        self.assertRegex(base[0], r"linear-gradient\(90deg,\s*rgba\(158,\s*0,\s*196")
+        self.assertRegex(base[0], r"margin:\s*0 -20px", "the band runs edge to edge, not inset by the card's padding")
+        self.assertIn("margin: 0 -16px", css.split("@media (max-width: 620px)")[-1].split(".rp-vote-head", 1)[1].split("}", 1)[0],
+                      "and edge to edge at phone widths too")
 
 
 class ReactionsSchema(unittest.TestCase):

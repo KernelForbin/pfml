@@ -505,6 +505,8 @@ button.trend-chip.is-on .dot { opacity: 1; }
      scroll started on. */
   .cm-pick:hover { background: var(--wash); border-color: rgba(158, 0, 196, 0.3); }
   .cm-emoji-btn:hover { background: var(--wash); border-color: rgba(158, 0, 196, 0.3); }
+  .cm-emoji-tab:hover { filter: none; opacity: 1; }
+  .cm-more:hover { border-color: rgba(158, 0, 196, 0.45); }
 }
 
 /* ---------- responsive ---------- */
@@ -628,41 +630,62 @@ body.auth-checking::before {
 .cm-add-wrap { position: relative; display: inline-flex; }
 .cm-picker {
   position: absolute; z-index: 30; top: calc(100% + 8px); left: 0;
-  width: min(300px, calc(100vw - 48px));
   background: var(--card); border: 1px solid var(--border); border-radius: var(--r-sm);
-  box-shadow: var(--shadow-md); padding: 10px;
+  box-shadow: var(--shadow-md); padding: 6px;
 }
-.cm-picker-quick {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 3px; padding-bottom: 8px; margin-bottom: 8px;
-  border-bottom: 1px solid var(--border-soft);
-}
-.cm-picker-close {
-  margin-left: auto; font: inherit; font-size: 1.25rem; line-height: 1; color: var(--muted); cursor: pointer;
-  background: none; border: 1px solid var(--border); border-radius: 999px; width: 32px; height: 32px;
+.cm-picker-quick { display: flex; align-items: center; gap: 2px; white-space: nowrap; }
+.cm-pick {
+  font-size: 1.2rem; line-height: 1; cursor: pointer; background: none; border: 1px solid transparent;
+  border-radius: 8px; width: 38px; height: 38px; display: inline-grid; place-items: center;
   -webkit-tap-highlight-color: transparent;
 }
-.cm-pick { font-size: 1.05rem; line-height: 1; cursor: pointer; background: none; border: 1px solid transparent; border-radius: 8px; padding: 4px 5px; }
 .cm-pick.is-on { background: var(--wash); border-color: rgba(158, 0, 196, 0.3); }
-.cm-picker-search { margin-bottom: 8px; }
+.cm-more {
+  font: inherit; font-size: 0.8rem; font-weight: 600; color: var(--deep); cursor: pointer; margin-left: 4px;
+  background: var(--wash); border: 1px solid rgba(158, 0, 196, 0.2); border-radius: 999px; height: 32px; padding: 0 12px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* "More": search, one row of category tabs, and a grid of fixed height,
+   so it doesn't jump about as the matches change. */
+.cm-picker.is-more { width: min(340px, calc(100vw - 32px)); padding: 10px; display: flex; flex-direction: column; }
+.cm-picker-head { display: flex; align-items: center; gap: 8px; }
 .cm-emoji-search {
-  display: block; width: 100%; font: inherit; font-size: 0.88rem; color: var(--ink);
-  background: var(--paper); border: 1px solid var(--border); border-radius: 999px; padding: 8px 12px;
+  flex: 1; min-width: 0; font: inherit; font-size: 16px; /* under 16px, iOS zooms the page on focus */
+  color: var(--ink); background: var(--paper); border: 1px solid var(--border); border-radius: 999px; padding: 7px 14px;
+  -webkit-appearance: none; appearance: none;
 }
 .cm-emoji-search::-webkit-search-cancel-button { -webkit-appearance: none; }
 .cm-emoji-search:focus-visible { outline: 2px solid var(--magenta); outline-offset: 1px; }
-.cm-emoji-grid { max-height: 240px; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
-.cm-emoji-group {
-  font-family: "Archivo", sans-serif; font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.04em; color: var(--muted); background: var(--card);
-  position: sticky; top: -10px; margin: 0 -2px; padding: 8px 2px 4px;
+.cm-picker-close {
+  flex: none; font: inherit; font-size: 1.25rem; line-height: 1; color: var(--muted); cursor: pointer;
+  background: none; border: 1px solid var(--border); border-radius: 999px; width: 34px; height: 34px;
+  -webkit-tap-highlight-color: transparent;
 }
-.cm-emoji-group:first-child { padding-top: 0; }
+.cm-emoji-tabs {
+  display: grid; grid-template-columns: repeat(9, 1fr); margin-top: 8px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.cm-emoji-tab {
+  font-size: 1.05rem; line-height: 1; cursor: pointer; background: none; border: none;
+  border-bottom: 2px solid transparent; padding: 7px 0 6px; filter: grayscale(1); opacity: .6;
+  -webkit-tap-highlight-color: transparent;
+}
+.cm-emoji-tab.is-on { filter: none; opacity: 1; border-bottom-color: var(--magenta); }
+.cm-emoji-caption {
+  margin: 8px 2px 4px; font-family: "Archivo", sans-serif; font-size: 0.7rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted);
+}
+.cm-emoji-grid {
+  height: 232px; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); align-content: start;
+}
 .cm-emoji-btn {
-  font-size: 1.15rem; line-height: 1; cursor: pointer; background: none; border: 1px solid transparent;
-  border-radius: 8px; width: 34px; height: 34px; display: inline-grid; place-items: center;
+  font-size: 1.35rem; line-height: 1; cursor: pointer; background: none; border: 1px solid transparent;
+  border-radius: 8px; height: 40px; display: grid; place-items: center; padding: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 .cm-emoji-btn.is-on { background: var(--wash); border-color: rgba(158, 0, 196, 0.3); }
-.cm-emoji-empty { margin: 10px 4px 2px; font-size: 0.82rem; color: var(--muted); }
 .cm-link {
   font: inherit; font-size: 0.82rem; color: var(--deep); background: none; border: none;
   padding: 4px 2px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
@@ -907,10 +930,17 @@ body.auth-checking::before {
 .rp-note span { display: block; font-size: 0.72rem; font-weight: 600; color: var(--deep); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
 
 .rp-votes { border-top: 3px solid var(--border-soft); }
-.rp-vote { padding: 16px 20px; border-bottom: 1px solid var(--border-soft); }
+.rp-vote { padding: 0 20px 16px; border-bottom: 1px solid var(--border-soft); }
 .rp-vote:last-child { border-bottom: none; }
-.rp-vote:not(.has-comment) { padding-top: 10px; padding-bottom: 10px; }
-.rp-vote-head { display: flex; align-items: center; gap: 14px; }
+.rp-vote:not(.has-comment) { padding-bottom: 0; }
+/* Each voter's name and points sit on a faint magenta band, full width,
+   fading out to the right, so where one voter's comment and replies end
+   and the next voter starts is obvious at a glance. */
+.rp-vote-head {
+  display: flex; align-items: center; gap: 14px;
+  margin: 0 -20px; padding: 10px 20px;
+  background: linear-gradient(90deg, rgba(158, 0, 196, 0.10), rgba(158, 0, 196, 0.04) 60%, rgba(158, 0, 196, 0.015));
+}
 .rp-voter { font-family: "Archivo", sans-serif; font-weight: 700; font-size: 1.08rem; flex: 1; min-width: 0; }
 .rp-pts { font-family: "Archivo", sans-serif; font-weight: 700; font-size: 1.35rem; font-variant-numeric: tabular-nums; }
 .rp-pts.is-zero { color: var(--muted); font-size: 1.05rem; }
@@ -926,17 +956,18 @@ body.auth-checking::before {
   .rp-art { width: 84px; height: 84px; }
   .rp-score { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 10px; text-align: left; padding-top: 0; }
   .rp-score span { margin-top: 0; }
-  .rp-vote { padding: 14px 16px; }
+  .rp-vote { padding: 0 16px 14px; }
+  .rp-vote-head { margin: 0 -16px; padding: 9px 16px; }
   .rl-card { grid-template-columns: 52px 1fr auto; gap: 12px; }
   .rl-art { width: 52px; height: 52px; }
 
-  /* The picker as a bottom sheet: pinned to the viewport, not the "add a
+  /* "More" as a bottom sheet: pinned to the viewport, not the "add a
      reaction" button, so it always fits regardless of where in the
-     wrapped row that button lands (it can end up hard against either
-     edge once a comment has a few reactions already). */
-  .cm-picker {
+     wrapped row that button lands. rounds.js (fitSheetToViewport) lifts
+     it above the iOS keyboard. The quick row stays a small popover. */
+  .cm-picker.is-more {
     position: fixed; z-index: 40; left: 12px; right: 12px; top: auto; bottom: 12px; width: auto;
-    max-height: 70vh; display: flex; flex-direction: column;
+    max-height: 70vh; box-shadow: 0 -8px 40px -8px rgba(22, 17, 26, .35);
   }
-  .cm-emoji-grid { flex: 1 1 auto; max-height: none; }
+  .cm-emoji-grid { flex: 1 1 auto; height: 260px; min-height: 0; }
 }
