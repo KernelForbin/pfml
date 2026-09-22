@@ -74,6 +74,19 @@
   }
   .hero p { margin: 12px 0 0; color: var(--muted); font-size: 1.05rem; max-width: 60ch; }
 
+  /* the at-a-glance summary above the section switch */
+  .summary {
+    margin: 22px 0 0; padding: 16px 20px 16px 36px; max-width: 72ch;
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow-sm);
+  }
+  .summary li { margin: 0 0 7px; line-height: 1.5; }
+  .summary li:last-child { margin-bottom: 0; }
+  .summary li::marker { color: var(--magenta); }
+  .summary b { font-family: "Archivo", sans-serif; }
+  .hero .modes-lead { margin: 22px 0 0; font-size: 0.92rem; }
+  .modes-lead + .modes { margin-top: 10px; }
+  @media (max-width: 620px) { .summary { padding: 14px 16px 14px 30px; font-size: 0.95rem; } }
+
   /* the mode switch: same look as the trend chart's view switch */
   .modes {
     display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 26px;
@@ -195,6 +208,16 @@
   <section class="hero">
     <h1>What this site can do</h1>
     <p>Everything from our Music League, all in one place. Here's what you can see and do.</p>
+    <ul class="summary" aria-label="The site at a glance">
+      <li><b>Season pages:</b> standings, round-by-round results, a trend chart, top tracks, who likes whose taste, voting styles and comment stats. Tap any player to focus on them.</li>
+      <li><b>Round pages:</b> every track, vote and comment from a round, full size. Vote comments up or down, react with emoji, and reply.</li>
+      <li><b>All-Time:</b> League Highlights, all-time standings ranked by Career Score, and comment awards (longest, loudest, shortest and more).</li>
+      <li><b>Profiles:</b> every player's Career Score and how it adds up, season finishes, best tracks, biggest fans and comment stats. Tap a name almost anywhere on the site to open one.</li>
+      <li><b>Inbox:</b> see when someone reacts to or replies to your comments.</li>
+      <li><b>Home:</b> a card for each season, plus league and season playlists that open in Spotify.</li>
+      <li><b>Members only:</b> sign in with Google, using your personal invite link the first time.</li>
+    </ul>
+    <p class="modes-lead">Tap a section below for the details.</p>
     <nav class="modes" aria-label="Part of the site">
       <a href="?mode=seasons" data-mode="seasons">Season pages</a>
       <a href="?mode=rounds" data-mode="rounds">Round pages</a>

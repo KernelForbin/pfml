@@ -92,6 +92,14 @@ class FeaturesPageIsStandalone(unittest.TestCase):
         default = re.search(r'var DEFAULT = "(\w+)"', script).group(1)
         self.assertEqual(default, modes[0], "the default mode is the first one shown")
 
+    def test_summary_sits_above_the_section_switch(self):
+        # the at-a-glance list first, then a pointer to the details, then
+        # the three section pills, all in the intro
+        hero = re.search(r'<section class="hero">(.*?)</section>', read("features.html"), re.S).group(1)
+        summary, lead, modes = hero.find('<ul class="summary"'), hero.find('class="modes-lead"'), hero.find('<nav class="modes"')
+        self.assertTrue(0 <= summary < lead < modes, (summary, lead, modes))
+        self.assertGreaterEqual(hero[summary:lead].count("<li>"), 5)
+
     def test_links_back_to_the_site(self):
         hrefs = [a.get("href") for a in self.page.find("a")]
         self.assertIn("./", hrefs)

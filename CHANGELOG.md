@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-22 (follow-up 6)
+
+- **Features page opens with a short summary** of the whole site (season
+  pages, round pages, All-Time, profiles, inbox, home, signing in), then
+  "Tap a section below for the details" above the three section pills.
+
 ## 2026-09-22 (follow-up 5)
 
 - **All-time standings columns renamed** "Round Podium Pts" and "Season
