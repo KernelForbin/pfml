@@ -94,7 +94,7 @@
       '<div class="acct-pop acct-menu" id="acctMenu" hidden>' +
         '<div class="acct-menu-head">' + avatar(member.competitorId, member.name) +
           '<span class="acct-menu-who"><b>' + esc(member.name) + "</b><small>Signed in</small></span></div>" +
-        '<a class="acct-item" href="profile.html">My profile</a>' +
+        '<a class="acct-item" href="profile">My profile</a>' +
         '<button type="button" class="acct-item" id="acctSignOut">Sign out</button>' +
       "</div>" +
       '<div class="acct-pop acct-inbox" id="acctInbox" hidden role="region" aria-label="Inbox">' +
@@ -224,7 +224,7 @@
       '<span class="acct-note-text">' + text + '<span class="acct-note-meta">' + meta + "</span></span>";
     var cls = "acct-note" + (fresh ? " is-new" : "");
     if (!round) return '<div class="' + cls + '">' + inner + "</div>";
-    var href = "round.html?s=" + encodeURIComponent(round.season) + "&r=" + encodeURIComponent(parts[0]) +
+    var href = "round?s=" + encodeURIComponent(round.season) + "&r=" + encodeURIComponent(parts[0]) +
       "&c=" + encodeURIComponent(item.commentId) + (item.kind === "reply" ? "&thread=1" : "");
     return '<a class="' + cls + '" href="' + href + '">' + inner + "</a>";
   }

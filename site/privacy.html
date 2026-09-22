@@ -64,5 +64,13 @@
   <p class="updated">Last updated September 21, 2026.</p>
 </main>
 
+<script>
+  /* No .html ending in the address bar: an old privacy.html bookmark still
+     loads and is tidied to /privacy. Same lines as the top of auth.js. */
+  if (/\.html$/i.test(location.pathname)) {
+    history.replaceState(history.state, "",
+      location.pathname.replace(/\.html$/i, "").replace(/\/index$/i, "/") + location.search + location.hash);
+  }
+</script>
 </body>
 </html>

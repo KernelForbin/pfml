@@ -489,6 +489,14 @@
 </main>
 
 <script>
+  /* No .html ending in the address bar: an old features.html bookmark still
+     loads (GitHub Pages serves /features from it) and is tidied to
+     /features, keeping ?mode. Same lines as the top of auth.js. */
+  if (/\.html$/i.test(location.pathname)) {
+    history.replaceState(history.state, "",
+      location.pathname.replace(/\.html$/i, "").replace(/\/index$/i, "/") + location.search + location.hash);
+  }
+
   /* The mode switch. Without JavaScript every section shows, one after
      another; with it, one shows at a time and the URL says which
      (?mode=seasons|rounds|home), so a link opens straight to it. */

@@ -23,6 +23,17 @@
 (function () {
   "use strict";
 
+  // Addresses never show a .html ending: GitHub Pages serves /career from
+  // career.html (measured, query strings included), so an old bookmark to
+  // career.html still loads and the address bar is quietly tidied to
+  // /career, keeping ?query and #hash. First thing on the page, so the
+  // sign-in return path and invite handling below only ever see the clean
+  // address. The same lines sit inline in features.html and privacy.html.
+  if (/\.html$/i.test(location.pathname)) {
+    history.replaceState(history.state, "",
+      location.pathname.replace(/\.html$/i, "").replace(/\/index$/i, "/") + location.search + location.hash);
+  }
+
   var cfg = window.PFML_CONFIG || {};
   var INVITE_KEY = "pfml.invite";
   var BUCKET = "league-data";

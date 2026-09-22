@@ -32,6 +32,8 @@ scripts/publish.py       build, then upload the JSON to Supabase (private)
 scripts/invites.py       one-time invite links that link a Google account
                          to a player
 scripts/supa.py          shared helper; reads the secret key from .env
+scripts/serve.py         local preview that resolves /career to career.html,
+                         like GitHub Pages
 supabase/schema.sql      tables, access rules and buckets; run once
 supabase/migrations/     one-off changes to the live project, run by hand in
                          the SQL Editor (schema.sql already includes them)
@@ -171,6 +173,18 @@ whose default is `localhost:3000`. Fix the Site URL and the
 `https://pfml.fun/**` entry and sign in again. Invite links aren't used up
 by a failed return, so the same link works once it's fixed.
 
+**Clean addresses.** No address on the site ends in `.html`: links go to
+`/career`, `/season1`, `/round?s=...&r=...`, `/profile?p=...`, and home is
+`/`. GitHub Pages serves each of those from the matching `.html` file,
+query strings included (measured on pfml.fun, 2026-09-22), so the files
+keep their names. An old `.html` address, from a bookmark, still loads, and
+the page tidies its own address bar (`history.replaceState`, keeping
+`?query` and `#hash`; `/index.html` becomes `/`). That runs first thing in
+`auth.js`, before sign-in reads or stores the address, and inline in the
+two standalone pages, `features.html` and `privacy.html`. A test fails if
+any page builds a link ending in `.html`. Python's plain `http.server`
+doesn't resolve clean paths; `scripts/serve.py` does, for local previews.
+
 ## Results by round, and the comments on them
 
 On every season page, directly under Standings, **Results by round**,
@@ -183,7 +197,7 @@ counts. Every round in the export is listed, including one that so far only
 has its prompt, which says so instead of showing results.
 
 Each card opens that round on its own full-width page,
-`round.html?s=season3&r=<round id>`, laid out like Music League's own round
+`round?s=season3&r=<round id>`, laid out like Music League's own round
 view: the prompt, the winner and the round playlist up top, previous/next
 round links, then a card per track in finishing order with its album art,
 place (shared places marked as ties), points and voter count, who submitted
@@ -397,7 +411,7 @@ To preview locally before publishing or pushing:
 
 ```bash
 python scripts/build.py
-cd site && python -m http.server 8000
+python scripts/serve.py
 ```
 
 then open `http://localhost:8000` and sign in as usual (localhost is on the
@@ -559,7 +573,7 @@ member's own vote comments, newest first, 40 at most. A comment id ends
 finds every comment they wrote, in every round; their own reactions are
 left out. Round and track names come from `lookup.json` (about 45KB,
 fetched the first time the inbox opens) rather than the ~1MB season files.
-Each item links to `round.html?s=...&r=...&c=<comment id>` (plus
+Each item links to `round?s=...&r=...&c=<comment id>` (plus
 `&thread=1` for a reply), which scrolls to that comment, marks it briefly
 and opens its replies.
 
@@ -573,7 +587,7 @@ by its own query, never by the sign-in lookup, so a database without it
 loses only the count; signing in and the list still work. The count
 refreshes on page load, and when the tab comes back after a minute away.
 
-**Profiles.** `profile.html?p=<competitor id>`, the signed-in member's own
+**Profiles.** `profile?p=<competitor id>`, the signed-in member's own
 without `?p`. Six Career tiles (Career Score, ranked with ties; total
 points; rounds won; top-3 rate, the share of their tracks that finished in
 a round's top three; tracks submitted; points given) sit two rows of three,

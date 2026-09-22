@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-09-22 (follow-up 7)
+
+- **No .html in any address.** Every link is clean (`/career`, `/season1`,
+  `/round?s=...`, `/profile?p=...`, `/` for home); GitHub Pages serves them
+  from the same files, query strings included (measured on pfml.fun). Old
+  `.html` bookmarks still work, and the page then tidies its own address
+  bar, keeping the query and any `#section`.
+- **`scripts/serve.py`** previews the site locally with clean addresses
+  (Python's plain `http.server` can't), replacing it in the README.
+
 ## 2026-09-22 (follow-up 6)
 
 - **Features page opens with a short summary** of the whole site (season

@@ -52,7 +52,7 @@
   function who(name, id) {
     id = id || profileIds[name];
     if (!id) return esc(name);
-    return '<a class="plink" href="profile.html?p=' + encodeURIComponent(id) + '">' + esc(name) + "</a>";
+    return '<a class="plink" href="profile?p=' + encodeURIComponent(id) + '">' + esc(name) + "</a>";
   }
   function plural(n, one, many) { return n === 1 ? one : (many || one + "s"); }
 
@@ -101,7 +101,7 @@
     nav.appendChild(seasonPicker(index, activeKey));
 
     var career = el("a", "season-tab");
-    career.href = "career.html";
+    career.href = "career";
     career.textContent = "All-Time";
     career.setAttribute("aria-current", String(activeKey === "career"));
     nav.appendChild(career);
@@ -133,7 +133,7 @@
     menu.hidden = true;
     menu.innerHTML = index.seasons.slice().reverse().map(function (s) {
       var live = s.key === index.currentSeason;
-      return '<a class="season-menu-item" href="' + esc(s.key) + '.html" aria-current="' + (s.key === activeKey) + '">' +
+      return '<a class="season-menu-item" href="' + esc(s.key) + '" aria-current="' + (s.key === activeKey) + '">' +
         (live ? pip : '<span class="pip-gap" aria-hidden="true"></span>') + "<span>" + esc(s.label) + "</span>" +
         (live ? '<small>In progress</small>' : "") + "</a>";
     }).join("");
@@ -215,7 +215,7 @@
 
   function seasonCard(s, isLive) {
     var a = el("a", "season-card" + (isLive ? " is-live" : ""));
-    a.href = s.key + ".html";
+    a.href = s.key;
 
     var nameHtml = '<div class="season-card-name-wrap"><span class="season-card-name">' + esc(s.label) + "</span>" +
       (isLive ? '<span class="live-badge"><span class="pip" aria-hidden="true"></span>Live</span>' : "") + "</div>";
@@ -259,7 +259,7 @@
   function careerCard(index) {
     var played = index.seasons.filter(function (s) { return s.roundCount > 0; }).length;
     var a = el("a", "season-card season-card-career");
-    a.href = "career.html";
+    a.href = "career";
     a.innerHTML =
       '<div class="season-card-top"><div class="season-card-name-wrap"><span class="season-card-name">All-Time</span></div>' +
       '<span class="season-card-arrow">&rarr;</span></div>' +
@@ -1895,7 +1895,7 @@
   }
 
 
-  /* ---- profile page (profile.html?p=<competitor id>; yours without ?p) ----
+  /* ---- profile page (profile?p=<competitor id>; yours without ?p) ----
      Totals and comment stats come from career.json, the rest (season
      finishes, best tracks, fans) from profiles.json, both built by
      scripts/build.py; the reaction tally is live from Supabase. */
@@ -1905,7 +1905,7 @@
     return n + (s[(v - 20) % 10] || s[v] || s[0]);
   }
 
-  function profileUrl(id) { return "profile.html?p=" + encodeURIComponent(id); }
+  function profileUrl(id) { return "profile?p=" + encodeURIComponent(id); }
 
   function avatarOf(id, name, cls) {
     return window.PFML && window.PFML.avatar ? window.PFML.avatar(id, name, cls) : "";
@@ -2000,7 +2000,7 @@
     seasons.forEach(function (s) {
       var row = el("div", "vrow" + (s.rank === 1 ? " is-leader" : ""));
       row.setAttribute("style", grid);
-      row.innerHTML = '<div class="vname"><a href="' + esc(s.key) + '.html">' + esc(s.label) + "</a></div>" +
+      row.innerHTML = '<div class="vname"><a href="' + esc(s.key) + '">' + esc(s.label) + "</a></div>" +
         "<div>" + (s.tied ? "T" : "") + ordinal(s.rank) + ' <small class="pf-of">of ' + s.field + "</small></div>" +
         '<div class="num"><b>' + s.points + '</b></div><div class="num">' + s.roundsWon + '</div><div class="num">' + s.podiums + "</div>";
       box.appendChild(row);
@@ -2016,7 +2016,7 @@
     var list = el("div", "rl");
     list.innerHTML = tracks.map(function (t) {
       var href = window.PFMLRounds ? window.PFMLRounds.roundUrl(t.seasonKey, t.roundId)
-        : "round.html?s=" + encodeURIComponent(t.seasonKey) + "&r=" + encodeURIComponent(t.roundId);
+        : "round?s=" + encodeURIComponent(t.seasonKey) + "&r=" + encodeURIComponent(t.roundId);
       var art = t.art ? '<img class="rl-art" src="' + esc(t.art) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
                       : '<span class="rl-art is-empty" aria-hidden="true">&#9835;</span>';
       return '<a class="rl-card" href="' + href + '">' + art +
@@ -2131,7 +2131,7 @@
     });
   }
 
-  /* ---- round page (round.html?s=<season key>&r=<round id>) ---- */
+  /* ---- round page (round?s=<season key>&r=<round id>) ---- */
 
   function initRound() {
     var params = new URLSearchParams(location.search);

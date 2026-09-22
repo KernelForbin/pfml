@@ -101,9 +101,7 @@ If not, it stays off.
 It's standalone on purpose: public, no sign-in, no `style.css`, no
 `app.js`, no data, nothing loaded but itself and its fonts. Its colour
 tokens are copied from `style.css`, so a palette change there updates them
-too. A local `python -m http.server` doesn't resolve the clean `features`
-and `privacy` links the way GitHub Pages does; open `features.html`
-directly when testing locally.
+too.
 
 ## Working agreement
 
@@ -259,9 +257,11 @@ which would rewrite `site/data/`. The browser caches `app.js` and friends betwee
 fix can look like it did nothing: refetch with `fetch(url, {cache:
 "reload"})`, or check `performance` entries, before trusting a
 before/after comparison.
-Python's `http.server` doesn't resolve `/features` to `features.html` the
-way GitHub Pages does; open the `.html` directly, or use a small handler
-that tries `.html`.
+Every link on the site is a clean address (`/career`, `/round?s=...`),
+never `.html` (README, Clean addresses); GitHub Pages resolves them, and a
+test fails if a page builds a `.html` link. Python's plain `http.server`
+doesn't resolve them, so serve local copies with `python scripts/serve.py`
+(or its `CleanUrlHandler` for a scratch folder), or every link 404s.
 
 ## Working style for this project
 

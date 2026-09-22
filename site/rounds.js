@@ -6,7 +6,7 @@
       bar under the leaderboard, one card per round (newest first) that
       links to that round's own page.
 
-   2. renderRoundPage(): round.html?s=<season key>&r=<round id>. The whole
+   2. renderRoundPage(): round?s=<season key>&r=<round id>. The whole
       round on its own full-width page, modelled on how Music League itself
       shows a finished round: a card per track with its album art, place,
       points and voter count, who submitted it, then every voter's points
@@ -122,7 +122,7 @@
   }
 
   function roundUrl(seasonKey, roundId) {
-    return "round.html?s=" + encodeURIComponent(seasonKey) + "&r=" + encodeURIComponent(roundId);
+    return "round?s=" + encodeURIComponent(seasonKey) + "&r=" + encodeURIComponent(roundId);
   }
 
   /* =====================================================================
@@ -265,7 +265,7 @@
   // text it replaces (.plink inherits colour and weight, no underline).
   function personLink(id, name) {
     if (!id) return "<span>" + esc(name) + "</span>";
-    return '<a class="plink" href="profile.html?p=' + encodeURIComponent(id) + '">' + esc(name) + "</a>";
+    return '<a class="plink" href="profile?p=' + encodeURIComponent(id) + '">' + esc(name) + "</a>";
   }
 
   // Every emoji beyond the 6 quick ones, for the "More" panel.
@@ -555,7 +555,7 @@
     var i = -1;
     for (var k = 0; k < d.rounds.length; k++) if (d.rounds[k].id === roundId) i = k;
     if (i === -1) {
-      page.innerHTML = '<section class="shell rp-head"><a class="rp-back" href="' + esc(d.key) + '.html">&larr; ' + esc(d.label) + "</a>" +
+      page.innerHTML = '<section class="shell rp-head"><a class="rp-back" href="' + esc(d.key) + '">&larr; ' + esc(d.label) + "</a>" +
         "<h1>Round not found</h1><p class=\"hero-line\">That round isn\u2019t in " + esc(d.label) + ". It may be from an older link.</p></section>";
       return;
     }
@@ -570,7 +570,7 @@
 
     page.innerHTML =
       '<section class="shell rp-head">' +
-        '<a class="rp-back" href="' + esc(d.key) + '.html#block-rounds">&larr; ' + esc(d.label) + "</a>" +
+        '<a class="rp-back" href="' + esc(d.key) + '#block-rounds">&larr; ' + esc(d.label) + "</a>" +
         roundJumpHtml(d, i) +
         '<p class="rp-kicker">Round ' + (i + 1) + " of " + d.rounds.length + (r.created ? " &middot; " + esc(dateOf(r.created)) : "") + "</p>" +
         "<h1>" + esc(r.name) + "</h1>" +

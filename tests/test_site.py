@@ -105,6 +105,72 @@ class FeaturesPageIsStandalone(unittest.TestCase):
         self.assertIn("./", hrefs)
 
 
+class CleanAddresses(unittest.TestCase):
+    """No address on the site shows ".html". GitHub Pages serves /career
+    from career.html, query strings included (measured 2026-09-22), so
+    links use the clean form, and a page reached at an old .html address
+    (a bookmark) tidies its own address bar."""
+
+    PAGES_JS = ["app.js", "rounds.js", "account.js", "auth.js"]
+    TIDY = 'location.pathname.replace(/\\.html$/i, "").replace(/\\/index$/i, "/") + location.search + location.hash'
+
+    def test_no_link_or_url_the_site_builds_ends_in_html(self):
+        # a ".html" right before a quote, ? or # is a link or URL being
+        # built; prose in comments ("career.html still loads") isn't
+        for name in self.PAGES_JS + [p.name for p in SITE.glob("*.html")]:
+            with self.subTest(name):
+                # (?<!\\) spares the tidy-up's own regex, /\.html$/
+                self.assertEqual(re.findall(r"(?<!\\)\.html(?=[\"'?#])", read(name)), [])
+
+    def test_every_page_tidies_an_old_html_address(self):
+        for name in ("auth.js", "features.html", "privacy.html"):
+            with self.subTest(name):
+                self.assertIn(self.TIDY, read(name))
+        # member pages all load auth.js; the tidy-up runs before sign-in
+        # reads or stores the address, and before the Supabase client
+        auth = read("auth.js")
+        self.assertLess(auth.index(self.TIDY), auth.index("stashInviteFromUrl();"))
+        self.assertLess(auth.index(self.TIDY), auth.index("createClient("))
+        for name in MEMBER_PAGES:
+            self.assertIn('<script src="auth.js"></script>', read(name), name)
+
+
+class LocalPreviewServer(unittest.TestCase):
+    """scripts/serve.py: clean links like /career work locally too."""
+
+    def test_clean_paths_serve_the_html_file_and_real_files_stay_as_they_are(self):
+        import threading
+        import urllib.request
+        from functools import partial
+        import http.server
+        sys_path = str(ROOT / "scripts")
+        import sys as _sys
+        if sys_path not in _sys.path:
+            _sys.path.insert(0, sys_path)
+        import serve
+        handler = partial(serve.CleanUrlHandler, directory=str(SITE))
+        handler.log_message = lambda *a: None
+        server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            base = f"http://127.0.0.1:{server.server_address[1]}"
+            def get(path):
+                with urllib.request.urlopen(base + path) as r:
+                    return r.status, r.read().decode("utf-8")
+            status, body = get("/career")
+            self.assertEqual(status, 200)
+            self.assertIn("<title>PFML - All-Time</title>", body)
+            status, body = get("/round?s=season1&r=x")
+            self.assertIn("<title>PFML - Round</title>", body, "query strings kept")
+            status, body = get("/career.html")
+            self.assertIn("<title>PFML - All-Time</title>", body, "old .html addresses still work")
+            status, body = get("/app.js")
+            self.assertIn("function renderNav", body)
+        finally:
+            server.shutdown()
+            server.server_close()
+
+
 class Linking(unittest.TestCase):
     def test_every_member_page_links_to_the_features_page(self):
         for name in MEMBER_PAGES:
@@ -416,7 +482,7 @@ class AccountCorner(unittest.TestCase):
         js = read("account.js")
         build = js_function(js, "function build(member)")
         menu = build.split('id="acctMenu"', 1)[1].split('id="acctInbox"', 1)[0]
-        self.assertIn('href="profile.html">My profile', menu)
+        self.assertIn('href="profile">My profile', menu)
         self.assertIn('id="acctSignOut">Sign out', menu)
         self.assertIn("PFML.signOut()", build)
         self.assertIn("avatar(member.competitorId, member.name)", build.split('id="acctMeBtn"', 1)[1].split("</button>", 1)[0],
@@ -620,14 +686,14 @@ class NamesLinkToProfiles(unittest.TestCase):
         self.assertIn("personLink(top[0].submitterId, top[0].submitterName)", page)
         self.assertIn("personLink(who.competitorId, memberName(r.user_id))", js_function(js, "function socialHtml(c)"))
         link = js_function(js, "function personLink(id, name)")
-        self.assertIn('\'<a class="plink" href="profile.html?p=\' + encodeURIComponent(id)', link)
+        self.assertIn('\'<a class="plink" href="profile?p=\' + encodeURIComponent(id)', link)
 
     def test_app_helper_links_known_names_and_leaves_others_plain(self):
         js = read("app.js")
         helper = js_function(js, "function who(name, id)")
         self.assertIn("id = id || profileIds[name]", helper)
         self.assertIn("if (!id) return esc(name);", helper)
-        self.assertIn('\'<a class="plink" href="profile.html?p=\' + encodeURIComponent(id)', helper)
+        self.assertIn('\'<a class="plink" href="profile?p=\' + encodeURIComponent(id)', helper)
         # every page type that shows names teaches it who's who first
         self.assertIn("knowPeople(d.competitors)", js_function(js, "function initSeason(key)"))
         self.assertIn("knowPeople(c.players)", js_function(js, "function initCareer()"))
