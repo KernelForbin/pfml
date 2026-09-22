@@ -508,7 +508,7 @@ class ProfilePage(unittest.TestCase):
 
     def test_career_names_link_to_profiles(self):
         standings = js_function(read("app.js"), "function renderCareerStandings(c)")
-        self.assertIn('href="profile.html?p=\' + encodeURIComponent(p.id)', standings)
+        self.assertIn("who(p.name, p.id)", standings)
 
 
 def phone_rules(css, selector):
@@ -607,6 +607,48 @@ class NamesLinkToProfiles(unittest.TestCase):
         self.assertIn("personLink(who.competitorId, memberName(r.user_id))", js_function(js, "function socialHtml(c)"))
         link = js_function(js, "function personLink(id, name)")
         self.assertIn('\'<a class="plink" href="profile.html?p=\' + encodeURIComponent(id)', link)
+
+    def test_app_helper_links_known_names_and_leaves_others_plain(self):
+        js = read("app.js")
+        helper = js_function(js, "function who(name, id)")
+        self.assertIn("id = id || profileIds[name]", helper)
+        self.assertIn("if (!id) return esc(name);", helper)
+        self.assertIn('\'<a class="plink" href="profile.html?p=\' + encodeURIComponent(id)', helper)
+        # every page type that shows names teaches it who's who first
+        self.assertIn("knowPeople(d.competitors)", js_function(js, "function initSeason(key)"))
+        self.assertIn("knowPeople(c.players)", js_function(js, "function initCareer()"))
+        self.assertIn("knowPeople(c.players)", js_function(js, "function initProfile()"))
+
+    # function -> a call that must be in it (one per kind of name spot)
+    SPOTS = {
+        "function tieLine(ties)": "return who(n);",
+        "function renderFocus(d)": "titleEl.innerHTML = who(nameOf(d, selected[0]), selected[0])",
+        "function renderFocusGroup(d, ids, host)": "who(r.name, r.id)",
+        "function renderFocusIndividual(d, id, host)": "who(fansOf[0].voterName, fansOf[0].voterId)",
+        "function renderHighlights(d)": "who(h.biggestFan.voterName) + \" &rarr; \" + who(h.biggestFan.submitterName)",
+        "function trackRow(s, pos, showRound, highlightSet)": "who(s.submitterName, s.submitterId)",
+        "function renderTaste(d)": "who(voter.name, voter.id)",
+        "function renderVoters(d)": "who(v.name, v.id)",
+        "function commentQuote(c, label)": "who(c.name)",
+        "function renderComments(d)": "who(summary.chattiest.name)",
+        "function renderCareerComments(c)": "who(s.mostTalkative.name)",
+        "function renderCareerHighlights(c)": "who(h.topScore.name)",
+    }
+
+    def test_names_link_across_season_and_all_time_pages(self):
+        js = read("app.js")
+        for sig, call in self.SPOTS.items():
+            with self.subTest(sig):
+                self.assertIn(call, js_function(js, sig))
+
+    def test_no_link_inside_a_tap_target(self):
+        # A Standings row is itself a button (tap = compare) and the
+        # collapsed bar folds the section: a link inside either fights the
+        # tap and reads badly to screen readers. The focus panel links instead.
+        js = read("app.js")
+        self.assertNotIn("who(", js_function(js, "function renderStandings(d)"))
+        self.assertNotIn("who(", js_function(js, "function renderStandingsSummary(d)"))
+        self.assertNotIn("who(", js_function(js, "function renderStandingsFilters(d)"))
 
     def test_links_look_like_the_text_they_replace(self):
         # Not obvious: same colour and no underline, even on hover, which

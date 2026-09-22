@@ -39,6 +39,21 @@
   }
 
   function empty(msg) { return el("div", "empty", esc(msg)); }
+
+  // A person's name as a quiet link to their profile (.plink: same colour
+  // and weight as the text around it). Most of the data only carries the
+  // name, so ids come from whatever the page loaded (knowPeople); names
+  // were checked to be unique across every season. Falls back to plain
+  // text for a name it can't place.
+  var profileIds = {};
+  function knowPeople(list) {
+    (list || []).forEach(function (p) { if (p && p.name && p.id && !profileIds[p.name]) profileIds[p.name] = p.id; });
+  }
+  function who(name, id) {
+    id = id || profileIds[name];
+    if (!id) return esc(name);
+    return '<a class="plink" href="profile.html?p=' + encodeURIComponent(id) + '">' + esc(name) + "</a>";
+  }
   function plural(n, one, many) { return n === 1 ? one : (many || one + "s"); }
 
   function fetchJSON(url) {
@@ -558,17 +573,17 @@
 
     var fansOf = tasteTo(d, id).slice().sort(function (a, b) { return b.index - a.index; });
     if (fansOf.length) {
-      g.appendChild(tile("Biggest fan", esc(fansOf[0].voterName),
+      g.appendChild(tile("Biggest fan", who(fansOf[0].voterName, fansOf[0].voterId),
         "sends " + fansOf[0].index + "&times; their baseline share of points to " + esc(name)));
       if (fansOf.length >= 2) {
         var cold = fansOf[fansOf.length - 1];
-        g.appendChild(tile("Hardest to win over", esc(cold.voterName),
+        g.appendChild(tile("Hardest to win over", who(cold.voterName, cold.voterId),
           "only " + cold.index + "&times; their baseline share"));
       }
     }
     var favorsOf = tasteFrom(d, id).slice().sort(function (a, b) { return b.index - a.index; });
     if (favorsOf.length) {
-      g.appendChild(tile("Favorite to vote for", esc(favorsOf[0].submitterName),
+      g.appendChild(tile("Favorite to vote for", who(favorsOf[0].submitterName, favorsOf[0].submitterId),
         esc(name) + " sends " + favorsOf[0].index + "&times; baseline their way"));
     }
 
@@ -596,14 +611,14 @@
     rows.forEach(function (r) {
       var row = el("div", "stand-row");
       if (!r.standing) {
-        row.innerHTML = '<div class="stand-rank">&mdash;</div><div><div class="stand-name">' + esc(r.name) +
+        row.innerHTML = '<div class="stand-rank">&mdash;</div><div><div class="stand-name">' + who(r.name, r.id) +
           '</div></div><div class="stand-score"><span>no submissions yet</span></div>';
       } else {
         var overallRank = r.standing.tied ? "T" + r.standing.rank : "#" + r.standing.rank;
         var pct = Math.max(3, Math.round((r.standing.points / max) * 100));
         row.innerHTML =
           '<div class="stand-rank">' + overallRank + "</div>" +
-          '<div><div class="stand-name">' + esc(r.name) + "</div>" +
+          '<div><div class="stand-name">' + who(r.name, r.id) + "</div>" +
           '<div class="bar"><i style="width:' + pct + '%"></i></div>' + dailyDoubleLine(r.standing) + "</div>" +
           '<div class="stand-score"><b>' + r.standing.points + "</b><span>" +
           r.standing.avgPerSubmission + " avg &middot; " + r.standing.roundsWon + " won &middot; " +
@@ -682,7 +697,7 @@
     var titleEl = $("focusTitle");
     var noteEl = $("focusNote");
     if (selected.length === 1) {
-      titleEl.textContent = nameOf(d, selected[0]);
+      titleEl.innerHTML = who(nameOf(d, selected[0]), selected[0]);
       noteEl.textContent = "Stats scoped to just this player.";
     } else {
       titleEl.textContent = "Comparing " + selected.length + " players";
@@ -720,7 +735,7 @@
   // says so. Long ties are cut to three names, with the rest on hover.
   function tieLine(ties) {
     if (!ties || !ties.length) return "";
-    var shown = ties.slice(0, 3).map(esc);
+    var shown = ties.slice(0, 3).map(function (n) { return who(n); });
     var more = ties.length - shown.length;
     var list = more > 0
       ? shown.join(", ") + " and " + more + " more"
@@ -756,13 +771,13 @@
 
     if (h.topTrack) {
       g.appendChild(tile("Highest-scoring track", extLink(trackLink(h.topTrack.spotifyId), h.topTrack.title),
-        esc(h.topTrack.artistText) + "<br>" + esc(h.topTrack.submitterName) + " &middot; " + h.topTrack.points +
+        esc(h.topTrack.artistText) + "<br>" + who(h.topTrack.submitterName) + " &middot; " + h.topTrack.points +
         " points &middot; " + esc(h.topTrack.roundName), false, h.topTrack.tiedWith));
     }
     if (h.divisiveTrack) {
       g.appendChild(tile("Most divisive track", extLink(trackLink(h.divisiveTrack.spotifyId), h.divisiveTrack.title),
         esc(h.divisiveTrack.artistText) + "<br>widest spread between voters who backed it (&sigma; " +
-        h.divisiveTrack.spread + "), from " + esc(h.divisiveTrack.submitterName), false, h.divisiveTrack.tiedWith));
+        h.divisiveTrack.spread + "), from " + who(h.divisiveTrack.submitterName), false, h.divisiveTrack.tiedWith));
     }
     if (h.closestRound) {
       g.appendChild(tile("Closest round", esc(h.closestRound.name),
@@ -770,26 +785,26 @@
     }
     if (h.blowoutRound) {
       g.appendChild(tile("Biggest blowout", esc(h.blowoutRound.name),
-        esc(h.blowoutRound.winner) + " won by " + h.blowoutRound.margin + " points with " + esc(h.blowoutRound.title), false, h.blowoutRound.tiedWith));
+        who(h.blowoutRound.winner) + " won by " + h.blowoutRound.margin + " points with " + esc(h.blowoutRound.title), false, h.blowoutRound.tiedWith));
     }
     if (h.biggestFan) {
-      g.appendChild(tile("Biggest fan", esc(h.biggestFan.voterName) + " &rarr; " + esc(h.biggestFan.submitterName),
+      g.appendChild(tile("Biggest fan", who(h.biggestFan.voterName) + " &rarr; " + who(h.biggestFan.submitterName),
         "sends " + h.biggestFan.index + "&times; their baseline share of points that way", false, h.biggestFan.tiedWith));
     }
     if (h.coldestShoulder) {
-      g.appendChild(tile("Coldest shoulder", esc(h.coldestShoulder.voterName) + " &rarr; " + esc(h.coldestShoulder.submitterName),
+      g.appendChild(tile("Coldest shoulder", who(h.coldestShoulder.voterName) + " &rarr; " + who(h.coldestShoulder.submitterName),
         "only " + h.coldestShoulder.index + "&times; their baseline share", false, h.coldestShoulder.tiedWith));
     }
     if (h.boldestVoter) {
-      g.appendChild(tile("Boldest voter", esc(h.boldestVoter.name),
+      g.appendChild(tile("Boldest voter", who(h.boldestVoter.name),
         "biggest single bet averages " + h.boldestVoter.avgTopBet + " points, spread over just " + h.boldestVoter.avgTracksBacked + " tracks a round", false, h.boldestVoter.tiedWith));
     }
     if (h.hedgiestVoter) {
-      g.appendChild(tile("Widest spreader", esc(h.hedgiestVoter.name),
+      g.appendChild(tile("Widest spreader", who(h.hedgiestVoter.name),
         "backs " + h.hedgiestVoter.avgTracksBacked + " tracks a round, top bet averages only " + h.hedgiestVoter.avgTopBet, false, h.hedgiestVoter.tiedWith));
     }
     if (h.bestTastemaker) {
-      g.appendChild(tile("Best read on the room", esc(h.bestTastemaker.name),
+      g.appendChild(tile("Best read on the room", who(h.bestTastemaker.name),
         "their top pick won the round " + Math.round(h.bestTastemaker.kingmakerRate * 100) + "% of the time (" +
         h.bestTastemaker.kingmakerHits + " of " + h.bestTastemaker.kingmakerRounds + ")", false, h.bestTastemaker.tiedWith));
     }
@@ -1061,7 +1076,7 @@
     var row = el("div", "trk" + (hl ? " trk-hl" : ""));
     var meta = artistLinks(s.artists, s.artistText);
     if (s.album) meta += " &middot; " + extLink(searchLink(s.album), s.album);
-    meta += " &middot; " + esc(s.submitterName);
+    meta += " &middot; " + who(s.submitterName, s.submitterId);
     if (showRound) meta += " &middot; " + esc(s.roundName);
     row.innerHTML =
       '<div class="trk-pos">' + pos + "</div>" +
@@ -1156,12 +1171,12 @@
     var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
 
     var head = "<thead><tr><th class=\"corner\">Voter &darr; / Submitter &rarr;</th>";
-    people.forEach(function (p) { head += "<th>" + esc(p.name) + "</th>"; });
+    people.forEach(function (p) { head += "<th>" + who(p.name, p.id) + "</th>"; });
     head += "</tr></thead>";
 
     var body = "<tbody>";
     people.forEach(function (voter) {
-      body += "<tr><th>" + esc(voter.name) + "</th>";
+      body += "<tr><th>" + who(voter.name, voter.id) + "</th>";
       people.forEach(function (sub) {
         if (voter.id === sub.id) { body += '<td class="nil">&mdash;</td>'; return; }
         var t = byKey[voter.id + "|" + sub.id];
@@ -1208,7 +1223,7 @@
       '<div class="vrow head"><div>Player</div><div class="num">Top bet</div><div class="num">Tracks backed</div><div class="num">Top pick won</div></div>');
     rows.forEach(function (v) {
       box.insertAdjacentHTML("beforeend",
-        '<div class="vrow"><div class="vname">' + esc(v.name) + "</div>" +
+        '<div class="vrow"><div class="vname">' + who(v.name, v.id) + "</div>" +
         '<div class="num">' + v.avgTopBet.toFixed(1) + "</div>" +
         '<div class="num">' + v.avgTracksBacked.toFixed(1) + "</div>" +
         '<div class="num">' + Math.round(v.kingmakerRate * 100) + "%</div></div>");
@@ -1234,7 +1249,7 @@
     box.innerHTML =
       '<p class="cmt-label">' + esc(label) + "</p>" +
       "<blockquote>" + esc(c.text) + "</blockquote>" +
-      '<p class="cmt-src">' + (c.name ? "<b>" + esc(c.name) + "</b> &middot; " : "") +
+      '<p class="cmt-src">' + (c.name ? "<b>" + who(c.name) + "</b> &middot; " : "") +
       meta.join(" &middot; ") + "</p>";
     return box;
   }
@@ -1271,41 +1286,41 @@
     if (!selected.length) {
       var g = el("div", "hl-grid");
       if (summary.chattiest) {
-        g.appendChild(tile("Most likely to say something", esc(summary.chattiest.name),
+        g.appendChild(tile("Most likely to say something", who(summary.chattiest.name),
           pct(summary.chattiest.rate) + " of their votes carry a comment", false, summary.chattiest.tiedWith));
       }
       if (summary.quietest) {
-        g.appendChild(tile("Least likely", esc(summary.quietest.name),
+        g.appendChild(tile("Least likely", who(summary.quietest.name),
           pct(summary.quietest.rate) + " &middot; " + summary.quietest.comments + " comments", false, summary.quietest.tiedWith));
       }
       if (summary.wordiest) {
-        g.appendChild(tile("Wordiest", esc(summary.wordiest.name),
+        g.appendChild(tile("Wordiest", who(summary.wordiest.name),
           summary.wordiest.meanWords + " words per comment on average", false, summary.wordiest.tiedWith));
       }
       if (summary.tersest) {
-        g.appendChild(tile("Tersest", esc(summary.tersest.name),
+        g.appendChild(tile("Tersest", who(summary.tersest.name),
           summary.tersest.meanWords + " words per comment on average", false, summary.tersest.tiedWith));
       }
       if (summary.loudest) {
-        g.appendChild(tile("Most SHOUTING", esc(summary.loudest.name),
+        g.appendChild(tile("Most SHOUTING", who(summary.loudest.name),
           pct(summary.loudest.rate) + " of their comments have an all-caps word", false, summary.loudest.tiedWith));
       }
       if (summary.richestVocab) {
-        g.appendChild(tile("Widest vocabulary", esc(summary.richestVocab.name),
+        g.appendChild(tile("Widest vocabulary", who(summary.richestVocab.name),
           summary.richestVocab.richness.toFixed(2) + " unique words per word, measured over " +
           summary.richestVocab.sampleWords + "-word samples", false, summary.richestVocab.tiedWith));
       }
       if (summary.mostZeroPoint) {
-        g.appendChild(tile("Most all-talk", esc(summary.mostZeroPoint.name),
+        g.appendChild(tile("Most all-talk", who(summary.mostZeroPoint.name),
           summary.mostZeroPoint.count + " comments awarding zero points", false, summary.mostZeroPoint.tiedWith));
       }
       if (summary.silentTreatment && summary.silentTreatment.comments === 0) {
         g.appendChild(tile("Silent treatment",
-          esc(summary.silentTreatment.voterName) + " &rarr; " + esc(summary.silentTreatment.submitterName),
+          who(summary.silentTreatment.voterName) + " &rarr; " + who(summary.silentTreatment.submitterName),
           "never commented on them in " + summary.silentTreatment.chances + " chances", false, summary.silentTreatment.tiedWith));
       } else if (summary.mostTalkedAt) {
         g.appendChild(tile("Most talked at",
-          esc(summary.mostTalkedAt.voterName) + " &rarr; " + esc(summary.mostTalkedAt.submitterName),
+          who(summary.mostTalkedAt.voterName) + " &rarr; " + who(summary.mostTalkedAt.submitterName),
           pct(summary.mostTalkedAt.rate) + " of their tracks got a comment", false, summary.mostTalkedAt.tiedWith));
       }
       host.appendChild(g);
@@ -1319,7 +1334,7 @@
       '<div class="num">!</div><div class="num">?</div><div class="num">CAPS</div></div>');
     rows.forEach(function (c) {
       box.insertAdjacentHTML("beforeend",
-        '<div class="crow"><div class="vname">' + esc(c.name) + "</div>" +
+        '<div class="crow"><div class="vname">' + who(c.name, c.id) + "</div>" +
         '<div class="num">' + c.comments + "</div>" +
         '<div class="num">' + pct(c.commentRate) + "</div>" +
         '<div class="num">' + c.meanWords + "</div>" +
@@ -1340,7 +1355,7 @@
         list.insertAdjacentHTML("beforeend",
           '<span class="cmt-word" title="' + esc(c.name) + " used it " + c.distinctiveWord.uses +
           " times, " + c.distinctiveWord.vsLeague + '&times; the league\'s rate">' +
-          esc(c.name) + ' <b>&ldquo;' + esc(c.distinctiveWord.word) + '&rdquo;</b> &times;' +
+          who(c.name, c.id) + ' <b>&ldquo;' + esc(c.distinctiveWord.word) + '&rdquo;</b> &times;' +
           c.distinctiveWord.uses + '</span>');
       });
       wbox.appendChild(list);
@@ -1385,7 +1400,7 @@
         '<div class="num">Of their subs</div></div>');
       notes.slice(0, 12).forEach(function (n) {
         nbox.insertAdjacentHTML("beforeend",
-          '<div class="nrow"><div class="vname">' + esc(n.name) + "</div>" +
+          '<div class="nrow"><div class="vname">' + who(n.name, n.id) + "</div>" +
           '<div class="num">' + n.notes + " of " + n.submissions + "</div>" +
           '<div class="num">' + pct(n.noteRate) + "</div></div>");
       });
@@ -1407,7 +1422,7 @@
           }).slice(0, 3);
           srow.insertAdjacentHTML("beforeend",
             '<span class="cmt-word" title="' + c.sentiment.labelled + ' comments labelled">' +
-            esc(c.name) + " <b>" + top.map(esc).join(", ") + "</b></span>");
+            who(c.name, c.id) + " <b>" + top.map(esc).join(", ") + "</b></span>");
         });
         sbox.appendChild(srow);
         host.appendChild(sbox);
@@ -1479,6 +1494,7 @@
       .then(function (res) {
         var index = res[0], d = res[1];
         seasonData = d;
+        knowPeople(d.competitors);
         selected = [];
         trendSelected = d.standings.map(function (p) { return p.id; });
         trendMode = "standing";
@@ -1536,38 +1552,38 @@
     // Two per row on a phone (.hl-pair): 8 awards, four even rows.
     var g = el("div", "hl-grid hl-pair");
     if (s.mostTalkative) {
-      g.appendChild(careerTile("Most talkative", esc(s.mostTalkative.name),
+      g.appendChild(careerTile("Most talkative", who(s.mostTalkative.name),
         pct(s.mostTalkative.rate) + " of their votes carry a comment &middot; " +
         s.mostTalkative.comments + " comments", s.mostTalkative.tiedWith));
     }
     if (s.mostTerse) {
-      g.appendChild(careerTile("Most terse", esc(s.mostTerse.name),
+      g.appendChild(careerTile("Most terse", who(s.mostTerse.name),
         s.mostTerse.meanWords + " words per comment across " + s.mostTerse.comments, s.mostTerse.tiedWith));
     }
     if (s.wordiest) {
-      g.appendChild(careerTile("Wordiest", esc(s.wordiest.name),
+      g.appendChild(careerTile("Wordiest", who(s.wordiest.name),
         s.wordiest.meanWords + " words per comment", s.wordiest.tiedWith));
     }
     if (s.quietest) {
-      g.appendChild(careerTile("Quietest", esc(s.quietest.name),
+      g.appendChild(careerTile("Quietest", who(s.quietest.name),
         pct(s.quietest.rate) + " of their votes carry a comment", s.quietest.tiedWith));
     }
     if (s.silentTreatment && s.silentTreatment.comments === 0) {
       g.appendChild(careerTile("Biggest silent treatment",
-        esc(s.silentTreatment.voterName) + " &rarr; " + esc(s.silentTreatment.submitterName),
+        who(s.silentTreatment.voterName) + " &rarr; " + who(s.silentTreatment.submitterName),
         "never once commented, across " + s.silentTreatment.chances + " chances to", s.silentTreatment.tiedWith));
     }
     if (s.loudest) {
-      g.appendChild(careerTile("Most SHOUTING", esc(s.loudest.name),
+      g.appendChild(careerTile("Most SHOUTING", who(s.loudest.name),
         pct(s.loudest.rate) + " of their comments have an all-caps word", s.loudest.tiedWith));
     }
     if (s.richestVocab) {
-      g.appendChild(careerTile("Widest vocabulary", esc(s.richestVocab.name),
+      g.appendChild(careerTile("Widest vocabulary", who(s.richestVocab.name),
         s.richestVocab.richness.toFixed(2) + " unique words per word over " +
         s.richestVocab.sampleWords + "-word samples", s.richestVocab.tiedWith));
     }
     if (s.mostSubmitterNotes) {
-      g.appendChild(careerTile("Most notes on their own picks", esc(s.mostSubmitterNotes.name),
+      g.appendChild(careerTile("Most notes on their own picks", who(s.mostSubmitterNotes.name),
         s.mostSubmitterNotes.notes + " of " + s.mostSubmitterNotes.submissions + " submissions", s.mostSubmitterNotes.tiedWith));
     }
     host.appendChild(g);
@@ -1580,7 +1596,7 @@
       '<div class="num">!</div><div class="num">?</div><div class="num">CAPS</div></div>');
     rows.forEach(function (p) {
       box.insertAdjacentHTML("beforeend",
-        '<div class="crow"><div class="vname">' + esc(p.name) + "</div>" +
+        '<div class="crow"><div class="vname">' + who(p.name, p.id) + "</div>" +
         '<div class="num">' + p.comments + "</div>" +
         '<div class="num">' + pct(p.commentRate) + "</div>" +
         '<div class="num">' + p.meanWords + "</div>" +
@@ -1605,7 +1621,7 @@
         list.insertAdjacentHTML("beforeend",
           '<span class="cmt-word" title="' + esc(p.name) + " used it " + p.distinctiveWord.uses +
           " times, " + p.distinctiveWord.vsLeague + '&times; the league\'s rate">' +
-          esc(p.name) + ' <b>&ldquo;' + esc(p.distinctiveWord.word) + '&rdquo;</b> &times;' +
+          who(p.name, p.id) + ' <b>&ldquo;' + esc(p.distinctiveWord.word) + '&rdquo;</b> &times;' +
           p.distinctiveWord.uses + '</span>');
       });
       wbox.appendChild(list);
@@ -1623,10 +1639,10 @@
   function renderCareerHighlights(c) {
     var h = c.highlights || {};
     var g = el("div", "hl-grid hl-pair");
-    if (h.topScore) g.appendChild(careerTile("Highest career score", esc(h.topScore.name), h.topScore.careerScore + " career score", h.topScore.tiedWith));
-    if (h.mostWins) g.appendChild(careerTile("Most rounds won", esc(h.mostWins.name), h.mostWins.roundsWon + " round wins", h.mostWins.tiedWith));
-    if (h.mostPodiums) g.appendChild(careerTile("Most podiums", esc(h.mostPodiums.name), h.mostPodiums.podiums + " top-3 finishes", h.mostPodiums.tiedWith));
-    if (h.bestSingleSeason) g.appendChild(careerTile("Best single season", esc(h.bestSingleSeason.name), h.bestSingleSeason.points + " points in " + esc(h.bestSingleSeason.season), h.bestSingleSeason.tiedWith));
+    if (h.topScore) g.appendChild(careerTile("Highest career score", who(h.topScore.name), h.topScore.careerScore + " career score", h.topScore.tiedWith));
+    if (h.mostWins) g.appendChild(careerTile("Most rounds won", who(h.mostWins.name), h.mostWins.roundsWon + " round wins", h.mostWins.tiedWith));
+    if (h.mostPodiums) g.appendChild(careerTile("Most podiums", who(h.mostPodiums.name), h.mostPodiums.podiums + " top-3 finishes", h.mostPodiums.tiedWith));
+    if (h.bestSingleSeason) g.appendChild(careerTile("Best single season", who(h.bestSingleSeason.name), h.bestSingleSeason.points + " points in " + esc(h.bestSingleSeason.season), h.bestSingleSeason.tiedWith));
     setBlock("highlights", g);
   }
 
@@ -1697,7 +1713,7 @@
     sorted.forEach(function (p, i) {
       var row = el("div", "vrow" + (i === 0 && careerSort.field === "careerScore" && careerSort.dir === "desc" ? " is-leader" : ""));
       row.setAttribute("style", gridStyle);
-      var rowHtml = '<div class="vname"><a href="profile.html?p=' + encodeURIComponent(p.id) + '">' + esc(p.name) + "</a></div>";
+      var rowHtml = '<div class="vname">' + who(p.name, p.id) + "</div>";
       c.seasons.forEach(function (s) {
         var pts = p.bySeason[s.key];
         rowHtml += '<div class="num">' + (pts == null ? "&ndash;" : pts) + "</div>";
@@ -1715,6 +1731,7 @@
       .then(function (res) {
         var index = res[0], c = res[1];
         careerData = c;
+        knowPeople(c.players);
         renderNav(index, "career");
         var line = c.seasons.length
           ? "Combined standings across " + c.seasons.length + " played " + plural(c.seasons.length, "season") + ": " +
@@ -1911,6 +1928,7 @@
       fetchJSON(DATA + "/profiles.json").catch(function () { return null; })
     ]).then(function (res) {
       var c = res[1], profiles = res[2];
+      knowPeople(c.players);
       renderNav(res[0], "profile");
       var p = c.players.filter(function (x) { return x.id === id; })[0];
       var prof = profiles && profiles.players[id];

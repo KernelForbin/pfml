@@ -532,8 +532,16 @@ on equal points), the three biggest fans (most points given to this
 player) and favourites (most points this player gave), all summed over
 every season, come from `profiles.json` (`build_profiles` in `build.py`).
 The count of reactions their comments have had is live from Supabase,
-leaving out any they left on their own. A dropdown switches player, and
-names on the Career standings link to profiles. If `profiles.json` hasn't
+leaving out any they left on their own. A dropdown switches player. Names link to profiles almost everywhere they
+appear, styled exactly like the text they replace (`.plink`):
+`personLink` in `rounds.js` on round pages, `who()` in `app.js` on season,
+All-Time and profile pages. Most season and career data carries names
+only, so `who()` resolves them through ids gathered from the page's own
+data (`knowPeople`); names were checked to be unique across all seasons
+(23 names, none shared), and an unknown name stays plain text. Not linked
+on purpose: Standings rows and the collapsed Standings bar (both are tap
+targets already; the focus panel's title links instead), buttons (filter
+and focus chips, trend legend) and cards that are links themselves. If `profiles.json` hasn't
 been published yet, the page shows what `career.json` has and hides the
 rest.
 

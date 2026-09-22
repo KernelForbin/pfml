@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-09-23 (follow-up 3)
+
+- **Names link to profiles almost everywhere**, looking exactly as before:
+  season highlights and comment awards (including "Tied with" lines), top
+  tracks, the taste table, the voting and comment tables, signature words,
+  quotes, the focus panel, and the All-Time highlights, awards and tables.
+  Standings rows and the collapsed Standings bar stay as they are (they're
+  tap targets already); tapping a row puts the name, as a link, at the top
+  of the focus panel.
+
 ## 2026-09-23 (follow-up 2)
 
 - **Top bar: Home | Season ▾ | All-Time.** One season button replaces a tab
