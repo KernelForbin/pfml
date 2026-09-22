@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-09-22 (follow-up 10): Daily Double checks, sentiment backup
+
+- **Daily Double file is checked before it's used.** Only an exact
+  `"accepted"` was applied, so `"Accepted"` or a missing decision dropped
+  the bonus without a word, and a missing field or a wrongly shaped file
+  crashed with a traceback. Now any decision other than `accepted` or
+  `rejected`, an accepted request without its round id, Spotify URI or
+  submitter id, or a file of the wrong shape stops the build with a
+  message naming the entry. The real Season 3 file passes, and the build
+  on the real data gives the same JSON and the same log as before.
+- **`publish.py` backs up `data/comment_sentiment.json`** (paid for per
+  labelling run) **and `data/track_art.json`** to the private exports
+  bucket, alongside the season exports, when they exist.
+
 ## 2026-09-22 (follow-up 9): deploy workflow
 
 - **Permissions:** the workflow is read-only by default; only the deploy

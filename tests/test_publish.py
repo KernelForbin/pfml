@@ -87,5 +87,34 @@ class AllPlayers(unittest.TestCase):
                                    {"competitor_id": "p2", "name": "Ben"}])
 
 
+class Backup(unittest.TestCase):
+    def run_publish(self):
+        uploads = []
+        with mock.patch.object(publish, "refresh_art"), \
+             mock.patch.object(publish.supa, "config"), \
+             mock.patch.object(publish.supa, "request"), \
+             mock.patch.object(publish.supa, "upload", side_effect=lambda b, n, d, t: uploads.append((b, n))), \
+             mock.patch("sys.argv", ["publish.py"]):
+            publish.main()
+        return [n for b, n in uploads if b == publish.EXPORT_BUCKET]
+
+    def test_paid_for_sentiment_labels_and_art_cache_are_backed_up(self):
+        with sandbox() as root, quiet():
+            make_season(root / "data" / "season1", [ROUND])
+            (root / "data" / "comment_sentiment.json").write_text('{"comments": {}}')
+            (root / "data" / "track_art.json").write_text("{}")
+            backed_up = self.run_publish()
+        self.assertIn("comment_sentiment.json", backed_up)
+        self.assertIn("track_art.json", backed_up)
+        self.assertIn("season1/votes.csv", backed_up)
+
+    def test_missing_local_files_are_simply_skipped(self):
+        with sandbox() as root, quiet():
+            make_season(root / "data" / "season1", [ROUND])
+            backed_up = self.run_publish()
+        self.assertNotIn("comment_sentiment.json", backed_up)
+        self.assertIn("season1/votes.csv", backed_up)
+
+
 if __name__ == "__main__":
     unittest.main()

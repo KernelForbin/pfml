@@ -14,8 +14,10 @@ What it does:
   2. uploads site/data/*.json to the private `league-data` bucket
   3. upserts every competitor into the `players` table, so invites can
      name them
-  4. backs up data/season*/ (CSVs + daily_doubles.json) to the private
-     `league-exports` bucket, so the only copy isn't on one laptop
+  4. backs up data/season*/ (CSVs + daily_doubles.json), and
+     data/comment_sentiment.json and data/track_art.json when present, to
+     the private `league-exports` bucket, so the only copy isn't on one
+     laptop
 
 Needs SUPABASE_URL and SUPABASE_SECRET_KEY in .env (see scripts/supa.py).
 Still stdlib-only.
@@ -56,6 +58,17 @@ def all_players():
 
 
 ART_CACHE = build.DATA_DIR / "track_art.json"
+
+
+def backup_files():
+    """What goes to the export bucket: every season folder's CSVs and JSON
+    (the exports, and Season 3's hand-kept daily_doubles.json), plus the
+    local-only files the build reads that would cost to rebuild: the
+    comment sentiment labels (paid for per run of enrich_comments.py) and
+    the album-art cache (hundreds of rate-limited Spotify lookups)."""
+    files = [p for f in season_folders() for p in sorted(f.iterdir()) if p.suffix in (".csv", ".json")]
+    files += [p for p in (build.SENTIMENT_PATH, ART_CACHE) if p.exists()]
+    return files
 
 
 class RateLimited(Exception):
@@ -128,8 +141,7 @@ def main():
     build.main()
 
     json_files = sorted(build.OUT_DIR.glob("*.json"))
-    exports = [p for f in season_folders() for p in sorted(f.iterdir())
-               if p.suffix in (".csv", ".json")]
+    exports = backup_files()
     players = all_players()
 
     if args.dry_run:

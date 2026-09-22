@@ -677,8 +677,14 @@ that scored 0 adds nothing, and the Daily Double is still used up.
 if two accepted requests from one person ever made it into the file, the
 earlier round counts and the later one is ignored with a printed reason.
 The build refuses to run, rather than quietly dropping a bonus, if the file
-is unreadable, if an accepted request doesn't match a real submission, or
-if two accepted requests point at the same track. A request whose
+is unreadable or the wrong shape (an object whose `requests` and
+`reviewedRounds` are lists of objects, each reviewed round with a
+`roundId`), if a request's `decision` isn't exactly `accepted` or
+`rejected` (so `"Accepted"` stops the build rather than being skipped), if
+an accepted request lacks its `roundId`, `spotifyUri` or `submitterId`, if
+an accepted request doesn't match a real submission, or if two accepted
+requests point at the same track. The message names the entry
+(`requests[2]`). A request whose
 submitter doesn't match the track's submitter is ignored with a warning.
 
 Seasons without a `daily_doubles.json` file (Seasons 1 and 2) don't use
@@ -874,9 +880,9 @@ the labels reach the site the way all data does: run the script, then
 `data/comment_sentiment.json`, and uploads. (An earlier version of this
 section said to commit the file; that predates the members-only setup.)
 Deleting the file breaks nothing: the next build just drops the
-sentiment stats. But it isn't backed up (`publish.py` backs up only the
-season exports), and getting the labels back means paying for another
-run. Sending the comments to the API sends every member's
+sentiment stats. `publish.py` backs it up to the private
+`league-exports` bucket with the season exports (as it does
+`track_art.json`), so a lost laptop doesn't mean paying to relabel. Sending the comments to the API sends every member's
 vote comments to Anthropic, so it's the league organizer's decision.
 
 ## Spotify links

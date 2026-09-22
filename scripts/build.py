@@ -293,11 +293,46 @@ def load_daily_doubles(folder):
             raw = json.load(f)
     except (json.JSONDecodeError, OSError) as e:
         raise SystemExit(f"{path}: unreadable ({e}). Fix it before building; it changes totals.")
+    check_daily_doubles(path, raw)
     requests = raw.get("requests", [])
     return {
-        "reviewed": {r["roundId"] for r in raw.get("reviewedRounds", []) if r.get("roundId")},
-        "accepted": [r for r in requests if r.get("decision") == "accepted"],
+        "reviewed": {r["roundId"] for r in raw.get("reviewedRounds", [])},
+        "accepted": [r for r in requests if r["decision"] == "accepted"],
     }
+
+
+DD_DECISIONS = ("accepted", "rejected")
+
+
+def check_daily_doubles(path, raw):
+    """Stops the build, naming the entry, on anything the scoring can't
+    trust. Only an exact "accepted" is applied, so a decision spelled
+    "Accepted" used to drop the bonus without a word; a missing field
+    crashed with a bare traceback instead."""
+    def stop(msg):
+        raise SystemExit(f"{path}: {msg}. Fix it before building; it changes totals.")
+
+    def text(entry, key):
+        return isinstance(entry.get(key), str) and entry[key].strip()
+
+    if not isinstance(raw, dict):
+        stop("expected an object with \"requests\" and \"reviewedRounds\"")
+    for key in ("requests", "reviewedRounds"):
+        if not isinstance(raw.get(key, []), list):
+            stop(f"\"{key}\" must be a list")
+    for i, r in enumerate(raw.get("reviewedRounds", [])):
+        if not isinstance(r, dict) or not text(r, "roundId"):
+            stop(f"reviewedRounds[{i}] needs a \"roundId\"")
+    for i, r in enumerate(raw.get("requests", [])):
+        if not isinstance(r, dict):
+            stop(f"requests[{i}] must be an object")
+        if r.get("decision") not in DD_DECISIONS:
+            stop(f"requests[{i}] has decision {r.get('decision')!r}; it must be exactly "
+                 f"\"accepted\" or \"rejected\"")
+        if r["decision"] == "accepted":
+            missing = [k for k in ("roundId", "spotifyUri", "submitterId") if not text(r, k)]
+            if missing:
+                stop(f"requests[{i}] is accepted but has no {', '.join(missing)}")
 
 
 def read_csv(path):

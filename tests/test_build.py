@@ -101,6 +101,34 @@ class Scoring(unittest.TestCase):
         with self.assertRaises(SystemExit):
             self.build([TIE_ROUND], daily_doubles="{not json")
 
+    def assert_stops(self, daily_doubles, says):
+        with self.assertRaises(SystemExit) as cm:
+            self.build([TIE_ROUND, SECOND_ROUND], daily_doubles=daily_doubles)
+        self.assertIn(says, str(cm.exception))
+
+    def test_a_misspelled_decision_stops_the_build(self):
+        # "Accepted" used to be skipped silently, dropping the bonus
+        for decision in ("Accepted", "accept", None):
+            req = dd_request("r2", "e", "p1", decision=decision)
+            self.assert_stops({"reviewedRounds": [], "requests": [req]}, "requests[0] has decision")
+
+    def test_an_accepted_request_missing_a_field_stops_the_build(self):
+        for field in ("roundId", "spotifyUri", "submitterId"):
+            req = dd_request("r2", "e", "p1")
+            del req[field]
+            self.assert_stops({"reviewedRounds": [], "requests": [req]}, f"has no {field}")
+
+    def test_a_badly_shaped_file_stops_the_build_with_a_message(self):
+        self.assert_stops([], "expected an object")
+        self.assert_stops({"requests": {}}, "\"requests\" must be a list")
+        self.assert_stops({"reviewedRounds": ["r1"]}, "reviewedRounds[0] needs a \"roundId\"")
+        self.assert_stops({"requests": ["r1"]}, "requests[0] must be an object")
+
+    def test_a_rejected_request_needs_no_track_details(self):
+        data = self.build([TIE_ROUND, SECOND_ROUND], daily_doubles={
+            "reviewedRounds": [{"roundId": "r1"}], "requests": [{"decision": "rejected", "reason": "second one"}]})
+        self.assertEqual(player(data, "p1")["points"], 6)
+
     def test_blowout_is_hidden_when_no_round_was_won_by_more_than_the_closest(self):
         self.assertNotIn("blowoutRound", self.build([TIE_ROUND])["highlights"])
 
