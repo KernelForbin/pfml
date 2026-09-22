@@ -155,6 +155,73 @@ class Main(unittest.TestCase):
                          {"number": 2, "name": "Round Two", "submissionCount": 2})
 
 
+class Profiles(unittest.TestCase):
+    """build_profiles(): the profile page's per-player extras."""
+
+    def seasons(self):
+        with sandbox() as root, quiet():
+            s1, _ = build.build_season(make_season(root / "data" / "season1", [TIE_ROUND, SECOND_ROUND]), "season1", "Season 1")
+            s2, _ = build.build_season(make_season(root / "data" / "season2", [SECOND_ROUND]), "season2", "Season 2")
+        return [s1, s2]
+
+    def test_fans_and_favorites_sum_points_across_seasons(self):
+        p = build.build_profiles(self.seasons())["players"]
+        # Ann got 2 (Ben, r1) + 1 (Cat, r1); r2 twice: Cat 2+2, Dan 1+1
+        self.assertEqual(p["p1"]["fans"], [{"id": "p3", "name": "Cat", "points": 5},
+                                           {"id": "p2", "name": "Ben", "points": 2},
+                                           {"id": "p4", "name": "Dan", "points": 2}])
+        # Dan's 0-point row on c is a comment, not a vote: not a favourite
+        self.assertEqual([f["id"] for f in p["p4"]["favorites"]], ["p2", "p1"])
+        self.assertEqual(p["p4"]["pointsGiven"], 6)
+
+    def test_points_given_and_received_balance(self):
+        p = build.build_profiles(self.seasons())["players"]
+        given = sum(x["pointsGiven"] for x in p.values())
+        received = sum(t["points"] for x in p.values() for t in x["bestTracks"])  # few enough tracks to all fit
+        self.assertEqual(given, received)
+
+    def test_best_tracks_highest_first_newest_first_on_a_tie(self):
+        p = build.build_profiles(self.seasons())["players"]
+        tracks = [(t["spotifyId"], t["points"], t["seasonKey"], t["roundNumber"]) for t in p["p1"]["bestTracks"]]
+        self.assertEqual(tracks, [("e", 3, "season2", 1), ("e", 3, "season1", 2), ("a", 3, "season1", 1)])
+
+    def test_each_season_finish_with_its_field_size(self):
+        p = build.build_profiles(self.seasons())["players"]
+        s = p["p2"]["seasons"]
+        self.assertEqual([(x["key"], x["rank"], x["tied"], x["field"]) for x in s],
+                         [("season1", 1, True, 4), ("season2", 1, True, 2)])   # standings list submitters only
+
+    def test_season_without_rounds_adds_nothing(self):
+        with sandbox() as root, quiet():
+            s1, _ = build.build_season(make_season(root / "data" / "season1", [TIE_ROUND]), "season1", "Season 1")
+            s2, _ = build.build_season(make_season(root / "data" / "season2", []), "season2", "Season 2")
+        p = build.build_profiles([s1, s2])["players"]
+        self.assertEqual([x["key"] for x in p["p1"]["seasons"]], ["season1"])
+
+
+class Lookup(unittest.TestCase):
+    def test_round_resolves_to_season_number_name_and_track_titles(self):
+        # The inbox gets only a comment id: "<round>|<spotify uri>|<voter>".
+        with sandbox() as root, quiet():
+            s1, _ = build.build_season(make_season(root / "data" / "season1", [TIE_ROUND, SECOND_ROUND]), "season1", "Season 1")
+        rounds = build.build_lookup([s1])["rounds"]
+        r2 = rounds["r2"]
+        self.assertEqual((r2["season"], r2["number"], r2["name"]), ("season1", 2, "Round Two"))
+        cid = song(s1, "c")["comments"][0]["id"]
+        round_id, track_uri, _voter = cid.split("|")
+        self.assertEqual(rounds[round_id]["tracks"][track_uri], "Song c")
+
+    def test_main_writes_profiles_and_lookup(self):
+        with sandbox() as root, quiet():
+            make_season(root / "data" / "season1", [TIE_ROUND])
+            build.main()
+            out = root / "site" / "data"
+            profiles = json.loads((out / "profiles.json").read_text(encoding="utf-8"))
+            lookup = json.loads((out / "lookup.json").read_text(encoding="utf-8"))
+        self.assertEqual(sorted(profiles["players"]), ["p1", "p2", "p3", "p4"])
+        self.assertIn("r1", lookup["rounds"])
+
+
 class Deterministic(unittest.TestCase):
     def test_same_output_under_different_hash_seeds(self):
         # A set of voter ids once leaked Python's per-process hash order into

@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 from support import ROOT
 
 SITE = ROOT / "site"
-MEMBER_PAGES = ["index.html", "career.html", "round.html", "season.template.html"]
+MEMBER_PAGES = ["index.html", "career.html", "round.html", "season.template.html", "profile.html"]
 FONT_HOSTS = {"fonts.googleapis.com", "fonts.gstatic.com"}
 
 
@@ -382,8 +382,149 @@ class VoterBands(unittest.TestCase):
         self.assertEqual(len(base), 1)
         self.assertRegex(base[0], r"linear-gradient\(90deg,\s*rgba\(158,\s*0,\s*196")
         self.assertRegex(base[0], r"margin:\s*0 -20px", "the band runs edge to edge, not inset by the card's padding")
-        self.assertIn("margin: 0 -16px", css.split("@media (max-width: 620px)")[-1].split(".rp-vote-head", 1)[1].split("}", 1)[0],
-                      "and edge to edge at phone widths too")
+        # each phone-width block runs to the first "}" at column 0
+        blocks = [b.split("\n}", 1)[0] for b in re.split(r"@media \(max-width: 620px\)\s*\{", css)[1:]]
+        phone = [r for b in blocks for r in re.findall(r"\.rp-vote-head\s*\{([^}]*)\}", b)]
+        self.assertTrue(phone, "the band is restated for phones")
+        self.assertIn("margin: 0 -16px", phone[0], "and edge to edge at phone widths too")
+
+
+def js_function(js, signature):
+    return js.split(signature, 1)[1].split("\n  }\n", 1)[0]
+
+
+class AccountCorner(unittest.TestCase):
+    """account.js: the header's inbox and initials menu, on every page."""
+
+    def test_every_member_page_loads_it_between_auth_and_the_page_code(self):
+        for name in MEMBER_PAGES:
+            srcs = [a.get("src") for a in Page(read(name)).find("script") if a.get("src")]
+            with self.subTest(name):
+                self.assertIn("account.js", srcs)
+                self.assertLess(srcs.index("auth.js"), srcs.index("account.js"))
+                self.assertLess(srcs.index("account.js"), srcs.index("app.js"))
+
+    def test_sign_out_and_my_profile_live_in_the_initials_menu(self):
+        js = read("account.js")
+        build = js_function(js, "function build(member)")
+        menu = build.split('id="acctMenu"', 1)[1].split('id="acctInbox"', 1)[0]
+        self.assertIn('href="profile.html">My profile', menu)
+        self.assertIn('id="acctSignOut">Sign out', menu)
+        self.assertIn("PFML.signOut()", build)
+        self.assertIn("avatar(member.competitorId, member.name)", build.split('id="acctMeBtn"', 1)[1].split("</button>", 1)[0],
+                      "the header shows the initials bubble, not the name")
+        self.assertTrue((SITE / "profile.html").exists())
+        # and nowhere else: the old name + "Sign out" link in auth.js is gone
+        auth = read("auth.js")
+        self.assertNotIn("whoami", auth)
+        self.assertNotIn("whoami", read("style.css"))
+
+    def test_initials_and_colour_match_the_round_page(self):
+        # The same person must look the same in the header, inbox and rounds.
+        def body(js):
+            return re.sub(r"\s+", " ", js_function(js, "function avatar(id, name")
+                          .split(") {", 1)[1].split("return", 1)[0])
+        self.assertEqual(body(read("account.js")), body(read("rounds.js")))
+
+    def test_reaction_names_match_the_round_page(self):
+        pattern = r"var LEGACY_REACT = (\{.*?\});"
+        self.assertEqual(re.search(pattern, read("account.js"), re.S).group(1),
+                         re.search(pattern, read("rounds.js"), re.S).group(1))
+
+    def test_inbox_asks_for_this_players_comments_and_not_their_own_reactions(self):
+        inbox = js_function(read("auth.js"), "inbox: function (competitorId, limit)")
+        self.assertIn('var suffix = "%|" + competitorId', inbox, "comment ids end |<voter id>")
+        self.assertEqual(inbox.count('.like("comment_id", suffix)'), 2)
+        self.assertEqual(inbox.count('.neq("user_id", uid)'), 2)
+
+    def test_seen_mark_is_read_apart_from_signing_in(self):
+        # If the migration hasn't run, a sign-in query naming inbox_seen_at
+        # would fail and lock every member out. Only the inbox may ask.
+        auth = read("auth.js")
+        self.assertNotIn("inbox_seen_at", js_function(auth, "function membership(userId)"))
+        self.assertIn('.select("inbox_seen_at")', auth)
+        self.assertIn('rpc("mark_inbox_seen")', auth)
+        self.assertIn("inboxSeenAt().catch(", read("account.js"), "a missing column costs the count, not the inbox")
+
+    def test_popovers_hide_despite_their_display_rules(self):
+        # The emoji search lesson: a class with its own display beats the
+        # hidden attribute unless [hidden] is restated for it.
+        css = read("style.css")
+        js = read("account.js")
+        toggled = set(re.findall(r'\$\("(\w+)"\)\.hidden =|(\w+)\.hidden =', js))
+        self.assertTrue(toggled, "account.js shows and hides its popovers with hidden")
+        for sel in (".acct-badge", ".acct-pop"):
+            with self.subTest(sel):
+                if any(re.search(r"(^|[\s;])display\s*:", b) for b in css_rules(css, sel)):
+                    self.assertTrue(any("display: none" in b for b in css_rules(css, sel + "[hidden]")),
+                                    f"{sel} sets display, so {sel}[hidden] must say display: none")
+        self.assertTrue(any("display" in b for b in css_rules(css, ".acct-pop")), "the popovers are flex boxes")
+
+
+class InboxLinks(unittest.TestCase):
+    def test_inbox_links_name_the_comment_and_open_replies(self):
+        item = js_function(read("account.js"), "function itemHtml(item, ctx, fresh)")
+        self.assertIn('"&c=" + encodeURIComponent(item.commentId)', item)
+        self.assertIn('item.kind === "reply" ? "&thread=1"', item)
+
+    def test_round_page_scrolls_to_that_comment_after_each_render(self):
+        js = read("rounds.js")
+        page = js_function(js, "function renderRoundPage(d, roundId)")
+        self.assertIn('params.get("c")', page)
+        self.assertIn('params.get("thread") === "1"', page)
+        self.assertEqual(page.count("showTarget(target)"), 2, "again after the member layer changes the heights")
+        self.assertIn('behavior: "instant"', js_function(js, "function showTarget(id)"))
+
+
+class ProfilePage(unittest.TestCase):
+    def test_boot_routes_the_profile_page(self):
+        self.assertIn('data-page="profile"', read("profile.html"))
+        self.assertIn('page === "profile"', read("app.js"))
+
+    def test_every_element_the_code_fills_exists_on_the_page(self):
+        js = read("app.js")
+        code = js.split("/* ---- profile page", 1)[1].split("/* ---- round page", 1)[0]
+        ids = set(re.findall(r'\$\("(\w+)"\)', code)) | set(re.findall(r'setBlock\("(\w+)"', code))
+        ids |= {i for group in re.findall(r"\[([^\]]*)\]\.forEach", code) for i in re.findall(r'"([\w-]+)"', group)}
+        ids -= {"pfPick", "pfReacts"}   # created by the code itself
+        page = read("profile.html")
+        self.assertTrue(ids)
+        for i in sorted(ids):
+            self.assertIn(f'id="{i}"', page, i)
+
+    def test_profile_defaults_to_the_signed_in_member(self):
+        init = js_function(read("app.js"), "function initProfile()")
+        self.assertIn('get("p") || myId', init)
+
+    def test_career_names_link_to_profiles(self):
+        standings = js_function(read("app.js"), "function renderCareerStandings(c)")
+        self.assertIn('href="profile.html?p=\' + encodeURIComponent(p.id)', standings)
+
+
+class InboxSchema(unittest.TestCase):
+    """schema.sql (new projects) and the migration (the live one) must add
+    the same column and function."""
+
+    def migration(self):
+        return read_root("supabase/migrations/2026-09-23_inbox_seen.sql")
+
+    def test_both_add_the_seen_column(self):
+        for name, sql in (("schema", read_root("supabase/schema.sql")), ("migration", self.migration())):
+            with self.subTest(name):
+                self.assertIn("alter table public.members add column if not exists inbox_seen_at timestamptz", sql)
+
+    def test_mark_seen_only_touches_the_callers_own_row(self):
+        fn = re.compile(r"create or replace function public\.mark_inbox_seen\(\).*?\$\$;", re.S)
+        schema_fn = fn.search(read_root("supabase/schema.sql")).group(0)
+        self.assertEqual(schema_fn, fn.search(self.migration()).group(0))
+        self.assertIn("security definer set search_path = public", schema_fn)
+        self.assertIn("set inbox_seen_at = now() where user_id = auth.uid()", schema_fn)
+        for sql in (read_root("supabase/schema.sql"), self.migration()):
+            self.assertIn("revoke all on function public.mark_inbox_seen() from public, anon;", sql)
+
+    def test_members_still_has_no_update_policy(self):
+        # A member able to update their own row could make themselves admin.
+        self.assertNotRegex(read_root("supabase/schema.sql"), r"on public\.members\s+for update")
 
 
 class ReactionsSchema(unittest.TestCase):
@@ -402,7 +543,7 @@ class ReactionsSchema(unittest.TestCase):
         self.constraint_of(sql)
 
     def test_migration_widens_the_same_column_the_same_way(self):
-        migrations = sorted((ROOT / "supabase" / "migrations").glob("*.sql"))
+        migrations = sorted((ROOT / "supabase" / "migrations").glob("*widen_comment_reactions.sql"))
         self.assertTrue(migrations, "expected a migration widening comment_reactions.reaction")
         migration = migrations[-1].read_text(encoding="utf-8")
         self.assertIn("comment_reactions", migration)
@@ -413,7 +554,7 @@ class ReactionsSchema(unittest.TestCase):
         # An inline `check (...)` gets an auto-generated name; hardcoding a
         # guess risks silently leaving the old, restrictive constraint in
         # place if the guess is wrong.
-        migrations = sorted((ROOT / "supabase" / "migrations").glob("*.sql"))
+        migrations = sorted((ROOT / "supabase" / "migrations").glob("*widen_comment_reactions.sql"))
         migration = migrations[-1].read_text(encoding="utf-8")
         self.assertIn("pg_constraint", migration)
         self.assertIn("drop constraint", migration.lower())

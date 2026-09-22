@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-09-23
+
+- **Inbox.** A tray icon at the top right of every members-only page
+  lists reactions and replies other members leave on your vote comments,
+  with a count of what's new since you last opened it. Each item opens the
+  round page scrolled to that comment (replies open for a reply). "Seen"
+  is stored in Supabase (`members.inbox_seen_at`, set only through
+  `mark_inbox_seen()`), so it carries across devices; needs
+  `supabase/migrations/2026-09-23_inbox_seen.sql`. Without it the list
+  still works, just with no count: the column is never read by sign-in.
+- **Account menu.** Your name and Sign out in the top bar are replaced by
+  your initials bubble (as on the round pages), opening My profile and
+  Sign out. New `site/account.js`, loaded by every members-only page.
+- **Profiles** (`profile.html`). Career Score and rank, totals, each
+  season's finish, five best tracks, biggest fans and favourites, comment
+  stats and longest comment, and reactions received. Career standings
+  names link to them; a dropdown switches player.
+- **Build: `profiles.json` and `lookup.json`.** Per-player extras for
+  profiles, and a round-to-season/track index for the inbox (the season
+  files are ~1MB each; these are ~50KB). Both published by `publish.py`
+  like the rest.
+
 ## 2026-09-22 (follow-up 3)
 
 - **Emoji search didn't filter at all.** It set `hidden` on non-matching

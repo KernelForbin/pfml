@@ -1268,6 +1268,86 @@ def build_career(season_datas, raw_seasons=None):
     }
 
 
+PROFILE_TOP_TRACKS = 5
+PROFILE_TOP_PEOPLE = 3
+
+
+def build_profiles(season_datas):
+    """Per-player extras for the profile page (profile.html), keyed by
+    competitor id: each season's finish, their highest-scoring tracks, who
+    gave them the most points and who they gave the most. Totals, Career
+    Score and comment stats are already in career.json; the page reads both.
+    Everything here is summed from the season data rather than from the raw
+    CSVs, so it agrees with what the season pages show."""
+    profiles = {}
+
+    def profile(pid, name):
+        return profiles.setdefault(pid, {"id": pid, "name": name, "seasons": [], "tracks": [],
+                                         "_fans": {}, "_favorites": {}, "pointsGiven": 0})
+
+    for d in season_datas:
+        # (a season with no rounds has no standings or songs: adds nothing)
+        names = {c["id"]: c["name"] for c in d["competitors"]}
+        field = len(d["standings"])
+        for p in d["standings"]:
+            profile(p["id"], p["name"])["seasons"].append({
+                "key": d["key"], "label": d["label"], "rank": p["rank"], "tied": p["tied"], "field": field,
+                "points": p["points"], "roundsWon": p["roundsWon"], "podiums": p["podiums"],
+                "submissions": p["submissions"],
+            })
+        for n, r in enumerate(d["rounds"], 1):
+            for s in r["songs"]:
+                sub = profile(s["submitterId"], s["submitterName"])
+                sub["tracks"].append({
+                    "title": s["title"], "artistText": s["artistText"], "spotifyId": s["spotifyId"],
+                    "art": s.get("art"), "points": s["points"], "place": s["place"],
+                    "roundId": r["id"], "roundName": r["name"], "roundNumber": n,
+                    "seasonKey": d["key"], "seasonLabel": d["label"],
+                })
+                for voter, pts in s["votes"]:
+                    if pts <= 0:
+                        continue
+                    sub["_fans"][voter] = sub["_fans"].get(voter, 0) + pts
+                    v = profile(voter, names.get(voter, "Unknown"))
+                    v["_favorites"][s["submitterId"]] = v["_favorites"].get(s["submitterId"], 0) + pts
+                    v["pointsGiven"] += pts
+
+    def top_people(totals):
+        ranked = sorted(totals.items(), key=lambda kv: (-kv[1], profiles[kv[0]]["name"] if kv[0] in profiles else kv[0]))
+        return [{"id": pid, "name": profiles[pid]["name"] if pid in profiles else "Unknown", "points": pts}
+                for pid, pts in ranked[:PROFILE_TOP_PEOPLE]]
+
+    out = {}
+    for pid, p in profiles.items():
+        # newest season first within equal points, so a recent hit isn't
+        # buried under an older one on the same score
+        order = {d["key"]: i for i, d in enumerate(season_datas)}
+        tracks = sorted(p["tracks"], key=lambda t: (-t["points"], -order[t["seasonKey"]], -t["roundNumber"], t["title"]))
+        out[pid] = {
+            "id": pid, "name": p["name"], "seasons": p["seasons"],
+            "bestTracks": tracks[:PROFILE_TOP_TRACKS],
+            "fans": top_people(p["_fans"]),
+            "favorites": top_people(p["_favorites"]),
+            "pointsGiven": p["pointsGiven"],
+        }
+    return {"players": dict(sorted(out.items()))}
+
+
+def build_lookup(season_datas):
+    """Round id -> where it lives and what's in it, for the header's inbox:
+    an inbox item only has a comment id ("<round>|<spotify uri>|<voter>"),
+    and the season files are ~1MB each, too much to fetch just to name the
+    round and track a reaction was on. This is a few tens of KB."""
+    rounds = {}
+    for d in season_datas:
+        for n, r in enumerate(d["rounds"], 1):
+            rounds[r["id"]] = {
+                "season": d["key"], "seasonLabel": d["label"], "number": n, "name": r["name"],
+                "tracks": {"spotify:track:" + s["spotifyId"]: s["title"] for s in r["songs"] if s["spotifyId"]},
+            }
+    return {"rounds": rounds}
+
+
 def main():
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     folders = sorted(
@@ -1340,6 +1420,14 @@ def main():
     with open(OUT_DIR / "career.json", "w", encoding="utf-8") as f:
         json.dump(career, f, ensure_ascii=False, separators=(",", ":"))
     print(f"career.json: {len(career['players'])} players across {career['totalSeasons']} played seasons")
+
+    profiles = build_profiles(season_datas)
+    with open(OUT_DIR / "profiles.json", "w", encoding="utf-8") as f:
+        json.dump(profiles, f, ensure_ascii=False, separators=(",", ":"))
+    lookup = build_lookup(season_datas)
+    with open(OUT_DIR / "lookup.json", "w", encoding="utf-8") as f:
+        json.dump(lookup, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"profiles.json: {len(profiles['players'])} players; lookup.json: {len(lookup['rounds'])} rounds")
 
 
 if __name__ == "__main__":

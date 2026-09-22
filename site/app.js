@@ -4,11 +4,12 @@
    every Spotify link is a plain open.spotify.com URL built from IDs
    already present in the export.
 
-   Two page types share this file:
-     - home page   (<body data-page="home">)   -> season cards + playlists
-     - season page (<body data-page="season" data-season-key="seasonN">)
-                                                 -> full season dashboard
-   Both render a season nav in the top bar from data/index.json. */
+   Page types sharing this file:
+     - home page    (<body data-page="home">)   -> season cards + playlists
+     - season page  (<body data-page="season" data-season-key="seasonN">)
+                                                  -> full season dashboard
+     - career, round and profile pages (data-page="career" | "round" | "profile")
+   All render a season nav in the top bar from data/index.json. */
 
 (function () {
   "use strict";
@@ -1662,7 +1663,7 @@
     sorted.forEach(function (p, i) {
       var row = el("div", "vrow" + (i === 0 && careerSort.field === "careerScore" && careerSort.dir === "desc" ? " is-leader" : ""));
       row.setAttribute("style", gridStyle);
-      var rowHtml = '<div class="vname">' + esc(p.name) + "</div>";
+      var rowHtml = '<div class="vname"><a href="profile.html?p=' + encodeURIComponent(p.id) + '">' + esc(p.name) + "</a></div>";
       c.seasons.forEach(function (s) {
         var pts = p.bySeason[s.key];
         rowHtml += '<div class="num">' + (pts == null ? "&ndash;" : pts) + "</div>";
@@ -1705,6 +1706,202 @@
   }
 
 
+  /* ---- profile page (profile.html?p=<competitor id>; yours without ?p) ----
+     Totals and comment stats come from career.json, the rest (season
+     finishes, best tracks, fans) from profiles.json, both built by
+     scripts/build.py; the reaction tally is live from Supabase. */
+
+  function ordinal(n) {
+    var s = ["th", "st", "nd", "rd"], v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+
+  function profileUrl(id) { return "profile.html?p=" + encodeURIComponent(id); }
+
+  function avatarOf(id, name, cls) {
+    return window.PFML && window.PFML.avatar ? window.PFML.avatar(id, name, cls) : "";
+  }
+
+  // Career Score rank with ties, the way Standings shares places.
+  function careerRank(players, p) {
+    var above = players.filter(function (x) { return x.careerScore > p.careerScore; }).length;
+    var tied = players.filter(function (x) { return x.careerScore === p.careerScore; }).length > 1;
+    return { rank: above + 1, tied: tied };
+  }
+
+  function renderProfileSwitch(c, id, myId) {
+    var host = $("pfSwitch");
+    if (!host) return;
+    var people = c.players.slice().sort(function (a, b) { return a.name.localeCompare(b.name); });
+    host.innerHTML = '<label class="cm-sr" for="pfPick">Show another player</label>' +
+      '<select id="pfPick" class="rp-jump-select">' + people.map(function (p) {
+        return '<option value="' + esc(p.id) + '"' + (p.id === id ? " selected" : "") + ">" +
+          esc(p.name) + (p.id === myId ? " (you)" : "") + "</option>";
+      }).join("") + "</select>";
+    $("pfPick").addEventListener("change", function () {
+      var v = $("pfPick").value;
+      if (v && v !== id) location.href = profileUrl(v);
+    });
+  }
+
+  function renderProfileCareer(c, p, prof) {
+    var g = el("div", "hl-grid");
+    var r = careerRank(c.players, p);
+    g.appendChild(careerTile("Career Score", String(p.careerScore),
+      (r.tied ? "Tied " : "") + ordinal(r.rank) + " of " + c.players.length + " all-time"));
+    g.appendChild(careerTile("Total points", String(p.totalPoints),
+      p.seasonsPlayed + " " + plural(p.seasonsPlayed, "season") + ", " + p.avgPointsPerSeason + " a season"));
+    g.appendChild(careerTile("Rounds won", String(p.roundsWon), p.podiums + " top-3 " + plural(p.podiums, "finish", "finishes")));
+    g.appendChild(careerTile("Tracks submitted", String(p.submissions),
+      p.submissions ? (Math.round(p.totalPoints / p.submissions * 10) / 10) + " points a track" : ""));
+    if (prof) g.appendChild(careerTile("Points given", String(prof.pointsGiven), "to other players’ tracks"));
+    setBlock("pfCareer", g);
+  }
+
+  function renderProfileSeasons(prof) {
+    var host = $("pfSeasons");
+    host.innerHTML = "";
+    var seasons = (prof && prof.seasons) || [];
+    if (!seasons.length) { host.appendChild(empty("No finished rounds yet.")); return; }
+    var grid = "grid-template-columns:1.4fr 1.2fr repeat(3,1fr);";
+    var box = el("div", "framed career-table pf-seasons");
+    var head = el("div", "vrow head");
+    head.setAttribute("style", grid);
+    head.innerHTML = "<div>Season</div><div>Finish</div><div class=\"num\">Points</div><div class=\"num\">Won</div><div class=\"num\">Top-3</div>";
+    box.appendChild(head);
+    seasons.forEach(function (s) {
+      var row = el("div", "vrow" + (s.rank === 1 ? " is-leader" : ""));
+      row.setAttribute("style", grid);
+      row.innerHTML = '<div class="vname"><a href="' + esc(s.key) + '.html">' + esc(s.label) + "</a></div>" +
+        "<div>" + (s.tied ? "T" : "") + ordinal(s.rank) + ' <small class="pf-of">of ' + s.field + "</small></div>" +
+        '<div class="num"><b>' + s.points + '</b></div><div class="num">' + s.roundsWon + '</div><div class="num">' + s.podiums + "</div>";
+      box.appendChild(row);
+    });
+    host.appendChild(box);
+  }
+
+  function renderProfileTracks(prof) {
+    var host = $("pfTracks");
+    host.innerHTML = "";
+    var tracks = (prof && prof.bestTracks) || [];
+    if (!tracks.length) { host.appendChild(empty("No tracks submitted yet.")); return; }
+    var list = el("div", "rl");
+    list.innerHTML = tracks.map(function (t) {
+      var href = window.PFMLRounds ? window.PFMLRounds.roundUrl(t.seasonKey, t.roundId)
+        : "round.html?s=" + encodeURIComponent(t.seasonKey) + "&r=" + encodeURIComponent(t.roundId);
+      var art = t.art ? '<img class="rl-art" src="' + esc(t.art) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+                      : '<span class="rl-art is-empty" aria-hidden="true">&#9835;</span>';
+      return '<a class="rl-card" href="' + href + '">' + art +
+        '<span class="rl-text"><span class="rl-num">' + esc(t.seasonLabel) + " &middot; Round " + t.roundNumber + " &middot; " + esc(t.roundName) + "</span>" +
+        '<span class="rl-name">' + esc(t.title) + "</span>" +
+        '<span class="rl-sub">' + esc(t.artistText) + "</span>" +
+        '<span class="rl-counts">' + t.points + " points" + (t.place ? " &middot; " + ordinal(t.place) + " place" : "") + "</span>" +
+        '</span><span class="rl-go" aria-hidden="true">&rarr;</span></a>';
+    }).join("");
+    host.appendChild(list);
+  }
+
+  function peopleList(title, people, note) {
+    var col = el("div", "pf-people");
+    col.innerHTML = "<h3>" + esc(title) + "</h3>" + (people.length ? "<ol>" + people.map(function (x) {
+      return '<li><a href="' + profileUrl(x.id) + '">' + avatarOf(x.id, x.name) + "<span>" + esc(x.name) + "</span></a>" +
+        "<b>" + x.points + " <small>pts</small></b></li>";
+    }).join("") + "</ol>" : '<p class="pf-none">' + esc(note) + "</p>");
+    return col;
+  }
+
+  function renderProfileFans(prof, name) {
+    var host = $("pfFans");
+    host.innerHTML = "";
+    var wrap = el("div", "pf-fans");
+    wrap.appendChild(peopleList("Biggest fans", (prof && prof.fans) || [], "Nobody has voted for " + name + " yet."));
+    wrap.appendChild(peopleList("Their favourites", (prof && prof.favorites) || [], name + " hasn’t voted yet."));
+    host.appendChild(wrap);
+  }
+
+  function renderProfileComments(cm, id) {
+    var host = $("pfComments");
+    host.innerHTML = "";
+    if (!cm || !cm.comments) { host.appendChild(empty("No vote comments yet.")); return; }
+    var g = el("div", "hl-grid");
+    g.appendChild(careerTile("Comments left", String(cm.comments),
+      cm.commentRate != null ? "on " + pct(cm.commentRate) + " of their votes" : ""));
+    g.appendChild(careerTile("Average length", cm.meanWords + " words", "median " + cm.medianWords));
+    if (cm.distinctiveWord) {
+      g.appendChild(careerTile("Signature word", "“" + esc(cm.distinctiveWord.word) + "”",
+        "used " + cm.distinctiveWord.uses + " times, " + cm.distinctiveWord.vsLeague + "× the league’s rate"));
+    }
+    var reacts = careerTile("Reactions on their comments", "&hellip;", "");
+    reacts.id = "pfReacts";
+    g.appendChild(reacts);
+    host.appendChild(g);
+    if (cm.longest) host.appendChild(commentQuote(cm.longest, "Longest comment"));
+    fillProfileReactions(id);
+  }
+
+  // Live from Supabase, leaving out any they left on their own comments.
+  function fillProfileReactions(id) {
+    var tile = $("pfReacts");
+    var api = window.PFML && window.PFML.api;
+    if (!tile || !api || !api.reactionsOn) { if (tile) tile.hidden = true; return; }
+    Promise.all([api.reactionsOn(id), api.people()]).then(function (res) {
+      var counts = {}, total = 0;
+      res[0].forEach(function (r) {
+        var who = res[1][r.user_id];
+        if (who && who.competitorId === id) return;
+        counts[r.reaction] = (counts[r.reaction] || 0) + 1;
+        total++;
+      });
+      var top = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a] || (a < b ? -1 : 1); }).slice(0, 5);
+      var glyph = window.PFML.reactionGlyph || function (k) { return k; };
+      tile.querySelector(".hl-value").textContent = String(total);
+      var meta = top.map(function (k) { return glyph(k) + " " + counts[k]; }).join("  ");
+      tile.insertAdjacentHTML("beforeend", '<div class="hl-meta pf-reacts">' + esc(meta || "none yet") + "</div>");
+    }).catch(function () { tile.hidden = true; });
+  }
+
+  function initProfile() {
+    var me = window.PFML && window.PFML.member;
+    var myId = me ? me.competitorId : null;
+    var id = new URLSearchParams(location.search).get("p") || myId || "";
+    Promise.all([
+      fetchJSON(DATA + "/index.json"),
+      fetchJSON(DATA + "/career.json"),
+      // null if not published yet: the page still shows what career.json has
+      fetchJSON(DATA + "/profiles.json").catch(function () { return null; })
+    ]).then(function (res) {
+      var c = res[1], profiles = res[2];
+      renderNav(res[0], "profile");
+      var p = c.players.filter(function (x) { return x.id === id; })[0];
+      var prof = profiles && profiles.players[id];
+      var cm = (c.commenters || []).filter(function (x) { return x.id === id; })[0];
+      renderProfileSwitch(c, id, myId);
+      if (!p) {
+        $("pfId").innerHTML = "<h1>Player not found</h1>";
+        $("heroLine").textContent = "That player isn’t in any finished season. Pick someone from the list.";
+        Array.prototype.forEach.call(document.querySelectorAll("main .block"), function (s) { s.hidden = true; });
+        return;
+      }
+      document.title = "PFML - " + p.name;
+      $("pfId").innerHTML = avatarOf(p.id, p.name, "pf-av") + "<h1>" + esc(p.name) + "</h1>";
+      var r = careerRank(c.players, p);
+      $("heroLine").textContent = (p.id === myId ? "Your profile. " : "") +
+        (r.tied ? "Tied " : "") + ordinal(r.rank) + " of " + c.players.length + " all-time, across " +
+        p.seasonsPlayed + " " + plural(p.seasonsPlayed, "season") + ".";
+      renderProfileCareer(c, p, prof);
+      renderProfileSeasons(prof);
+      renderProfileTracks(prof);
+      renderProfileFans(prof, p.name);
+      renderProfileComments(cm, p.id);
+      if (!profiles) {
+        ["block-seasons", "block-tracks", "block-fans"].forEach(function (s) { $(s).hidden = true; });
+      }
+    }).catch(function (err) {
+      console.error(err);
+      $("heroLine").textContent = "The profile didn’t load: " + (err.message || err);
+    });
+  }
+
   /* ---- round page (round.html?s=<season key>&r=<round id>) ---- */
 
   function initRound() {
@@ -1739,6 +1936,8 @@
       initCareer();
     } else if (page === "round") {
       initRound();
+    } else if (page === "profile") {
+      initProfile();
     }
   }
 

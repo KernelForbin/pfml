@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PFML - Home</title>
-<meta name="description" content="Standings, round results and voting stats from our Music League seasons.">
+<title>PFML - Profile</title>
+<meta name="description" content="One PFML Music League player: their seasons, best tracks, fans and comments.">
 <meta name="theme-color" content="#9E00C4">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%239E00C4'/><path d='M30 74V26h22a14 14 0 010 28H44v20z' fill='%23F8F9FA'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,7 +12,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
-<body class="gated" data-page="home">
+<body class="gated" data-page="profile">
 
 <header class="topbar">
   <div class="shell topbar-inner">
@@ -22,16 +22,37 @@
 </header>
 
 <main>
-  <section class="shell block block-first" id="block-seasons">
-    <h2>Seasons</h2>
-    <p class="block-note">Pick a season for the full standings, round-by-round results and voting stats.</p>
-    <div id="seasonCards"></div>
+  <section class="shell hero pf-hero">
+    <div class="pf-id" id="pfId"></div>
+    <p class="hero-line" id="heroLine">Loading the profile.</p>
+    <div class="pf-switch" id="pfSwitch"></div>
   </section>
 
-  <section class="shell block" id="block-playlists">
-    <h2>Playlists</h2>
-    <p class="block-note">Curated playlists across the league. Links go live as they're built.</p>
-    <div id="playlists"></div>
+  <section class="shell block block-first" id="block-career">
+    <h2>Career</h2>
+    <div id="pfCareer"></div>
+  </section>
+
+  <section class="shell block" id="block-seasons">
+    <h2>Season by season</h2>
+    <div id="pfSeasons"></div>
+  </section>
+
+  <section class="shell block" id="block-tracks">
+    <h2>Best tracks</h2>
+    <p class="block-note">Their highest-scoring submissions, all seasons.</p>
+    <div id="pfTracks"></div>
+  </section>
+
+  <section class="shell block" id="block-fans">
+    <h2>Fans and favourites</h2>
+    <p class="block-note">Points given, summed over every season.</p>
+    <div id="pfFans"></div>
+  </section>
+
+  <section class="shell block" id="block-comments">
+    <h2>Comments</h2>
+    <div id="pfComments"></div>
   </section>
 </main>
 

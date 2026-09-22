@@ -569,9 +569,16 @@
     state.host = document.getElementById("rpTracks");
     if (status) { state.host.innerHTML = '<p class="rp-empty">Nothing to show yet: ' + esc(status.toLowerCase()) + ".</p>"; return; }
 
+    // An inbox link (account.js) names one comment: &c=<comment id>, plus
+    // &thread=1 for a reply, which opens that comment's replies.
+    var params = new URLSearchParams(location.search);
+    var target = params.get("c");
+    if (target && params.get("thread") === "1") state.threads[target] = true;
+
     // Tracks and votes render straight away; the member layer fills in when
     // it arrives, so a slow connection still shows the round immediately.
     renderTracks(r);
+    showTarget(target);
     state.host.addEventListener("click", onClick);
     state.host.addEventListener("submit", onSubmit);
     state.host.addEventListener("input", onEmojiSearch);
@@ -585,11 +592,23 @@
     Promise.all([api().people(), loadSocial(r.id)]).then(function (res) {
       state.people = res[0];
       renderTracks(r);
+      // again: the member layer made every comment above it taller
+      showTarget(target);
     }).catch(function (err) {
       state.host.insertAdjacentHTML("afterbegin",
         '<p class="rp-empty">Couldn\u2019t load member votes and replies: ' + esc(err && err.message ? err.message : err) + "</p>");
     });
     state.roundId = r.id;
+  }
+
+  // Brings the linked comment into view and marks it briefly. Instant, not
+  // smooth: the page's smooth scrolling would slide past a second call.
+  function showTarget(id) {
+    if (!id) return;
+    var card = state.host.querySelector('.rp-vote[data-id="' + cssEscape(id) + '"]');
+    if (!card) return;
+    card.classList.add("is-target");
+    card.scrollIntoView({ block: "center", behavior: "instant" });
   }
 
   function loadSocial(roundId) {

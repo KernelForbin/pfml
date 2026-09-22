@@ -5,7 +5,8 @@
 -- What it sets up:
 --   players          every Music League competitor (id + name), written by
 --                    scripts/publish.py from the exports
---   members          which Google account is which player, one to one
+--   members          which Google account is which player, one to one, and
+--                    when they last opened their inbox
 --   invites          one-time links that create that pairing
 --   comment_votes    up/down votes on Music League vote comments
 --   comment_reactions
@@ -34,8 +35,13 @@ create table if not exists public.members (
   user_id       uuid primary key references auth.users (id) on delete cascade,
   competitor_id text not null unique references public.players (competitor_id),
   role          text not null default 'member' check (role in ('member', 'admin')),
-  created_at    timestamptz not null default now()
+  created_at    timestamptz not null default now(),
+  inbox_seen_at timestamptz                -- last time they opened the header inbox
 );
+-- For a project set up before inbox_seen_at existed (the create above
+-- skips an existing table); supabase/migrations/2026-09-23_inbox_seen.sql
+-- does the same for the live project.
+alter table public.members add column if not exists inbox_seen_at timestamptz;
 
 create table if not exists public.invites (
   code          text primary key,
@@ -129,6 +135,16 @@ begin
 end;
 $$;
 
+-- The inbox's "seen up to here" mark. members has no UPDATE policy (a
+-- member mustn't change their own role or player), so this is the one way
+-- in, and it only ever touches inbox_seen_at on the caller's own row.
+create or replace function public.mark_inbox_seen()
+returns timestamptz language sql security definer set search_path = public as $$
+  update public.members set inbox_seen_at = now() where user_id = auth.uid() returning inbox_seen_at;
+$$;
+
+revoke all on function public.mark_inbox_seen() from public, anon;
+grant execute on function public.mark_inbox_seen() to authenticated;
 revoke all on function public.claim_invite(text) from public, anon;
 grant execute on function public.claim_invite(text) to authenticated;
 grant execute on function public.is_member() to authenticated;

@@ -179,6 +179,8 @@
   <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3L2 8l10 5 10-5z"/><path d="M2 13l10 5 10-5"/></symbol>
   <symbol id="i-playlist" viewBox="0 0 24 24"><path d="M3 6h12M3 12h12M3 18h8M19 16V4"/><circle cx="17" cy="16" r="2"/></symbol>
   <symbol id="i-medal" viewBox="0 0 24 24"><circle cx="12" cy="15" r="6"/><path d="M8 3l3 6M16 3l-3 6M12 13v4"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M4 13.5 6.3 5.8A2 2 0 0 1 8.2 4.4h7.6a2 2 0 0 1 1.9 1.4L20 13.5V18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M4 13.5h4.6l1.2 2.2h4.4l1.2-2.2H20"/></symbol>
   <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></symbol>
 </svg>
 
@@ -196,7 +198,7 @@
     <nav class="modes" aria-label="Part of the site">
       <a href="?mode=seasons" data-mode="seasons">Season pages</a>
       <a href="?mode=rounds" data-mode="rounds">Round pages</a>
-      <a href="?mode=home" data-mode="home">Home &amp; Career</a>
+      <a href="?mode=home" data-mode="home">Home, Career &amp; you</a>
     </nav>
   </section>
 
@@ -357,8 +359,8 @@
 
   <!-- ============ HOME & CAREER ============ -->
   <section class="mode" id="mode-home" data-mode="home">
-    <h2>Home &amp; Career</h2>
-    <p class="note">Getting in, finding your way around, and the all-time view.</p>
+    <h2>Home, Career &amp; you</h2>
+    <p class="note">Getting in, finding your way around, the all-time view, profiles and your inbox.</p>
     <div class="cards">
       <article class="card">
         <div class="card-head"><span class="icon"><svg><use href="#i-layers"/></svg></span><h3>Season cards</h3></div>
@@ -375,7 +377,27 @@
           <li>Open it from the Career tab in the top bar, or its card on the Home page.</li>
           <li>Standings across every season: points per season, total, rounds won, top-3 finishes, and a Career Score that rewards wins and podiums.</li>
           <li>Tap any column heading to sort by it. Tap again to flip the order.</li>
+          <li>Tap a player's name to open their profile.</li>
           <li>Awards for the highest Career Score, most round wins, most podiums and best single season.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-user"/></svg></span><h3>Profiles</h3></div>
+        <ul>
+          <li>Every player has a profile: Career Score and where it ranks, total points, wins, top-3 finishes and tracks submitted.</li>
+          <li>How they finished each season, their five best tracks, their biggest fans and whose tracks they give the most points to.</li>
+          <li>Their comment stats, signature word and longest comment, plus how many reactions their comments have had.</li>
+          <li>Open yours from the menu under your initials. Switch to anyone else from the list at the top.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-inbox"/></svg></span><h3>Inbox</h3></div>
+        <ul>
+          <li>The tray icon at the top right lists reactions and replies other members leave on your vote comments, newest first.</li>
+          <li>A number on it counts what's new since you last opened it, on any device.</li>
+          <li>Tap an item to jump straight to that comment on its round page, with the replies open.</li>
         </ul>
       </article>
 
@@ -410,7 +432,7 @@
         <ul>
           <li>The site is for league members only. You sign in with Google.</li>
           <li>The first time, use the personal invite link from the league organizer. It connects your Google account to your player, once.</li>
-          <li>Your name and a Sign out button sit in the top bar.</li>
+          <li>Your initials sit at the top right. Tap them for My profile and Sign out.</li>
         </ul>
       </article>
     </div>

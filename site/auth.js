@@ -15,8 +15,10 @@
      ready     Promise, resolves with the member once they're let in
      member    { competitorId, name, role } after ready
      loadJSON  (name) -> Promise of parsed JSON from the private bucket
-     api       the comment votes / reactions / replies operations
-     signOut   () */
+     api       the comment votes / reactions / replies operations, and the
+               inbox's queries
+     signOut   ()
+   The header's account menu and inbox live in account.js. */
 
 (function () {
   "use strict";
@@ -207,25 +209,11 @@
       [{ label: "Sign out", onClick: PFML.signOut }]);
   }
 
-  function addWhoAmI(member) {
-    var bar = document.querySelector(".topbar-inner");
-    if (!bar || bar.querySelector(".whoami")) return;
-    var box = document.createElement("div");
-    box.className = "whoami";
-    box.innerHTML = '<span class="whoami-name">' + esc(member.name) + "</span>";
-    var out = document.createElement("button");
-    out.type = "button";
-    out.className = "whoami-out";
-    out.textContent = "Sign out";
-    out.addEventListener("click", PFML.signOut);
-    box.appendChild(out);
-    bar.appendChild(box);
-  }
-
+  // The header's account menu and inbox are account.js, which waits on
+  // PFML.ready like the page code does.
   function letIn(member) {
     PFML.member = member;
     openSite();
-    addWhoAmI(member);
     resolveReady(member);
   }
 
@@ -323,6 +311,35 @@
     },
     deleteReply: function (id) {
       return client.from("comment_replies").delete().eq("id", id).then(must);
+    },
+    // Reactions and replies other members left on this player's own vote
+    // comments, newest first. A comment id ends "|<voter id>", so a suffix
+    // match finds every comment they wrote, across every round and season.
+    inbox: function (competitorId, limit) {
+      var suffix = "%|" + competitorId, uid = currentUserId(), n = limit || 40;
+      return Promise.all([
+        client.from("comment_reactions").select("comment_id, user_id, reaction, created_at")
+          .like("comment_id", suffix).neq("user_id", uid).order("created_at", { ascending: false }).limit(n).then(must),
+        client.from("comment_replies").select("id, comment_id, user_id, body, created_at")
+          .like("comment_id", suffix).neq("user_id", uid).order("created_at", { ascending: false }).limit(n).then(must)
+      ]).then(function (r) { return { reactions: r[0], replies: r[1] }; });
+    },
+    // When this member last opened their inbox (null before the first
+    // time). Asked for on its own, not as part of the sign-in lookup, so a
+    // database without the column yet breaks only the "new" count, never
+    // signing in.
+    inboxSeenAt: function () {
+      return client.from("members").select("inbox_seen_at").eq("user_id", currentUserId()).maybeSingle()
+        .then(must).then(function (row) { return row ? row.inbox_seen_at : null; });
+    },
+    markInboxSeen: function () {
+      return client.rpc("mark_inbox_seen").then(must);
+    },
+    // Every reaction on this player's comments, for the profile page's
+    // tally (which leaves out any they left on their own).
+    reactionsOn: function (competitorId) {
+      return client.from("comment_reactions").select("comment_id, user_id, reaction")
+        .like("comment_id", "%|" + competitorId).then(must);
     },
     me: function () { return currentUserId(); }
   };

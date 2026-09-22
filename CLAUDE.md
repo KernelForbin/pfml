@@ -172,7 +172,7 @@ and write down what was measured and when.
   the previous break's cached bytecode, and a test that works looked like
   it let a break through.
 - Not covered by the suite: the browser JavaScript (`app.js`, `rounds.js`,
-  `auth.js`, the features page's switch at runtime). There's no Node here
+  `auth.js`, `account.js`, the features page's switch at runtime). There's no Node here
   to run it. Check those in a real browser, as below.
 
 **Verify against reality before calling it done:** rerun the full suite
@@ -250,7 +250,12 @@ tested. To test `auth.js` itself, load it with a fake
 `window.supabase.createClient`, which is how the sign-in return path was
 checked. Keep stubs and copied data out of the repo, and delete them after.
 A page stub must also remove the `gated` class from `<body>`, or the page
-stays blank. The browser caches `app.js` and friends between edits, so a
+stays blank. For the header (`account.js`) and profiles the stub's `api`
+also needs `people`, `inbox`, `inboxSeenAt`, `markInboxSeen` and
+`reactionsOn`, and the scratch copy needs `profiles.json` and
+`lookup.json`: generate them there with `build.build_profiles` /
+`build.build_lookup` from the season JSON, rather than running `build.py`,
+which would rewrite `site/data/`. The browser caches `app.js` and friends between edits, so a
 fix can look like it did nothing: refetch with `fetch(url, {cache:
 "reload"})`, or check `performance` entries, before trusting a
 before/after comparison.
