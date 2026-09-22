@@ -1061,6 +1061,69 @@ def build_season(folder: Path, season_key: str, label: str):
     return data, raw
 
 
+# Quote awards need a real showing to be worth an award: a comment with
+# one exclamation mark isn't "the most excited" of anything.
+MIN_QUOTE_AWARD_COUNT = 3
+SKIN_TONE_RE = re.compile("[\U0001F3FB-\U0001F3FF]")
+
+
+def quote_of(e, name):
+    """One comment as the page shows it in a quote card."""
+    return {
+        "text": e["text"], "name": name, "words": len(comment_words(e["text"])), "chars": len(e["text"]),
+        "roundName": e["roundName"], "trackTitle": e["trackTitle"], "trackArtist": e["trackArtist"],
+        "spotifyId": e["spotifyId"], "points": e["points"], "seasonLabel": e.get("seasonLabel", ""),
+    }
+
+
+def quote_awards(entries):
+    """Single comments that stand out, all-time: [(entry, voter name)].
+
+    Each award is one comment, picked by a count with a fixed tie-break
+    (then the shorter text, then the comment id) so the same export always
+    picks the same comment. Counted from the text alone; nothing here
+    needs comment_sentiment.json. An award is left out when its best count
+    is under MIN_QUOTE_AWARD_COUNT.
+    """
+    def best(count, extra=None):
+        scored = [(count(e), e, n) for e, n in entries]
+        scored = [s for s in scored if s[0] > 0]
+        if not scored:
+            return None
+        s = min(scored, key=lambda s: (-s[0], len(s[1]["text"]), s[1]["id"]))
+        return s
+
+    def caps(t):
+        return sum(1 for w in comment_words(t) if is_allcaps_word(w))
+
+    def emoji(t):
+        # a skin tone rides on the emoji before it: one clap, not two
+        return len(EMOJI_RE.findall(SKIN_TONE_RE.sub("", t)))
+
+    awards = {}
+    for key, count, unit in (("loudest", lambda e: caps(e["text"]), "all-caps words"),
+                             ("mostExcited", lambda e: e["text"].count("!"), "exclamation marks"),
+                             ("mostQuestions", lambda e: e["text"].count("?"), "question marks"),
+                             ("mostEmoji", lambda e: emoji(e["text"]), "emoji")):
+        s = best(count)
+        if s and s[0] >= MIN_QUOTE_AWARD_COUNT:
+            awards[key] = dict(quote_of(s[1], s[2]), count=s[0], unit=unit)
+
+    # the most said while giving nothing: longest comment on a 0-point row
+    zero = [(e, n) for e, n in entries if e["points"] == 0 and comment_words(e["text"])]
+    if zero:
+        e, n = min(zero, key=lambda x: (-len(comment_words(x[0]["text"])), len(x[0]["text"]), x[0]["id"]))
+        awards["mostWordsForZero"] = quote_of(e, n)
+
+    # the least said: fewest words (at least one), then the biggest vote,
+    # then the fewest letters
+    worded = [(e, n) for e, n in entries if comment_words(e["text"])]
+    if worded:
+        e, n = min(worded, key=lambda x: (len(comment_words(x[0]["text"])), -x[0]["points"], len(x[0]["text"]), x[0]["id"]))
+        awards["shortest"] = quote_of(e, n)
+    return awards
+
+
 def build_career_comments(raw_seasons):
     """Career comment stats, recomputed from every season's raw comments
     rather than by averaging per-season summaries.
@@ -1178,6 +1241,8 @@ def build_career_comments(raw_seasons):
                               key=lambda p: p["longest"]["words"], default=None)
         if longest_overall:
             summary["longestComment"] = dict(longest_overall["longest"], name=longest_overall["name"])
+        summary["quoteAwards"] = quote_awards(
+            [(e, names.get(cid, "Unknown")) for cid, slot in by_player.items() if slot["voteRows"] for e in slot["entries"]])
         if eligible:
             sup = comment_superlatives(eligible)
             # the career page calls these two by career-flavoured names

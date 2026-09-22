@@ -462,6 +462,48 @@ button.trend-chip.is-on .dot { opacity: 1; }
 }
 .cmt-src { margin: 10px 0 0; font-size: 0.83rem; color: var(--muted); }
 
+/* All-Time "Comment awards": quote cards, two across, long ones clipped
+   with a Read all toggle (app.js renderQuoteAwards). */
+.quote-awards { margin-top: 26px; }
+.quote-awards h3 { margin: 0 0 4px; font-size: 1.05rem; }
+.quote-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.quote-grid .cmt-quote { margin-top: 10px; }
+.quote-grid blockquote { overflow-wrap: anywhere; }
+.quote-grid blockquote.is-clipped { max-height: 9.4em; overflow: hidden; position: relative; }
+.quote-grid blockquote.is-clipped::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2.2em;
+  background: linear-gradient(transparent, var(--card));
+}
+.quote-grid blockquote.is-open { max-height: none; }
+.quote-grid blockquote.is-open::after { display: none; }
+.quote-more {
+  margin: 6px 0 0 12px; padding: 0; font: inherit; font-size: 0.82rem; font-weight: 600; color: var(--deep);
+  background: none; border: none; cursor: pointer;
+}
+
+/* A profile's Career Score as its parts: Score = Avg season + Round
+   finishes + Season podiums, the sum the All-Time table shows in columns. */
+.pf-parts {
+  margin-top: 12px; padding: 14px 16px; background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); box-shadow: var(--shadow-sm);
+}
+.pf-parts-title {
+  margin: 0 0 10px; font-family: "Archivo", sans-serif; font-weight: 600; font-size: 0.72rem;
+  text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted);
+}
+.pf-parts-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 12px; }
+.pf-part { display: flex; flex-direction: column; min-width: 0; }
+.pf-part b { font-family: "Archivo", sans-serif; font-size: 1.5rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.pf-part:first-child b { color: var(--magenta); }
+.pf-part span { font-size: 0.8rem; font-weight: 600; }
+.pf-part small { font-size: 0.74rem; color: var(--muted); }
+.pf-op { font-family: "Archivo", sans-serif; font-size: 1.3rem; color: var(--muted); padding-top: 2px; }
+.pf-parts-none { margin: 0; color: var(--muted); font-size: 0.9rem; }
+@media (max-width: 620px) {
+  .quote-grid { grid-template-columns: 1fr; }
+  .pf-part b { font-size: 1.25rem; }
+}
+
 .nrow {
   display: grid; grid-template-columns: 1fr 7rem 7rem; gap: 10px; align-items: center;
   padding: 8px 0; font-size: 0.9rem; border-bottom: 1px solid var(--border-soft);

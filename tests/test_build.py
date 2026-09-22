@@ -227,6 +227,52 @@ class CareerScore(unittest.TestCase):
                          {"perRoundScale": 20, "roundBonus": [3, 2, 1], "seasonBonus": [6, 4, 2], "minRounds": 10})
 
 
+class QuoteAwards(unittest.TestCase):
+    """quote_awards(): single all-time comments that stand out, counted
+    from the text alone (no comment_sentiment.json needed)."""
+
+    ROUND = {
+        "id": "r1", "name": "Round One", "created": "2025-01-01T00:00:00Z",
+        "subs": [("a", "p1"), ("b", "p2"), ("c", "p3"), ("d", "p4")],
+        "votes": [("p1", "b", 2, "YES YES YES YES this rules"),
+                  ("p1", "c", 1, "wow!!!! ok!"),
+                  ("p2", "a", 2, "who? what? why? when?"),
+                  ("p2", "c", 1, "\U0001F525\U0001F525\U0001F44F\U0001F3FE nice"),   # 3 emoji: the skin tone isn't a 4th
+                  ("p3", "a", 3, "Dank"),
+                  ("p3", "d", 1, "Fine"),
+                  # longer than Dan's zero-point comment, but it gave a point
+                  ("p1", "d", 1, "this one takes me right back to a summer road trip with the windows down and the "
+                                 "volume far too loud for anyone else in the car"),
+                  ("p4", "c", 0, "I have a lot to say about this one and none of it earns a point")],
+    }
+
+    def awards(self):
+        with sandbox() as root, quiet():
+            d, raw = build.build_season(make_season(root / "data" / "season1", [self.ROUND]), "season1", "Season 1")
+        return build.build_career([d], [raw])["commentSummary"]["quoteAwards"]
+
+    def test_each_award_picks_its_comment(self):
+        q = self.awards()
+        self.assertEqual((q["loudest"]["name"], q["loudest"]["count"]), ("Ann", 4))
+        self.assertEqual((q["mostExcited"]["text"], q["mostExcited"]["count"]), ("wow!!!! ok!", 5))
+        self.assertEqual((q["mostQuestions"]["name"], q["mostQuestions"]["count"]), ("Ben", 4))
+        self.assertEqual(q["mostEmoji"]["count"], 3, "a skin tone rides on its emoji")
+        self.assertEqual(q["mostWordsForZero"]["name"], "Dan")
+
+    def test_shortest_breaks_ties_on_the_bigger_vote(self):
+        # "Dank" (3 points) and "Fine" (1 point) are both one word
+        q = self.awards()
+        self.assertEqual((q["shortest"]["text"], q["shortest"]["points"]), ("Dank", 3))
+
+    def test_a_weak_showing_gets_no_award(self):
+        quiet_round = dict(self.ROUND, votes=[("p1", "b", 2, "good!"), ("p2", "a", 2, "nice?")])
+        with sandbox() as root, quiet():
+            d, raw = build.build_season(make_season(root / "data" / "season1", [quiet_round]), "season1", "Season 1")
+        q = build.build_career([d], [raw])["commentSummary"]["quoteAwards"]
+        self.assertNotIn("mostExcited", q)
+        self.assertNotIn("mostQuestions", q)
+
+
 class Profiles(unittest.TestCase):
     """build_profiles(): the profile page's per-player extras."""
 

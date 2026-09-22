@@ -630,7 +630,7 @@ class NamesLinkToProfiles(unittest.TestCase):
         "function trackRow(s, pos, showRound, highlightSet)": "who(s.submitterName, s.submitterId)",
         "function renderTaste(d)": "who(voter.name, voter.id)",
         "function renderVoters(d)": "who(v.name, v.id)",
-        "function commentQuote(c, label)": "who(c.name)",
+        "function commentQuote(c, label, stats)": "who(c.name)",
         "function renderComments(d)": "who(summary.chattiest.name)",
         "function renderCareerComments(c)": "who(s.mostTalkative.name)",
         "function renderCareerHighlights(c)": "who(h.topScore.name)",
@@ -682,6 +682,35 @@ class CareerScoreTable(unittest.TestCase):
         rank = js_function(js, "function careerRank(players, p)")
         self.assertIn("if (!p.rated) return null;", rank)
         self.assertIn("var rated = players.filter(function (x) { return x.rated; });", rank)
+
+
+class QuoteAwardsPage(unittest.TestCase):
+    def test_all_time_page_shows_every_award_with_longest(self):
+        js = read("app.js")
+        self.assertIn("renderQuoteAwards(s, host);", js_function(js, "function renderCareerComments(c)"))
+        cards = js_function(js, "function renderQuoteAwards(s, host)")
+        for key in ("s.longestComment", "q.shortest", "q.loudest", "q.mostExcited", "q.mostQuestions",
+                    "q.mostEmoji", "q.mostWordsForZero"):
+            self.assertIn("[" + key + ",", cards)
+        # clipped first, then measured: measured unclipped, nothing ever overflows
+        clip, measure = cards.index('bq.classList.add("is-clipped")'), cards.index("bq.scrollHeight <= bq.clientHeight")
+        self.assertLess(clip, measure)
+        self.assertIn('bq.classList.remove("is-clipped")', cards, "and unclipped again when it fits")
+
+    def test_clipping_and_toggle_css(self):
+        css = read("style.css")
+        self.assertIn("max-height", " ".join(css_rules(css, ".quote-grid blockquote.is-clipped")))
+        self.assertIn("max-height: none", " ".join(css_rules(css, ".quote-grid blockquote.is-open")))
+
+
+class ProfileScoreParts(unittest.TestCase):
+    def test_profile_shows_score_as_its_parts(self):
+        js = read("app.js")
+        self.assertIn("scoreParts(c, p)", js_function(js, "function renderProfileCareer(c, p, prof)"))
+        parts = js_function(js, "function scoreParts(c, p)")
+        for field in ("p.careerScore", "p.avgSeason", "p.roundBonus", "p.seasonBonus"):
+            self.assertIn(field, parts)
+        self.assertIn("if (!p.rated)", parts)
 
 
 class AllTimeTables(unittest.TestCase):

@@ -1240,12 +1240,12 @@
 
   function pct(rate) { return Math.round(rate * 100) + "%"; }
 
-  function commentQuote(c, label) {
+  function commentQuote(c, label, stats) {
     var meta = [];
     if (c.trackTitle) meta.push(extLink(trackLink(c.spotifyId), c.trackTitle));
     if (c.roundName) meta.push(esc(c.roundName));
     if (c.seasonLabel) meta.push(esc(c.seasonLabel));
-    meta.push(c.words + " words");
+    (stats || [c.words + " words"]).forEach(function (s) { meta.push(esc(s)); });
     var box = el("div", "cmt-quote");
     box.innerHTML =
       '<p class="cmt-label">' + esc(label) + "</p>" +
@@ -1596,9 +1596,7 @@
     host.appendChild(tableHost);
     renderCareerCommentTable(rows);
 
-    if (s.longestComment) {
-      host.appendChild(commentQuote(s.longestComment, "Longest comment ever written"));
-    }
+    renderQuoteAwards(s, host);
 
     var words = rows.filter(function (p) { return p.distinctiveWord; });
     if (words.length) {
@@ -1645,6 +1643,47 @@
     { key: "allCapsRate", label: "CAPS", title: "Share of comments with an all-caps word", pct: true }
   ];
   var commentSort = { field: "comments", dir: "desc" };
+
+  // Single comments that stand out, all-time (quoteAwards in career.json,
+  // counted from the text by build.py), as a grid of quote cards. Long
+  // quotes start clipped with a "Read all" toggle, so one 200-word comment
+  // doesn't push the rest off screen.
+  function renderQuoteAwards(s, host) {
+    var q = s.quoteAwards || {};
+    function pts(c) { return c.points + " " + plural(c.points, "point") + " given"; }
+    function counted(c) { return c.count + " " + c.unit; }
+    var cards = [
+      [s.longestComment, "Longest comment ever written", function (c) { return [c.words + " words"]; }],
+      [q.shortest, "Shortest review", function (c) { return [c.words + " " + plural(c.words, "word"), pts(c)]; }],
+      [q.loudest, "Loudest comment", function (c) { return [counted(c)]; }],
+      [q.mostExcited, "Most excited", function (c) { return [counted(c)]; }],
+      [q.mostQuestions, "Most questions", function (c) { return [counted(c)]; }],
+      [q.mostEmoji, "Most emoji", function (c) { return [counted(c)]; }],
+      [q.mostWordsForZero, "Most words for zero points", function (c) { return [c.words + " words", "0 points given"]; }]
+    ].filter(function (x) { return x[0]; });
+    if (!cards.length) return;
+    var wrap = el("div", "quote-awards");
+    wrap.appendChild(el("h3", null, "Comment awards"));
+    var grid = el("div", "quote-grid");
+    cards.forEach(function (x) { grid.appendChild(commentQuote(x[0], x[1], x[2](x[0]))); });
+    wrap.appendChild(grid);
+    host.appendChild(wrap);
+    Array.prototype.forEach.call(grid.querySelectorAll("blockquote"), function (bq) {
+      // clip first, then measure: unclipped, a quote is always exactly as
+      // tall as its text, so it could never look too long
+      bq.classList.add("is-clipped");
+      if (bq.scrollHeight <= bq.clientHeight + 2) { bq.classList.remove("is-clipped"); return; }
+      var more = el("button", "quote-more", "Read all");
+      more.type = "button";
+      more.setAttribute("aria-expanded", "false");
+      more.addEventListener("click", function () {
+        var open = bq.classList.toggle("is-open");
+        more.textContent = open ? "Show less" : "Read all";
+        more.setAttribute("aria-expanded", String(open));
+      });
+      bq.insertAdjacentElement("afterend", more);
+    });
+  }
 
   function renderCareerCommentTable(rows) {
     var host = $("careerCommentTable");
@@ -1856,6 +1895,31 @@
     return { rank: above + 1, tied: tied, of: rated.length };
   }
 
+  // The Career Score as the sum the All-Time table shows in columns:
+  // Score = Avg season + Round finishes + Season podiums.
+  function scoreParts(c, p) {
+    var box = el("div", "pf-parts");
+    var f = c.careerScoreFormula || {};
+    if (!p.rated) {
+      box.innerHTML = '<p class="pf-parts-none">Career Score starts after ' + f.minRounds + " rounds played. " +
+        esc(p.name) + " has played " + p.rounds + ".</p>";
+      return box;
+    }
+    var rf = p.roundFinishes || {};
+    var podiums = (p.seasonPodiums || []).map(function (s) {
+      return { 1: "1st", 2: "2nd", 3: "3rd" }[s.place] + " in " + s.label;
+    }).join(", ");
+    function part(value, label, sub) {
+      return '<span class="pf-part"><b>' + value + "</b><span>" + label + "</span>" + (sub ? "<small>" + esc(sub) + "</small>" : "") + "</span>";
+    }
+    box.innerHTML = '<p class="pf-parts-title">How the Career Score adds up</p><div class="pf-parts-row">' +
+      part(Math.round(p.careerScore), "Career Score") + '<span class="pf-op">=</span>' +
+      part(Math.round(p.avgSeason), "Avg season", (p.totalPoints / p.rounds).toFixed(1) + " a round \u00d7 " + f.perRoundScale) + '<span class="pf-op">+</span>' +
+      part(p.roundBonus, "Round finishes", (rf.first || 0) + " 1st, " + (rf.second || 0) + " 2nd, " + (rf.third || 0) + " 3rd") + '<span class="pf-op">+</span>' +
+      part(p.seasonBonus, "Season podiums", podiums || "none yet") + "</div>";
+    return box;
+  }
+
   function rankLine(c, p, r) {
     return r ? (r.tied ? "Tied " : "") + ordinal(r.rank) + " of " + r.of + " scored players"
              : "Scored after " + c.careerScoreFormula.minRounds + " rounds: " + p.rounds + " so far";
@@ -1893,6 +1957,7 @@
       p.submissions ? (Math.round(p.totalPoints / p.submissions * 10) / 10) + " points a track" : ""));
     if (prof) g.appendChild(careerTile("Points given", String(prof.pointsGiven), "to other players’ tracks"));
     setBlock("pfCareer", g);
+    $("pfCareer").appendChild(scoreParts(c, p));
   }
 
   function renderProfileSeasons(prof) {

@@ -459,6 +459,18 @@ changed their Music League display name between seasons, that's the
 join taking the first name it saw for that id; `build_career()` in
 `build.py` is where to change that if it comes up.
 
+**Comment awards** (`quoteAwards` in `career.json`, `quote_awards()` in
+`build.py`): single all-time comments picked from the text alone, shown as
+quote cards with the longest comment: shortest review (fewest words, then
+the biggest vote, then fewest letters), loudest (most ALL-CAPS words),
+most excited (most `!`), most questions (most `?`), most emoji (a skin
+tone isn't counted as a second emoji) and most words for zero points. Ties
+go to the shorter comment, then the comment id, so a re-build picks the
+same one. A count award needs at least 3 to appear. Long quotes start
+clipped with a Read all toggle; the page clips before it measures, since
+an unclipped quote never looks too tall (the first version had it the other
+way round and clipped nothing).
+
 `career.html` also carries an all-time Comments section: the same
 per-player table aggregated across every season played (sortable by any
 column, like the standings: `renderCareerCommentTable`), plus career
@@ -526,7 +538,9 @@ season, Round finishes (with the 1st/2nd/3rd counts), Season podiums
 `SEASON_BONUS` and `MIN_SCORED_ROUNDS` in `build.py` are the knobs; the
 note above the table and the profile read them from `careerScoreFormula`
 in `career.json`, so they follow any change. A profile's Career Score
-ranks among scored players only.
+ranks among scored players only, and the profile shows the same sum under
+its tiles (Score = Avg season + Round finishes + Season podiums, with each
+part's working).
 
 ## Profiles, the inbox and the account menu
 
@@ -813,10 +827,14 @@ scripts. A re-run only sends comments that aren't already in the file, so
 adding a season costs only that season. `--force` re-labels everything,
 and `--season seasonN` restricts it to one season.
 
-**Commit the JSON if you want the labels live.** The Action runs
-`build.py` on a clean checkout, so it can only see
-`data/comment_sentiment.json` if that file is committed. It is safe to
-delete at any time: the next build just drops the sentiment stats.
+**Going live.** `data/` is never committed (the site is members-only), so
+the labels reach the site the way all data does: run the script, then
+`python scripts/publish.py`, which builds locally, where it can read
+`data/comment_sentiment.json`, and uploads. (An earlier version of this
+section said to commit the file; that predates the members-only setup.)
+The file is safe to delete at any time: the next build just drops the
+sentiment stats. Sending the comments to the API sends every member's
+vote comments to Anthropic, so it's the league organizer's decision.
 
 ## Spotify links
 

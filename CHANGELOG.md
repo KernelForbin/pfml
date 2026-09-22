@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-09-22 (follow-up)
+
+- **Comment awards on the All-Time page**, next to the longest comment
+  ever written: shortest review, loudest, most excited, most questions,
+  most emoji and most words for zero points, each a quote card with the
+  comment itself. Counted from the text alone (no AI). Long quotes start
+  clipped with a Read all toggle.
+- **Profiles show how the Career Score adds up**: Score = Avg season +
+  Round finishes + Season podiums, with each part's working.
+- **Docs: the sentiment section said to commit `comment_sentiment.json`**
+  to make labels live, which predates the members-only setup; it now says
+  to run `publish.py`.
+
 ## 2026-09-22
 
 - **New Career Score**, chosen by the league after comparing options on
