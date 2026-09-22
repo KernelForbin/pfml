@@ -142,6 +142,18 @@ class Main(unittest.TestCase):
         self.assertEqual(page, '<title>PFML - Season 1</title><body data-season-key="season1">Season 1')
         self.assertEqual(index["seasons"][0]["leaderNames"], ["Ann", "Ben"])
 
+    def test_latest_round_is_reported_without_a_guessed_phase(self):
+        # Music League's export only holds finished rounds, so the build
+        # can't know an unfinished round's phase. It once labelled the
+        # latest round "Voting" because it had votes, which every exported
+        # round does; finished seasons read "Voting" too.
+        with sandbox() as root, quiet():
+            make_season(root / "data" / "season1", [TIE_ROUND, SECOND_ROUND])
+            build.main()
+            index = json.loads((root / "site" / "data" / "index.json").read_text(encoding="utf-8"))
+        self.assertEqual(index["seasons"][0]["liveRound"],
+                         {"number": 2, "name": "Round Two", "submissionCount": 2})
+
 
 class Deterministic(unittest.TestCase):
     def test_same_output_under_different_hash_seeds(self):

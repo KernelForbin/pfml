@@ -692,13 +692,12 @@ def build_season(folder: Path, season_key: str, label: str):
             "margin": margin,
             "voterCount": len(electorate),
             "submissionCount": len(round_subs),
-            # Music League's export has no explicit phase field. A voter
-            # only appears in votes.csv for a round once voting has opened
-            # for it (even a zero-point comment-only row means they were
-            # able to vote), so "someone has a vote row for this round" is
-            # the best available signal that it left song-selection and
-            # entered voting. This is an inference, not a fact the export
-            # states outright.
+            # Whether anyone has a vote row for this round. Music League's
+            # export only holds finished rounds (measured, see the season
+            # timeline below), so in a real export this is always true; it
+            # stays as a guard for a hand-made or partial folder, where the
+            # round list says "voting hasn't started" instead of showing an
+            # empty result.
             "hasVotingActivity": len(electorate) > 0,
         })
 
@@ -741,10 +740,14 @@ def build_season(folder: Path, season_key: str, label: str):
 
     # ---- season timeline ----
     # startedAt: the Created timestamp of the first round, straight from
-    # rounds.csv. liveRound describes whichever round was created most
-    # recently, on the assumption that's the one currently in play; its
-    # "phase" is the hasVotingActivity heuristic explained above, not a
-    # field the export provides directly.
+    # rounds.csv. liveRound is the latest round in the export, which is
+    # always a finished one: Music League's export leaves out a round until
+    # it's over. Measured 2026-09-21 against export (3).zip, taken while
+    # Season 2's last round was being played: that round was entirely
+    # absent (no round row, submissions or votes), and all 19 rounds it did
+    # hold had exactly the votes of the final export. So the export can't
+    # say which phase an unfinished round is in, and nothing here guesses;
+    # this used to call the latest round "Voting" because it had votes.
     started_at = rounds_out[0]["created"] if rounds_out else None
     live_round = None
     if rounds_out:
@@ -753,7 +756,6 @@ def build_season(folder: Path, season_key: str, label: str):
             "number": len(rounds_out),
             "name": latest["name"],
             "submissionCount": latest["submissionCount"],
-            "phase": "Voting" if latest["hasVotingActivity"] else "Song Selection",
         }
 
     # ---- voting style ----

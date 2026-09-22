@@ -288,26 +288,32 @@ it back once the session exists, before any page code runs.
 ## The "live" season on the home page
 
 The home page marks whichever season is last by number as the current one.
-If it has at least one round, its card shows a LIVE badge, the round it's
-on, a phase, and a start date. All of that comes from inference, not a
-field Music League's export states outright, worth knowing before you trust
-it blindly:
+If it has at least one round, its card shows a LIVE badge, the latest
+round marked Complete, "Round N+1 underway", and a start date.
+
+**Music League's export only contains finished rounds.** A round in song
+submission or voting isn't in it at all: no round row, no submissions, no
+votes. Measured on 2026-09-21 against `export (3).zip`, which was taken
+while Season 2's last round was being played. That round was missing
+entirely, and all 19 rounds the export did hold had exactly the votes of
+the final export. So:
 
 - **Started** is the `Created` timestamp of that season's first round.
-- **Round N** is just "however many rounds exist so far," on the assumption
-  the most recently created one is the one currently in play.
-- **Phase** (Song Selection vs. Voting) is guessed from whether anyone has
-  a row in `votes.csv` for that round yet, since a voter only appears there
-  once voting has opened, even a zero-point comment-only vote counts. There
-  is no field in the export for phase or for submission/voting deadlines,
-  so this is the best signal available, not a fact the CSV states. It
-  never moves past "Voting" on its own: a round where everyone has voted
-  looks identical in the export to one still taking votes, so a finished
-  round keeps reading "Voting" until the next round appears.
+- **Round N · Complete** is the latest round in the export. It's always
+  finished.
+- **Round N+1 underway** is inferred: the season is the current one, so the
+  next round is assumed to be in play. Whether it's in song submission or
+  voting isn't in the export, so the card doesn't say. And the export
+  doesn't say how many rounds a season has, so after a season's final
+  round the card would still say the next one is underway, until a newer
+  season is added.
+- This used to show a "Voting phase" guessed from whether a round had votes.
+  Every round in an export has votes, so it always said Voting, even for
+  finished seasons.
 
 A season with zero rounds in its CSVs (a freshly created `data/seasonN/`
 with only `competitors.csv`) shows "not started yet" instead, no LIVE badge,
-no guessed round or phase, since there is nothing to infer from.
+and no round line.
 
 ## Playlists on the home page
 

@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-09-21 (follow-up 13)
+
+- **The Home page no longer says the live round is in "Voting".** It
+  called the latest round's phase "Voting" because the round had votes.
+  Checked against real exports: Music League's export contains only
+  finished rounds. `export (3).zip`, taken while Season 2's last round was
+  being played, didn't have that round at all, and its other 19 rounds
+  matched the final votes exactly. So every exported round has votes, the
+  label always said Voting (finished seasons too), and the export can't
+  tell which phase an unfinished round is in. The card now says "Round 1:
+  New Heat · Complete" and "Round 2 underway". The build no longer writes
+  a guessed `phase`. A test pins that. CLAUDE.md and README record the
+  measurement.
+
 ## 2026-09-21 (follow-up 12)
 
 - **Season pages lead with Standings.** The summary line and the five stat

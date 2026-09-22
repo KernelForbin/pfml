@@ -172,9 +172,13 @@
       : s.playerCount + " players &middot; not started yet";
 
     var roundLine = "";
+    // The export only ever holds finished rounds (see build.py), so the
+    // latest one is complete and the next is underway. Which phase that
+    // next round is in isn't in the data, so the card doesn't say.
     if (isLive && s.liveRound) {
       roundLine = '<div class="season-card-round">Round ' + s.liveRound.number + ": " + esc(s.liveRound.name) +
-        '<span class="phase">' + esc(s.liveRound.phase) + " phase</span></div>";
+        '<span class="phase">Complete</span></div>' +
+        '<div class="season-card-round">Round ' + (s.liveRound.number + 1) + " underway</div>";
     }
     var startedLine = "";
     if (isLive && s.startedAt) {

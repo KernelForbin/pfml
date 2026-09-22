@@ -55,6 +55,15 @@ not just documented, but nothing stops it recurring, so keep the habits:
   above it
 - Never run `git init` anywhere but the project folder you mean to track
 
+## Music League exports hold finished rounds only
+
+A round in song submission or voting is not in the export at all: no round
+row, no submissions, no votes. Measured 2026-09-21 against a real export
+taken mid-round (details in README, The "live" season). So never infer a
+round's phase from the export, and expect a new round to appear only once
+it's over. An earlier "Voting phase" label on the Home page was built on
+the opposite assumption, never checked, and was wrong for every season.
+
 ## Season 3: review every new export for Daily Double requests
 
 Season 3 has a Daily Double rule: once per season, a submitter can ask in
