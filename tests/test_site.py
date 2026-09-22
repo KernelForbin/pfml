@@ -703,6 +703,20 @@ class QuoteAwardsPage(unittest.TestCase):
         self.assertIn("max-height: none", " ".join(css_rules(css, ".quote-grid blockquote.is-open")))
 
 
+class SentimentAwardsPage(unittest.TestCase):
+    def test_judged_cards_and_titles_appear_only_with_labels(self):
+        js = read("app.js")
+        cards = js_function(js, "function renderQuoteAwards(s, host)")
+        for key in ("sq.funniest", "sq.wittiest", "sq.angriest", "sq.meanest", "sq.mostHeartfelt", "sq.hottestTake"):
+            self.assertIn("[" + key + ",", cards)
+        self.assertIn("(s.sentimentAwards && s.sentimentAwards.quotes) || {}", cards)
+        self.assertIn('"judged by Claude"', cards)
+        self.assertIn("if (judged.length)", cards, "the AI note only when there are AI picks")
+        comments = js_function(js, "function renderCareerComments(c)")
+        for key in ("classClown", "sweetheart", "grump", "hotTakeArtist"):
+            self.assertIn('["' + key + '",', comments)
+
+
 class ProfileScoreParts(unittest.TestCase):
     def test_profile_shows_score_as_its_parts(self):
         js = read("app.js")

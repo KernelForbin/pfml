@@ -273,6 +273,56 @@ class QuoteAwards(unittest.TestCase):
         self.assertNotIn("mostQuestions", q)
 
 
+class SentimentAwards(unittest.TestCase):
+    """Awards from data/comment_sentiment.json (written by
+    enrich_comments.py). Uses QuoteAwards.ROUND's comments."""
+
+    def cid(self, voter, track):
+        return f"r1|spotify:track:{track}|{voter}"
+
+    def build_with(self, labels):
+        with sandbox() as root, quiet(), mock.patch.object(build, "MIN_COMMENTS_FOR_RATES", 1):
+            if labels is not None:
+                (root / "data" / "comment_sentiment.json").write_text(json.dumps({"comments": labels}), encoding="utf-8")
+            d, raw = build.build_season(make_season(root / "data" / "season1", [QuoteAwards.ROUND]), "season1", "Season 1")
+            return build.build_career([d], [raw])["commentSummary"]
+
+    def test_strongest_comment_wins_and_ties_break_by_length(self):
+        s = self.build_with({
+            self.cid("p3", "a"): {"labels": ["funny"], "strength": {"funny": 2}},          # "Dank": shortest, but weaker
+            self.cid("p1", "b"): {"labels": ["funny"], "strength": {"funny": 3}},          # longer: loses the tie
+            self.cid("p2", "a"): {"labels": ["funny"], "strength": {"funny": 3}},          # "who? what? why? when?"
+            self.cid("p1", "d"): {"labels": ["heartfelt"], "strength": {"heartfelt": 3}},  # long: wins heartfelt
+            self.cid("p3", "d"): {"labels": ["heartfelt"], "strength": {"heartfelt": 3}},  # "Fine"
+            self.cid("p4", "c"): {"labels": ["mean"], "strength": {"mean": 1}},
+        })["sentimentAwards"]
+        q = s["quotes"]
+        self.assertEqual((q["funniest"]["text"], q["funniest"]["strength"]), ("who? what? why? when?", 3))
+        self.assertEqual(q["mostHeartfelt"]["name"], "Ann", "a heartfelt tie goes to the longer comment")
+        self.assertEqual(q["meanest"]["name"], "Dan")
+        self.assertNotIn("angriest", q, "no comment labelled angry: no award")
+        self.assertEqual(s["labelled"], 6)
+
+    def test_titles_go_to_the_highest_share_of_a_players_comments(self):
+        s = self.build_with({
+            self.cid("p3", "a"): {"labels": ["funny"], "strength": {"funny": 3}},   # Cat: 1 of 2
+            self.cid("p1", "b"): {"labels": ["witty"], "strength": {"witty": 1}},   # Ann: 1 of 3
+            self.cid("p4", "c"): {"labels": ["angry"], "strength": {"angry": 2}},   # Dan: 1 of 1
+        })["sentimentAwards"]["titles"]
+        self.assertEqual((s["classClown"]["name"], s["classClown"]["rate"]), ("Cat", 0.5))
+        self.assertEqual((s["grump"]["name"], s["grump"]["rate"]), ("Dan", 1.0))
+
+    def test_first_version_labels_count_as_strength_one_and_unknown_ones_drop(self):
+        s = self.build_with({
+            self.cid("p3", "a"): {"labels": ["funny", "rude"]},     # no strengths, a retired label
+        })["sentimentAwards"]
+        self.assertEqual(s["quotes"]["funniest"]["strength"], 1)
+        self.assertNotIn("meanest", s["quotes"])
+
+    def test_no_file_means_no_sentiment_awards(self):
+        self.assertNotIn("sentimentAwards", self.build_with(None))
+
+
 class Profiles(unittest.TestCase):
     """build_profiles(): the profile page's per-player extras."""
 

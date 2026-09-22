@@ -78,7 +78,30 @@ SENTIMENT_PATH = DATA_DIR / "comment_sentiment.json"
 # The sentiment labels the site knows how to render. A label outside this
 # set in comment_sentiment.json is ignored rather than rendered blindly,
 # so a change to the enrichment prompt can't inject arbitrary keys here.
-SENTIMENT_LABELS = ("witty", "funny", "rude", "appreciative", "storytelling", "analytical")
+SENTIMENT_LABELS = ("funny", "witty", "angry", "mean", "heartfelt", "hot_take",
+                    "appreciative", "storytelling", "analytical")
+SENTIMENT_STRENGTHS = (1, 2, 3)
+
+# Single-comment awards from the labels: the strongest comment for each.
+# Many comments share the top strength, so each award breaks the tie its
+# own way: a joke or a jab lands best short, a heartfelt one long.
+SENTIMENT_QUOTE_AWARDS = (
+    # (key, label, prefer shorter?)
+    ("funniest", "funny", True),
+    ("wittiest", "witty", True),
+    ("angriest", "angry", True),
+    ("meanest", "mean", True),
+    ("mostHeartfelt", "heartfelt", False),
+    ("hottestTake", "hot_take", True),
+)
+# Per-player titles: the highest share of their comments carrying the
+# label(s), among players with MIN_COMMENTS_FOR_RATES comments.
+SENTIMENT_PLAYER_AWARDS = (
+    ("classClown", ("funny", "witty")),
+    ("sweetheart", ("heartfelt", "appreciative")),
+    ("grump", ("angry", "mean")),
+    ("hotTakeArtist", ("hot_take",)),
+)
 
 # Deliberately small and hand-written: a dependency-free stopword list for
 # picking out someone's distinctive recurring word. Covers English
@@ -206,8 +229,46 @@ def load_sentiment():
         labels = [l for l in entry.get("labels", []) if l in SENTIMENT_LABELS]
         if not labels:
             continue
-        out[cid] = {"labels": labels, "rationale": (entry.get("rationale") or "").strip()}
+        # strength 1-3 per label; a label without one (or a file from the
+        # first version of the script) counts as 1, a touch of it
+        given = entry.get("strength") if isinstance(entry.get("strength"), dict) else {}
+        strength = {l: (given.get(l) if given.get(l) in SENTIMENT_STRENGTHS else 1) for l in labels}
+        out[cid] = {"labels": labels, "strength": strength, "rationale": (entry.get("rationale") or "").strip()}
     return out
+
+
+def sentiment_awards(entries, players):
+    """Awards from comment_sentiment.json labels; {} without any labels.
+
+    entries: [(entry, voter name)] for every comment; players: the career
+    commenter rows (with "id", "name", "comments")."""
+    labelled = [(e, n) for e, n in entries if "sentiment" in e]
+    if not labelled:
+        return {}
+    quotes = {}
+    for key, label, shorter in SENTIMENT_QUOTE_AWARDS:
+        hits = [(e["sentiment"]["strength"][label], e, n) for e, n in labelled if label in e["sentiment"]["labels"]]
+        if not hits:
+            continue
+        s, e, n = min(hits, key=lambda h: (-h[0], len(h[1]["text"]) if shorter else -len(h[1]["text"]), h[1]["id"]))
+        quotes[key] = dict(quote_of(e, n), strength=s)
+
+    titles = {}
+    by_voter = {}
+    for e, n in labelled:
+        by_voter.setdefault(n, []).append(e)
+    eligible = [p for p in players if p["comments"] >= MIN_COMMENTS_FOR_RATES]
+    for key, labels in SENTIMENT_PLAYER_AWARDS:
+        rows = []
+        for p in eligible:
+            count = sum(1 for e in by_voter.get(p["name"], []) if set(labels) & set(e["sentiment"]["labels"]))
+            if count:
+                rows.append({"name": p["name"], "count": count, "comments": p["comments"],
+                             "rate": round(count / p["comments"], 3)})
+        if rows:
+            g = best_of(rows, lambda r: r["rate"], order=by_name)
+            titles[key] = with_ties(g[0], g, lambda r: r["name"])
+    return {"quotes": quotes, "titles": titles, "labelled": len(labelled)}
 
 
 # Season 3 rule: once per season, a submitter can ask in their own note on
@@ -1241,8 +1302,11 @@ def build_career_comments(raw_seasons):
                               key=lambda p: p["longest"]["words"], default=None)
         if longest_overall:
             summary["longestComment"] = dict(longest_overall["longest"], name=longest_overall["name"])
-        summary["quoteAwards"] = quote_awards(
-            [(e, names.get(cid, "Unknown")) for cid, slot in by_player.items() if slot["voteRows"] for e in slot["entries"]])
+        all_entries = [(e, names.get(cid, "Unknown")) for cid, slot in by_player.items() if slot["voteRows"] for e in slot["entries"]]
+        summary["quoteAwards"] = quote_awards(all_entries)
+        sentiment = sentiment_awards(all_entries, players)
+        if sentiment:
+            summary["sentimentAwards"] = sentiment
         if eligible:
             sup = comment_superlatives(eligible)
             # the career page calls these two by career-flavoured names

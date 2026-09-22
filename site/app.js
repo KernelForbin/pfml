@@ -1588,6 +1588,15 @@
       g.appendChild(careerTile("Most notes on their own picks", who(s.mostSubmitterNotes.name),
         s.mostSubmitterNotes.notes + " of " + s.mostSubmitterNotes.submissions + " submissions", s.mostSubmitterNotes.tiedWith));
     }
+    // Titles from comment_sentiment.json (labels by Claude, via
+    // scripts/enrich_comments.py): only there once that's been run. Four,
+    // so the grid stays in even rows.
+    var titles = (s.sentimentAwards && s.sentimentAwards.titles) || {};
+    [["classClown", "Class clown", "funny or witty"], ["sweetheart", "Sweetheart", "heartfelt or appreciative"],
+     ["grump", "Resident grump", "angry or mean"], ["hotTakeArtist", "Hot-take artist", "a hot take"]].forEach(function (x) {
+      var t = titles[x[0]];
+      if (t) g.appendChild(careerTile(x[1], who(t.name), pct(t.rate) + " of their comments " + x[2], t.tiedWith));
+    });
     host.appendChild(g);
 
     host.appendChild(tableHint(true));
@@ -1660,10 +1669,22 @@
       [q.mostQuestions, "Most questions", function (c) { return [counted(c)]; }],
       [q.mostEmoji, "Most emoji", function (c) { return [counted(c)]; }],
       [q.mostWordsForZero, "Most words for zero points", function (c) { return [c.words + " words", "0 points given"]; }]
+    ];
+    // Judged by Claude from comment_sentiment.json, when it exists.
+    var sq = (s.sentimentAwards && s.sentimentAwards.quotes) || {};
+    var judged = [
+      [sq.funniest, "Funniest comment"], [sq.wittiest, "Wittiest comment"], [sq.angriest, "Angriest comment"],
+      [sq.meanest, "Meanest comment"], [sq.mostHeartfelt, "Most heartfelt comment"], [sq.hottestTake, "Hottest take"]
     ].filter(function (x) { return x[0]; });
+    judged.forEach(function (x) { cards.push([x[0], x[1], function () { return ["judged by Claude"]; }]); });
+    cards = cards.filter(function (x) { return x[0]; });
     if (!cards.length) return;
     var wrap = el("div", "quote-awards");
     wrap.appendChild(el("h3", null, "Comment awards"));
+    if (judged.length) {
+      wrap.appendChild(el("p", "block-note quote-note",
+        "Funniest, meanest and the rest are judged by an AI model (Claude) reading each comment, so treat them as a bit of fun. The others are counted from the text."));
+    }
     var grid = el("div", "quote-grid");
     cards.forEach(function (x) { grid.appendChild(commentQuote(x[0], x[1], x[2](x[0]))); });
     wrap.appendChild(grid);

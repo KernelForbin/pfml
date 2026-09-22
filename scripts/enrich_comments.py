@@ -15,8 +15,11 @@ ever inferred at build time.
 
 WHAT IT DOES
   Reads every voter comment out of data/season*/votes.csv, asks Claude to
-  label each one with any mix of: witty, funny, rude, appreciative,
-  storytelling, analytical, plus a one-line rationale. Results are keyed by
+  label each one with any mix of: funny, witty, angry, mean, heartfelt,
+  hot_take, appreciative, storytelling, analytical. Each label comes with
+  a strength from 1 (a touch) to 3 (the whole point of the comment), so the
+  site can crown single comments (funniest, meanest...) and not just count
+  them, plus a one-line rationale. Results are keyed by
   a stable comment id (round id + spotify uri + voter id), the same id
   build.py computes in comment_id(), so a re-run after a fresh export only
   pays for comments it hasn't already labelled.
@@ -52,10 +55,13 @@ OUT_PATH = DATA_DIR / "comment_sentiment.json"
 
 MODEL = "claude-opus-5"
 
-# Must match SENTIMENT_LABELS in build.py. build.py drops anything outside
-# this set rather than rendering it, so adding a label here means adding it
-# there too.
-LABELS = ["witty", "funny", "rude", "appreciative", "storytelling", "analytical"]
+# Must match SENTIMENT_LABELS in build.py (a test checks). build.py drops
+# anything outside this set rather than rendering it, so adding a label here
+# means adding it there too. "rude" from the first version became "mean"
+# and "angry": nothing had ever been labelled with it.
+LABELS = ["funny", "witty", "angry", "mean", "heartfelt", "hot_take",
+          "appreciative", "storytelling", "analytical"]
+STRENGTHS = (1, 2, 3)
 
 # How many comments go in one request. They're short (~15 words average),
 # so batching many per request keeps the per-comment overhead of the system
@@ -65,6 +71,7 @@ COMMENTS_PER_REQUEST = 25
 # Published per-MTok prices for the model above, used only by --estimate.
 # Update if pricing changes; this script never fetches pricing.
 PRICE_IN_PER_MTOK = 5.00
+OUTPUT_TOKENS_PER_COMMENT = 60
 PRICE_OUT_PER_MTOK = 25.00
 BATCH_DISCOUNT = 0.5
 
@@ -73,19 +80,28 @@ where players submit songs to a themed round and vote on each other's picks \
 with a short written comment.
 
 For each comment you are given, choose every label that genuinely applies \
-from this set:
+from this set, each with a strength:
 
-- witty: wordplay, a clever turn of phrase, dry humour
 - funny: going for a laugh, a joke, an absurd bit
-- rude: insulting or harsh about the track or the person, including in jest
+- witty: wordplay, a clever turn of phrase, dry humour
+- angry: frustrated, annoyed or fed up, at the track, the round or anyone
+- mean: harsh or cutting about the track or the person, including in jest
+- heartfelt: sincere and warm, emotional, the song clearly meant something
+- hot_take: a bold or contrarian opinion stated with confidence
 - appreciative: praising the track or thanking the submitter
 - storytelling: a personal anecdote or memory, not just a reaction
 - analytical: talking about the music itself, production, structure, genre
 
+Strength says how much of the comment is that thing:
+- 1: a touch of it, in passing
+- 2: clearly there, a real part of the comment
+- 3: the whole point of the comment, a standout example
+
 Rules:
 - Apply as many labels as fit, or none at all. Most comments are short and \
 plain and get one label or zero. Do not reach for a label to fill space.
-- These are friends insulting each other affectionately. Label "rude" on \
+- Save 3 for comments that would make a good example of the label.
+- These are friends teasing each other affectionately. Label "mean" on \
 the content, not on whether it was meant kindly.
 - The rationale is one short clause, under 12 words, quoting or pointing at \
 what decided it. No preamble.
@@ -166,7 +182,15 @@ RESPONSE_SCHEMA = {
                     "index": {"type": "integer"},
                     "labels": {
                         "type": "array",
-                        "items": {"type": "string", "enum": LABELS},
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "label": {"type": "string", "enum": LABELS},
+                                "strength": {"type": "integer", "enum": list(STRENGTHS)},
+                            },
+                            "required": ["label", "strength"],
+                            "additionalProperties": False,
+                        },
                     },
                     "rationale": {"type": "string"},
                 },
@@ -209,10 +233,10 @@ def estimate(client, batches):
         per_batch.append(counted.input_tokens)
     avg_in = sum(per_batch) / len(per_batch)
     total_in = avg_in * len(batches)
-    # Each result is an index, a short label list and a clause: ~40 output
-    # tokens per comment is a generous allowance measured against the real
-    # schema.
-    total_out = sum(len(b) for b in batches) * 40
+    # Each result is an index, a short list of {label, strength} and a
+    # clause: ~60 output tokens per comment is a generous allowance for the
+    # real schema.
+    total_out = sum(len(b) for b in batches) * OUTPUT_TOKENS_PER_COMMENT
 
     for label, mult in (("batch (default, 50% off)", BATCH_DISCOUNT), ("standard", 1.0)):
         cost = (total_in / 1e6 * PRICE_IN_PER_MTOK + total_out / 1e6 * PRICE_OUT_PER_MTOK) * mult
@@ -220,9 +244,23 @@ def estimate(client, batches):
     print(f"\n  model            {MODEL}")
     print(f"  requests         {len(batches)}")
     print(f"  input tokens     ~{total_in:,.0f} (measured on {len(sample)} sampled request(s))")
-    print(f"  output tokens    ~{total_out:,.0f} (allowance, 40/comment)")
+    print(f"  output tokens    ~{total_out:,.0f} (allowance, {OUTPUT_TOKENS_PER_COMMENT}/comment)")
     print("\nPrices are the published per-MTok rates hardcoded in this script; "
           "check the pricing page if it's been a while.")
+
+
+def clean_labels(raw_labels):
+    """[{label, strength}] from a response -> {label: strength}, keeping
+    only known labels with a strength of 1-3 (the strongest if a label
+    repeats). Anything else is dropped, not guessed at."""
+    out = {}
+    for item in raw_labels or []:
+        if not isinstance(item, dict):
+            continue
+        label, strength = item.get("label"), item.get("strength")
+        if label in LABELS and strength in STRENGTHS:
+            out[label] = max(out.get(label, 0), strength)
+    return out
 
 
 def merge_results(store, batch, payload):
@@ -235,9 +273,10 @@ def merge_results(store, batch, payload):
         idx = item.get("index")
         if not isinstance(idx, int) or not (0 <= idx < len(batch)):
             continue
-        labels = [l for l in item.get("labels", []) if l in LABELS]
+        strength = clean_labels(item.get("labels"))
         store[batch[idx]["id"]] = {
-            "labels": labels,
+            "labels": sorted(strength),
+            "strength": strength,
             "rationale": (item.get("rationale") or "").strip(),
         }
         added += 1
@@ -254,13 +293,14 @@ def write_store(store, model):
                     "Safe to delete: the site drops sentiment stats and everything else builds.",
         "model": model,
         "labels": LABELS,
+        "strengths": list(STRENGTHS),
         "generatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "comments": store,
     }
     with open(OUT_PATH, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=1, sort_keys=True)
     print(f"\nWrote {OUT_PATH.relative_to(ROOT)}: {len(store)} labelled comments.")
-    print("Now run: python scripts/build.py")
+    print("Now run: python scripts/publish.py   (builds with the labels, then uploads)")
 
 
 def run_batch_api(client, batches, store):

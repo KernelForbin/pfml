@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-09-22 (follow-up 2)
+
+- **Sentiment script, ready to run** (`scripts/enrich_comments.py`, not
+  run yet). Labels are now funny, witty, angry, mean, heartfelt, hot_take,
+  appreciative, storytelling and analytical, each with a strength of 1-3,
+  so single comments can be crowned. The build turns them into six "judged
+  by Claude" quote cards and four player titles on the All-Time page, which
+  appear only once `data/comment_sentiment.json` exists. Steps: run
+  `--estimate` to see the cost, run it, then `publish.py`.
+
 ## 2026-09-22 (follow-up)
 
 - **Comment awards on the All-Time page**, next to the longest comment

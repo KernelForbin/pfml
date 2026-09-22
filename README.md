@@ -792,9 +792,24 @@ eligible to win anything.
 ### Comment sentiment (optional, and not part of the build)
 
 `scripts/enrich_comments.py` is a standalone local tool that labels each
-vote comment with any mix of *witty, funny, rude, appreciative,
-storytelling, analytical*, plus a one-line rationale. It is the only thing
-in this repo that calls an API and it costs money to run.
+vote comment with any mix of *funny, witty, angry, mean, heartfelt,
+hot_take, appreciative, storytelling, analytical*, each with a strength
+from 1 (a touch) to 3 (the whole point of the comment), plus a one-line
+rationale. It is the only thing in this repo that calls an API and it
+costs money to run. It has not been run yet (as of 2026-09-22).
+
+**What the labels unlock** (all absent until the file exists, so the site
+looks exactly as without it): on the All-Time page, six quote cards judged
+by the labels (funniest, wittiest, angriest, meanest, most heartfelt,
+hottest take: the highest strength wins, ties to the shorter comment,
+except heartfelt, which goes to the longer), under a line saying they're
+judged by Claude; and four player titles among the award tiles (class
+clown, sweetheart, resident grump, hot-take artist: the highest share of a
+player's comments carrying those labels, 10 comments minimum).
+`sentiment_awards()` in `build.py`. The first version's labels had no
+strengths and a *rude* label; a file in that shape still loads (strength
+1, *rude* dropped). The label list lives in both scripts, and a test keeps
+them identical.
 
 **Nothing automatic ever runs it.** `build.py` does not call it, and
 neither does the GitHub Action — the deploy has no API key and must never
