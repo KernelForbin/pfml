@@ -1745,13 +1745,19 @@
   }
 
   function renderProfileCareer(c, p, prof) {
-    var g = el("div", "hl-grid");
+    // Six tiles: two rows of three, or three rows of two on a phone (.pf-tiles).
+    var g = el("div", "hl-grid pf-tiles");
     var r = careerRank(c.players, p);
     g.appendChild(careerTile("Career Score", String(p.careerScore),
       (r.tied ? "Tied " : "") + ordinal(r.rank) + " of " + c.players.length + " all-time"));
     g.appendChild(careerTile("Total points", String(p.totalPoints),
       p.seasonsPlayed + " " + plural(p.seasonsPlayed, "season") + ", " + p.avgPointsPerSeason + " a season"));
-    g.appendChild(careerTile("Rounds won", String(p.roundsWon), p.podiums + " top-3 " + plural(p.podiums, "finish", "finishes")));
+    g.appendChild(careerTile("Rounds won", String(p.roundsWon),
+      p.submissions ? pct(p.roundsWon / p.submissions) + " of their tracks" : ""));
+    // Consistency, where Rounds won only counts the very top: how often a
+    // track of theirs finished in its round's top three.
+    g.appendChild(careerTile("Top-3 rate", p.submissions ? pct(p.podiums / p.submissions) : "&ndash;",
+      p.podiums + " of " + p.submissions + " " + plural(p.submissions, "track") + " in a round’s top 3"));
     g.appendChild(careerTile("Tracks submitted", String(p.submissions),
       p.submissions ? (Math.round(p.totalPoints / p.submissions * 10) / 10) + " points a track" : ""));
     if (prof) g.appendChild(careerTile("Points given", String(prof.pointsGiven), "to other players’ tracks"));

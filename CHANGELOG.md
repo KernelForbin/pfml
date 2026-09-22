@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-09-23 (follow-up)
+
+- **Profile tiles fit phones.** The six Career tiles sit three rows of two
+  on a phone (smaller boxes, measured 163px wide at 390px, nothing
+  overflowing) and stay two rows of three on desktop. The new sixth tile
+  is **Top-3 rate**: the share of their tracks that finished in a round's
+  top three, so consistency shows, not just wins. Rounds won now shows its
+  share of their tracks instead of the podium count.
+
 ## 2026-09-23
 
 - **Inbox.** A tray icon at the top right of every members-only page

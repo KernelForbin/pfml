@@ -492,6 +492,18 @@ class ProfilePage(unittest.TestCase):
         for i in sorted(ids):
             self.assertIn(f'id="{i}"', page, i)
 
+    def test_career_tiles_are_six_in_three_columns_or_two_on_phones(self):
+        career = js_function(read("app.js"), "function renderProfileCareer(c, p, prof)")
+        labels = re.findall(r'^\s*(?:if \(prof\) )?g\.appendChild\(careerTile\("([^"]+)"', career, re.M)
+        self.assertEqual(labels, ["Career Score", "Total points", "Rounds won", "Top-3 rate",
+                                  "Tracks submitted", "Points given"], "two full rows of three, three of two")
+        self.assertIn('el("div", "hl-grid pf-tiles")', career)
+        css = read("style.css")
+        self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr))", " ".join(css_rules(css, ".pf-tiles")))
+        blocks = [b.split("\n}", 1)[0] for b in re.split(r"@media \(max-width: 620px\)\s*\{", css)[1:]]
+        phone = [r for b in blocks for r in re.findall(r"\.pf-tiles\s*\{([^}]*)\}", b)]
+        self.assertTrue(phone and "repeat(2, minmax(0, 1fr))" in phone[0])
+
     def test_profile_defaults_to_the_signed_in_member(self):
         init = js_function(read("app.js"), "function initProfile()")
         self.assertIn('get("p") || myId', init)

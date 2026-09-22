@@ -519,8 +519,11 @@ loses only the count; signing in and the list still work. The count
 refreshes on page load, and when the tab comes back after a minute away.
 
 **Profiles.** `profile.html?p=<competitor id>`, the signed-in member's own
-without `?p`. Totals, Career Score (ranked with ties) and comment stats come
-from `career.json`; each season's finish, the five best tracks (newest first
+without `?p`. Six Career tiles (Career Score, ranked with ties; total
+points; rounds won; top-3 rate, the share of their tracks that finished in
+a round's top three; tracks submitted; points given) sit two rows of three,
+or three rows of two at phone widths (`.pf-tiles`). Totals and comment
+stats come from `career.json`; each season's finish, the five best tracks (newest first
 on equal points), the three biggest fans (most points given to this
 player) and favourites (most points this player gave), all summed over
 every season, come from `profiles.json` (`build_profiles` in `build.py`).

@@ -1040,6 +1040,8 @@ body.auth-checking::before {
 .pf-id h1 { font-size: clamp(2.1rem, 7vw, 3.4rem); overflow-wrap: anywhere; }
 .pf-id .pf-av { width: 72px; height: 72px; font-size: 1.5rem; box-shadow: 0 0 0 4px var(--card), var(--shadow-md); }
 .pf-switch { margin-top: 14px; }
+/* The Career tiles: two rows of three here, three rows of two on phones. */
+.pf-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .pf-switch .rp-jump-select { max-width: 100%; }
 .pf-of { color: var(--muted); font-size: 0.8em; }
 .pf-seasons .vname a { color: var(--ink); font-weight: 600; }
@@ -1073,6 +1075,10 @@ body.auth-checking::before {
      which sits too far right for a 380px panel to fit from it. */
   .acct-inbox { position: fixed; top: 60px; left: 12px; right: 12px; width: auto; }
   .pf-fans { grid-template-columns: 1fr; }
+  .pf-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .pf-tiles .hl { padding: 12px 13px; }
+  .pf-tiles .hl-label { margin-bottom: 4px; font-size: 0.74rem; }
+  .pf-tiles .hl-meta { margin-top: 3px; font-size: 0.76rem; line-height: 1.35; }
   .pf-id { gap: 14px; }
   .pf-id .pf-av { width: 56px; height: 56px; font-size: 1.15rem; }
 }
