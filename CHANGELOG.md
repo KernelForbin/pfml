@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-09-22 (follow-up)
+
+- **Tapping names in Standings no longer shifts the list on a phone.**
+  Measured on the live site at 375px with scroll anchoring off (Safari
+  has none): the tapped name jumped 99px on the first tap and 68px when
+  the filter chips wrapped, because the "Filtered to" row grows in the bar
+  above the list. Chrome's scroll anchoring hid it. Now the tapped row is
+  put back where it was, whichever browser it is. On a phone the chips are
+  one swipeable line with Clear all first, so the bar grows once (86px to
+  124px) and then holds, however many names are picked. Re-measured: 0px
+  of movement on every tap.
+- **No more purple names while scrolling on a phone.** The row hover
+  highlight applied on touch screens, where `:hover` sticks to whatever a
+  finger touched, including the start of a scroll. Hover effects on the
+  Standings rows, the section bars and the filter chips now apply only on
+  devices with a real hover (`@media (hover: hover)`), and the grey tap
+  flash is off on them.
+
 ## 2026-09-22
 
 - **No "Signing you in" card when you're already signed in.** `auth.js`

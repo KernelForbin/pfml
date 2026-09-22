@@ -171,6 +171,20 @@ After a deploy, fetch the live files and compare them with the commit.
 `gh run list` can return the previous run for a moment after a push, so
 match the run to the commit's sha before watching it.
 
+**Testing on a phone viewport:** Chrome's scroll anchoring quietly hides
+layout shifts that Safari (no scroll anchoring) shows. Measure with
+`document.documentElement.style.overflowAnchor = "none"` too. The page has
+`scroll-behavior: smooth`, so a corrective `scrollBy`/`scrollTo` needs
+`behavior: "instant"`, or it slides instead of holding still. On touch
+screens `:hover` sticks to whatever a finger touched, so hover styling on
+tappable lists belongs inside `@media (hover: hover)`. Resize the viewport
+*after* the tab has a page loaded; resizing a blank tab silently fails.
+
+**Break-checks need a passing baseline:** run the suite in the scratch copy
+before breaking anything. If a test already fails there, every break looks
+"caught". That happened once, when the CSS test helper tripped on a
+comment, and the results were only trusted after a rerun.
+
 **Editing files from a script:** backslashes and quotes get mangled when
 file content passes through a shell heredoc into a Python string. It
 happened four times in one session: CSS `\25BE` became a control

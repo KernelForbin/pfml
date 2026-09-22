@@ -208,6 +208,7 @@ def css_rules(css, selector):
     """The declaration blocks of every rule whose selector list includes
     `selector` exactly."""
     out = []
+    css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)   # a comment right before a rule isn't its selector
     for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
         if selector in [s.strip() for s in sel.split(",")]:
             out.append(body)
@@ -276,6 +277,55 @@ class QuietSignIn(unittest.TestCase):
     def test_the_checking_state_is_styled(self):
         self.assertIn('classList.add("auth-checking")', read("auth.js"))
         self.assertIn("body.auth-checking::before", read("style.css"))
+
+
+def strip_media(css, query):
+    """css with every `@media <query> { ... }` block removed (braces matched)."""
+    out, i = [], 0
+    pattern = re.compile(r"@media\s*" + re.escape(query) + r"\s*\{")
+    while True:
+        m = pattern.search(css, i)
+        if not m:
+            out.append(css[i:])
+            return "".join(out)
+        out.append(css[i:m.start()])
+        depth, j = 1, m.end()
+        while depth:
+            depth += {"{": 1, "}": -1}.get(css[j], 0)
+            j += 1
+        i = j
+
+
+class TouchFriendlyStandings(unittest.TestCase):
+    def test_hover_effects_only_on_devices_that_hover(self):
+        # On a phone, :hover sticks to whatever a finger touched, including
+        # the start of a scroll: Standings names turned purple while
+        # scrolling. These parts may only hover on hover-capable devices.
+        css = strip_media(read("style.css"), "(hover: hover)")
+        for sel, _ in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
+            for part in sel.split(","):
+                if ":hover" in part:
+                    self.assertNotRegex(part, r"stand-row|fold-bar|stand-filter",
+                                        f"{part.strip()} applies on touch screens too")
+
+    def test_filter_row_spans_the_whole_bar(self):
+        # Squeezed into the title column beside Show all, each chip took a
+        # line of its own and the bar grew by ~100px on the first tap.
+        bar = re.search(r'id="standBar"(.*?)id="standPanel"', read("season.template.html"), re.S).group(1)
+        text_col = re.search(r'<span class="fold-text">(.*?)</span>\s*<button', bar, re.S).group(1)
+        self.assertNotIn('id="standFilters"', text_col, "filters sit outside the narrow text column")
+        self.assertIn('id="standFilters"', bar)
+        rule = " ".join(css_rules(read("style.css"), ".stand-filters"))
+        self.assertIn("grid-column: 1 / -1", rule)
+
+    def test_on_a_phone_the_chips_are_one_swipeable_line(self):
+        # measured at 375px: wrapping chips grew the bar ~36px per pick
+        css = read("style.css")
+        phone = re.search(r"@media \(max-width: 620px\) \{(.*?)\n\}", css[css.index("folding sections"):], re.S)
+        self.assertIsNotNone(phone)
+        rule = " ".join(css_rules(phone.group(1), ".stand-filters"))
+        self.assertIn("flex-wrap: nowrap", rule)
+        self.assertIn("overflow-x: auto", rule)
 
 
 class CleanText(unittest.TestCase):

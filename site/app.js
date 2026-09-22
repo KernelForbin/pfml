@@ -418,6 +418,7 @@
       var pct = Math.max(3, Math.round((p.points / max) * 100));
       var on = isSelected(p.id);
       var row = el("div", "stand-row is-clickable" + (on ? " is-selected" : ""));
+      row.setAttribute("data-id", p.id);
       row.setAttribute("role", "button");
       row.setAttribute("tabindex", "0");
       row.setAttribute("aria-pressed", String(on));
@@ -428,13 +429,34 @@
         '<div class="bar"><i style="width:' + pct + '%"></i></div>' + dailyDoubleLine(p) + "</div>" +
         '<div class="stand-score"><b>' + p.points + "</b><span>" +
         p.avgPerSubmission + " avg &middot; " + p.roundsWon + " won &middot; " + p.podiums + " top-3</span></div>";
-      row.addEventListener("click", function () { toggleSelected(p.id); });
+      row.addEventListener("click", function () { toggleFromStandings(p.id, row); });
       row.addEventListener("keydown", function (ev) {
-        if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault && ev.preventDefault(); toggleSelected(p.id); }
+        if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault && ev.preventDefault(); toggleFromStandings(p.id, row); }
       });
       box.appendChild(row);
     });
     setBlock("standings", box);
+  }
+
+  // A tap on a name re-renders the page, and the "Filtered to" row in the
+  // bar above the list grows or shrinks, so the list moved under the
+  // finger: measured at 375px with scroll anchoring off (as on Safari,
+  // which has none), the tapped name jumped 99px on the first tap and 68px
+  // when the chips wrapped. Chrome's scroll anchoring hid it. Put the
+  // tapped row back where it was, whichever browser it is.
+  function toggleFromStandings(id, row) {
+    var before = row.getBoundingClientRect().top;
+    toggleSelected(id);
+    var now = document.querySelector('#standings .stand-row[data-id="' + cssEscape(id) + '"]');
+    if (!now) return;
+    var moved = now.getBoundingClientRect().top - before;
+    // instant: the page has scroll-behavior: smooth, and a smooth scroll
+    // would visibly slide the list back instead of never moving it
+    if (Math.abs(moved) >= 1) window.scrollBy({ top: moved, behavior: "instant" });
+  }
+
+  function cssEscape(s) {
+    return window.CSS && CSS.escape ? CSS.escape(s) : String(s).replace(/["\\]/g, "\\$&");
   }
 
   /* ---- player focus / comparison panel ---- */

@@ -155,13 +155,11 @@ a:hover { color: var(--magenta); }
 .stand-score span { display: block; font-size: 0.74rem; color: var(--muted); }
 
 .stand-row.is-clickable { cursor: pointer; transition: background .12s ease; }
-.stand-row.is-clickable:hover { background: var(--wash); }
 .stand-row.is-clickable:focus-visible { outline-offset: -2px; }
 .stand-row.is-selected {
   background: rgba(158, 0, 196, 0.045);
   box-shadow: inset 4px 0 0 var(--magenta);
 }
-.stand-row.is-selected.is-clickable:hover { background: rgba(158, 0, 196, 0.08); }
 .stand-row.is-selected .stand-name { color: var(--deep); }
 
 /* ---------- player focus / comparison panel ---------- */
@@ -489,6 +487,20 @@ button.trend-chip.is-on .dot { opacity: 1; }
 .site-footer p { margin: 0; max-width: 70ch; }
 .site-footer p + p { margin-top: 6px; }
 
+/* Hover effects only where there's a real hover (mouse, trackpad). On a
+   phone, :hover lands on whatever a finger touches, including the start of
+   a scroll, and sticks: names in Standings turned purple while scrolling.
+   So these apply on hover-capable devices only, and rows don't flash grey
+   on tap either. */
+.stand-row.is-clickable, .fold-bar, .stand-filter { -webkit-tap-highlight-color: transparent; }
+@media (hover: hover) {
+  .stand-row.is-clickable:hover { background: var(--wash); }
+  .stand-row.is-selected.is-clickable:hover { background: rgba(158, 0, 196, 0.08); }
+  .fold-bar:hover { transform: translateY(-1px); box-shadow: inset 4px 0 0 var(--magenta), 0 22px 44px -22px rgba(22, 17, 26, .45), 0 2px 6px -2px rgba(22, 17, 26, .1); }
+  .stand-filter:hover { background: var(--deep); border-color: var(--deep); }
+  .stand-filters-clear:hover { color: var(--magenta); }
+}
+
 /* ---------- responsive ---------- */
 
 @media (max-width: 620px) {
@@ -641,7 +653,6 @@ body.auth-checking::before {
   box-shadow: inset 4px 0 0 var(--magenta), var(--shadow-md);
   transition: box-shadow .15s ease, transform .15s ease;
 }
-.fold-bar:hover { transform: translateY(-1px); box-shadow: inset 4px 0 0 var(--magenta), 0 22px 44px -22px rgba(22, 17, 26, .45), 0 2px 6px -2px rgba(22, 17, 26, .1); }
 .fold[open] > .fold-bar, .fold.is-open > .fold-bar { background: var(--wash); border-color: rgba(158, 0, 196, 0.25); }
 .fold-text { display: grid; gap: 3px; min-width: 0; padding-left: 4px; }
 .fold-title { margin: 0; font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
@@ -682,7 +693,7 @@ body.auth-checking::before {
 /* Standings: the filters in use, shown open or closed. Tapping a name
    takes it off; Clear all takes them all off. They sit in the bar but
    don't fold it (app.js ignores clicks on them for the toggle). */
-.stand-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.stand-filters { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: -4px; padding-left: 4px; }
 .stand-filters[hidden] { display: none; }
 .stand-filters-label { font-size: 0.8rem; font-weight: 600; color: var(--deep); margin-right: 2px; }
 .stand-filter {
@@ -695,13 +706,11 @@ body.auth-checking::before {
   display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%;
   background: rgba(255,255,255,.22); font-size: 0.9rem; line-height: 1;
 }
-.stand-filter:hover { background: var(--deep); border-color: var(--deep); }
 .stand-filter .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .stand-filters-clear {
   font: 500 0.84rem "Inter", sans-serif; color: var(--deep); background: none; border: none;
   padding: 5px 4px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
 }
-.stand-filters-clear:hover { color: var(--magenta); }
 
 /* Results by round: the newest winners' album art */
 .rr-art { display: flex; padding-left: 4px; }
@@ -719,6 +728,14 @@ body.auth-checking::before {
   .fold-bar { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
   .fold-cta { grid-column: 2; padding: 9px 12px; }
   #block-standings .fold-text { grid-column: 1; }
+  /* One swipeable line of chips on a phone: long names otherwise wrapped
+     each chip onto its own line and the bar grew ~36px per pick. Clear
+     all comes right after the label so it's never scrolled out of view. */
+  .stand-filters { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .stand-filters::-webkit-scrollbar { display: none; }
+  .stand-filters > * { flex: 0 0 auto; }
+  .stand-filters-label { order: -2; }
+  .stand-filters-clear { order: -1; }
   .rr-art { grid-column: 1 / -1; }
   .rr-thumb { width: 44px; height: 44px; }
   .fold-title { font-size: 1.25rem; }
