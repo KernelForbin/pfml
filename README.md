@@ -143,6 +143,15 @@ kept outside the repo, locally, as a git bundle.
 6. `.env` (copy `.env.example`): the project URL and the secret key.
 7. `python scripts/publish.py`, then `python scripts/invites.py`.
 
+**Moving between pages.** Every page load checks the session and looks up
+the membership before any data loads. When the browser already holds a
+saved sign-in (supabase-js's `sb-<project ref>-auth-token` in
+localStorage), the page shows its own layout straight away, with a thin
+loading bar along the top, while that check runs. The "Signing you in"
+card only appears for a first visit or an invite link. If the check fails
+(expired session, account not linked), the usual card replaces the page.
+The page's data still loads only after the check lets the member in.
+
 If signing in lands on `http://localhost:3000` (a dead page, with `?code=...`
 in the address), step 4 didn't take: Supabase only returns people to an
 address on its redirect list, and otherwise falls back to the Site URL,

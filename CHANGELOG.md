@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-09-22
+
+- **No "Signing you in" card when you're already signed in.** `auth.js`
+  showed that card on every page load while it checked the session and
+  membership. With a saved sign-in in the browser, the page now shows its
+  own layout at once, with a thin magenta loading bar along the top, until
+  the check lets the member in. First visits and invite links still get
+  the card, and a failed check (expired, not linked) still ends on it.
+  Checked in a browser against the real `auth.js`, with a fake Supabase
+  client delayed 1.2s: the old code showed the card to a signed-in
+  member, the new code shows the page and the bar; the expired, not-linked
+  and invite cases end where they did before.
+
 ## 2026-09-21 (follow-up 13)
 
 - **The Home page no longer says the live round is in "Voting".** It

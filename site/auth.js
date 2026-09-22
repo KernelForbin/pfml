@@ -49,6 +49,7 @@
   document.body.appendChild(gate);
 
   function showGate(title, bodyHtml, actions) {
+    document.body.classList.remove("auth-checking");
     document.body.classList.add("gated");
     gate.hidden = false;
     gate.innerHTML =
@@ -68,7 +69,30 @@
   }
 
   function openSite() {
+    document.body.classList.remove("gated", "auth-checking");
+    gate.hidden = true;
+    gate.innerHTML = "";
+  }
+
+  // Members moving between pages used to see the "Signing you in" card on
+  // every load, because the check (saved session, then a membership
+  // lookup) runs before anything shows. When this browser already holds a
+  // saved sign-in, show the page's own shell with a thin loading bar
+  // instead; the page still has no data until the check lets them in, and
+  // if it fails, the usual card replaces it. The key is supabase-js's
+  // default, sb-<project ref>-auth-token (read from the pinned 2.116.0).
+  function hasSavedSession() {
+    try {
+      var ref = new URL(cfg.supabaseUrl).hostname.split(".")[0];
+      return !!localStorage.getItem("sb-" + ref + "-auth-token");
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function showChecking() {
     document.body.classList.remove("gated");
+    document.body.classList.add("auth-checking");
     gate.hidden = true;
     gate.innerHTML = "";
   }
@@ -208,7 +232,9 @@
   }
 
   function start() {
-    showGate("Signing you in", "<p>One moment.</p>");
+    // An invite still gets the card: linking an account is a real step.
+    if (hasSavedSession() && !pendingInvite()) showChecking();
+    else showGate("Signing you in", "<p>One moment.</p>");
     client.auth.getSession().then(function (res) {
       var session = res.data && res.data.session;
       if (!session) { showSignIn(); return; }

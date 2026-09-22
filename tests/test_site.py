@@ -256,6 +256,28 @@ class FeaturesPageTokens(unittest.TestCase):
             self.assertIn(name, page, f"features.html is missing {name}")
 
 
+class QuietSignIn(unittest.TestCase):
+    """Members with a saved sign-in see the page and a loading bar, not the
+    "Signing you in" card, on every page change. The browser behaviour was
+    checked against the real auth.js with a fake Supabase client; these pin
+    what it depends on."""
+
+    def test_session_key_was_read_from_the_pinned_library(self):
+        # auth.js looks for supabase-js's default storage key,
+        # sb-<project ref>-auth-token, as read from version 2.116.0. A
+        # different version may store it elsewhere: recheck, then update
+        # both this test and the comment in auth.js.
+        versions = set()
+        for name in ("index.html", "career.html", "round.html", "season.template.html"):
+            versions |= set(re.findall(r"@supabase/supabase-js@([\d.]+)/", read(name)))
+        self.assertEqual(versions, {"2.116.0"})
+        self.assertIn('"sb-" + ref + "-auth-token"', read("auth.js"))
+
+    def test_the_checking_state_is_styled(self):
+        self.assertIn('classList.add("auth-checking")', read("auth.js"))
+        self.assertIn("body.auth-checking::before", read("style.css"))
+
+
 class CleanText(unittest.TestCase):
     def test_no_control_characters_in_site_files(self):
         # A generated CSS edit once turned the escape "\25BE" (the arrow on
