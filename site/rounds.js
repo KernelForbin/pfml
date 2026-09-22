@@ -22,9 +22,21 @@
 (function () {
   "use strict";
 
-  var REACT = { fire: "\uD83D\uDD25", laugh: "\uD83D\uDE02", hundred: "\uD83D\uDCAF",
-                eyes: "\uD83D\uDC40", grimace: "\uD83D\uDE2C", heart: "\u2764\uFE0F" };
-  var REACT_ORDER = ["fire", "laugh", "hundred", "eyes", "grimace", "heart"];
+  // The 6 reactions PFML has offered since the feature shipped, stored by
+  // this short name, not the emoji itself: comment_reactions rows already
+  // in Supabase use these exact values. Kept as a one-tap "quick" row in
+  // the picker so they still store the same value and count together with
+  // any reaction of the same kind added before this. Anything picked from
+  // the searchable grid below is new, and is stored as the emoji character
+  // itself (see site/emoji-data.js) rather than needing a name for it.
+  var LEGACY_REACT = { fire: "\uD83D\uDD25", laugh: "\uD83D\uDE02", hundred: "\uD83D\uDCAF",
+                        eyes: "\uD83D\uDC40", grimace: "\uD83D\uDE2C", heart: "\u2764\uFE0F" };
+  var LEGACY_REACT_ORDER = ["fire", "laugh", "hundred", "eyes", "grimace", "heart"];
+
+  // The glyph to show for a stored reaction value: LEGACY_REACT[key] for
+  // one of the 6 old names, or the value itself, since anything else is
+  // already the emoji character that was clicked.
+  function reactionGlyph(key) { return LEGACY_REACT[key] || key; }
 
   var state = {
     host: null,            // element holding the round page's tracks
@@ -222,23 +234,76 @@
   function repliesFor(id) { return (state.social && state.social.replies[id]) || []; }
   function memberName(uid) { return (state.people && state.people[uid] && state.people[uid].name) || "A member"; }
 
+  // A plain outline face, drawn as SVG rather than relying on a Unicode
+  // emoji character: a smiley text glyph (previously "+☺") rendered
+  // through each device's own emoji font, which on iOS/Android is a full
+  // colour "yellow face", not the flat 2D icon it looked like on desktop.
+  // currentColor keeps it in step with the button's own text colour.
+  var ADD_REACTION_ICON =
+    '<svg class="cm-add-icon" viewBox="0 0 20 20" width="15" height="15" aria-hidden="true" focusable="false">' +
+    '<circle cx="8.4" cy="8.4" r="6.9" fill="none" stroke="currentColor" stroke-width="1.5"/>' +
+    '<circle cx="6.1" cy="7" r="1" fill="currentColor"/><circle cx="10.7" cy="7" r="1" fill="currentColor"/>' +
+    '<path d="M5.6 10.2c.9 1.3 2.2 1.9 2.8 1.9s1.9-.6 2.8-1.9" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>' +
+    '<circle cx="15.3" cy="15.3" r="3.7" fill="var(--card)" stroke="currentColor" stroke-width="1.3"/>' +
+    '<path d="M15.3 13.5v3.6M13.5 15.3h3.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>' +
+    "</svg>";
+
+  // Every emoji beyond the 6 quick ones, for the picker's search grid.
+  // site/emoji-data.js (script tag, not a fetch: no request at open time)
+  // sets these; empty arrays if it somehow didn't load, so the picker
+  // still works with just the quick row rather than breaking.
+  function emojiData() { return window.PFML_EMOJI_DATA || []; }
+  function emojiGroups() { return window.PFML_EMOJI_GROUPS || []; }
+
+  function emojiPickerHtml(c, reacts) {
+    var quick = LEGACY_REACT_ORDER.map(function (k) {
+      var on = reacts[k] && reacts[k].mine;
+      return '<button type="button" class="cm-pick' + (on ? " is-on" : "") + '" data-act="react" data-r="' + k +
+        '" aria-label="' + k + '" aria-pressed="' + !!on + '">' + LEGACY_REACT[k] + "</button>";
+    }).join("");
+
+    var lastGroup = -1, grid = [];
+    emojiData().forEach(function (row) {
+      var emoji = row[0], name = row[1], groupIndex = row[2];
+      if (groupIndex !== lastGroup) {
+        lastGroup = groupIndex;
+        grid.push('<div class="cm-emoji-group" data-group="' + groupIndex + '">' + esc(emojiGroups()[groupIndex] || "") + "</div>");
+      }
+      var on = reacts[emoji] && reacts[emoji].mine;
+      grid.push('<button type="button" class="cm-emoji-btn' + (on ? " is-on" : "") + '" data-act="react" data-r="' + esc(emoji) +
+        '" data-name="' + esc(name.toLowerCase()) + '" data-group="' + groupIndex + '" title="' + esc(name) +
+        '" aria-label="' + esc(name) + '" aria-pressed="' + !!on + '">' + emoji + "</button>");
+    });
+
+    // Its own close button: on a phone the picker is a bottom sheet that
+    // covers the comment it belongs to, including the "add a reaction"
+    // button that also closes it (measured at 375px: that button sat right
+    // under the sheet), so without this the only way out was picking one.
+    return '<div class="cm-picker" role="dialog" aria-label="Add a reaction">' +
+      '<div class="cm-picker-quick">' + quick +
+        '<button type="button" class="cm-picker-close" data-act="picker" aria-label="Close">&times;</button>' +
+      "</div>" +
+      '<div class="cm-picker-search">' +
+        '<label class="cm-sr" for="es-' + esc(c.id) + '">Search emoji</label>' +
+        '<input type="search" id="es-' + esc(c.id) + '" class="cm-emoji-search" placeholder="Search emoji…" autocomplete="off" autocapitalize="off" spellcheck="false">' +
+      "</div>" +
+      '<div class="cm-emoji-grid">' + grid.join("") +
+        '<p class="cm-emoji-empty" hidden>No emoji match that.</p>' +
+      "</div>" +
+    "</div>";
+  }
+
   function socialHtml(c) {
     if (!state.social) return "";
     var v = votesFor(c.id), reacts = reactionsFor(c.id), replies = repliesFor(c.id);
     var open = !!state.threads[c.id], uid = me(), admin = isAdmin();
 
-    var chips = REACT_ORDER.filter(function (k) { return reacts[k]; }).map(function (k) {
+    var chips = Object.keys(reacts).sort().map(function (k) {
       var r = reacts[k];
-      return '<button type="button" class="cm-chip' + (r.mine ? " is-on" : "") + '" data-act="react" data-r="' + k +
-        '" title="' + esc(r.who.join(", ")) + '" aria-pressed="' + r.mine + '">' + REACT[k] + " " + r.count + "</button>";
+      return '<button type="button" class="cm-chip' + (r.mine ? " is-on" : "") + '" data-act="react" data-r="' + esc(k) +
+        '" title="' + esc(r.who.join(", ")) + '" aria-pressed="' + r.mine + '">' + reactionGlyph(k) + " " + r.count + "</button>";
     }).join("");
-    var picker = state.picker === c.id
-      ? '<span class="cm-picker">' + REACT_ORDER.map(function (k) {
-          var on = reacts[k] && reacts[k].mine;
-          return '<button type="button" class="cm-pick' + (on ? " is-on" : "") + '" data-act="react" data-r="' + k +
-            '" aria-label="' + k + '">' + REACT[k] + "</button>";
-        }).join("") + "</span>"
-      : "";
+    var picker = state.picker === c.id ? emojiPickerHtml(c, reacts) : "";
 
     var thread = "";
     if (open) {
@@ -261,8 +326,10 @@
         '<span class="cm-score">' + v.score + "</span>" +
         '<button type="button" data-act="vote" data-v="-1" class="' + (v.mine < 0 ? "is-on" : "") + '" aria-label="Downvote" aria-pressed="' + (v.mine < 0) + '">&#9660;</button>' +
       "</span>" + chips +
-      '<button type="button" class="cm-chip cm-add" data-act="picker" aria-label="Add a reaction">' +
-        (state.picker === c.id ? "&times;" : "+&#9786;") + "</button>" + picker +
+      '<span class="cm-add-wrap">' +
+        '<button type="button" class="cm-chip cm-add" data-act="picker" aria-label="Add a reaction" aria-expanded="' + (state.picker === c.id) + '">' +
+          (state.picker === c.id ? "&times;" : ADD_REACTION_ICON) + "</button>" + picker +
+      "</span>" +
       '<button type="button" class="cm-link" data-act="thread">' +
         (open ? "Hide replies" : replies.length ? plural(replies.length, "reply", "replies") : "Reply") + "</button>" +
       "</div>" + thread;
@@ -318,6 +385,20 @@
       "</article>";
   }
 
+  // Jump straight to any round in the season, from the top of the page:
+  // faster than going back to the season and reopening Results by round,
+  // especially useful once a season has many rounds.
+  function roundJumpHtml(d, i) {
+    var options = d.rounds.map(function (r, k) {
+      var label = "Round " + (k + 1) + ": " + r.name;
+      return '<option value="' + esc(r.id) + '"' + (k === i ? " selected" : "") + ">" + esc(label) + "</option>";
+    }).join("");
+    return '<div class="rp-jump">' +
+      '<label class="cm-sr" for="rpJump">Jump to a round in ' + esc(d.label) + "</label>" +
+      '<select id="rpJump" class="rp-jump-select">' + options + "</select>" +
+      "</div>";
+  }
+
   function navHtml(d, i, where) {
     var prev = d.rounds[i - 1], next = d.rounds[i + 1];
     return '<nav class="rp-nav rp-nav-' + where + '" aria-label="Other rounds">' +
@@ -355,6 +436,7 @@
     page.innerHTML =
       '<section class="shell rp-head">' +
         '<a class="rp-back" href="' + esc(d.key) + '.html#block-rounds">&larr; ' + esc(d.label) + "</a>" +
+        roundJumpHtml(d, i) +
         '<p class="rp-kicker">Round ' + (i + 1) + " of " + d.rounds.length + (r.created ? " &middot; " + esc(dateOf(r.created)) : "") + "</p>" +
         "<h1>" + esc(r.name) + "</h1>" +
         (r.description ? '<p class="rp-prompt">' + esc(r.description) + "</p>" : "") +
@@ -369,6 +451,11 @@
       '<section class="shell rp-body"><div id="rpTracks"></div></section>' +
       '<section class="shell rp-foot">' + navHtml(d, i, "bottom") + "</section>";
 
+    var jump = document.getElementById("rpJump");
+    if (jump) jump.addEventListener("change", function () {
+      if (jump.value && jump.value !== r.id) location.href = roundUrl(d.key, jump.value);
+    });
+
     state.host = document.getElementById("rpTracks");
     if (status) { state.host.innerHTML = '<p class="rp-empty">Nothing to show yet: ' + esc(status.toLowerCase()) + ".</p>"; return; }
 
@@ -377,6 +464,9 @@
     renderTracks(r);
     state.host.addEventListener("click", onClick);
     state.host.addEventListener("submit", onSubmit);
+    state.host.addEventListener("input", onEmojiSearch);
+    document.addEventListener("click", closePickerFromOutside);
+    document.addEventListener("keydown", closePickerOnEscape);
     if (!api()) return;
     Promise.all([api().people(), loadSocial(r.id)]).then(function (res) {
       state.people = res[0];
@@ -459,6 +549,55 @@
     if (!text) return;
     state.threads[id] = true;
     refreshAfter(function () { return api().addReply(id, text); }, id);
+  }
+
+  function closePicker() {
+    var id = state.picker;
+    if (!id) return;
+    state.picker = null;
+    rerenderVote(id);
+    var btn = state.host.querySelector('.rp-vote[data-id="' + cssEscape(id) + '"] .cm-add');
+    if (btn) btn.focus();
+  }
+
+  // A tap anywhere but the picker (or the button that opened it) closes
+  // it, like any popover. The button's own click is left to onClick,
+  // which toggles it.
+  function closePickerFromOutside(ev) {
+    if (!state.picker || !ev.target.closest) return;
+    if (ev.target.closest(".cm-picker, .cm-add")) return;
+    closePicker();
+  }
+
+  function closePickerOnEscape(ev) {
+    if (ev.key === "Escape" && state.picker) closePicker();
+  }
+
+  // Filters the open picker's emoji grid as a member types, by toggling
+  // `hidden` on the existing buttons rather than rebuilding the grid's
+  // HTML, so the search box never loses focus or its cursor position
+  // mid-keystroke. The quick row above the search box isn't filtered.
+  function onEmojiSearch(ev) {
+    if (!ev.target.classList.contains("cm-emoji-search")) return;
+    var picker = ev.target.closest(".cm-picker");
+    var grid = picker && picker.querySelector(".cm-emoji-grid");
+    if (!grid) return;
+    var query = ev.target.value.trim().toLowerCase();
+    var groupLabel = null, groupHasMatch = false, anyMatch = false;
+    Array.prototype.forEach.call(grid.children, function (el) {
+      if (el.classList.contains("cm-emoji-group")) {
+        if (groupLabel) groupLabel.hidden = !groupHasMatch;
+        groupLabel = el;
+        groupHasMatch = false;
+      } else if (el.classList.contains("cm-emoji-btn")) {
+        var match = !query || el.getAttribute("data-name").indexOf(query) !== -1;
+        el.hidden = !match;
+        if (match) { groupHasMatch = true; anyMatch = true; }
+      }
+    });
+    if (groupLabel) groupLabel.hidden = !groupHasMatch;
+    var empty = picker.querySelector(".cm-emoji-empty");
+    if (empty) empty.hidden = anyMatch;
   }
 
   window.PFMLRounds = { renderList: renderList, renderRoundPage: renderRoundPage, roundUrl: roundUrl };

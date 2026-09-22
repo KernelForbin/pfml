@@ -53,12 +53,16 @@ create table if not exists public.comment_votes (
   primary key (comment_id, user_id)
 );
 
--- Reactions are stored as short keys; the site maps them to emoji. Keeping
--- emoji out of the database avoids encoding surprises in the SQL editor.
+-- The original 6 quick reactions are stored by name ('fire', 'heart', ...);
+-- anything picked from the round page's searchable emoji picker is stored
+-- as the emoji character itself (site/emoji-data.js has ~1,900 of them),
+-- so the bound below is a length limit, not a fixed list. A project set up
+-- from this file gets that straight away; an existing one needs the
+-- migration in supabase/migrations/ that widens this same constraint.
 create table if not exists public.comment_reactions (
   comment_id text not null,
   user_id    uuid not null default auth.uid() references auth.users (id) on delete cascade,
-  reaction   text not null check (reaction in ('fire', 'laugh', 'hundred', 'eyes', 'grimace', 'heart')),
+  reaction   text not null check (char_length(reaction) between 1 and 32),
   created_at timestamptz not null default now(),
   primary key (comment_id, user_id, reaction)
 );

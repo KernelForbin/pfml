@@ -45,6 +45,10 @@ def read(name):
     return (SITE / name).read_text(encoding="utf-8")
 
 
+def read_root(rel):
+    return (ROOT / rel).read_text(encoding="utf-8")
+
+
 def tracked_files():
     out = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True)
     return out.stdout.splitlines()
@@ -202,6 +206,150 @@ class LeadsWithStandings(unittest.TestCase):
     def test_stat_card_code_is_gone(self):
         for name in ("app.js", "style.css", "season.template.html"):
             self.assertNotIn("scoreline", read(name), name)
+
+    def test_bar_says_season_standings(self):
+        # "Standings" -> "Season Standings": distinguishes it from Career's
+        # own "All-time standings", which keeps its own wording.
+        template = read("season.template.html")
+        bar = re.search(r'id="standBar"(.*?)id="standPanel"', template, re.S).group(1)
+        self.assertIn("Season Standings", bar)
+
+
+class RoundSwitcher(unittest.TestCase):
+    """The round page's jump-to-round dropdown (rounds.js renders it; there
+    is no static markup to read, round.html only holds a loading
+    placeholder, so these are structural checks on the source, not a run
+    of the code -- see CLAUDE.md on what this suite can't cover."""
+
+    def test_every_round_becomes_one_option_wired_to_roundUrl(self):
+        js = read("rounds.js")
+        self.assertIn("function roundJumpHtml(d, i)", js)
+        self.assertIn("roundJumpHtml(d, i) +", js, "the function must actually be called when the header is built")
+        self.assertIn('id="rpJump"', js)
+        self.assertIn("<select", js)
+        # every round in the season, not just the one before/after
+        self.assertIn("d.rounds.map(function (r, k)", js)
+        self.assertIn("k === i", js, "the current round is preselected")
+
+    def test_choosing_a_round_navigates_there(self):
+        js = read("rounds.js")
+        self.assertIn('getElementById("rpJump")', js)
+        self.assertIn('addEventListener("change"', js)
+        self.assertIn("location.href = roundUrl(d.key, jump.value)", js)
+
+    def test_dropdown_sits_at_the_top_of_the_page(self):
+        # right after the back link, before the round's own heading
+        js = read("rounds.js")
+        m = re.search(r'"rp-back".*?roundJumpHtml\(d, i\).*?"rp-kicker"', js, re.S)
+        self.assertIsNotNone(m, "roundJumpHtml runs between the back link and the kicker line")
+
+
+class ReactionPicker(unittest.TestCase):
+    """The round page's reaction picker: the original 6 "quick" reactions
+    (stored the same way real comment_reactions rows already are, so old
+    and new reactions of those 6 still count together) plus a searchable
+    grid of the wider Unicode emoji set from site/emoji-data.js."""
+
+    LEGACY = ["fire", "laugh", "hundred", "eyes", "grimace", "heart"]
+    LEGACY_GLYPHS = {"\U0001F525", "\U0001F602", "\U0001F4AF", "\U0001F440", "\U0001F62C", "❤️"}
+
+    def test_quick_row_still_uses_the_original_six_names(self):
+        # These are the values already sitting in the live comment_reactions
+        # table; changing them would split old and new reactions in two.
+        js = read("rounds.js")
+        m = re.search(r"var LEGACY_REACT_ORDER = \[(.*?)\];", js)
+        self.assertIsNotNone(m)
+        names = re.findall(r'"(\w+)"', m.group(1))
+        self.assertEqual(names, self.LEGACY)
+
+    def test_trigger_icon_is_not_a_unicode_emoji_character(self):
+        # The old trigger, the text "+☺" (a smiley character), let each
+        # device's emoji font choose how to draw it -- full colour on
+        # iOS/Android, not the flat icon it looked like on desktop.
+        js = read("rounds.js")
+        self.assertNotIn("&#9786;", js)
+        self.assertIn("ADD_REACTION_ICON", js)
+        self.assertIn('class="cm-add-icon"', js)
+        self.assertIn("<svg", js)
+
+    def test_picker_can_always_be_closed(self):
+        # At 375px the bottom sheet covers its own comment, "add a reaction"
+        # button included, so the picker needs a way out of its own.
+        js = read("rounds.js")
+        picker = js.split("function emojiPickerHtml(c, reacts)", 1)[1].split("\n  }\n", 1)[0]
+        self.assertIn('class="cm-picker-close" data-act="picker"', picker)
+        self.assertIn('document.addEventListener("click", closePickerFromOutside)', js)
+        self.assertIn('document.addEventListener("keydown", closePickerOnEscape)', js)
+        self.assertIn('ev.key === "Escape"', js)
+
+    def test_search_filters_by_toggling_hidden_not_by_redrawing(self):
+        # Rebuilding the grid's HTML on every keystroke would reset the
+        # search box's focus and cursor position mid-type.
+        js = read("rounds.js")
+        self.assertIn("function onEmojiSearch(ev)", js)
+        self.assertIn('addEventListener("input", onEmojiSearch)', js)
+        search_fn = js.split("function onEmojiSearch(ev)", 1)[1].split("\n\n", 1)[0]
+        self.assertIn(".hidden =", search_fn)
+        self.assertNotIn(".innerHTML", search_fn)
+
+    def test_data_file_is_a_large_deduplicated_set_without_the_quick_six(self):
+        data = read("emoji-data.js")
+        self.assertIn("window.PFML_EMOJI_GROUPS = [", data)
+        self.assertIn("window.PFML_EMOJI_DATA = [", data)
+        rows = re.findall(r'^\s*\["([^"]+)","([^"]*)",(\d+)\],$', data, re.M)
+        self.assertGreater(len(rows), 1000, "expected the broad Unicode set, not a short hand-picked list")
+        glyphs = [g for g, _name, _group in rows]
+        self.assertEqual(len(glyphs), len(set(glyphs)), "a repeated emoji would make two chips for one reaction")
+        self.assertTrue(self.LEGACY_GLYPHS.isdisjoint(glyphs),
+                        "a quick-row emoji also in the searchable grid would store two different values for it")
+
+    def test_round_page_loads_the_data_file_without_blocking(self):
+        html = read("round.html")
+        self.assertIn('<script src="emoji-data.js" defer></script>', html)
+        # season pages never open a picker; only round.html needs the data
+        self.assertNotIn("emoji-data.js", read("season.template.html"))
+
+    def test_grid_hover_is_also_guarded_to_devices_that_actually_hover(self):
+        # Same reason as Standings rows: .cm-emoji-grid scrolls under a
+        # finger too, on the phone-width bottom sheet.
+        css = strip_media(read("style.css"), "(hover: hover)")
+        for sel, _ in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
+            for part in sel.split(","):
+                if ":hover" in part:
+                    self.assertNotRegex(part, r"cm-pick|cm-emoji-btn", f"{part.strip()} applies on touch screens too")
+
+
+class ReactionsSchema(unittest.TestCase):
+    """supabase/schema.sql (fresh installs) and the one-off migration for
+    the live project (supabase/migrations/) both have to allow the same
+    reaction values, or one of them still rejects a member's tap."""
+
+    def constraint_of(self, sql):
+        m = re.search(r"check \(char_length\(reaction\)[^)]*\)", sql)
+        self.assertIsNotNone(m, "expected a char_length bound on comment_reactions.reaction")
+        return m.group(0)
+
+    def test_schema_no_longer_hardcodes_six_names(self):
+        sql = read_root("supabase/schema.sql")
+        self.assertNotIn("check (reaction in (", sql)
+        self.constraint_of(sql)
+
+    def test_migration_widens_the_same_column_the_same_way(self):
+        migrations = sorted((ROOT / "supabase" / "migrations").glob("*.sql"))
+        self.assertTrue(migrations, "expected a migration widening comment_reactions.reaction")
+        migration = migrations[-1].read_text(encoding="utf-8")
+        self.assertIn("comment_reactions", migration)
+        self.assertEqual(self.constraint_of(migration), self.constraint_of(read_root("supabase/schema.sql")),
+                         "schema.sql and the migration must land on the same constraint")
+
+    def test_migration_finds_the_constraint_instead_of_guessing_its_name(self):
+        # An inline `check (...)` gets an auto-generated name; hardcoding a
+        # guess risks silently leaving the old, restrictive constraint in
+        # place if the guess is wrong.
+        migrations = sorted((ROOT / "supabase" / "migrations").glob("*.sql"))
+        migration = migrations[-1].read_text(encoding="utf-8")
+        self.assertIn("pg_constraint", migration)
+        self.assertIn("drop constraint", migration.lower())
 
 
 def css_rules(css, selector):

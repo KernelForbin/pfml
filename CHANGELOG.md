@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-09-22 (follow-up 2)
+
+- **"Standings" is now "Season Standings"** on season pages, so it reads
+  apart from Career's "All-time standings". The jump-bar link stays
+  "Standings", as "Results" is short for "Results by round".
+- **Jump to any round from a dropdown** at the top of every round page,
+  alongside the previous/next links.
+- **Reactions: a flat add-reaction icon, and every emoji.** The trigger was
+  the character "+☺", which each device drew with its own emoji font: flat
+  on desktop, a full-colour yellow face on phones. It's now a drawn outline
+  icon. The picker keeps the 6 one-tap reactions and adds a search box over
+  1,908 more emoji (Unicode's full list, from `unicode-emoji-json` 0.9.0,
+  vendored as `site/emoji-data.js` by `scripts/update_emoji_data.py`). The
+  6 keep their stored names, so reactions from before still count
+  together with new ones; everything else is stored as the emoji itself.
+  On a phone the picker is a bottom sheet. It first covered its own close
+  button (measured at 375px: the add-reaction button sat under the sheet),
+  so it now has its own close button and closes on an outside tap or on
+  Escape. Opening it renders all 1,908 buttons in about 9ms.
+- **Database: `comment_reactions.reaction` was limited to the 6 names.**
+  `schema.sql` now bounds its length instead. The live project needs the
+  one-off `supabase/migrations/2026-09-22_widen_comment_reactions.sql`,
+  run by hand in the SQL Editor. It finds the old constraint by its
+  definition rather than a guessed name.
+
 ## 2026-09-22 (follow-up)
 
 - **Tapping names in Standings no longer shifts the list on a phone.**

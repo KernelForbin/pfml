@@ -499,6 +499,12 @@ button.trend-chip.is-on .dot { opacity: 1; }
   .fold-bar:hover { transform: translateY(-1px); box-shadow: inset 4px 0 0 var(--magenta), 0 22px 44px -22px rgba(22, 17, 26, .45), 0 2px 6px -2px rgba(22, 17, 26, .1); }
   .stand-filter:hover { background: var(--deep); border-color: var(--deep); }
   .stand-filters-clear:hover { color: var(--magenta); }
+  /* Same reason as the Standings rows above: .cm-emoji-grid scrolls under
+     a finger too, on a phone narrow enough to need the bottom-sheet
+     picker, and touch "hover" would otherwise stick to whatever the
+     scroll started on. */
+  .cm-pick:hover { background: var(--wash); border-color: rgba(158, 0, 196, 0.3); }
+  .cm-emoji-btn:hover { background: var(--wash); border-color: rgba(158, 0, 196, 0.3); }
 }
 
 /* ---------- responsive ---------- */
@@ -611,10 +617,52 @@ body.auth-checking::before {
 }
 .cm-chip:hover { border-color: rgba(158, 0, 196, 0.35); }
 .cm-chip.is-on { background: var(--wash); border-color: rgba(158, 0, 196, 0.45); }
-.cm-add { color: var(--muted); }
-.cm-picker { display: inline-flex; flex-wrap: wrap; gap: 3px; }
+.cm-add { color: var(--muted); display: inline-flex; align-items: center; }
+.cm-add-icon { display: block; }
+.cm-add[aria-expanded="true"] { color: var(--ink); }
+
+/* The reaction picker: a popover anchored to .cm-add-wrap (not .cm-bar),
+   so it opens right under the "add a reaction" button wherever that
+   button falls in the wrapped row, rather than pushing the rest of the
+   comment down the way the old 6-icon inline row didn't need to. */
+.cm-add-wrap { position: relative; display: inline-flex; }
+.cm-picker {
+  position: absolute; z-index: 30; top: calc(100% + 8px); left: 0;
+  width: min(300px, calc(100vw - 48px));
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--r-sm);
+  box-shadow: var(--shadow-md); padding: 10px;
+}
+.cm-picker-quick {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 3px; padding-bottom: 8px; margin-bottom: 8px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.cm-picker-close {
+  margin-left: auto; font: inherit; font-size: 1.25rem; line-height: 1; color: var(--muted); cursor: pointer;
+  background: none; border: 1px solid var(--border); border-radius: 999px; width: 32px; height: 32px;
+  -webkit-tap-highlight-color: transparent;
+}
 .cm-pick { font-size: 1.05rem; line-height: 1; cursor: pointer; background: none; border: 1px solid transparent; border-radius: 8px; padding: 4px 5px; }
-.cm-pick:hover, .cm-pick.is-on { background: var(--wash); border-color: rgba(158, 0, 196, 0.3); }
+.cm-pick.is-on { background: var(--wash); border-color: rgba(158, 0, 196, 0.3); }
+.cm-picker-search { margin-bottom: 8px; }
+.cm-emoji-search {
+  display: block; width: 100%; font: inherit; font-size: 0.88rem; color: var(--ink);
+  background: var(--paper); border: 1px solid var(--border); border-radius: 999px; padding: 8px 12px;
+}
+.cm-emoji-search::-webkit-search-cancel-button { -webkit-appearance: none; }
+.cm-emoji-search:focus-visible { outline: 2px solid var(--magenta); outline-offset: 1px; }
+.cm-emoji-grid { max-height: 240px; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+.cm-emoji-group {
+  font-family: "Archivo", sans-serif; font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--muted); background: var(--card);
+  position: sticky; top: -10px; margin: 0 -2px; padding: 8px 2px 4px;
+}
+.cm-emoji-group:first-child { padding-top: 0; }
+.cm-emoji-btn {
+  font-size: 1.15rem; line-height: 1; cursor: pointer; background: none; border: 1px solid transparent;
+  border-radius: 8px; width: 34px; height: 34px; display: inline-grid; place-items: center;
+}
+.cm-emoji-btn.is-on { background: var(--wash); border-color: rgba(158, 0, 196, 0.3); }
+.cm-emoji-empty { margin: 10px 4px 2px; font-size: 0.82rem; color: var(--muted); }
 .cm-link {
   font: inherit; font-size: 0.82rem; color: var(--deep); background: none; border: none;
   padding: 4px 2px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
@@ -781,6 +829,25 @@ body.auth-checking::before {
 
 .rp-head { padding-top: 26px; padding-bottom: 6px; }
 .rp-back { display: inline-block; font-weight: 600; font-size: 0.9rem; text-decoration: none; margin-bottom: 18px; }
+
+/* Jump straight to another round in the season, right at the top of the
+   page: a native <select> styled to match the site's pills, so it works
+   with the keyboard and screen readers for free. */
+.rp-jump { position: relative; display: inline-block; max-width: 100%; margin: 0 0 16px; }
+.rp-jump-select {
+  appearance: none; -webkit-appearance: none; -moz-appearance: none;
+  display: block; width: auto; max-width: 100%;
+  font-family: "Archivo", sans-serif; font-weight: 700; font-size: 0.85rem; color: var(--ink);
+  background: var(--card); border: 1px solid var(--border); border-radius: 999px;
+  padding: 9px 36px 9px 16px; cursor: pointer; box-shadow: var(--shadow-sm);
+  text-overflow: ellipsis; transition: box-shadow .15s ease, transform .15s ease;
+}
+.rp-jump-select:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.rp-jump-select:focus-visible { outline: 3px solid var(--magenta); outline-offset: 2px; }
+.rp-jump::after {
+  content: "\25BE"; position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
+  color: var(--magenta); font-size: 0.8rem; pointer-events: none;
+}
 .rp-kicker { margin: 0; font-size: 0.8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
 .rp-head h1 { margin: 6px 0 0; font-size: clamp(2.2rem, 7vw, 3.4rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.02; text-wrap: balance; }
 .rp-prompt { margin: 14px 0 0; font-size: 1.08rem; color: var(--ink); max-width: 62ch; white-space: pre-wrap; }
@@ -853,6 +920,8 @@ body.auth-checking::before {
 .rp-empty { margin: 0; padding: 18px 20px; color: var(--muted); }
 
 @media (max-width: 620px) {
+  .rp-jump { display: block; width: 100%; }
+  .rp-jump-select { width: 100%; }
   .rp-track-main { grid-template-columns: 84px 1fr; gap: 14px; padding: 14px; }
   .rp-art { width: 84px; height: 84px; }
   .rp-score { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 10px; text-align: left; padding-top: 0; }
@@ -860,4 +929,14 @@ body.auth-checking::before {
   .rp-vote { padding: 14px 16px; }
   .rl-card { grid-template-columns: 52px 1fr auto; gap: 12px; }
   .rl-art { width: 52px; height: 52px; }
+
+  /* The picker as a bottom sheet: pinned to the viewport, not the "add a
+     reaction" button, so it always fits regardless of where in the
+     wrapped row that button lands (it can end up hard against either
+     edge once a comment has a few reactions already). */
+  .cm-picker {
+    position: fixed; z-index: 40; left: 12px; right: 12px; top: auto; bottom: 12px; width: auto;
+    max-height: 70vh; display: flex; flex-direction: column;
+  }
+  .cm-emoji-grid { flex: 1 1 auto; max-height: none; }
 }

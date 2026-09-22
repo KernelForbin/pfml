@@ -114,10 +114,13 @@ verified" has to be both.
 - Test command: `python -m unittest discover -s tests -v` (stdlib only,
   offline, about 3 seconds). The deploy runs it too, and a failure blocks
   the deploy.
-- Live test (network): `PFML_LIVE=1 python -m unittest discover -s tests
-  -p test_live_spotify.py -v`. Run it whenever the album-art lookup in
-  `publish.py` changes. Note: `python -m unittest tests.test_x` does not
-  work here, since `tests/` isn't a package on the path; use `discover`.
+- Live tests (network): `PFML_LIVE=1 python -m unittest discover -s tests
+  -p test_live_spotify.py -v` whenever the album-art lookup in `publish.py`
+  changes, and `-p test_live_emoji_data.py` whenever
+  `scripts/update_emoji_data.py` or its pinned version changes (it also
+  checks the committed `site/emoji-data.js` is what that version builds).
+  Note: `python -m unittest tests.test_x` does not work here, since
+  `tests/` isn't a package on the path; use `discover`.
 - Main branch: `main`. Work on a branch; don't merge or push to `main`
   without the user's go-ahead. Pushing `main` deploys the site.
 - Never modify without explicit instruction:
@@ -127,7 +130,16 @@ verified" has to be both.
     review above
   - `site/seasonN.html`, which are generated: edit `season.template.html`
     and run `scripts/build.py`
-  - `supabase/schema.sql`, which is applied to the live database by hand
+  - `site/emoji-data.js`, which is generated: change
+    `scripts/update_emoji_data.py` and run it
+  - `supabase/schema.sql`, which is applied to the live database by hand.
+    A change to a table the live project already has needs a migration in
+    `supabase/migrations/` as well, which the user runs in the SQL Editor:
+    Claude can't, and has no access to the live database or its keys. Code
+    that depends on it waits to ship until the user confirms it's run.
+    Before reading or writing the reaction column, note that the original 6
+    reactions are stored by name, not as emoji, on purpose (README,
+    Reactions).
 - Deploys by: push to `main` -> GitHub Actions -> GitHub Pages (pages
   only). Data goes separately, by `python scripts/publish.py` to Supabase.
 - Docs to keep current: CLAUDE.md, README.md, CHANGELOG.md, and

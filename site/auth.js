@@ -24,7 +24,6 @@
   var cfg = window.PFML_CONFIG || {};
   var INVITE_KEY = "pfml.invite";
   var BUCKET = "league-data";
-  var REACTIONS = ["fire", "laugh", "hundred", "eyes", "grimace", "heart"];
 
   var resolveReady;
   var PFML = window.PFML = {
@@ -32,8 +31,7 @@
     member: null,
     loadJSON: null,
     api: null,
-    signOut: null,
-    reactions: REACTIONS
+    signOut: null
   };
 
   function esc(s) {
