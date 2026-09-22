@@ -703,6 +703,37 @@ class QuoteAwardsPage(unittest.TestCase):
         self.assertIn("max-height: none", " ".join(css_rules(css, ".quote-grid blockquote.is-open")))
 
 
+class AvatarStaysCentred(unittest.TestCase):
+    def test_no_rule_in_the_menu_turns_the_avatar_into_a_column(self):
+        # Regression: ".acct-menu-head span { display: flex; flex-direction:
+        # column }" meant for the name also hit the avatar (a span), sliding
+        # its initials to the top left when the menu opened.
+        css = read("style.css")
+        self.assertEqual(css_rules(css, ".acct-menu-head span"), [])
+        self.assertIn("flex-direction: column", " ".join(css_rules(css, ".acct-menu-who")))
+        self.assertIn('class="acct-menu-who"', js_function(read("account.js"), "function build(member)"))
+
+
+class PlaylistTiles(unittest.TestCase):
+    def test_league_wide_first_then_newest_season_first(self):
+        render = js_function(read("app.js"), "function renderPlaylists(pl)")
+        league, seasons = render.index("pl.leagueWide"), render.index("(pl.seasons || []).slice().reverse()")
+        self.assertLess(league, seasons)
+        self.assertIn('el("div", "pl-grid")', render)
+
+    def test_tile_shortens_the_name_and_only_links_when_there_is_a_url(self):
+        tile = js_function(read("app.js"), "function playlistTile(item, group)")
+        self.assertIn(r'.replace(/^PFML\s*-\s*(S\d+\s*-\s*)?/i, "")', tile)
+        self.assertIn('el("div", "pl-tile is-soon", inner)', tile, "no url: a tile that isn't a link")
+        self.assertIn('a.target = "_blank"; a.rel = "noopener"', tile)
+
+    def test_old_chip_styles_are_gone(self):
+        css = read("style.css")
+        for sel in (".pill.pill-live", ".pill.is-disabled", ".playlist-row", ".playlist-group"):
+            self.assertEqual(css_rules(css, sel), [], sel)
+        self.assertIn("repeat(4, minmax(0, 1fr))", " ".join(css_rules(css, ".pl-grid")))
+
+
 class SentimentAwardsPage(unittest.TestCase):
     def test_judged_cards_and_titles_appear_only_with_labels(self):
         js = read("app.js")

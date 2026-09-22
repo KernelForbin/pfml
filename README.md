@@ -384,7 +384,9 @@ per-season playlist links shown on the home page. Each entry looks like:
 { "label": "PFML - S1 - All Submissions", "url": null }
 ```
 
-`url: null` renders as a "coming soon" chip with no link. Fill in a real
+Each entry is a tile on the home page (league-wide first, then seasons
+newest first), its name with the repeated "PFML - S1 - " prefix dropped.
+`url: null` renders as a dashed "Coming soon" tile with no link. Fill in a real
 `https://open.spotify.com/playlist/...` URL and it becomes a live link the
 next time you run `scripts/publish.py`. The file is git-ignored like the
 rest of `site/data/`, and publish uploads it with the other data. Adding a Season 4 group here is manual, since these are

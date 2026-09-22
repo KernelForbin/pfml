@@ -276,21 +276,6 @@ button.focus-chip:hover { background: var(--magenta); border-color: var(--magent
   box-shadow: var(--shadow-sm); transition: box-shadow .15s ease, transform .15s ease;
 }
 .pill:hover { color: var(--ink); box-shadow: var(--shadow-md); transform: translateY(-1px); }
-.pill.is-disabled {
-  color: var(--muted); border-style: dashed; box-shadow: none; cursor: default;
-}
-.pill.is-disabled:hover { box-shadow: none; transform: none; }
-
-/* resting-state hint that a playlist chip is a real, clickable link, not
-   just a hover effect: a faint magenta halo and a barely-tinted border */
-.pill.pill-live {
-  border-color: rgba(158, 0, 196, 0.28);
-  box-shadow: 0 0 0 3px rgba(158, 0, 196, 0.08), var(--shadow-sm);
-}
-.pill.pill-live:hover {
-  border-color: rgba(158, 0, 196, 0.45);
-  box-shadow: 0 0 0 4px rgba(158, 0, 196, 0.12), var(--shadow-md);
-}
 
 /* ---------- taste matrix ---------- */
 
@@ -372,13 +357,37 @@ table.taste td.nil { color: #C6BDCC; font-weight: 400; }
 
 /* ---------- home page: playlists ---------- */
 
-.playlist-group { margin-bottom: 20px; }
-.playlist-group:last-child { margin-bottom: 0; }
-.playlist-group h3 {
-  margin: 0 0 10px; font-size: 0.82rem; font-weight: 600; color: var(--muted);
-  text-transform: none;
+/* One tile per playlist, league-wide first then newest season first:
+   four across, two on a phone so each phone row is one season's pair. */
+.pl-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.pl-tile {
+  display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 14px 15px 13px;
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--r);
+  box-shadow: var(--shadow-sm); color: var(--ink); text-decoration: none;
+  transition: box-shadow .15s ease, transform .15s ease, border-color .15s ease;
+  -webkit-tap-highlight-color: transparent;
 }
-.playlist-row { display: flex; flex-wrap: wrap; gap: 9px; }
+.pl-icon {
+  display: grid; place-items: center; width: 38px; height: 38px; margin-bottom: 8px;
+  border-radius: 10px; background: var(--wash); color: var(--magenta);
+}
+.pl-kicker { font-size: 0.72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.pl-name { font-family: "Archivo", sans-serif; font-weight: 700; font-size: 1rem; line-height: 1.25; overflow-wrap: anywhere; }
+.pl-cta { margin-top: auto; padding-top: 8px; font-size: 0.8rem; font-weight: 600; color: var(--deep); }
+.pl-tile.is-soon { border-style: dashed; box-shadow: none; color: var(--muted); }
+.pl-tile.is-soon .pl-icon { background: var(--paper); color: var(--muted); }
+.pl-tile.is-soon .pl-cta { color: var(--muted); }
+@media (hover: hover) {
+  a.pl-tile:hover { color: var(--ink); border-color: rgba(158, 0, 196, 0.35); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+}
+@media (max-width: 900px) {
+  .pl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 620px) {
+  .pl-grid { gap: 10px; }
+  .pl-tile { padding: 12px 12px 11px; }
+  .pl-name { font-size: 0.92rem; }
+}
 
 /* ---------- points-over-time trend chart ---------- */
 
@@ -700,7 +709,9 @@ body.auth-checking::before {
 }
 .acct-menu { min-width: 220px; padding: 6px; }
 .acct-menu-head { display: flex; align-items: center; gap: 10px; padding: 8px 10px 10px; border-bottom: 1px solid var(--border-soft); margin-bottom: 4px; }
-.acct-menu-head span { display: flex; flex-direction: column; min-width: 0; }
+/* the name beside the avatar; not every span, or the avatar (a span too)
+   turns into a column and its initials slide to the top left */
+.acct-menu-who { display: flex; flex-direction: column; min-width: 0; }
 .acct-menu-head b { font-family: "Archivo", sans-serif; font-size: 0.98rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .acct-menu-head small { color: var(--muted); font-size: 0.76rem; }
 .acct-item {

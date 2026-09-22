@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-09-22 (follow-up 3)
+
+- **All 8 playlists are live**: All Podium Tracks, S2 Podium Tracks, S3 All
+  Submissions and S3 Podium Tracks added (`site/data/playlists.json`,
+  which goes live with `publish.py`).
+- **Playlists as tiles** on the home page instead of a row of chips: an
+  icon, the group (League-wide, then seasons newest first), the name and
+  "Open in Spotify". Four across, a season's pair per row on phones.
+- **Fixed: the initials in the account menu sat top-left.** A rule meant
+  for the name beside it (`.acct-menu-head span`) also matched the avatar,
+  a span, and made it a column. Now scoped to the name.
+
 ## 2026-09-22 (follow-up 2)
 
 - **Sentiment script, ready to run** (`scripts/enrich_comments.py`, not

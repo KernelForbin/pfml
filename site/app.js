@@ -268,40 +268,45 @@
     return a;
   }
 
-  function playlistChip(item) {
-    if (item.url) {
-      var a = el("a", "pill pill-live");
-      a.href = item.url; a.target = "_blank"; a.rel = "noopener";
-      a.textContent = item.label;
-      return a;
+  // Drawn icons (not a brand logo): a medal for podium playlists, a stack
+  // of records for everything submitted.
+  var PLAYLIST_ICONS = {
+    podium: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><circle cx="12" cy="15" r="5.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8.5 3.5 11 9.6M15.5 3.5 13 9.6M10.6 15l1-1v4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    all: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><circle cx="10" cy="13" r="7" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="10" cy="13" r="1.8" fill="currentColor"/><path d="M14.5 5.6A7 7 0 0 1 20.8 13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>'
+  };
+
+  // One playlist as a tile: which group it belongs to, its name without
+  // the "PFML - S1 - " prefix every label repeats, and where it goes.
+  function playlistTile(item, group) {
+    var name = String(item.label || "").replace(/^PFML\s*-\s*(S\d+\s*-\s*)?/i, "");
+    var icon = /podium/i.test(item.label) ? PLAYLIST_ICONS.podium : PLAYLIST_ICONS.all;
+    var inner = '<span class="pl-icon">' + icon + "</span>" +
+      '<span class="pl-kicker">' + esc(group) + "</span>" +
+      '<span class="pl-name">' + esc(name) + "</span>" +
+      '<span class="pl-cta">' + (item.url ? "Open in Spotify &nearr;" : "Coming soon") + "</span>";
+    if (!item.url) {
+      var soon = el("div", "pl-tile is-soon", inner);
+      soon.setAttribute("aria-label", item.label + ", coming soon");
+      return soon;
     }
-    var span = el("span", "pill is-disabled");
-    span.textContent = item.label + " — coming soon";
-    return span;
+    var a = el("a", "pl-tile", inner);
+    a.href = item.url; a.target = "_blank"; a.rel = "noopener";
+    a.setAttribute("aria-label", item.label + ", opens in Spotify");
+    return a;
   }
 
+  // League-wide first, then seasons newest first, like the season menu.
   function renderPlaylists(pl) {
     var host = $("playlists");
     if (!host) return;
     host.innerHTML = "";
     if (!pl) { host.appendChild(empty("Playlists haven't been added yet.")); return; }
-
-    if (pl.leagueWide && pl.leagueWide.length) {
-      var g0 = el("div", "playlist-group");
-      g0.appendChild(el("h3", null, "League-wide"));
-      var row0 = el("div", "playlist-row");
-      pl.leagueWide.forEach(function (item) { row0.appendChild(playlistChip(item)); });
-      g0.appendChild(row0);
-      host.appendChild(g0);
-    }
-    (pl.seasons || []).forEach(function (group) {
-      var g = el("div", "playlist-group");
-      g.appendChild(el("h3", null, group.season));
-      var row = el("div", "playlist-row");
-      group.items.forEach(function (item) { row.appendChild(playlistChip(item)); });
-      g.appendChild(row);
-      host.appendChild(g);
+    var grid = el("div", "pl-grid");
+    (pl.leagueWide || []).forEach(function (item) { grid.appendChild(playlistTile(item, "League-wide")); });
+    (pl.seasons || []).slice().reverse().forEach(function (group) {
+      group.items.forEach(function (item) { grid.appendChild(playlistTile(item, group.season)); });
     });
+    host.appendChild(grid);
   }
 
   function initHome() {

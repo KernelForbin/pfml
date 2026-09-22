@@ -93,7 +93,7 @@
         'aria-label="Account menu for ' + esc(member.name) + '" title="' + esc(member.name) + '">' + avatar(member.competitorId, member.name) + "</button>" +
       '<div class="acct-pop acct-menu" id="acctMenu" hidden>' +
         '<div class="acct-menu-head">' + avatar(member.competitorId, member.name) +
-          '<span><b>' + esc(member.name) + "</b><small>Signed in</small></span></div>" +
+          '<span class="acct-menu-who"><b>' + esc(member.name) + "</b><small>Signed in</small></span></div>" +
         '<a class="acct-item" href="profile.html">My profile</a>' +
         '<button type="button" class="acct-item" id="acctSignOut">Sign out</button>' +
       "</div>" +
