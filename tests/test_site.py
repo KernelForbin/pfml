@@ -669,6 +669,8 @@ class CareerScoreTable(unittest.TestCase):
         cols = js_function(read("app.js"), "function careerColumns()")
         self.assertEqual(re.findall(r'key: "(\w+)"', cols),
                          ["name", "careerScore", "avgSeason", "roundBonus", "seasonBonus", "rounds"])
+        self.assertEqual(re.findall(r'label: "([^"]+)"', cols),
+                         ["Player", "Score", "Avg season", "Round Podium Pts", "Season Podium Pts", "Rounds"])
 
     def test_unscored_players_have_no_parts_to_sort_by(self):
         # One round would otherwise top "Avg season" at 400-odd.

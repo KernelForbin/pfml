@@ -503,10 +503,10 @@ Default sort. Chosen by the league on 2026-09-22 after comparing options
 against the real data:
 
 ```
-Score = Avg season + Round finishes + Season podiums
+Score = Avg season + Round Podium Pts + Season Podium Pts
   Avg season      = 20 x points per round played
-  Round finishes  = 3 per 1st, 2 per 2nd, 1 per 3rd place in a round
-  Season podiums  = 6 / 4 / 2 for finishing a finished season 1st / 2nd / 3rd
+  Round Podium Pts  = 3 per 1st, 2 per 2nd, 1 per 3rd place in a round
+  Season Podium Pts  = 6 / 4 / 2 for finishing a finished season 1st / 2nd / 3rd
 Scored only after 10 rounds played.
 ```
 
@@ -535,13 +535,13 @@ Why each piece:
   player, and lifted short weak careers).
 
 The table's columns are the pieces, so each row adds up: Score, Avg
-season, Round finishes (with the 1st/2nd/3rd counts), Season podiums
+season, Round Podium Pts (with the 1st/2nd/3rd counts), Season Podium Pts
 (with which seasons), Rounds. `PER_ROUND_SCALE`, `ROUND_BONUS`,
 `SEASON_BONUS` and `MIN_SCORED_ROUNDS` in `build.py` are the knobs; the
 note above the table and the profile read them from `careerScoreFormula`
 in `career.json`, so they follow any change. A profile's Career Score
 ranks among scored players only, and the profile shows the same sum under
-its tiles (Score = Avg season + Round finishes + Season podiums, with each
+its tiles (Score = Avg season + Round Podium Pts + Season Podium Pts, with each
 part's working).
 
 ## Profiles, the inbox and the account menu

@@ -1761,15 +1761,15 @@
   }
 
   // Columns that add up to the Score, left to right: Score = Avg season +
-  // Round finishes + Season podiums. Rounds says why a short career can
+  // Round Podium Pts + Season Podium Pts. Rounds says why a short career can
   // rank high, and who hasn't played enough to be scored yet.
   function careerColumns() {
     return [
       { key: "name", label: "Player", align: "left" },
       { key: "careerScore", label: "Score" },
       { key: "avgSeason", label: "Avg season" },
-      { key: "roundBonus", label: "Round finishes" },
-      { key: "seasonBonus", label: "Season podiums" },
+      { key: "roundBonus", label: "Round Podium Pts" },
+      { key: "seasonBonus", label: "Season Podium Pts" },
       { key: "rounds", label: "Rounds" }
     ];
   }
@@ -1879,9 +1879,9 @@
         var note = $("standingsNote");
         if (note && c.careerScoreFormula) {
           var f = c.careerScoreFormula;
-          note.textContent = "Score = Avg season + Round finishes + Season podiums. Avg season is points per round played \u00d7 " +
-            f.perRoundScale + ", a typical season's worth, so missed rounds don't count against anyone. Round finishes: " +
-            f.roundBonus.join("/") + " for each 1st/2nd/3rd in a round. Season podiums: " + f.seasonBonus.join("/") +
+          note.textContent = "Score = Avg season + Round Podium Pts + Season Podium Pts. Avg season is points per round played \u00d7 " +
+            f.perRoundScale + ", a typical season's worth, so missed rounds don't count against anyone. Round Podium Pts: " +
+            f.roundBonus.join("/") + " for each 1st/2nd/3rd in a round. Season Podium Pts: " + f.seasonBonus.join("/") +
             " for finishing a season 1st/2nd/3rd (once it's over). Scored after " + f.minRounds +
             " rounds played. Tap any column to sort by it.";
         }
@@ -1922,7 +1922,7 @@
   }
 
   // The Career Score as the sum the All-Time table shows in columns:
-  // Score = Avg season + Round finishes + Season podiums.
+  // Score = Avg season + Round Podium Pts + Season Podium Pts.
   function scoreParts(c, p) {
     var box = el("div", "pf-parts");
     var f = c.careerScoreFormula || {};
@@ -1941,8 +1941,8 @@
     box.innerHTML = '<p class="pf-parts-title">How the Career Score adds up</p><div class="pf-parts-row">' +
       part(Math.round(p.careerScore), "Career Score") + '<span class="pf-op">=</span>' +
       part(Math.round(p.avgSeason), "Avg season", (p.totalPoints / p.rounds).toFixed(1) + " a round \u00d7 " + f.perRoundScale) + '<span class="pf-op">+</span>' +
-      part(p.roundBonus, "Round finishes", (rf.first || 0) + " 1st, " + (rf.second || 0) + " 2nd, " + (rf.third || 0) + " 3rd") + '<span class="pf-op">+</span>' +
-      part(p.seasonBonus, "Season podiums", podiums || "none yet") + "</div>";
+      part(p.roundBonus, "Round Podium Pts", (rf.first || 0) + " 1st, " + (rf.second || 0) + " 2nd, " + (rf.third || 0) + " 3rd") + '<span class="pf-op">+</span>' +
+      part(p.seasonBonus, "Season Podium Pts", podiums || "none yet") + "</div>";
     return box;
   }
 

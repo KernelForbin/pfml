@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-22 (follow-up 5)
+
+- **All-time standings columns renamed** "Round Podium Pts" and "Season
+  Podium Pts" (were "Round finishes" and "Season podiums"); the note above
+  the table and the profile's score breakdown use the same names.
+
 ## 2026-09-22 (follow-up 4)
 
 - **All-Time page order**: League Highlights, then All-time standings, then
