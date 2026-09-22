@@ -120,7 +120,6 @@
     var btn = el("button", "season-tab season-pick-btn");
     btn.type = "button";
     btn.id = "seasonPickBtn";
-    btn.setAttribute("aria-haspopup", "true");
     btn.setAttribute("aria-expanded", "false");
     btn.setAttribute("aria-controls", "seasonMenu");
     btn.setAttribute("aria-current", String(onSeason));
@@ -311,7 +310,6 @@
 
   function initHome() {
     fetchJSON(DATA + "/index.json").then(function (index) {
-      window.__pfmlIndex = index;
       renderNav(index, null);
       var grid = el("div", "season-grid");
       if (!index.seasons.length) {
@@ -1021,6 +1019,7 @@
     [["standing", "Standing over time"], ["ratio", "Performance vs field"], ["points", "Cumulative points"]].forEach(function (pair) {
       var b = el("button", trendMode === pair[0] ? "is-active" : "", esc(pair[1]));
       b.type = "button";
+      b.setAttribute("aria-pressed", String(trendMode === pair[0]));
       b.addEventListener("click", function () { setTrendMode(pair[0]); });
       modeRow.appendChild(b);
     });
@@ -1039,6 +1038,7 @@
       var on = trendSelected.indexOf(s.id) !== -1;
       var b = el("button", "trend-chip" + (on ? " is-on" : ""));
       b.type = "button";
+      b.setAttribute("aria-pressed", String(on));
       b.innerHTML = '<span class="dot" style="background:' + s.color + '"></span>' + esc(s.name);
       b.addEventListener("click", function () { toggleTrend(s.id); });
       chipRow.appendChild(b);
@@ -1161,8 +1161,8 @@
         .map(function (t) { return { label: t.submitterName, index: t.index, points: t.points, chances: t.chances }; });
       var into = tasteTo(d, id).slice().sort(function (a, b) { return b.index - a.index; })
         .map(function (t) { return { label: t.voterName, index: t.index, points: t.points, chances: t.chances }; });
-      renderTasteRowList("How " + name + " rates everyone else", out, host);
-      renderTasteRowList("How everyone else rates " + name, into, host);
+      renderTasteRowList("How " + esc(name) + " rates everyone else", out, host);
+      renderTasteRowList("How everyone else rates " + esc(name), into, host);
       return;
     }
 
@@ -1527,7 +1527,7 @@
         var t = $("heroTitle");
         if (t) t.textContent = "PFML";
         var l = $("heroLine");
-        if (l) { l.hidden = false; l.textContent = "Season data didn't load. Check that site/data/*.json was built and deployed next to this page."; }
+        if (l) { l.hidden = false; l.textContent = "Season data didn't load. Try reloading the page."; }
       });
   }
 
@@ -1538,13 +1538,7 @@
   var careerData = null;
   var careerSort = { field: "careerScore", dir: "desc" };
 
-  function careerTile(label, valueHtml, metaHtml, ties) {
-    var n = el("div", "hl");
-    n.innerHTML = '<p class="hl-label">' + label + "</p>" +
-      '<div class="hl-value">' + valueHtml + "</div>" +
-      (metaHtml ? '<div class="hl-meta">' + metaHtml + "</div>" : "") + tieLine(ties);
-    return n;
-  }
+  function careerTile(label, valueHtml, metaHtml, ties) { return tile(label, valueHtml, metaHtml, false, ties); }
 
   function renderCareerComments(c) {
     var section = document.getElementById("block-comments");
@@ -1890,7 +1884,7 @@
       .catch(function (err) {
         console.error(err);
         var l = $("heroLine");
-        if (l) l.textContent = "Career data didn't load. Check that site/data/career.json was built and deployed next to this page.";
+        if (l) l.textContent = "All-Time data didn't load. Try reloading the page.";
       });
   }
 
@@ -1956,10 +1950,11 @@
     if (!host) return;
     var people = c.players.slice().sort(function (a, b) { return a.name.localeCompare(b.name); });
     host.innerHTML = '<label class="cm-sr" for="pfPick">Show another player</label>' +
-      '<select id="pfPick" class="rp-jump-select">' + people.map(function (p) {
+      // In .rp-jump, like the round page's menu, for its ▾ and its width.
+      '<div class="rp-jump"><select id="pfPick" class="rp-jump-select">' + people.map(function (p) {
         return '<option value="' + esc(p.id) + '"' + (p.id === id ? " selected" : "") + ">" +
           esc(p.name) + (p.id === myId ? " (you)" : "") + "</option>";
-      }).join("") + "</select>";
+      }).join("") + "</select></div>";
     $("pfPick").addEventListener("change", function () {
       var v = $("pfPick").value;
       if (v && v !== id) location.href = profileUrl(v);
@@ -2015,8 +2010,8 @@
     if (!tracks.length) { host.appendChild(empty("No tracks submitted yet.")); return; }
     var list = el("div", "rl");
     list.innerHTML = tracks.map(function (t) {
-      var href = window.PFMLRounds ? window.PFMLRounds.roundUrl(t.seasonKey, t.roundId)
-        : "round?s=" + encodeURIComponent(t.seasonKey) + "&r=" + encodeURIComponent(t.roundId);
+      // profile.html doesn't load rounds.js, so no PFMLRounds.roundUrl here.
+      var href = "round?s=" + encodeURIComponent(t.seasonKey) + "&r=" + encodeURIComponent(t.roundId);
       var art = t.art ? '<img class="rl-art" src="' + esc(t.art) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
                       : '<span class="rl-art is-empty" aria-hidden="true">&#9835;</span>';
       return '<a class="rl-card" href="' + href + '">' + art +

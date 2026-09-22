@@ -148,8 +148,9 @@ class LocalPreviewServer(unittest.TestCase):
         if sys_path not in _sys.path:
             _sys.path.insert(0, sys_path)
         import serve
-        handler = partial(serve.CleanUrlHandler, directory=str(SITE))
-        handler.log_message = lambda *a: None
+        class Quiet(serve.CleanUrlHandler):
+            def log_message(self, *a): pass
+        handler = partial(Quiet, directory=str(SITE))
         server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
         threading.Thread(target=server.serve_forever, daemon=True).start()
         try:
@@ -161,6 +162,7 @@ class LocalPreviewServer(unittest.TestCase):
             self.assertEqual(status, 200)
             self.assertIn("<title>PFML - All-Time</title>", body)
             status, body = get("/round?s=season1&r=x")
+            self.assertEqual(status, 200)
             self.assertIn("<title>PFML - Round</title>", body, "query strings kept")
             status, body = get("/career.html")
             self.assertIn("<title>PFML - All-Time</title>", body, "old .html addresses still work")
@@ -1073,6 +1075,18 @@ class TouchFriendlyStandings(unittest.TestCase):
                     self.assertNotRegex(part, r"stand-row|fold-bar|stand-filter",
                                         f"{part.strip()} applies on touch screens too")
 
+    def test_tapped_controls_and_cards_dont_keep_a_hover_look(self):
+        # The same sticking, on things that toggle or lift: an un-voted
+        # arrow stayed magenta, a tapped sort heading looked like the active
+        # sort, and cards stayed lifted after a tap.
+        css = strip_media(read("style.css"), "(hover: hover)")
+        sticky = (r"trend-chip|cm-vote|cm-chip:|career-sort-btn|season-tab:hover|focus-chip|"
+                  r"\.pill:|\.art:|season-card|rl-card|rp-jump-select")
+        for sel, _ in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
+            for part in sel.split(","):
+                if ":hover" in part:
+                    self.assertNotRegex(part, sticky, f"{part.strip()} applies on touch screens too")
+
     def test_filter_row_spans_the_whole_bar(self):
         # Squeezed into the title column beside Show all, each chip took a
         # line of its own and the bar grew by ~100px on the first tap.
@@ -1091,6 +1105,68 @@ class TouchFriendlyStandings(unittest.TestCase):
         rule = " ".join(css_rules(phone.group(1), ".stand-filters"))
         self.assertIn("flex-wrap: nowrap", rule)
         self.assertIn("overflow-x: auto", rule)
+
+
+class MemberTextIsEscaped(unittest.TestCase):
+    """Reactions are free text in the database (any 1-32 characters, so
+    any emoji fits), and names are whatever players call themselves on
+    Music League. Either could carry markup into innerHTML."""
+
+    def test_every_reaction_glyph_is_escaped(self):
+        for name in ("rounds.js", "account.js"):
+            js = read(name)
+            calls = [m.start() for m in re.finditer(r"reactionGlyph\(", js)
+                     if not js[max(0, m.start() - 9):m.start()].endswith("function ")]
+            self.assertTrue(calls, name)
+            for at in calls:
+                self.assertTrue(js[:at].endswith("esc("), f"{name}: unescaped reactionGlyph at {at}")
+
+    def test_taste_panel_titles_escape_the_name(self):
+        js = read("app.js")
+        self.assertIn('renderTasteRowList("How " + esc(name) + " rates everyone else"', js)
+        self.assertIn('renderTasteRowList("How everyone else rates " + esc(name)', js)
+
+
+class PickerClosesCleanly(unittest.TestCase):
+    def test_a_reaction_closes_the_open_picker_right_away(self):
+        # A chip on comment B used to clear state.picker without redrawing
+        # comment A, so A's picker stayed on screen with its button stuck on
+        # "close"; a failed save left it open the same way.
+        js = read("rounds.js")
+        branch = js.split('} else if (act === "react") {', 1)[1].split("} else if", 1)[0]
+        self.assertRegex(branch, r"var open = state\.picker;[\s\S]*state\.picker = null;[\s\S]*if \(open\) rerenderVote\(open\);[\s\S]*refreshAfter\(")
+
+    def test_a_tap_outside_doesnt_move_focus(self):
+        js = read("rounds.js")
+        outside = js.split("function closePickerFromOutside", 1)[1].split("\n  }\n", 1)[0]
+        self.assertIn("closePicker(true)", outside)
+        self.assertRegex(js, r"function closePicker\(quiet\) \{[\s\S]*?if \(quiet\) return;[\s\S]*?\.focus\(\)")
+
+
+class InboxBadge(unittest.TestCase):
+    def test_inbox_opened_before_its_first_load_still_marks_items_seen(self):
+        # refresh() used to only redraw an open inbox, so opening it before
+        # the first fetch landed never cleared the badge.
+        js = read("account.js")
+        refresh = js.split("function refresh()", 1)[1].split("function isNew", 1)[0]
+        self.assertIn('if (state.open === "inbox") openInbox();', refresh)
+
+    def test_a_late_refresh_keeps_the_later_seen_time(self):
+        refresh = read("account.js").split("function refresh()", 1)[1].split("function isNew", 1)[0]
+        self.assertIn("Date.parse(state.seenAt) > Date.parse(seen)", refresh)
+
+
+class JumpMenus(unittest.TestCase):
+    def test_profile_switcher_is_wrapped_for_its_arrow(self):
+        # .rp-jump::after draws the arrow; a bare select had none
+        self.assertIn('<div class="rp-jump"><select id="pfPick" class="rp-jump-select">', read("app.js"))
+
+    def test_menu_text_is_16px_on_phones(self):
+        # iOS zooms the page in when a select under 16px is tapped
+        css = read("style.css")
+        phones = re.findall(r"@media \(max-width: 620px\) \{(.*?)\n\}", css, re.S)
+        rules = [r for block in phones for r in css_rules(block, ".rp-jump-select")]
+        self.assertTrue(any("font-size: 16px" in r for r in rules))
 
 
 class CleanText(unittest.TestCase):

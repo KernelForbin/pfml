@@ -28,7 +28,7 @@ USAGE
   pip install anthropic            # local only; build.py stays stdlib-only
   export ANTHROPIC_API_KEY=sk-ant-...
 
-  python scripts/enrich_comments.py --estimate     # cost only, no API call
+  python scripts/enrich_comments.py --estimate     # cost only (counts tokens; needs the key)
   python scripts/enrich_comments.py --dry-run      # show what would be sent
   python scripts/enrich_comments.py                # label what's missing
   python scripts/enrich_comments.py --season season2
@@ -37,8 +37,7 @@ USAGE
 COST
   --estimate prints a real token count and a real dollar figure before you
   spend anything. It uses the Batch API by default, which is half price and
-  usually finishes well inside an hour. See the README's "Comment
-  sentiment" section for the current measured number.
+  usually finishes well inside an hour.
 """
 import argparse
 import csv
@@ -145,11 +144,13 @@ def collect_comments(season_filter=None):
 def load_existing():
     if not OUT_PATH.exists():
         return {}
+    # An unreadable file stops the run rather than counting as empty: it
+    # holds labels that were paid for, and the run ends by rewriting it.
     try:
         with open(OUT_PATH, encoding="utf-8") as f:
             raw = json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return {}
+    except (json.JSONDecodeError, OSError) as e:
+        raise SystemExit(f"Can't read {OUT_PATH} ({e}). Fix or move it aside, then run again.")
     return raw.get("comments", {}) if isinstance(raw, dict) else {}
 
 
@@ -314,7 +315,8 @@ def run_batch_api(client, batches, store):
     ]
     job = client.messages.batches.create(requests=requests)
     print(f"Batch {job.id} submitted ({len(requests)} requests). Polling every 30s.")
-    print("Safe to Ctrl-C: re-running resumes and only pays for what's still missing.")
+    print("Keep this running until it finishes: after Ctrl-C the batch still runs and is "
+          "billed, but its results are lost, and a re-run pays for them again.")
 
     while True:
         job = client.messages.batches.retrieve(job.id)
@@ -395,7 +397,9 @@ def main():
         print("No comments found. Is data/season*/votes.csv in place?")
         return 1
 
-    store = {} if args.force else load_existing()
+    # Always start from what's stored: --force only re-labels the comments
+    # in this run (one season, or --limit of them) and keeps the rest.
+    store = load_existing()
     todo = [c for c in comments if args.force or c["id"] not in store]
     already = len(comments) - len(todo)          # count before --limit truncates
     if args.limit:

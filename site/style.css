@@ -27,6 +27,7 @@
   --silver: #C4CAD3;
   --bronze: #C98B55;
   --card: #FFFFFF;
+  --neg: #B3261E;
   --shadow-sm: 0 1px 2px rgba(22, 17, 26, .05);
   --shadow-md: 0 18px 40px -22px rgba(22, 17, 26, .35), 0 2px 6px -2px rgba(22, 17, 26, .08);
   --r: 16px;
@@ -44,8 +45,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3, .n { font-family: "Archivo", "Inter", system-ui, sans-serif; }
-.n { font-variant-numeric: tabular-nums; }
+h1, h2, h3 { font-family: "Archivo", "Inter", system-ui, sans-serif; }
 
 a { color: var(--deep); text-underline-offset: 2px; text-decoration-thickness: 1.5px; }
 a:hover { color: var(--magenta); }
@@ -80,7 +80,7 @@ a:hover { color: var(--magenta); }
   display: inline-flex; align-items: center; gap: 7px; text-decoration: none;
   box-shadow: var(--shadow-sm); transition: box-shadow .15s ease, transform .15s ease;
 }
-.season-tab:hover { color: var(--ink); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+@media (hover: hover) { .season-tab:hover { color: var(--ink); box-shadow: var(--shadow-md); transform: translateY(-1px); } }
 .season-tab[aria-current="true"] {
   background: var(--magenta); border-color: var(--magenta); color: #fff; box-shadow: var(--shadow-md);
 }
@@ -196,7 +196,7 @@ button.focus-chip {
   font-family: "Inter", sans-serif; font-size: 0.87rem; cursor: pointer;
   background: var(--wash); border-color: rgba(158, 0, 196, 0.25); color: var(--deep);
 }
-button.focus-chip:hover { background: var(--magenta); border-color: var(--magenta); color: #fff; }
+@media (hover: hover) { button.focus-chip:hover { background: var(--magenta); border-color: var(--magenta); color: #fff; } }
 .focus-clear-all {
   font-family: "Inter", sans-serif; font-size: 0.85rem; color: var(--muted);
   background: none; border: none; text-decoration: underline; text-underline-offset: 2px;
@@ -275,7 +275,7 @@ button.focus-chip:hover { background: var(--magenta); border-color: var(--magent
   text-decoration: none; background: var(--card); margin-bottom: 14px;
   box-shadow: var(--shadow-sm); transition: box-shadow .15s ease, transform .15s ease;
 }
-.pill:hover { color: var(--ink); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+@media (hover: hover) { .pill:hover { color: var(--ink); box-shadow: var(--shadow-md); transform: translateY(-1px); } }
 
 /* ---------- taste matrix ---------- */
 
@@ -319,7 +319,7 @@ table.taste td.nil { color: #C6BDCC; font-weight: 400; }
   background: var(--card); text-decoration: none; color: var(--ink); font-size: 0.9rem; font-weight: 600;
   box-shadow: var(--shadow-sm); transition: box-shadow .15s ease, transform .15s ease;
 }
-.art:hover { color: var(--ink); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+@media (hover: hover) { .art:hover { color: var(--ink); box-shadow: var(--shadow-md); transform: translateY(-1px); } }
 .art b { font-family: "Archivo", sans-serif; color: var(--magenta); font-variant-numeric: tabular-nums; }
 
 /* ---------- home page: season cards ---------- */
@@ -331,7 +331,7 @@ table.taste td.nil { color: #C6BDCC; font-weight: 400; }
   padding: 20px 22px; box-shadow: var(--shadow-sm);
   transition: box-shadow .18s ease, transform .18s ease;
 }
-.season-card:hover { color: var(--ink); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+@media (hover: hover) { .season-card:hover { color: var(--ink); box-shadow: var(--shadow-md); transform: translateY(-2px); } }
 .season-card.is-live { background: linear-gradient(165deg, #fff 0%, var(--wash) 130%); }
 .season-card-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .season-card-name-wrap { display: flex; align-items: center; gap: 9px; }
@@ -410,7 +410,7 @@ button.trend-chip {
   color: var(--muted); cursor: pointer; box-shadow: var(--shadow-sm);
 }
 button.trend-chip .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; opacity: 0.35; }
-button.trend-chip:hover { border-color: rgba(158, 0, 196, 0.3); color: var(--ink); }
+@media (hover: hover) { button.trend-chip:hover { border-color: rgba(158, 0, 196, 0.3); color: var(--ink); } }
 button.trend-chip.is-on { color: var(--ink); border-color: var(--border); background: var(--wash); }
 button.trend-chip.is-on .dot { opacity: 1; }
 
@@ -539,7 +539,7 @@ button.trend-chip.is-on .dot { opacity: 1; }
 .cmt-foot { margin-top: 12px; }
 
 
-/* ---------- career table ---------- */
+/* ---------- all-time standings table (career.html) ---------- */
 /* column count varies with how many seasons have data, so the grid
    template is set inline per row from JS (see renderCareerStandings)
    rather than guessed here */
@@ -551,7 +551,7 @@ button.trend-chip.is-on .dot { opacity: 1; }
   background: none; border: none; cursor: pointer; text-align: right; padding: 11px 18px;
 }
 .career-sort-btn.is-left { text-align: left; }
-.career-sort-btn:hover { color: var(--acid); }
+@media (hover: hover) { .career-sort-btn:hover { color: var(--acid); } }
 .career-sort-btn.is-active { color: var(--acid); }
 .career-sort-btn .arrow { font-size: 0.7rem; }
 /* The small print under a Score part: 1st/2nd/3rd counts, which season
@@ -638,7 +638,7 @@ button.trend-chip.is-on .dot { opacity: 1; }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .season-tab, .pill, .art, .season-card { transition: none; }
+  .season-tab, .pill, .art, .season-card, .rl-card, .pl-tile, .fold-bar, .rp-jump-select { transition: none; }
 }
 
 /* ---------- members-only gate (auth.js) ---------- */
@@ -672,7 +672,7 @@ body.auth-checking::before {
 .gate-card h1 { margin: 10px 0 12px; font-size: 1.55rem; letter-spacing: -0.02em; text-wrap: balance; }
 .gate-card p { margin: 0 0 10px; color: var(--muted); font-size: 0.95rem; }
 .gate-card p b { color: var(--ink); word-break: break-all; }
-.gate-fine { font-size: 0.84rem !important; }
+.gate-card .gate-fine { font-size: 0.84rem; }
 .gate-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
 .gate-btn {
   font-family: "Archivo", sans-serif; font-weight: 700; font-size: 0.92rem; cursor: pointer;
@@ -744,37 +744,7 @@ body.auth-checking::before {
   .acct-btn:hover { border-color: rgba(158, 0, 196, 0.45); }
 }
 
-/* ---------- comments page ---------- */
-
-.cm-controls { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 22px; }
-.cm-controls label {
-  display: flex; flex-direction: column; gap: 5px; min-width: 0;
-  font-size: 0.74rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;
-}
-.cm-controls select {
-  font: inherit; font-size: 0.92rem; text-transform: none; letter-spacing: 0; color: var(--ink);
-  padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--r-sm);
-  background: var(--card); max-width: 100%;
-}
-.cm-round h2 { margin: 0 0 5px; font-size: 1.35rem; letter-spacing: -0.02em; }
-.cm-round-meta { margin: 0 0 6px; font-size: 0.85rem; color: var(--muted); }
-
-.cm-track { margin-top: 26px; }
-.cm-track-head { margin: 0 0 10px; font-family: "Inter", sans-serif; font-size: 0.93rem; font-weight: 500; line-height: 1.45; }
-.cm-track-head a { font-weight: 600; }
-.cm-place { font-family: "Archivo", sans-serif; font-weight: 700; color: var(--magenta); }
-.cm-track-pts { color: var(--muted); font-size: 0.82rem; white-space: nowrap; }
-
-.cm-list { display: grid; gap: 10px; }
-.cm {
-  background: var(--card); border: 1px solid var(--border); border-radius: var(--r-sm);
-  box-shadow: var(--shadow-sm); padding: 12px 14px;
-}
-.cm-context { margin: 0 0 6px; font-size: 0.8rem; color: var(--muted); }
-.cm-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
-.cm-who { font-weight: 600; }
-.cm-pts { font-size: 0.78rem; color: var(--muted); }
-.cm-text { margin: 5px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.95rem; }
+/* ---------- comment layer: votes, reactions, replies (rounds.js) ---------- */
 
 .cm-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 10px; }
 .cm-vote { display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
@@ -782,14 +752,14 @@ body.auth-checking::before {
   font: inherit; font-size: 0.72rem; line-height: 1; cursor: pointer;
   background: none; border: none; color: var(--muted); padding: 7px 10px;
 }
-.cm-vote button:hover { color: var(--magenta); }
+@media (hover: hover) { .cm-vote button:hover { color: var(--magenta); } }
 .cm-vote button.is-on { background: var(--magenta); color: #fff; }
 .cm-score { min-width: 22px; text-align: center; font-family: "Archivo", sans-serif; font-weight: 700; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
 .cm-chip {
   font: inherit; font-size: 0.82rem; line-height: 1; cursor: pointer;
   border: 1px solid var(--border); border-radius: 999px; background: var(--card); color: var(--ink); padding: 6px 10px;
 }
-.cm-chip:hover { border-color: rgba(158, 0, 196, 0.35); }
+@media (hover: hover) { .cm-chip:hover { border-color: rgba(158, 0, 196, 0.35); } }
 .cm-chip.is-on { background: var(--wash); border-color: rgba(158, 0, 196, 0.45); }
 .cm-add { color: var(--muted); display: inline-flex; align-items: center; }
 .cm-add-icon { display: block; }
@@ -905,7 +875,7 @@ body.auth-checking::before {
 .plink, .plink:hover { color: inherit; text-decoration: none; }   /* beats the site-wide a:hover magenta */
 @media (hover: hover) {
   .cm-send:not(:disabled):hover { background: var(--deep); }
-  .cm-del:hover { color: #B3261E; }
+  .cm-del:hover { color: var(--neg); }
   .plink:hover { color: inherit; text-decoration: underline; text-decoration-color: rgba(158, 0, 196, 0.45); text-underline-offset: 3px; }
 }
 .cm-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -1016,7 +986,7 @@ body.auth-checking::before {
 }
 
 
-/* the home page's Career card sits in the season grid */
+/* the home page's All-Time card sits in the season grid */
 .season-card-career .season-card-name { color: var(--deep); }
 
 /* ---------- ties ---------- */
@@ -1033,7 +1003,7 @@ body.auth-checking::before {
   background: var(--card); color: var(--ink); text-decoration: none; box-shadow: var(--shadow-sm);
   transition: box-shadow .15s ease, transform .15s ease;
 }
-.rl-card:hover { color: var(--ink); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+@media (hover: hover) { .rl-card:hover { color: var(--ink); box-shadow: var(--shadow-md); transform: translateY(-1px); } }
 .rl-art { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; display: block; }
 .rl-art.is-empty, .rp-art.is-empty {
   display: grid; place-items: center; background: var(--wash); color: var(--magenta); font-size: 1.4rem;
@@ -1068,7 +1038,8 @@ body.auth-checking::before {
   padding: 9px 36px 9px 16px; cursor: pointer; box-shadow: var(--shadow-sm);
   text-overflow: ellipsis; transition: box-shadow .15s ease, transform .15s ease;
 }
-.rp-jump-select:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+@media (hover: hover) { .rp-jump-select:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); } }
+.rp-meta .pill { margin-bottom: 0; }
 .rp-jump-select:focus-visible { outline: 3px solid var(--magenta); outline-offset: 2px; }
 .rp-jump::after {
   content: "\25BE"; position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
@@ -1147,14 +1118,15 @@ body.auth-checking::before {
 .rp-voter { font-family: "Archivo", sans-serif; font-weight: 700; font-size: 1.08rem; flex: 1; min-width: 0; }
 .rp-pts { font-family: "Archivo", sans-serif; font-weight: 700; font-size: 1.35rem; font-variant-numeric: tabular-nums; }
 .rp-pts.is-zero { color: var(--muted); font-size: 1.05rem; }
-.rp-pts.is-neg { color: #B3261E; }
+.rp-pts.is-neg { color: var(--neg); }
 .rp-comment { margin: 10px 0 0; font-size: 1.06rem; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
 .rp-vote .cm-bar { margin-top: 12px; }
 .rp-empty { margin: 0; padding: 18px 20px; color: var(--muted); }
 
 @media (max-width: 620px) {
   .rp-jump { display: block; width: 100%; }
-  .rp-jump-select { width: 100%; }
+  /* 16px, or iOS zooms the page in when the menu is tapped */
+  .rp-jump-select { width: 100%; font-size: 16px; }
   .rp-track-main { grid-template-columns: 84px 1fr; gap: 14px; padding: 14px; }
   .rp-art { width: 84px; height: 84px; }
   .rp-score { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 10px; text-align: left; padding-top: 0; }
@@ -1191,9 +1163,9 @@ body.auth-checking::before {
 .pf-id h1 { font-size: clamp(2.1rem, 7vw, 3.4rem); overflow-wrap: anywhere; }
 .pf-id .pf-av { width: 72px; height: 72px; font-size: 1.5rem; box-shadow: 0 0 0 4px var(--card), var(--shadow-md); }
 .pf-switch { margin-top: 14px; }
+.pf-switch .rp-jump { margin-bottom: 0; }
 /* The Career tiles: two rows of three here, three rows of two on phones. */
 .pf-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.pf-switch .rp-jump-select { max-width: 100%; }
 .pf-of { color: var(--muted); font-size: 0.8em; }
 .pf-seasons .vname a { color: var(--ink); font-weight: 600; }
 .pf-fans { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -1227,7 +1199,7 @@ body.auth-checking::before {
   .acct-inbox { position: fixed; top: 60px; left: 12px; right: 12px; width: auto; }
   .pf-fans { grid-template-columns: 1fr; }
   /* Tile grids marked .hl-pair go two per row, smaller: the profile's
-     Career and Comments, the Career page's highlights and comment awards. */
+     Career and Comments, the All-Time page's highlights and comment awards. */
   .hl-pair { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .hl-pair .hl { padding: 12px 13px; min-width: 0; }
   .hl-pair .hl-label { margin-bottom: 4px; font-size: 0.74rem; }

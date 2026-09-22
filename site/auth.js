@@ -270,7 +270,8 @@
       jsonCache[name] = client.storage.from(BUCKET).download(name).then(function (res) {
         if (res.error) throw new Error(name + ": " + res.error.message);
         return res.data.text();
-      }).then(function (text) { return JSON.parse(text); });
+      }).then(function (text) { return JSON.parse(text); })
+        .catch(function (err) { delete jsonCache[name]; throw err; });   // a later call can retry
     }
     return jsonCache[name];
   };
@@ -282,9 +283,12 @@
 
   function must(res) { if (res.error) throw new Error(res.error.message); return res.data; }
 
+  var peopleCache = null;   // asked for by both the page and the inbox; once per load is plenty
+
   PFML.api = {
     people: function () {
-      return Promise.all([
+      if (peopleCache) return peopleCache;
+      return peopleCache = Promise.all([
         client.from("members").select("user_id, competitor_id").then(must),
         client.from("players").select("competitor_id, name").then(must)
       ]).then(function (r) {
@@ -293,7 +297,7 @@
         var byUser = {};
         r[0].forEach(function (m) { byUser[m.user_id] = { competitorId: m.competitor_id, name: names[m.competitor_id] || "Member" }; });
         return byUser;
-      });
+      }).catch(function (err) { peopleCache = null; throw err; });
     },
     loadRound: function (roundId) {
       var prefix = roundId + "|%";

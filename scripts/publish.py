@@ -34,7 +34,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import build  # noqa: E402
 import supa   # noqa: E402
 
-ROOT = build.ROOT
 DATA_BUCKET = "league-data"
 EXPORT_BUCKET = "league-exports"
 

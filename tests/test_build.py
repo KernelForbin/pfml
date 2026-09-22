@@ -5,7 +5,6 @@ import subprocess
 import sys
 import textwrap
 import unittest
-from pathlib import Path
 from unittest import mock
 
 from support import ROOT, build, make_season, quiet, sandbox, uri

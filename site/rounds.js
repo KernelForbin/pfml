@@ -202,7 +202,7 @@
                points: v[1], comment: byVoter[v[0]] || null };
     });
     (song.comments || []).forEach(function (c) {
-      if (!seen[c.voterId]) rows.push({ voterId: c.voterId, name: c.voterName, points: 0, comment: c });
+      if (!seen[c.voterId]) rows.push({ voterId: c.voterId, name: state.names[c.voterId] || c.voterName || "Unknown", points: 0, comment: c });
     });
     rows.sort(function (a, b) {
       if ((a.points === 0) !== (b.points === 0)) return a.points === 0 ? 1 : -1;   // comment-only last
@@ -429,7 +429,7 @@
     var chips = Object.keys(reacts).sort().map(function (k) {
       var r = reacts[k];
       return '<button type="button" class="cm-chip' + (r.mine ? " is-on" : "") + '" data-act="react" data-r="' + esc(k) +
-        '" title="' + esc(r.who.join(", ")) + '" aria-pressed="' + r.mine + '">' + reactionGlyph(k) + " " + r.count + "</button>";
+        '" title="' + esc(r.who.join(", ")) + '" aria-pressed="' + r.mine + '">' + esc(reactionGlyph(k)) + " " + r.count + "</button>";
     }).join("");
     var picker = state.picker !== c.id ? "" : state.pickerMore ? morePickerHtml(c) : quickPickerHtml(reacts);
 
@@ -711,8 +711,13 @@
     } else if (act === "react") {
       var key = btn.getAttribute("data-r");
       var on = reactionsFor(id)[key];
+      // Close whichever picker is open now, not after the save: a chip on
+      // another comment would otherwise leave that one's picker stuck open,
+      // and so would a failed or dropped save on this one.
+      var open = state.picker;
       state.picker = null;
       state.pickerMore = false;
+      if (open) rerenderVote(open);
       refreshAfter(function () { return api().toggleReaction(id, key, !(on && on.mine)); }, id);
     } else if (act === "picker") {
       if (state.picker === id) { closePicker(); return; }
@@ -784,12 +789,15 @@
     refreshAfter(function () { return api().addReply(id, text); }, id);
   }
 
-  function closePicker() {
+  // `quiet` skips handing focus back to the + button: after a tap
+  // elsewhere, focusing it could scroll the page away from that tap.
+  function closePicker(quiet) {
     var id = state.picker;
     if (!id) return;
     state.picker = null;
     state.pickerMore = false;
     rerenderVote(id);
+    if (quiet) return;
     var btn = state.host.querySelector('.rp-vote[data-id="' + cssEscape(id) + '"] .cm-add');
     if (btn) btn.focus();
   }
@@ -800,7 +808,7 @@
   function closePickerFromOutside(ev) {
     if (!state.picker || !ev.target.closest) return;
     if (ev.target.closest(".cm-picker, .cm-add")) return;
-    closePicker();
+    closePicker(true);
   }
 
   function closePickerOnEscape(ev) {

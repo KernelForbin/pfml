@@ -87,9 +87,9 @@
     var box = document.createElement("div");
     box.className = "acct";
     box.innerHTML =
-      '<button type="button" class="acct-btn acct-inbox-btn" id="acctInboxBtn" aria-haspopup="true" aria-expanded="false" aria-controls="acctInbox" aria-label="Inbox">' +
+      '<button type="button" class="acct-btn acct-inbox-btn" id="acctInboxBtn" aria-expanded="false" aria-controls="acctInbox" aria-label="Inbox">' +
         INBOX_ICON + '<span class="acct-badge" id="acctBadge" hidden></span></button>' +
-      '<button type="button" class="acct-btn acct-me-btn" id="acctMeBtn" aria-haspopup="true" aria-expanded="false" aria-controls="acctMenu" ' +
+      '<button type="button" class="acct-btn acct-me-btn" id="acctMeBtn" aria-expanded="false" aria-controls="acctMenu" ' +
         'aria-label="Account menu for ' + esc(member.name) + '" title="' + esc(member.name) + '">' + avatar(member.competitorId, member.name) + "</button>" +
       '<div class="acct-pop acct-menu" id="acctMenu" hidden>' +
         '<div class="acct-menu-head">' + avatar(member.competitorId, member.name) +
@@ -165,9 +165,15 @@
       }));
       items.sort(function (a, b) { return a.at < b.at ? 1 : a.at > b.at ? -1 : 0; });
       state.items = items.slice(0, 40);
-      state.seenAt = res[1];
+      // Keep the later time: a refresh that started before the inbox was
+      // opened (and marked seen) mustn't bring the old count back.
+      var seen = res[1];
+      if (seen && state.seenAt && Date.parse(state.seenAt) > Date.parse(seen)) seen = state.seenAt;
+      state.seenAt = seen;
       renderBadge();
-      if (state.open === "inbox") renderList();
+      // openInbox, not just renderList: opened before this first load
+      // landed, it has had nothing to mark seen yet.
+      if (state.open === "inbox") openInbox();
     }).catch(function (err) {
       state.items = state.items || [];
       if (state.open === "inbox") renderList(err);

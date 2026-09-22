@@ -107,7 +107,7 @@ SENTIMENT_PLAYER_AWARDS = (
 # picking out someone's distinctive recurring word. Covers English
 # function words plus the handful of words that dominate *every* Music
 # League comment ("song", "track", "love") and would otherwise be the top
-# word for all 16 players, telling you nothing about any of them.
+# word for every player, telling you nothing about any of them.
 STOPWORDS = frozenset("""
 a about after all also am an and any are as at be because been before being but by
 can cant cause come could did didnt do does doesnt doing dont down each even ever
@@ -151,7 +151,7 @@ def norm_word(w):
 
 
 def is_allcaps_word(w):
-    """SHOUTING, not "I" or "A" or "OK". Two letters minimum, and it has to
+    """SHOUTING, not "I" or "A" or "OK": three letters minimum, and it has to
     have an uppercase letter to begin with, so "a" never qualifies."""
     return len(w) >= 3 and w.isupper() and w.isalpha()
 
@@ -734,7 +734,7 @@ def build_season(folder: Path, season_key: str, label: str):
                 if submitter == vid:
                     continue
                 pts = points_at.get((rid, s["Spotify URI"], vid), 0)
-                pts = max(pts, 0) if pts < 0 else pts
+                pts = max(pts, 0)
                 pair_points[(vid, submitter)] = pair_points.get((vid, submitter), 0) + pts
                 pair_chances[(vid, submitter)] = pair_chances.get((vid, submitter), 0) + 1
                 voter_total_points[vid] = voter_total_points.get(vid, 0) + pts
@@ -1345,7 +1345,7 @@ def build_career(season_datas, raw_seasons=None):
             t = totals.setdefault(p["id"], {
                 "id": p["id"], "name": p["name"], "totalPoints": 0,
                 "roundsWon": 0, "podiums": 0, "submissions": 0,
-                "seasonsPlayed": 0, "bySeasson": {}, "bestSeasonPoints": None, "bestSeasonKey": None,
+                "seasonsPlayed": 0, "bySeason": {}, "bestSeasonPoints": None, "bestSeasonKey": None,
                 "roundFinishes": {"first": 0, "second": 0, "third": 0}, "seasonPodiums": [],
             })
             t["totalPoints"] += p["points"]
@@ -1353,7 +1353,7 @@ def build_career(season_datas, raw_seasons=None):
             t["podiums"] += p["podiums"]
             t["submissions"] += p["submissions"]
             t["seasonsPlayed"] += 1
-            t["bySeasson"][d["key"]] = p["points"]
+            t["bySeason"][d["key"]] = p["points"]
             if t["bestSeasonPoints"] is None or p["points"] > t["bestSeasonPoints"]:
                 t["bestSeasonPoints"] = p["points"]
                 t["bestSeasonKey"] = d["key"]
@@ -1377,7 +1377,6 @@ def build_career(season_datas, raw_seasons=None):
     players = []
     for t in totals.values():
         t["avgPointsPerSeason"] = round(t["totalPoints"] / t["seasonsPlayed"], 1) if t["seasonsPlayed"] else 0
-        t["bySeason"] = t.pop("bySeasson")
         # Career Score: an average rather than a total, so a missed season
         # (or round) doesn't count against anyone, plus bonuses for finishing
         # on top. "Rounds" is tracks submitted: one per round played. Points

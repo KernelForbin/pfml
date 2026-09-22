@@ -1,5 +1,53 @@
 # Changelog
 
+## 2026-09-22 (follow-up 8): review pass
+
+A full review of the site, scripts and docs; the low-risk fixes, each with
+a test shown to fail without it. Every page was checked at 375px and
+1280px on a signed-in local copy (no horizontal overflow, no script errors).
+
+- **Reactions are escaped when drawn.** A reaction is free text in the
+  database (1-32 characters), and the round page wrote it into the page
+  unescaped, so a member could have stored markup that ran for everyone
+  opening that round. The inbox and profile already escaped it. The
+  season page's "How X rates everyone else" headings now escape the name
+  too.
+- **The reaction picker no longer gets stuck open.** Tapping a reaction on
+  another comment, or a save that failed, left the open picker on screen
+  with its button stuck on close. A tap outside closes it without jumping
+  focus (and the page) back to its button.
+- **Inbox badge:** opening the inbox before its first load finished left
+  the count up; a refresh already in flight when the inbox was opened
+  could bring it back.
+- **Phones:** the round and profile player menus are 16px on phones (iOS
+  zoomed the page when they were tapped); the profile's menu gets the ▾
+  the round page's has; hover looks on toggles and cards (vote arrows,
+  reaction chips, sort headings, trend chips, pills, cards) apply only on
+  devices that really hover, so they don't stick after a tap; the round
+  page's playlist pill lines up with the count chips beside it; reduced
+  motion covers every card that lifts.
+- **Tidying:** the old Comments page's unused CSS and the unused `.n`
+  class removed; the red is a `--neg` token, as on the features page;
+  `careerTile` reuses `tile`; `api.people()` is fetched once per page, and
+  a failed data download can be retried; dead code (`window.__pfmlIndex`,
+  an unreachable branch on profiles, an unused import and constant, a
+  misspelled key renamed after the fact) removed; error messages no longer
+  point members at `site/data/`; `aria-pressed` on the trend buttons;
+  `aria-haspopup` removed where the popup isn't a menu. The build's JSON
+  on the real data is identical before and after (compared parsed).
+- **`enrich_comments.py`:** `--force` kept only the labels from its own
+  run, so `--force --season season2` would have wiped every other season's
+  paid-for labels; it now starts from the stored file and replaces only
+  what it re-labels. An unreadable labels file stops the run instead of
+  being overwritten. The batch run no longer says Ctrl-C is safe (the batch
+  keeps running and is billed, but its results aren't saved).
+- **Docs:** player names out of the CHANGELOG; the README no longer says no
+  commit on GitHub holds league data (old commits still load by id,
+  re-checked today); the All-Time page's section, the sort note, the Tests
+  section, the point budget (16, then 19 in Season 3) and a duplicated
+  paragraph corrected; the features page's "tap a name" line said it opens
+  the profile (it opens the player focus panel).
+
 ## 2026-09-22 (follow-up 7)
 
 - **No .html in any address.** Every link is clean (`/career`, `/season1`,
@@ -72,7 +120,7 @@
   scored after 10 rounds played. Replaces total points + 10 per round win
   + 5 per podium, which punished missed seasons. A season's podium counts
   once a newer season exists (Seasons 1 and 2 now). Top of the table:
-  Rick D 403, Kris Brinker 394, Justin Mendelsohn 376, josh storm 375.
+  four players between 375 and 403.
 - **All-time standings columns show the score's parts**: Score (now second),
   Avg season, Round finishes (with 1st/2nd/3rd counts), Season podiums
   (with which seasons), Rounds. The per-season points and total moved off

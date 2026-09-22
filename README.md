@@ -17,7 +17,8 @@ plain `open.spotify.com` URL built from IDs already present in the export.
 **None of the league data is in this repo.** `data/` and `site/data/` are
 git-ignored, and the deploy refuses to run if a JSON file or a `data/`
 folder ever turns up in it. The repo's history was rewritten on
-2026-09-21 to take out the CSVs and JSON older commits carried; see
+2026-09-21 to take out the CSVs and JSON older commits carried, though
+GitHub still serves the old commits by id until the repo is recreated; see
 Members only below.
 
 ```
@@ -63,7 +64,7 @@ site/                    everything GitHub Pages serves
   season2.html
   season3.html
   style.css
-  app.js                 shared by the home, career, profile and season pages
+  app.js                 shared by the home, career, profile, round and season pages
   data/                  LOCAL ONLY (git-ignored), published to Supabase
     index.json           generated: season list + each leader
     career.json           generated: cross-season standings and highlights
@@ -99,11 +100,17 @@ the Daily Double and its failure modes, the blowout rule, album art, CRLF
 handling, identical builds across hash seeds), the album-art lookup in
 `publish.py` (backoff on 429, stopping early and keeping progress), and the
 site's static contracts (the features page loads nothing but its fonts,
-every page links to it, generated season pages match the template, no data
-or secret keys are tracked). The deploy runs it before publishing.
+every page links to it, generated season pages match the template, no
+`.html` links, the local preview server, no data or secret keys are
+tracked), plus the profile and inbox data, the database schema and
+migrations, the committed emoji data, and the parts of
+`enrich_comments.py` that decide what gets stored. The deploy runs it
+before publishing.
 
-`tests/test_live_spotify.py` calls Spotify's real endpoint and skips unless
-`PFML_LIVE=1` is set. The browser JavaScript isn't covered by the suite
+Two live tests skip unless `PFML_LIVE=1` is set:
+`tests/test_live_spotify.py` calls Spotify's real endpoint, and
+`tests/test_live_emoji_data.py` checks the committed `site/emoji-data.js`
+is what its pinned version builds. The browser JavaScript isn't covered by the suite
 (there's no Node here); it's checked in a real browser, see CLAUDE.md.
 
 ## Members only
@@ -135,8 +142,10 @@ or in a commit.
 **History.** Until 2026-09-21, commits from before the site went
 members-only still carried the CSVs and built JSON. The history was
 rewritten that day (`git filter-branch` removing `data/` and `site/data/`
-from every commit, then a force-push), so no commit on GitHub holds league
-data. Commit ids from before that date no longer match. Anyone with an
+from every commit, then a force-push), so no branch holds league data.
+GitHub still serves the old commits by their ids (checked 2026-09-22: a
+raw URL for a pre-rewrite commit's CSV still loaded) until the repo is
+deleted and recreated, which is pending. Commit ids from before that date no longer match. Anyone with an
 older clone should re-clone rather than pull. A full pre-rewrite backup is
 kept outside the repo, locally, as a git bundle.
 
@@ -288,10 +297,6 @@ it back once the session exists, before any page code runs.
   3rd or better with their points (ties share a place, so that can be more
   than three people; past four it shows three and "+N more"). Open it for
   the full clickable list. While players are picked, the bar also shows a
-  "Filtered to" row, open or closed: tap a name to drop it, or Clear all.
-  Standings is a bar plus a real toggle button rather than a `<details>`,
-  because its bar holds buttons, and a button inside a `<summary>` would
-  also fold the section (and reads badly in screen readers). While players are picked, the bar also shows a
   "Filtered to" row, open or closed: tap a name to drop it, or Clear all.
   Standings is a bar plus a real toggle button rather than a `<details>`,
   because its bar holds buttons, and a button inside a `<summary>` would
@@ -453,9 +458,9 @@ while a filter is active (it's a season-wide summary, not a per-player one,
 so it stops making sense to show it between player-specific panels), and
 its jump-nav link disappears along with it.
 
-## Career page
+## All-Time page (career.html)
 
-Shown as All-Time in the top bar. Both of its tables (standings and
+Titled All-Time League Stats, and shown as All-Time in the top bar. Both of its tables (standings and
 comments), and a season page's Voting and Comments tables, keep every
 column on a phone and scroll sideways inside their box (`.table-wide`), with the Player column pinned (`position: sticky`,
 opaque) and a "swipe sideways" line shown on phones only. The one phone rule
@@ -470,7 +475,7 @@ League reusing the same id for the same person across separate CSV
 exports, which was checked against the real data (13 people who played
 all 3 seasons, zero id/name mismatches) rather than assumed. A season
 with zero rounds contributes nothing, since nobody has a standings entry
-in it yet. If a name ever looks wrong on the Career page for someone who
+in it yet. If a name ever looks wrong on the All-Time page for someone who
 changed their Music League display name between seasons, that's the
 join taking the first name it saw for that id; `build_career()` in
 `build.py` is where to change that if it comes up.
@@ -506,10 +511,11 @@ union of the words they used, not a sum of per-season unique counts. So
 shipping every raw comment length per player per season would bloat a file
 the site downloads, for data no page reads.
 
-The all-time standings table is sortable by clicking any column header,
-including the season-by-season point columns; click again to flip the
-direction. Someone who hasn't played a season sorts to the bottom of that
-column regardless of direction, rather than sorting as a zero.
+The all-time standings table is sortable by clicking any column header;
+click again to flip the direction. Players under 10 rounds have no score
+or score parts (`careerFieldValue` returns null), so they sort to the
+bottom of those columns in either direction, rather than sorting as a
+zero.
 
 ### Career Score
 
@@ -693,8 +699,8 @@ level on 29), so nothing that names a winner picks one silently:
 - **Home page**: a season whose top spot is shared says "Tied for the
   lead" (or "Joint winners" once it's over) and names everyone in it
   (`leaderNames` in `index.json`).
-- **Every superlative** (season in numbers, comment superlatives, career
-  highlights) is computed with `best_of()` in `build.py`, which returns the
+- **Every superlative** (season in numbers, comment superlatives, League
+  Highlights) is computed with `best_of()` in `build.py`, which returns the
   whole group tied for the best value rather than whichever one `max()`
   met first. The card names the first of the group, in a fixed order
   (alphabetical for people and tracks, earliest first for rounds), and a
@@ -785,7 +791,7 @@ stopwords are removed first. The stopword list is hand-written in
 `build.py` (`STOPWORDS`), deliberately small and dependency-free. It
 covers English function words plus the handful that dominate *every*
 Music League comment ("song", "track", "love") and would otherwise be the
-answer for all 16 players, telling you nothing about any of them.
+answer for every player, telling you nothing about any of them.
 
 **Comment matrix** — how often a voter comments on a given submitter's
 tracks, out of the chances they had to. It shares the taste matrix's
@@ -839,7 +845,7 @@ label outside the known set is dropped rather than rendered.
 pip install anthropic          # local only; build.py stays stdlib-only
 export ANTHROPIC_API_KEY=sk-ant-...
 
-python scripts/enrich_comments.py --estimate   # measured cost, no API call
+python scripts/enrich_comments.py --estimate   # measured cost; counts tokens, labels nothing
 python scripts/enrich_comments.py --dry-run    # prints what would be sent
 python scripts/enrich_comments.py              # label what isn't labelled yet
 ```
@@ -855,16 +861,22 @@ the top of the script — check the pricing page if they look stale.
 **Re-running after a new export.** Labels are keyed by a stable comment id
 (round id + spotify URI + voter id), computed the same way in both
 scripts. A re-run only sends comments that aren't already in the file, so
-adding a season costs only that season. `--force` re-labels everything,
-and `--season seasonN` restricts it to one season.
+adding a season costs only that season. `--force` re-labels everything in
+the run, and `--season seasonN` restricts it to one season; labels outside
+the run are kept either way (an earlier version of `--force` started from
+an empty file and wiped them). An unreadable labels file stops the script
+rather than being overwritten. Let a batch run finish: after Ctrl-C the
+batch still runs and is billed, but its results aren't saved.
 
 **Going live.** `data/` is never committed (the site is members-only), so
 the labels reach the site the way all data does: run the script, then
 `python scripts/publish.py`, which builds locally, where it can read
 `data/comment_sentiment.json`, and uploads. (An earlier version of this
 section said to commit the file; that predates the members-only setup.)
-The file is safe to delete at any time: the next build just drops the
-sentiment stats. Sending the comments to the API sends every member's
+Deleting the file breaks nothing: the next build just drops the
+sentiment stats. But it isn't backed up (`publish.py` backs up only the
+season exports), and getting the labels back means paying for another
+run. Sending the comments to the API sends every member's
 vote comments to Anthropic, so it's the league organizer's decision.
 
 ## Spotify links
