@@ -179,6 +179,16 @@ class Linking(unittest.TestCase):
             hrefs = [a.get("href") for a in Page(read(name)).find("a")]
             self.assertIn("features", hrefs, name)
 
+    def test_privacy_is_linked_from_every_page_and_the_sign_in_card(self):
+        # A signed-out visitor sees only the sign-in card (every other
+        # element is hidden while gated), so the card needs the link too.
+        for name in MEMBER_PAGES + ["features.html"]:
+            hrefs = [a.get("href") for a in Page(read(name)).find("a")]
+            self.assertIn("privacy", hrefs, name)
+        self.assertIn("features", [a.get("href") for a in Page(read("privacy.html")).find("a")])
+        gate = js_function(read("auth.js"), "function showGate(title, bodyHtml, actions)")
+        self.assertIn('<a href="privacy">Privacy</a>', gate)
+
     def test_clean_links_point_at_real_pages(self):
         # GitHub Pages serves /features from features.html; keep the target real.
         for target in ("features", "privacy"):
@@ -665,14 +675,31 @@ class Replies(unittest.TestCase):
     def test_composer_sends_only_with_text_and_grows(self):
         js = read("rounds.js")
         social = js_function(js, "function socialHtml(c)")
-        self.assertIn('class="cm-send" aria-label="Send reply" disabled', social)
+        self.assertIn("""class="cm-send" aria-label="Send reply"' + (draft.trim() ? "" : " disabled")""", social)
         self.assertIn('rows="1"', social)
         self.assertIn('addEventListener("input", onReplyInput)', js)
         self.assertIn('addEventListener("keydown", onReplyKey)', js)
         grow = js_function(js, "function onReplyInput(ev)")
-        self.assertIn('ta.style.height = ta.scrollHeight + "px"', grow)
+        self.assertIn("fitReplyBox(ta)", grow)
+        self.assertIn('ta.style.height = ta.scrollHeight + "px"', js_function(js, "function fitReplyBox(ta)"))
         self.assertIn("send.disabled = !ta.value.trim()", grow)
         self.assertIn("(ev.ctrlKey || ev.metaKey)", js_function(js, "function onReplyKey(ev)"))
+
+    def test_a_draft_survives_a_redraw_of_its_comment(self):
+        # A vote or reaction on the same comment redraws it, and used to
+        # replace the reply box with an empty one mid-sentence.
+        js = read("rounds.js")
+        self.assertIn("state.drafts[id] = ta.value", js_function(js, "function onReplyInput(ev)"))
+        social = js_function(js, "function socialHtml(c)")
+        self.assertIn('var draft = state.drafts[c.id] || "";', social)
+        self.assertIn('+ esc(draft) + "</textarea>"', social)
+        redraw = js_function(js, "function rerenderVote(id)")
+        self.assertIn("box.focus();", redraw)
+        self.assertIn("box.setSelectionRange(typing.selectionStart, typing.selectionEnd)", redraw)
+
+    def test_a_draft_is_dropped_only_once_the_reply_is_saved(self):
+        submit = js_function(read("rounds.js"), "function onSubmit(ev)")
+        self.assertIn("api().addReply(id, text).then(function () { delete state.drafts[id]; })", submit)
 
     def test_reply_box_does_not_make_ios_zoom(self):
         sizes = [m for b in css_rules(read("style.css"), ".cm-compose textarea") for m in re.findall(r"font-size:\s*(\d+)px", b)]

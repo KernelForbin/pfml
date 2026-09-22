@@ -194,6 +194,11 @@ two standalone pages, `features.html` and `privacy.html`. A test fails if
 any page builds a link ending in `.html`. Python's plain `http.server`
 doesn't resolve clean paths; `scripts/serve.py` does, for local previews.
 
+The privacy page is linked from every page's footer and from the sign-in
+card itself (`showGate` in `auth.js`), since a signed-out visitor sees
+only that card; the footers are hidden until sign-in. The privacy page's
+own footer links back to the site and to the features page.
+
 ## Results by round, and the comments on them
 
 On every season page, directly under Standings, **Results by round**,
@@ -233,6 +238,12 @@ the first time that round is opened. Votes show as a net score with the
 up/down split on hover. Everything members add is visible to every member,
 including who voted which way, at the data level. Replies are flat (no
 nested threads) and can be deleted by their author or an admin, not edited.
+
+A vote, reaction or picker on a comment redraws that comment, reply box
+included. A reply being typed survives it: the text is kept per comment
+in `state.drafts` in `rounds.js` and written back, with focus and the
+cursor restored, and it's dropped only once the reply saves (a failed
+send keeps it). Drafts live in the page only; leaving the page loses them.
 
 A dropdown at the top of every round page jumps to any other round in that
 season, alongside the previous/next links.

@@ -674,6 +674,7 @@ body.auth-checking::before {
 .gate-card p b { color: var(--ink); word-break: break-all; }
 .gate-card .gate-fine { font-size: 0.84rem; }
 .gate-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+.gate-card .gate-links { margin: 22px 0 0; font-size: 0.84rem; }
 .gate-btn {
   font-family: "Archivo", sans-serif; font-weight: 700; font-size: 0.92rem; cursor: pointer;
   padding: 11px 20px; border-radius: 999px; border: 1px solid var(--border);

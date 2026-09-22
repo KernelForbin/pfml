@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-09-22 (follow-up 11): Privacy link, reply drafts
+
+- **Privacy is linked everywhere.** Every page's footer now reads "What
+  this site can do · Privacy", and the sign-in card (the only thing a
+  signed-out visitor sees; footers are hidden until sign-in) links
+  Privacy and the features page. The privacy page gets a footer linking
+  back. Checked with the real `auth.js` and a signed-out fake session at
+  375px and 1280px.
+- **A half-typed reply survives.** Voting, reacting or opening the picker
+  on a comment redraws it, which used to replace the reply box with an
+  empty one. The draft is now kept per comment and written back, with
+  focus and cursor restored, and dropped only once the reply saves; a
+  failed send keeps it. Checked in a browser at 375px: vote, reaction and
+  failed send each kept a draft (including multi-line text and markup,
+  which stays text), and a successful send cleared it.
+
 ## 2026-09-22 (follow-up 10): Daily Double checks, sentiment backup
 
 - **Daily Double file is checked before it's used.** Only an exact

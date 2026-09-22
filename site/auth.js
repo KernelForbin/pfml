@@ -67,7 +67,10 @@
       '<div class="gate-card">' +
       '<div class="gate-mark">PFML</div>' +
       "<h1>" + esc(title) + "</h1>" + bodyHtml +
-      '<div class="gate-actions"></div></div>';
+      '<div class="gate-actions"></div>' +
+      // The only thing a signed-out visitor can see, so the privacy
+      // policy is linked here as well as in the page footers.
+      '<p class="gate-links"><a href="privacy">Privacy</a> &middot; <a href="features">What this site can do</a></p></div>';
     var row = gate.querySelector(".gate-actions");
     (actions || []).forEach(function (a) {
       var b = document.createElement("button");

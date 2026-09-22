@@ -44,6 +44,7 @@
     social: null,          // { votes, reactions, replies }, each grouped by comment id
     people: null,          // member user_id -> { name }
     threads: {},           // comment id -> reply thread open
+    drafts: {},            // comment id -> unsent reply text, kept across redraws
     picker: null,          // comment id with the reaction picker open
     pickerMore: false,     // that picker showing the full "More" panel, not just the quick row
     emojiGroup: 0,         // category the "More" panel shows when nothing's searched
@@ -436,6 +437,7 @@
     var thread = "";
     if (open) {
       var self = window.PFML && window.PFML.member;
+      var draft = state.drafts[c.id] || "";
       thread = '<div class="cm-thread">' + replies.map(function (r) {
         var canDelete = r.user_id === uid || admin;
         var who = (state.people && state.people[r.user_id]) || {};
@@ -449,8 +451,8 @@
         (self ? avatar(self.competitorId, self.name) : "") +
         '<div class="cm-compose">' +
           '<label class="cm-sr" for="r-' + esc(c.id) + '">Reply to ' + esc(c.voterName) + "</label>" +
-          '<textarea id="r-' + esc(c.id) + '" rows="1" maxlength="2000" placeholder="Reply to ' + esc(c.voterName) + '…"></textarea>' +
-          '<button type="submit" class="cm-send" aria-label="Send reply" disabled>' + SEND_ICON + "</button>" +
+          '<textarea id="r-' + esc(c.id) + '" rows="1" maxlength="2000" placeholder="Reply to ' + esc(c.voterName) + '…">' + esc(draft) + "</textarea>" +
+          '<button type="submit" class="cm-send" aria-label="Send reply"' + (draft.trim() ? "" : " disabled") + ">" + SEND_ICON + "</button>" +
         "</div></form></div>";
     }
 
@@ -646,14 +648,26 @@
 
   /* ---- actions ---- */
 
+  // Redraws one comment. A reply being typed survives it: the text is in
+  // state.drafts (voteHtml writes it back), and if the box had focus, the
+  // new box gets it back with the cursor where it was, so a vote or a
+  // reaction on the same comment doesn't wipe or interrupt the reply.
   function rerenderVote(id) {
     var node = state.host.querySelector('.rp-vote[data-id="' + cssEscape(id) + '"]');
     var row = state.index[id];
     if (!node || !row) return;
+    var typing = document.activeElement && document.activeElement.tagName === "TEXTAREA" &&
+      node.contains(document.activeElement) ? document.activeElement : null;
     var wrap = document.createElement("div");
     wrap.innerHTML = voteHtml(row);
     var fresh = wrap.firstChild;
     node.replaceWith(fresh);
+    var box = fresh.querySelector('form[data-act="reply"] textarea');
+    if (box && box.value) fitReplyBox(box);
+    if (box && typing) {
+      box.focus();
+      box.setSelectionRange(typing.selectionStart, typing.selectionEnd);
+    }
     var picker = state.picker === id && fresh.querySelector(".cm-picker");
     if (picker) {
       if (state.pickerMore) fillEmojiGrid(picker, id);
@@ -761,10 +775,20 @@
   function onReplyInput(ev) {
     var ta = ev.target;
     if (ta.tagName !== "TEXTAREA" || !ta.closest('form[data-act="reply"]')) return;
-    ta.style.height = "auto";
-    ta.style.height = ta.scrollHeight + "px";
+    var card = ta.closest(".rp-vote[data-id]");
+    if (card) {
+      var id = card.getAttribute("data-id");
+      if (ta.value) state.drafts[id] = ta.value;
+      else delete state.drafts[id];
+    }
+    fitReplyBox(ta);
     var send = ta.closest("form").querySelector(".cm-send");
     if (send) send.disabled = !ta.value.trim();
+  }
+
+  function fitReplyBox(ta) {
+    ta.style.height = "auto";
+    ta.style.height = ta.scrollHeight + "px";
   }
 
   // Ctrl/Cmd+Enter sends; plain Enter is a new line, as in any chat box
@@ -786,7 +810,8 @@
     var text = form.querySelector("textarea").value.trim();
     if (!text) return;
     state.threads[id] = true;
-    refreshAfter(function () { return api().addReply(id, text); }, id);
+    // The draft goes only once the reply is saved; if it fails, it stays.
+    refreshAfter(function () { return api().addReply(id, text).then(function () { delete state.drafts[id]; }); }, id);
   }
 
   // `quiet` skips handing focus back to the + button: after a tap
