@@ -440,10 +440,11 @@ its jump-nav link disappears along with it.
 ## Career page
 
 Shown as All-Time in the top bar. Both of its tables (standings and
-comments) keep every column on a phone and scroll sideways inside their
-box (`.table-wide`), with the Player column pinned (`position: sticky`,
-opaque) and a "swipe sideways" line shown on phones only. The phone rules
-that trim columns elsewhere are scoped away from them: one written for the
+comments), and a season page's Voting and Comments tables, keep every
+column on a phone and scroll sideways inside their box (`.table-wide`), with the Player column pinned (`position: sticky`,
+opaque) and a "swipe sideways" line shown on phones only. The one phone rule
+still trimming columns is for the Taste section's short lists, and is
+scoped away from these tables: one written for the
 season Voting table used to hide every `.vrow`'s 4th cell, which here was
 Season 3 (and "Won" on a profile's seasons).
 

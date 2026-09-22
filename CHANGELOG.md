@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-09-23 (follow-up 5)
+
+- **Season page tables scroll sideways on phones too.** Voting style and
+  the comment table keep every column (they used to drop one and four),
+  names pinned on the left, with the "swipe sideways" line. The comment
+  tables' number columns are now at least 72px, because the COMMENTS
+  heading (71px) ran into the next column at 56px, on All-Time as well.
+  The season comment table also gets the standard space under its awards.
+
 ## 2026-09-23 (follow-up 4)
 
 - **All-Time tables on phones.** All-time standings and the comment table

@@ -673,7 +673,7 @@ class AllTimeTables(unittest.TestCase):
         self.assertIn("left: 0", pinned)
         self.assertIn("background: inherit", pinned, "opaque, or scrolled numbers show through the names")
         self.assertIn("min-width: 600px", " ".join(css_rules(css, ".career-table.table-wide > .vrow")))
-        self.assertIn("min-width: 700px", " ".join(css_rules(css, ".cmt-table-box > .crow")))
+        self.assertIn("min-width: 800px", " ".join(css_rules(css, ".cmt-table-box > .crow")))
 
     def test_no_column_is_hidden_from_them(self):
         # Regression: a phone rule for the season Voting table hid every
@@ -681,17 +681,17 @@ class AllTimeTables(unittest.TestCase):
         # "Won" on a profile's seasons); the comment table dropped 4 columns.
         css = read("style.css").replace("\r\n", "\n")
         self.assertNotRegex(css, r"(^|\n)\s*\.vrow > :nth-child\(4\)")
-        self.assertIn(".framed:not(.career-table) > .vrow > :nth-child(4) { display: none; }", css)
-        self.assertNotRegex(css, r"(^|\n)\s*\.crow > :nth-child\(n \+ 6\)")
-        self.assertIn(".framed:not(.table-wide) > .crow > :nth-child(n + 6) { display: none; }", css)
+        self.assertIn(".framed:not(.career-table):not(.table-wide) > .vrow > :nth-child(4) { display: none; }", css)
+        # every comment table scrolls now, so nothing trims their columns
+        self.assertNotIn(".crow > :nth-child(n + 6)", css)
 
     def test_hint_only_on_phones(self):
         css = read("style.css")
         self.assertTrue(any("display: none" in b for b in css_rules(css, ".table-hint")))
         self.assertTrue(any("display: block" in b for b in phone_rules(css, ".table-hint")))
         js = read("app.js")
-        self.assertIn("tableHint()", js_function(js, "function renderCareerStandings(c)"))
-        self.assertIn("tableHint()", js_function(js, "function renderCareerComments(c)"))
+        self.assertIn("tableHint(", js_function(js, "function renderCareerStandings(c)"))
+        self.assertIn("tableHint(", js_function(js, "function renderCareerComments(c)"))
 
     def test_comment_table_sorts_by_every_column(self):
         js = read("app.js")
@@ -704,6 +704,25 @@ class AllTimeTables(unittest.TestCase):
         self.assertIn('commentSort.dir = commentSort.dir === "desc" ? "asc" : "desc"', table, "tap again to flip")
         self.assertIn("renderCareerCommentTable(rows);", table)
         self.assertIn('var commentSort = { field: "comments", dir: "desc" }', js, "starts in today's order")
+
+    def test_season_voting_and_comment_tables_scroll_too(self):
+        js = read("app.js")
+        voters = js_function(js, "function renderVoters(d)")
+        self.assertIn('el("div", "framed table-wide voters-box")', voters)
+        self.assertIn("tableHint()", voters)
+        comments = js_function(js, "function renderComments(d)")
+        self.assertIn('el("div", "framed table-wide cmt-table-box cmt-table")', comments)
+        self.assertIn("tableHint()", comments)
+        self.assertIn("min-width: 480px", " ".join(css_rules(read("style.css"), ".voters-box > .vrow")))
+
+    def test_hint_mentions_sorting_only_where_tables_sort(self):
+        js = read("app.js")
+        hint = js_function(js, "function tableHint(sortable)")
+        self.assertIn('(sortable ? " Tap a heading to sort." : "")', hint)
+        self.assertIn("tableHint(true)", js_function(js, "function renderCareerStandings(c)"))
+        self.assertIn("tableHint(true)", js_function(js, "function renderCareerComments(c)"))
+        self.assertNotIn("tableHint(true)", js_function(js, "function renderVoters(d)"))
+        self.assertNotIn("tableHint(true)", js_function(js, "function renderComments(d)"))
 
     def test_standard_space_above_the_comment_table(self):
         css = read("style.css")

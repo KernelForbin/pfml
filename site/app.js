@@ -1218,7 +1218,7 @@
     attachFilterTag(host, d);
     var rows = selected.length ? d.voters.filter(function (v) { return selected.indexOf(v.id) !== -1; }) : d.voters;
     if (!rows.length) { host.appendChild(empty(selected.length ? "No votes from this selection." : "No votes cast yet.")); return; }
-    var box = el("div", "framed");
+    var box = el("div", "framed table-wide voters-box");
     box.insertAdjacentHTML("beforeend",
       '<div class="vrow head"><div>Player</div><div class="num">Top bet</div><div class="num">Tracks backed</div><div class="num">Top pick won</div></div>');
     rows.forEach(function (v) {
@@ -1228,6 +1228,7 @@
         '<div class="num">' + v.avgTracksBacked.toFixed(1) + "</div>" +
         '<div class="num">' + Math.round(v.kingmakerRate * 100) + "%</div></div>");
     });
+    host.appendChild(tableHint());
     host.appendChild(box);
   }
 
@@ -1326,7 +1327,8 @@
       host.appendChild(g);
     }
 
-    var box = el("div", "framed");
+    host.appendChild(tableHint());
+    var box = el("div", "framed table-wide cmt-table-box cmt-table");
     box.insertAdjacentHTML("beforeend",
       '<div class="crow head"><div>Player</div><div class="num">Comments</div>' +
       '<div class="num">Rate</div><div class="num">Avg words</div>' +
@@ -1588,7 +1590,7 @@
     }
     host.appendChild(g);
 
-    host.appendChild(tableHint());
+    host.appendChild(tableHint(true));
     var tableHost = el("div", "cmt-table");
     tableHost.id = "careerCommentTable";
     host.appendChild(tableHost);
@@ -1622,10 +1624,11 @@
       " comments are left out of the superlatives above.</p>");
   }
 
-  // At phone widths the All-Time tables scroll sideways inside their box
-  // (.table-wide) rather than dropping columns; this says so, on phones only.
-  function tableHint() {
-    return el("p", "table-hint", "Swipe the table sideways for every column. Tap a heading to sort.");
+  // At phone widths the wide tables (All-Time, and a season's Voting and
+  // Comments) scroll sideways inside their box (.table-wide) rather than
+  // dropping columns; this says so, on phones only.
+  function tableHint(sortable) {
+    return el("p", "table-hint", "Swipe the table sideways for every column." + (sortable ? " Tap a heading to sort." : ""));
   }
 
   // The all-time comment table, sortable by any column like All-time
@@ -1771,7 +1774,7 @@
       row.innerHTML = rowHtml;
       box.appendChild(row);
     });
-    host.appendChild(tableHint());
+    host.appendChild(tableHint(true));
     host.appendChild(box);
     box.scrollLeft = x;
   }
