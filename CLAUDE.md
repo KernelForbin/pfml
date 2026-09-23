@@ -74,6 +74,11 @@ the keyboard, so it has to run without a click anywhere. Measured
 1. Claude in Chrome drives the user's own Chrome, which is signed in to
    Music League; the built-in browser pane is not, and Claude must never
    sign in for them. If no Chrome is connected, stop and say so.
+   Two Chromes are usually connected here and only one is signed in, so a
+   "Login with Spotify" page means the wrong one is selected, not that the
+   session expired: `list_connected_browsers`, then `select_browser` on
+   the other, before telling the user anything is wrong (it happened
+   2026-09-23).
 2. The league is `https://app.musicleague.com/l/<league id>/` (Season 3:
    `7cc28873ea734191a181253aa87b887d`). Clicking ⋯ → Export Data did
    nothing measurable; navigating the tab straight to `<league>/-/data`
@@ -84,7 +89,12 @@ the keyboard, so it has to run without a click anywhere. Measured
    is already complete on disk. Take the newest file in Downloads written
    after the navigation, wait for its size to settle, and check it opens
    as a zip holding competitors.csv, rounds.csv, submissions.csv and
-   votes.csv before using it. Never delete the user's download.
+   votes.csv before using it.
+   Delete that download at the end of every run, whether or not it held
+   anything new: the user asked for it (2026-09-23), since these pile up
+   as unnamed `.tmp` files they never see. Delete only the one file this
+   run downloaded and checked, after the copy into `data/` (or after
+   finding it identical), and never anything else in Downloads.
 4. Compare with `data/seasonN/` before copying. A fresh export whose four
    CSVs are byte-identical means no new finished round (the export leaves
    out a round until it's over), so copy nothing and say so.
