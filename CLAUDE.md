@@ -89,7 +89,10 @@ the keyboard, so it has to run without a click anywhere. Measured
    CSVs are byte-identical means no new finished round (the export leaves
    out a round until it's over), so copy nothing and say so.
 5. When it does differ: copy the four CSVs in, do the Daily Double review
-   below for each new round, then publish, and report what changed.
+   below for each new round, then run `python scripts/publish.py`, and
+   report what changed. The user gave a standing go-ahead (2026-09-23)
+   for the publish inside this flow, so it needs no separate ask; it
+   uploads data only. Pushing the repo still does.
 6. Close the tab afterwards and delete any scratch copy.
 
 ## Season 3: review every new export for Daily Double requests
@@ -260,7 +263,9 @@ and fix any doc the change makes wrong.
 
 **Commits and shipping:** messages say why, and how it was verified. No
 merge, push to `main`, deploy or publish without the user's go-ahead; when
-waiting on it, make that the bolded last line of the reply.
+waiting on it, make that the bolded last line of the reply. One standing
+exception (2026-09-23): "update the data" carries its own go-ahead to
+publish, as described in "Update the data" above.
 
 **Reporting back:** decisions needed come first. Then what changed, how it
 was verified, and anything assumed, skipped or unverified. State failures
