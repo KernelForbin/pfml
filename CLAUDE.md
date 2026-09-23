@@ -65,6 +65,33 @@ round's phase from the export, and expect a new round to appear only once
 it's over. An earlier "Voting phase" label on the Home page was built on
 the opposite assumption, never checked, and was wrong for every season.
 
+## "Update the data": fetching the export yourself
+
+The user may ask for this from a phone (Remote Control), with nobody at
+the keyboard, so it has to run without a click anywhere. Measured
+2026-09-23 against the real league:
+
+1. Claude in Chrome drives the user's own Chrome, which is signed in to
+   Music League; the built-in browser pane is not, and Claude must never
+   sign in for them. If no Chrome is connected, stop and say so.
+2. The league is `https://app.musicleague.com/l/<league id>/` (Season 3:
+   `7cc28873ea734191a181253aa87b887d`). Clicking ⋯ → Export Data did
+   nothing measurable; navigating the tab straight to `<league>/-/data`
+   starts the download.
+3. Chrome may hold the file as an unnamed `.tmp` in the user's Downloads,
+   waiting for a Keep/Save click that lives in Chrome's own UI, not the
+   page, so it can't be clicked from here. That doesn't matter: the file
+   is already complete on disk. Take the newest file in Downloads written
+   after the navigation, wait for its size to settle, and check it opens
+   as a zip holding competitors.csv, rounds.csv, submissions.csv and
+   votes.csv before using it. Never delete the user's download.
+4. Compare with `data/seasonN/` before copying. A fresh export whose four
+   CSVs are byte-identical means no new finished round (the export leaves
+   out a round until it's over), so copy nothing and say so.
+5. When it does differ: copy the four CSVs in, do the Daily Double review
+   below for each new round, then publish, and report what changed.
+6. Close the tab afterwards and delete any scratch copy.
+
 ## Season 3: review every new export for Daily Double requests
 
 Season 3 has a Daily Double rule: once per season, a submitter can ask in
