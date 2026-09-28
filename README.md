@@ -464,9 +464,10 @@ its 5-chance minimum, which takes five rounds.
 
 ## The round clip (temporary)
 
-Added 2026-09-28, to be taken out when the league organizer asks.
-`pfml.fun/` sends members to `/watch`, a page that plays one video for
-the current round, with Home and Season 3 links at the top.
+Added 2026-09-28, to be taken out when the league organizer asks. Every
+members-only page sends people to `/watch`, which plays one video for the
+current round; Home and Season 3 sit at the top, greyed out, until the
+clip has played to the end.
 
 The video is *not* on the public site. Anything under `site/` is served
 to anyone who knows the URL, and this clip is a scene from a film, so it
@@ -474,27 +475,36 @@ lives in the private `league-data` bucket like the league data:
 `media/s3r2-clip.mp4` and its poster frame `media/s3r2-poster.jpg`. The
 page asks `PFML.mediaUrl()` (in `auth.js`) for a signed URL good for an
 hour, which only a signed-in member can get, and which lets the browser
-stream and seek rather than download the whole file first. The source was
-78MB of 1080p at 14Mbit/s; it was re-encoded (H.264 CRF 23, AAC 128k,
-`+faststart`) to 11MB, both because Supabase refuses uploads over 50MB
-and because members watch on phones.
+stream and seek. The source was 78MB of 1080p at 14Mbit/s, re-encoded
+(H.264 CRF 23, AAC 128k, `+faststart`) to 11MB, both because Supabase
+refuses uploads over 50MB and because members watch on phones.
 
-It starts on a tap, not by itself: browsers block sound until someone
-interacts with the page, so a big Play button sits over the poster.
+It starts on a tap: browsers block sound until someone interacts with the
+page, so a Play button sits over the poster. The video has no native
+controls, so there's no scrubber to drag to the last second; tapping the
+picture pauses, and a thin bar shows progress.
 
-The redirect is in `index.html`'s `<head>`, before anything renders, so
-the home page never flashes first. "Home" on the clip page links to
-`/?stay=1`, which sets a `sessionStorage` flag so that tab stops being
-redirected; a browser that refuses storage keeps the home page instead of
-looping.
+**How the gate works.** `watch.html` writes `pfml.clipWatched` to
+localStorage when the video fires `ended`, and the block at the top of
+`auth.js` (which every members-only page loads, before the invite code is
+read and before the Supabase client exists) sends anyone without that key
+to `/watch`. So a bookmark straight to `/season3` bounces too.
 
-**To remove it:** delete `site/watch.html`, the marked `<script>` block in
-`site/index.html`, the `.watch-*` rules in `site/style.css`, the
-`TemporaryClipRedirect` tests in `tests/test_site.py`, the clip's line on
-the features page, and this section; then delete `media/s3r2-clip.mp4`
-and `media/s3r2-poster.jpg` from the bucket. Everything in the code is
-marked `TEMPORARY`, so `grep -rn TEMPORARY site/` finds it.
-`PFML.mediaUrl()` can stay; it's general.
+It is a soft lock, not a rule the database enforces: it's a flag in one
+browser, so clearing site data, using another browser, or opening
+devtools walks straight past it, and the data itself stays protected only
+by sign-in as before. Two deliberate escape hatches: a browser that
+refuses storage (private mode) is let through rather than trapped, and if
+the clip fails to load the page unlocks itself, so a bad URL can't shut
+members out of the site.
+
+**To remove it:** delete `site/watch.html`, the marked block at the top of
+`site/auth.js`, the `.watch-*` and `.season-tab.is-locked` rules in
+`site/style.css`, the `TemporaryClipGate` tests in `tests/test_site.py`,
+the clip's line on the features page, and this section; then delete
+`media/s3r2-clip.mp4` and `media/s3r2-poster.jpg` from the bucket.
+Everything in the code is marked `TEMPORARY`, so `grep -rn TEMPORARY site/`
+finds it. `PFML.mediaUrl()` can stay; it's general.
 
 ## Player focus and comparison
 

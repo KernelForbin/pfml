@@ -11,22 +11,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
-<script>
-  /* TEMPORARY (from 2026-09-28): / sends members to the round's clip on
-     /watch. "Home" there comes back as /?stay=1, which is remembered for
-     the tab, so nothing bounces once they've chosen to be here. Before
-     anything else on the page, so it never flashes the home page first.
-     Remove this block, watch.html, and the bucket's media/ files together
-     (README, "The round clip (temporary)"). */
-  (function () {
-    var KEY = "pfml.skipWatch";
-    try {
-      if (new URLSearchParams(location.search).has("stay")) sessionStorage.setItem(KEY, "1");
-      if (sessionStorage.getItem(KEY)) return;
-    } catch (e) { return; }   // no storage: leave the home page alone
-    location.replace("watch");
-  })();
-</script>
 </head>
 <body class="gated" data-page="home">
 

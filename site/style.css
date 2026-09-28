@@ -416,6 +416,11 @@ table.taste td.nil { color: #C6BDCC; font-weight: 400; }
   box-shadow: 0 10px 30px -10px rgba(22, 17, 26, .6);
 }
 @media (hover: hover) { .watch-play:hover .watch-play-icon { background: var(--deep); } }
+/* Home and Season 3 sit there greyed out until the clip has been watched. */
+.season-tab.is-locked { color: var(--muted); opacity: 0.55; cursor: default; box-shadow: none; }
+.watch-progress { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255, 255, 255, 0.25); }
+.watch-progress[hidden] { display: none; }
+.watch-bar { display: block; width: 0; height: 100%; background: var(--magenta); transition: width .2s linear; }
 @media (max-width: 620px) {
   .watch-play-icon { width: 58px; height: 58px; font-size: 1.3rem; }
 }

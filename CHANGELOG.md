@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-09-28 (follow-up): watch the clip to get in
+
+- **Every members-only page now sends people to `/watch`** until the clip
+  has played to the end, not just the home page: the check sits at the top
+  of `auth.js`, so a bookmark straight to `/season3` bounces too.
+- **Home and Season 3 are greyed-out text until it finishes**, with
+  "Watch the clip to the end to carry on into the site." under the video;
+  they turn into real links when it ends, and the page remembers
+  (`pfml.clipWatched` in localStorage), so it's once per browser.
+- **No scrubber**: the video has no native controls, so there's nothing to
+  drag to the last second. Tap the picture to pause, and a thin bar shows
+  progress.
+- A soft lock, by design: clearing site data or another browser walks past
+  it. A browser that refuses storage is let through rather than trapped,
+  and a clip that fails to load unlocks the site rather than shutting
+  members out.
+
 ## 2026-09-28: the round's clip on the home page (temporary)
 
 - **`pfml.fun/` opens on `/watch`**, a page that plays one video for the

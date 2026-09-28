@@ -1254,34 +1254,59 @@ class DeployWorkflow(unittest.TestCase):
         self.assertIn("needs: build", self.deploy)
 
 
-class TemporaryClipRedirect(unittest.TestCase):
-    """TEMPORARY: / sends members to watch.html, which plays one clip out
-    of the private bucket. When it's removed, this class goes with it."""
+class TemporaryClipGate(unittest.TestCase):
+    """TEMPORARY: every members-only page sends people to watch.html until
+    they've watched the round's clip to the end. When it's removed, this
+    class goes with it."""
 
-    def test_home_redirects_before_it_renders_anything(self):
-        html = read("index.html")
-        self.assertLess(html.index('location.replace("watch")'), html.index("<body"),
-                        "redirect runs in <head>, so the home page never flashes first")
+    def test_the_check_runs_before_the_page_or_sign_in_does_anything(self):
+        auth = read("auth.js")
+        at = auth.index('location.replace("watch")')
+        self.assertLess(auth.index(CleanAddresses.TIDY), at, "after the address tidy-up")
+        self.assertLess(at, auth.index("stashInviteFromUrl();"), "before the invite is read")
+        self.assertLess(at, auth.index("createClient("), "before the Supabase client")
+        # and it is auth.js, which every members-only page loads, not one page
+        for name in MEMBER_PAGES:
+            self.assertIn('<script src="auth.js"></script>', read(name), name)
 
-    def test_home_link_back_stops_the_bounce_for_that_tab(self):
-        html = read("index.html")
-        self.assertIn('new URLSearchParams(location.search).has("stay")', html)
-        self.assertIn('sessionStorage.setItem(KEY, "1")', html)
-        self.assertIn("if (sessionStorage.getItem(KEY)) return;", html)
-        # and the way back is offered on the clip page
-        hrefs = [a.get("href") for a in Page(read("watch.html")).find("a")]
-        self.assertIn("./?stay=1", hrefs, "Home")
-        self.assertIn("season3", hrefs, "Season 3")
+    def test_the_clip_page_itself_is_not_redirected(self):
+        self.assertIn(r'if (/\/watch$/i.test(location.pathname)) return;', read("auth.js"))
+        self.assertIn('<script src="auth.js"></script>', read("watch.html"), "but it is still gated")
 
-    def test_a_browser_with_no_storage_keeps_the_home_page(self):
-        # private mode throws on sessionStorage; better to skip the clip
-        # than to trap someone in a redirect they can't get out of
-        block = read("index.html").split("var KEY", 1)[1].split("</script>", 1)[0]
-        self.assertLess(block.index("catch (e) { return; }"), block.index('location.replace("watch")'))
+    def test_watching_is_remembered_and_only_the_end_counts(self):
+        html = read("watch.html")
+        self.assertIn('video.addEventListener("ended", unlock)', html)
+        unlock = js_function(html, "function unlock()")
+        self.assertIn("remember();", unlock)
+        self.assertIn('localStorage.setItem(WATCHED, "1")', js_function(html, "function remember()"))
+        self.assertIn('localStorage.getItem("pfml.clipWatched")', read("auth.js"), "same key both sides")
+        self.assertIn('var WATCHED = "pfml.clipWatched";', html)
+
+    def test_there_is_nothing_to_drag_to_the_end(self):
+        # native controls would let anyone scrub to the last second
+        html = read("watch.html")
+        tag = re.search(r"<video[^>]*>", html).group(0)
+        self.assertNotIn("controls", tag)
+        self.assertNotIn("autoplay", tag)
+
+    def test_the_links_are_dead_text_until_then_and_say_why(self):
+        nav = js_function(read("watch.html"), "function renderNav()")
+        self.assertIn('class="season-tab is-locked" aria-disabled="true"', nav)
+        self.assertIn("""'<a class="season-tab" href="' + l[0]""", nav, "real links once watched")
+        self.assertIn("LOCKED_NOTE", nav)
+        self.assertIn('var LOCKED_NOTE = "Watch the clip to the end to carry on into the site.";', read("watch.html"))
+        self.assertTrue(any("cursor: default" in b for b in css_rules(read("style.css"), ".season-tab.is-locked")))
+
+    def test_nobody_is_trapped_by_a_clip_that_will_not_load(self):
+        html = read("watch.html")
+        catch = html.split(".catch(function (err) {", 1)[1].split("});", 1)[0]
+        self.assertIn("unlock();", catch, "a broken clip must not lock the site")
+        # and a browser with no storage is let through, not held
+        self.assertIn("} catch (e) {\n      return;\n    }", read("auth.js"))
+        self.assertIn('catch (e) { return true; }', js_function(html, "function watched()"))
 
     def test_the_clip_is_members_only_and_never_a_public_url(self):
         html = read("watch.html")
-        self.assertIn('<script src="auth.js"></script>', html, "gated like every member page")
         self.assertIn('class="gated"', html)
         self.assertIn("PFML.mediaUrl(CLIP)", html)
         self.assertNotRegex(html, r"https?://[^\"']*\.(mp4|jpg)", "no public media URL")
@@ -1291,14 +1316,8 @@ class TemporaryClipRedirect(unittest.TestCase):
         fn = js_function(read("auth.js"), "PFML.mediaUrl = function (name, seconds)")
         self.assertIn("client.storage.from(BUCKET).createSignedUrl(name, seconds || 3600)", fn)
 
-    def test_nothing_plays_until_it_is_asked_to(self):
-        html = read("watch.html")
-        self.assertNotIn("autoplay", html)
-        self.assertIn('play.addEventListener("click"', html)
-        self.assertIn("video.play()", html)
-
     def test_every_piece_is_marked_for_removal(self):
-        for name in ("index.html", "watch.html", "style.css"):
+        for name in ("auth.js", "watch.html", "style.css"):
             self.assertIn("TEMPORARY", read(name), name)
 
 

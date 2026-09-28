@@ -12,30 +12,29 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
-<!-- TEMPORARY (from 2026-09-28): the round's clip, which / redirects to.
-     Removing it is three things: this file, the redirect at the top of
-     index.html, and the two media/ files in the bucket. See README,
-     "The round clip (temporary)". -->
+<!-- TEMPORARY (from 2026-09-28): the round's clip. Every members-only
+     page sends people here until they've watched it to the end (the
+     check is at the top of auth.js). Removing it is three things: this
+     file, that check, and the two media/ files in the bucket. See
+     README, "The round clip (temporary)". -->
 <body class="gated" data-page="watch">
 
 <header class="topbar">
   <div class="shell topbar-inner">
-    <a class="wordmark" href="./?stay=1">PFML</a>
-    <nav class="seasons" aria-label="Site">
-      <a class="season-tab" href="./?stay=1">Home</a>
-      <a class="season-tab" href="season3">Season 3</a>
-    </nav>
+    <span class="wordmark" id="watchMark">PFML</span>
+    <nav class="seasons" id="watchNav" aria-label="Site"></nav>
   </div>
 </header>
 
 <main>
   <section class="shell block block-first">
     <div class="watch-stage">
-      <video id="watchVideo" class="watch-video" playsinline controls preload="metadata"></video>
+      <video id="watchVideo" class="watch-video" playsinline preload="metadata"></video>
       <button type="button" class="watch-play" id="watchPlay" hidden>
         <span class="watch-play-icon" aria-hidden="true">&#9654;</span>
-        <span>Play with sound</span>
+        <span id="watchPlayLabel">Play with sound</span>
       </button>
+      <div class="watch-progress" id="watchProgress" hidden><span class="watch-bar" id="watchBar"></span></div>
     </div>
     <p class="block-note" id="watchNote">Loading the clip&hellip;</p>
   </section>
@@ -54,28 +53,78 @@
 (function () {
   "use strict";
   var CLIP = "media/s3r2-clip.mp4", POSTER = "media/s3r2-poster.jpg";
+  var WATCHED = "pfml.clipWatched";          // same key auth.js reads
+  var LOCKED_NOTE = "Watch the clip to the end to carry on into the site.";
   var video = document.getElementById("watchVideo");
   var play = document.getElementById("watchPlay");
+  var playLabel = document.getElementById("watchPlayLabel");
+  var progress = document.getElementById("watchProgress");
+  var bar = document.getElementById("watchBar");
   var note = document.getElementById("watchNote");
+  var nav = document.getElementById("watchNav");
+  var mark = document.getElementById("watchMark");
 
+  function watched() {
+    try { return !!localStorage.getItem(WATCHED); } catch (e) { return true; }   // no storage: don't trap anyone
+  }
+  function remember() {
+    try { localStorage.setItem(WATCHED, "1"); } catch (e) { /* nothing to remember it with */ }
+  }
+
+  // The two links: dead text until the clip has been watched, real links
+  // after, so there's nothing to click past.
+  function renderNav() {
+    var open = watched();
+    var links = [["./", "Home"], ["season3", "Season 3"]];
+    nav.innerHTML = links.map(function (l) {
+      return open
+        ? '<a class="season-tab" href="' + l[0] + '">' + l[1] + "</a>"
+        : '<span class="season-tab is-locked" aria-disabled="true" title="' + LOCKED_NOTE + '">' + l[1] + "</span>";
+    }).join("");
+    if (open) mark.outerHTML = '<a class="wordmark" href="./">PFML</a>';
+  }
+
+  function unlock() {
+    remember();
+    renderNav();
+    progress.hidden = true;
+    note.textContent = "That's the one. Head in with Home or Season 3 above.";
+  }
+
+  renderNav();
   window.PFML.ready.then(function () {
     return Promise.all([PFML.mediaUrl(CLIP), PFML.mediaUrl(POSTER).catch(function () { return null; })]);
   }).then(function (urls) {
     if (urls[1]) video.poster = urls[1];
     video.src = urls[0];
-    note.textContent = "";
     play.hidden = false;
-    // Browsers only allow sound after a real tap or click, so the clip
-    // waits behind this button rather than starting muted.
+    note.textContent = watched() ? "You've seen this one. Head in with Home or Season 3 above." : LOCKED_NOTE;
+
+    // No native controls: nothing to drag to the end. Tap to start, tap
+    // the picture to pause, and the bar just shows where it's up to.
     play.addEventListener("click", function () {
-      video.play().then(function () { play.hidden = true; }).catch(function () {
-        note.textContent = "Your browser wouldn't start it. Use the video's own play button.";
+      video.play().then(function () {
+        play.hidden = true;
+        progress.hidden = false;
+      }).catch(function () {
+        note.textContent = "Your browser wouldn't start it. Try tapping again.";
       });
     });
+    video.addEventListener("click", function () { if (!video.paused) video.pause(); });
+    video.addEventListener("pause", function () {
+      if (video.ended) return;
+      play.hidden = false;
+      playLabel.textContent = "Keep watching";
+    });
     video.addEventListener("play", function () { play.hidden = true; });
-    video.addEventListener("pause", function () { if (video.currentTime === 0) play.hidden = false; });
+    video.addEventListener("timeupdate", function () {
+      if (video.duration) bar.style.width = (video.currentTime / video.duration * 100) + "%";
+    });
+    video.addEventListener("ended", unlock);
   }).catch(function (err) {
-    note.textContent = "The clip didn't load: " + (err && err.message ? err.message : err);
+    // A clip that won't load mustn't lock anyone out of the site.
+    unlock();
+    note.textContent = "The clip didn't load (" + (err && err.message ? err.message : err) + "), so carry on in.";
   });
 })();
 </script>
