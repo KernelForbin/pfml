@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-09-28: the round's clip on the home page (temporary)
+
+- **`pfml.fun/` opens on `/watch`**, a page that plays one video for the
+  current round, with Home and Season 3 at the top. Home comes back as
+  `/?stay=1`, remembered for that tab, so nothing bounces afterwards. The
+  redirect sits in `index.html`'s `<head>`, so the home page never flashes
+  first, and a browser with no storage keeps the home page.
+- **The clip is members-only, not on the public site.** It's in the
+  private `league-data` bucket (`media/s3r2-clip.mp4`, plus a poster
+  frame), reached through a new `PFML.mediaUrl()` that hands the page a
+  signed URL good for an hour, so it streams and seeks. 78MB of 1080p was
+  re-encoded to 11MB: Supabase refuses uploads over 50MB, and members
+  watch on phones.
+- It waits for a tap. Browsers don't allow sound until someone interacts
+  with the page, so a Play button sits over the poster frame.
+- Temporary by design: every piece is marked `TEMPORARY`, and README, "The
+  round clip (temporary)", lists what to delete.
+
 ## 2026-09-22 (follow-up 12): playlist sizes on the Home page
 
 - **Each playlist tile shows its track count and running time** ("99

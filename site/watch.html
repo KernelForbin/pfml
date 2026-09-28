@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PFML - Watch</title>
+<meta name="description" content="A clip for this round, for members.">
+<meta name="theme-color" content="#9E00C4">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%239E00C4'/><path d='M30 74V26h22a14 14 0 010 28H44v20z' fill='%23F8F9FA'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<!-- TEMPORARY (from 2026-09-28): the round's clip, which / redirects to.
+     Removing it is three things: this file, the redirect at the top of
+     index.html, and the two media/ files in the bucket. See README,
+     "The round clip (temporary)". -->
+<body class="gated" data-page="watch">
+
+<header class="topbar">
+  <div class="shell topbar-inner">
+    <a class="wordmark" href="./?stay=1">PFML</a>
+    <nav class="seasons" aria-label="Site">
+      <a class="season-tab" href="./?stay=1">Home</a>
+      <a class="season-tab" href="season3">Season 3</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="shell block block-first">
+    <div class="watch-stage">
+      <video id="watchVideo" class="watch-video" playsinline controls preload="metadata"></video>
+      <button type="button" class="watch-play" id="watchPlay" hidden>
+        <span class="watch-play-icon" aria-hidden="true">&#9654;</span>
+        <span>Play with sound</span>
+      </button>
+    </div>
+    <p class="block-note" id="watchNote">Loading the clip&hellip;</p>
+  </section>
+</main>
+
+<footer class="shell site-footer">
+  <p>Members only. This clip is in the league's private storage, not on the public site.</p>
+  <p><a href="features">What this site can do</a> &middot; <a href="privacy">Privacy</a></p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="auth.js"></script>
+<script src="account.js"></script>
+<script>
+(function () {
+  "use strict";
+  var CLIP = "media/s3r2-clip.mp4", POSTER = "media/s3r2-poster.jpg";
+  var video = document.getElementById("watchVideo");
+  var play = document.getElementById("watchPlay");
+  var note = document.getElementById("watchNote");
+
+  window.PFML.ready.then(function () {
+    return Promise.all([PFML.mediaUrl(CLIP), PFML.mediaUrl(POSTER).catch(function () { return null; })]);
+  }).then(function (urls) {
+    if (urls[1]) video.poster = urls[1];
+    video.src = urls[0];
+    note.textContent = "";
+    play.hidden = false;
+    // Browsers only allow sound after a real tap or click, so the clip
+    // waits behind this button rather than starting muted.
+    play.addEventListener("click", function () {
+      video.play().then(function () { play.hidden = true; }).catch(function () {
+        note.textContent = "Your browser wouldn't start it. Use the video's own play button.";
+      });
+    });
+    video.addEventListener("play", function () { play.hidden = true; });
+    video.addEventListener("pause", function () { if (video.currentTime === 0) play.hidden = false; });
+  }).catch(function (err) {
+    note.textContent = "The clip didn't load: " + (err && err.message ? err.message : err);
+  });
+})();
+</script>
+</body>
+</html>

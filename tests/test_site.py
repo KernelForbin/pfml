@@ -1254,6 +1254,54 @@ class DeployWorkflow(unittest.TestCase):
         self.assertIn("needs: build", self.deploy)
 
 
+class TemporaryClipRedirect(unittest.TestCase):
+    """TEMPORARY: / sends members to watch.html, which plays one clip out
+    of the private bucket. When it's removed, this class goes with it."""
+
+    def test_home_redirects_before_it_renders_anything(self):
+        html = read("index.html")
+        self.assertLess(html.index('location.replace("watch")'), html.index("<body"),
+                        "redirect runs in <head>, so the home page never flashes first")
+
+    def test_home_link_back_stops_the_bounce_for_that_tab(self):
+        html = read("index.html")
+        self.assertIn('new URLSearchParams(location.search).has("stay")', html)
+        self.assertIn('sessionStorage.setItem(KEY, "1")', html)
+        self.assertIn("if (sessionStorage.getItem(KEY)) return;", html)
+        # and the way back is offered on the clip page
+        hrefs = [a.get("href") for a in Page(read("watch.html")).find("a")]
+        self.assertIn("./?stay=1", hrefs, "Home")
+        self.assertIn("season3", hrefs, "Season 3")
+
+    def test_a_browser_with_no_storage_keeps_the_home_page(self):
+        # private mode throws on sessionStorage; better to skip the clip
+        # than to trap someone in a redirect they can't get out of
+        block = read("index.html").split("var KEY", 1)[1].split("</script>", 1)[0]
+        self.assertLess(block.index("catch (e) { return; }"), block.index('location.replace("watch")'))
+
+    def test_the_clip_is_members_only_and_never_a_public_url(self):
+        html = read("watch.html")
+        self.assertIn('<script src="auth.js"></script>', html, "gated like every member page")
+        self.assertIn('class="gated"', html)
+        self.assertIn("PFML.mediaUrl(CLIP)", html)
+        self.assertNotRegex(html, r"https?://[^\"']*\.(mp4|jpg)", "no public media URL")
+        self.assertIn("media/s3r2-clip.mp4", html)
+
+    def test_media_urls_are_signed_reads_of_the_private_bucket(self):
+        fn = js_function(read("auth.js"), "PFML.mediaUrl = function (name, seconds)")
+        self.assertIn("client.storage.from(BUCKET).createSignedUrl(name, seconds || 3600)", fn)
+
+    def test_nothing_plays_until_it_is_asked_to(self):
+        html = read("watch.html")
+        self.assertNotIn("autoplay", html)
+        self.assertIn('play.addEventListener("click"', html)
+        self.assertIn("video.play()", html)
+
+    def test_every_piece_is_marked_for_removal(self):
+        for name in ("index.html", "watch.html", "style.css"):
+            self.assertIn("TEMPORARY", read(name), name)
+
+
 class CleanText(unittest.TestCase):
     def test_no_control_characters_in_site_files(self):
         # A generated CSS edit once turned the escape "\25BE" (the arrow on

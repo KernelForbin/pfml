@@ -15,6 +15,7 @@
      ready     Promise, resolves with the member once they're let in
      member    { competitorId, name, role } after ready
      loadJSON  (name) -> Promise of parsed JSON from the private bucket
+     mediaUrl  (name) -> Promise of a signed URL for a file in that bucket
      api       the comment votes / reactions / replies operations, and the
                inbox's queries
      signOut   ()
@@ -277,6 +278,17 @@
         .catch(function (err) { delete jsonCache[name]; throw err; });   // a later call can retry
     }
     return jsonCache[name];
+  };
+
+  // A URL for a file in the private bucket that the browser can load
+  // directly (a <video> or <img> src), good for an hour. Signed rather
+  // than downloaded whole, so video seeks and streams instead of stalling
+  // until every byte is in. Members only, like everything in the bucket.
+  PFML.mediaUrl = function (name, seconds) {
+    return client.storage.from(BUCKET).createSignedUrl(name, seconds || 3600).then(function (res) {
+      if (res.error) throw new Error(name + ": " + res.error.message);
+      return res.data.signedUrl;
+    });
   };
 
   /* ---- comments: votes, reactions, replies ----
