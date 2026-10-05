@@ -35,24 +35,6 @@
       location.pathname.replace(/\.html$/i, "").replace(/\/index$/i, "/") + location.search + location.hash);
   }
 
-  /* TEMPORARY (from 2026-09-28): every members-only page sends people to
-     the round's clip until they've watched it to the end, which
-     watch.html records under this key. Right after the address tidy-up
-     and before anything else, so no page is fetched or drawn first.
-     A soft lock: it's a flag in this browser, not a rule the database
-     enforces, so anyone who clears it (or opens devtools) walks past it.
-     A browser with no storage is let through rather than trapped.
-     Delete this block with watch.html (README, "The round clip"). */
-  (function () {
-    if (/\/watch$/i.test(location.pathname)) return;
-    try {
-      if (localStorage.getItem("pfml.clipWatched")) return;
-    } catch (e) {
-      return;
-    }
-    location.replace("watch");
-  })();
-
   var cfg = window.PFML_CONFIG || {};
   var INVITE_KEY = "pfml.invite";
   var BUCKET = "league-data";

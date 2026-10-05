@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-05: the round clip is gone
+
+- **The site opens on Home again.** The temporary clip gate from
+  2026-09-28 is out, as the league organizer asked: `site/watch.html`, the
+  check at the top of `auth.js`, the `.watch-*` and `.season-tab.is-locked`
+  rules, the clip's line on the features page, and the README section that
+  described it. The two media files were deleted from the `league-data`
+  bucket, so the clip is nowhere any more.
+- `PFML.mediaUrl()` stays. It's general (signed reads of the private
+  bucket, which is the only place media can live, since anything under
+  `site/` is public) and keeps its own tests.
+- Members who watched the clip still have `pfml.clipWatched` in
+  localStorage. Nothing reads it now, so it's harmless.
+
 ## 2026-09-28 (follow-up): watch the clip to get in
 
 - **Every members-only page now sends people to `/watch`** until the clip
