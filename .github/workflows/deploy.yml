@@ -18,10 +18,19 @@ concurrency:
 
 # Actions are pinned to a commit, with the release tag alongside, so a
 # moved tag can't change what runs with a Pages token. Bump both together.
+
+# A job's timeout-minutes covers the wait for a runner, not just the run, so
+# a tight one turns a GitHub capacity incident into a cancelled deploy. That
+# happened 2026-10-05: with timeout-minutes: 10, the build sat queued through
+# an Actions incident ("delays in assigning GitHub-hosted runners") and was
+# cancelled with zero steps executed. These jobs normally finish in about 12
+# seconds, so the generous job timeouts below are pure queue headroom, and
+# the real hang protection is per-step, where the clock starts when the step
+# does.
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -41,7 +50,9 @@ jobs:
       # The offline suite (tests/, stdlib only, made-up data) gates every
       # deploy: a failing test means nothing ships. The live tests skip
       # themselves here; they need PFML_LIVE=1.
+      # Takes 3 seconds; this only catches a test that hangs.
       - name: Run tests
+        timeout-minutes: 5
         run: python -m unittest discover -s tests -v
 
       - name: Refuse to publish league data or secrets
@@ -65,7 +76,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     permissions:
       pages: write
       id-token: write
@@ -73,5 +84,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # Takes about 7 seconds; this only catches a Pages call that hangs.
       - id: deployment
+        timeout-minutes: 10
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

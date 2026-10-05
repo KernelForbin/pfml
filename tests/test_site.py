@@ -1253,6 +1253,25 @@ class DeployWorkflow(unittest.TestCase):
         self.assertIn("python -m unittest discover -s tests", self.build)
         self.assertIn("needs: build", self.deploy)
 
+    def test_a_runner_backlog_doesnt_cancel_the_deploy(self):
+        # A job's timeout-minutes covers the wait for a runner too, so a tight
+        # one cancels the deploy during a GitHub capacity incident instead of
+        # waiting it out. That happened 2026-10-05 at 10 minutes. These jobs
+        # run in about 12 seconds, so the job clock is only queue headroom.
+        job_timeouts = [int(m) for m in re.findall(
+            r"^    timeout-minutes: (\d+)$", self.yml, re.M)]
+        self.assertEqual(len(job_timeouts), 2, "both jobs set one")
+        for t in job_timeouts:
+            self.assertGreaterEqual(t, 30, "too tight to ride out a runner backlog")
+
+    def test_a_hung_step_is_still_caught(self):
+        # The hang protection the job clock used to provide moves to the steps,
+        # where the clock starts when the step does, not when it is queued.
+        step_timeouts = re.findall(r"^        timeout-minutes: (\d+)$", self.yml, re.M)
+        self.assertTrue(step_timeouts, "no step bounds its own run time")
+        tests_step = self.build.split("- name: Run tests", 1)[1].split("- name:", 1)[0]
+        self.assertRegex(tests_step, r"timeout-minutes: \d+", "the suite can hang")
+
 
 class SignedMediaUrls(unittest.TestCase):
     """PFML.mediaUrl is how a page gets at a file in the private bucket. It

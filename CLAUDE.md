@@ -335,7 +335,20 @@ read its release notes, and change both. `upload-pages-artifact` leaves
 out dotfiles, so `site/.nojekyll` isn't uploaded; that's fine, since an
 Actions deploy never runs Jekyll. A new push waits for a deploy in
 progress rather than cancelling it. `tests/test_site.py` (DeployWorkflow)
-pins all of this. The custom domain (`pfml.fun`) is set in the repo's
+pins all of this.
+
+Timeouts are deliberately lopsided: 30 minutes on each job, 5 on the test
+step and 10 on the Pages call. A job's `timeout-minutes` covers the wait
+for a runner, not just the run, so a tight job clock turns a GitHub
+capacity incident into a cancelled deploy. Measured 2026-10-05: with
+`timeout-minutes: 10`, the build sat queued through an Actions incident
+("delays in assigning GitHub-hosted runners") and was cancelled after
+15 minutes with zero steps executed. These jobs finish in about 12
+seconds when a runner is free, so the job clock is only queue headroom
+and the real hang protection is per-step, where the clock starts when the
+step does. Don't tighten the job numbers to "match" the runtime.
+
+The custom domain (`pfml.fun`) is set in the repo's
 Settings → Pages, not by the `site/CNAME` file, that file only matters if
 this ever switches to branch-deploy. DNS is already configured at
 Namecheap; nothing to redo there.
