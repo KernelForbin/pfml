@@ -1,18 +1,21 @@
 # Changelog
 
-## 2026-10-05 (follow-up): a runner backlog no longer cancels the deploy
+## 2026-10-05 (follow-up): deploy timeouts, and a correction
 
 - **Job timeouts go 10 → 30 minutes; the tight bounds move to the steps**
-  (5 minutes on the test suite, 10 on the Pages call). A job's
-  `timeout-minutes` covers the wait for a runner, not just the run, so the
-  old 10-minute job clock turned a GitHub capacity incident into a
-  cancelled deploy: the clip-gate removal sat queued through an Actions
-  incident and was cancelled after 15 minutes with zero steps executed.
-- A step's clock starts when the step does, so hang protection is actually
-  stronger than before, not weaker. These jobs finish in about 12 seconds
-  when a runner is free.
-- `DeployWorkflow` gained two tests for it, so nobody tightens the job
-  numbers back down to "match" the runtime.
+  (5 minutes on the test suite, 10 on the Pages call). A step's clock
+  starts when the step runs rather than when it is queued, so this is real
+  hang protection; the job numbers are just slack. These jobs finish in
+  about 12 seconds when a runner is free.
+- **Correction: this does not stop a runner shortage cancelling a deploy,
+  which is why it was originally made.** A queued job is cancelled at
+  about 15 minutes regardless of `timeout-minutes`. Measured during the
+  2026-10-05 Actions outage, zero steps executed both times: the build
+  cancelled at 15m02s on `timeout-minutes: 10`, then the deploy cancelled
+  at 15m02s on `30`. So that limit is GitHub's, not the job clock, and the
+  only remedy during an outage is to re-run afterwards.
+- `DeployWorkflow` gained two tests, so nobody tightens the job numbers
+  back down to "match" the runtime, and the step bounds stay.
 
 ## 2026-10-05: the round clip is gone
 

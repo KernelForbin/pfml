@@ -19,14 +19,15 @@ concurrency:
 # Actions are pinned to a commit, with the release tag alongside, so a
 # moved tag can't change what runs with a Pages token. Bump both together.
 
-# A job's timeout-minutes covers the wait for a runner, not just the run, so
-# a tight one turns a GitHub capacity incident into a cancelled deploy. That
-# happened 2026-10-05: with timeout-minutes: 10, the build sat queued through
-# an Actions incident ("delays in assigning GitHub-hosted runners") and was
-# cancelled with zero steps executed. These jobs normally finish in about 12
-# seconds, so the generous job timeouts below are pure queue headroom, and
-# the real hang protection is per-step, where the clock starts when the step
-# does.
+# The job timeouts are slack; the per-step ones are the real hang protection,
+# because a step's clock starts when the step runs, not when it is queued.
+# These jobs finish in about 12 seconds when a runner is free.
+#
+# Don't raise the job numbers hoping to survive a runner shortage: a queued
+# job is cancelled at about 15 minutes whatever they say. Measured during the
+# 2026-10-05 Actions outage, zero steps executed both times: build cancelled
+# at 15m02s on timeout-minutes: 10, deploy cancelled at 15m02s on 30. See
+# CLAUDE.md, Deploy.
 jobs:
   build:
     runs-on: ubuntu-latest
