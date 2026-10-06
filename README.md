@@ -16,10 +16,10 @@ plain `open.spotify.com` URL built from IDs already present in the export.
 
 **None of the league data is in this repo.** `data/` and `site/data/` are
 git-ignored, and the deploy refuses to run if a JSON, CSV or `.env*` file
-turns up in `site/`, or a `data/` folder in the repo. The repo's history was rewritten on
-2026-09-21 to take out the CSVs and JSON older commits carried, though
-GitHub still serves the old commits by id until the repo is recreated; see
-Members only below.
+turns up in `site/`, or a `data/` folder in the repo. The repo's history
+was rewritten on 2026-09-21 to take out the CSVs and JSON older commits
+carried, though GitHub still serves the old commits by id until the repo is
+recreated; see Members only below.
 
 ```
 data/season1/            raw Music League export (4 CSVs)       LOCAL ONLY
@@ -35,14 +35,14 @@ scripts/invites.py       one-time invite links that link a Google account
 scripts/supa.py          shared helper; reads the secret key from .env
 scripts/serve.py         local preview that resolves /career to career.html,
                          like GitHub Pages
+scripts/update_emoji_data.py  regenerates site/emoji-data.js from Unicode's
+                              emoji list; run by hand, rarely
+scripts/enrich_comments.py    run by hand, calls the Claude API. Never run
+                              by build.py or by the Action.
 supabase/schema.sql      tables, access rules and buckets; run once
 supabase/migrations/     one-off changes to the live project, run by hand in
                          the SQL Editor (schema.sql already includes them)
-scripts/update_emoji_data.py  regenerates site/emoji-data.js from Unicode's
-                              emoji list; run by hand, rarely
 tests/                   offline test suite (stdlib unittest, made-up data)
-scripts/enrich_comments.py    standalone, run by hand, calls the Claude API.
-                              Never run by build.py or by the Action.
 site/                    everything GitHub Pages serves
   index.html             home page: season cards + playlists, pfml.fun
   career.html            cross-season standings, static, not templated
@@ -58,7 +58,9 @@ site/                    everything GitHub Pages serves
                          the reaction picker's searchable emoji (round.html only)
   auth.js                the members-only gate, loaded by every page
   account.js             the header's inbox and initials menu (My profile,
-                         Sign out), loaded by every members-only page
+                         Sign out), loaded by every members-only page; also
+                         the one copy of the avatar, reaction-glyph and
+                         "3h ago" helpers the other pages share
   config.js              Supabase URL + publishable key (public by design)
   season1.html           generated, one page per season, own URL
   season2.html
@@ -75,6 +77,7 @@ site/                    everything GitHub Pages serves
     season2.json
     season3.json
     playlists.json       hand-maintained, see below, NOT touched by build.py
+    playlist_stats.json  written by publish.py: each playlist's size
   CNAME
 ```
 
@@ -96,22 +99,26 @@ Offline and stdlib-only, like the scripts. Every test builds its own tiny
 made-up season in a temp directory (`tests/support.py`), so the suite never
 reads the real exports or writes the real output. It covers the scoring
 rules in `build.py` (zero-point rows are comments, shared places on ties,
-the Daily Double and its failure modes, the blowout rule, album art, CRLF
-handling, identical builds across hash seeds), the album-art lookup in
-`publish.py` (backoff on 429, stopping early and keeping progress), and the
-site's static contracts (the features page loads nothing but its fonts,
-every page links to it, generated season pages match the template, no
-`.html` links, the local preview server, no data or secret keys are
-tracked), plus the profile and inbox data, the database schema and
-migrations, the committed emoji data, and the parts of
-`enrich_comments.py` that decide what gets stored. The deploy runs it
+the point budget, the Daily Double and its failure modes, the blowout rule,
+album art, CRLF handling, season folders in numeric order, identical builds
+across hash seeds), and that every field the build writes is read by a page
+(members download these files, so dead weight is caught). In `publish.py`:
+the album-art lookup (backoff on 429, stopping early and keeping progress),
+the playlist-size parsing, and what gets backed up. Then the site's static
+contracts (the features page loads nothing but its fonts, every page links
+to it, the scripts load in the order they depend on, generated season pages
+match the template, no `.html` links, the local preview server, no data or
+secret keys are tracked), the deploy workflow, the profile and inbox data,
+the database schema and migrations, the committed emoji data, and the parts
+of `enrich_comments.py` that decide what gets stored. The deploy runs it
 before publishing.
 
 Two live tests skip unless `PFML_LIVE=1` is set:
-`tests/test_live_spotify.py` calls Spotify's real endpoint, and
-`tests/test_live_emoji_data.py` checks the committed `site/emoji-data.js`
-is what its pinned version builds. The browser JavaScript isn't covered by the suite
-(there's no Node here); it's checked in a real browser, see CLAUDE.md.
+`tests/test_live_spotify.py` calls Spotify's real oEmbed endpoint and
+playlist pages, and `tests/test_live_emoji_data.py` checks the committed
+`site/emoji-data.js` is what its pinned version builds. The browser
+JavaScript isn't covered by the suite (there's no Node here); it's checked
+in a real browser, see CLAUDE.md.
 
 ## Members only
 
@@ -145,9 +152,10 @@ rewritten that day (`git filter-branch` removing `data/` and `site/data/`
 from every commit, then a force-push), so no branch holds league data.
 GitHub still serves the old commits by their ids (checked 2026-09-22: a
 raw URL for a pre-rewrite commit's CSV still loaded) until the repo is
-deleted and recreated, which is pending. Commit ids from before that date no longer match. Anyone with an
-older clone should re-clone rather than pull. A full pre-rewrite backup is
-kept outside the repo, locally, as a git bundle.
+deleted and recreated, which is pending. Commit ids from before that date
+no longer match. Anyone with an older clone should re-clone rather than
+pull. A full pre-rewrite backup is kept outside the repo, locally, as a git
+bundle.
 
 **One-time setup** (done once, recorded here for a rebuild from scratch):
 
@@ -182,6 +190,11 @@ whose default is `localhost:3000`. Fix the Site URL and the
 `https://pfml.fun/**` entry and sign in again. Invite links aren't used up
 by a failed return, so the same link works once it's fixed.
 
+**Links survive sign-in.** Google returns people to the bare page address
+(the one on Supabase's redirect list), so `auth.js` keeps the rest of the
+link (`?s=...&r=...`) in this tab's sessionStorage and puts it back once
+the session exists, before any page code runs.
+
 **Clean addresses.** No address on the site ends in `.html`: links go to
 `/career`, `/season1`, `/round?s=...&r=...`, `/profile?p=...`, and home is
 `/`. GitHub Pages serves each of those from the matching `.html` file,
@@ -208,7 +221,9 @@ full-width card: the round count, the latest round and its winner, the
 newest three winners' album art, and a Show all button. Open it for a card per round, newest first, with the
 winning track's album art, the winner (or everyone tied for it) and the
 counts. Every round in the export is listed, including one that so far only
-has its prompt, which says so instead of showing results.
+has its prompt, which says so instead of showing results. The list follows
+the Standings player selection: only rounds the selected players submitted
+to are listed.
 
 Each card opens that round on its own full-width page,
 `round?s=season3&r=<round id>`, laid out like Music League's own round
@@ -279,20 +294,6 @@ column is now length-bounded instead (`supabase/migrations/2026-09-22_widen_comm
 for the live project, already folded into `schema.sql` for a new one).
 Until that migration has been run, any reaction outside the 6 fails to
 save.
-
-The list follows the Standings player selection: only rounds the selected
-players submitted to are listed.
-
-The top bar holds Home, one season button, then All-Time (the Career page,
-`career.html`, titled All-Time League Stats). The season button names the
-season being viewed, or the one in progress on any other page, and opens
-a list of every season, newest first (`seasonPicker` in `app.js`). All-Time
-also has a card on the Home page, next to the season cards.
-
-A round link survives sign-in: Google returns people to the bare page
-address (the one on Supabase's redirect list), so `auth.js` keeps the
-rest of the link (`?s=...&r=...`) in this tab's sessionStorage and puts
-it back once the session exists, before any page code runs.
 
 ## Season page features
 
@@ -374,6 +375,31 @@ it back once the session exists, before any page code runs.
 5. Only if the build created or changed a `site/seasonN.html` page (a new
    season), commit and push that page so GitHub Pages serves it.
 
+A season with a `competitors.csv` and nothing else builds fine and renders
+empty states throughout, which is how Season 3 looked before its first
+round was exported.
+
+A season with exactly one round renders too, minus whatever needs more
+history: the trend chart stays hidden until there are two rounds (with one,
+every line is a single dot and the chart is a column of dots over an empty
+plot), and the taste matrix stays empty, and Silent treatment and Most
+talked at stay away, until a pair reaches its 5-chance minimum, which takes
+five rounds.
+
+## Previewing locally
+
+```bash
+python scripts/build.py
+python scripts/serve.py
+```
+
+then open `http://localhost:8000` and sign in as usual (localhost is on the
+sign-in allowlist, see Members only). The local pages still read the data
+from Supabase, not from your local `site/data/`, so a data change shows
+up locally only after `publish.py`. Opening `index.html` from the
+filesystem will not work. To check page code without signing in, see
+CLAUDE.md, Checking page code in a browser.
+
 ## The "live" season on the home page
 
 The home page marks whichever season is last by number as the current one.
@@ -419,7 +445,10 @@ newest first), its name with the repeated "PFML - S1 - " prefix dropped.
 `url: null` renders as a dashed "Coming soon" tile with no link. Fill in a real
 `https://open.spotify.com/playlist/...` URL and it becomes a live link the
 next time you run `scripts/publish.py`. The file is git-ignored like the
-rest of `site/data/`, and publish uploads it with the other data.
+rest of `site/data/`, and publish uploads it with the other data. Adding a
+Season 4 group here is manual, since these are curated meta-playlists you
+build yourself, not something derivable from the CSV export the way round
+playlists are.
 
 **Track count and running time.** Each tile shows its playlist's size
 ("319 tracks · about 21 hr"; stacked on a phone). `publish.py` looks them
@@ -435,32 +464,7 @@ gets the first 100's average times the count, rounded to the hour and
 shown as "about". Exact times for those would need Spotify's Web API and a
 developer key. A failed lookup keeps the last good numbers, and
 `tests/test_live_spotify.py` checks both pages still carry what's parsed.
-A playlist's numbers change only when you next publish. Adding a Season 4 group here is manual, since these are
-curated meta-playlists you build yourself, not something derivable from the
-CSV export the way round playlists are.
-
-To preview locally before publishing or pushing:
-
-```bash
-python scripts/build.py
-python scripts/serve.py
-```
-
-then open `http://localhost:8000` and sign in as usual (localhost is on the
-sign-in allowlist, see Members only). The local pages still read the data
-from Supabase, not from your local `site/data/`, so a data change shows
-up locally only after `publish.py`. Opening `index.html` from the
-filesystem will not work.
-
-A season with a `competitors.csv` and nothing else builds fine and renders
-empty states throughout, which is how Season 3 looked before its first
-round was exported.
-
-A season with exactly one round renders too, minus whatever needs more
-history: the trend chart stays hidden until there are two rounds (with one,
-every line is a single dot and the chart is a column of dots over an empty
-plot), and the taste and comment matrices stay empty until a pair reaches
-its 5-chance minimum, which takes five rounds.
+A playlist's numbers change only when you next publish.
 
 ## Player focus and comparison
 
@@ -591,14 +595,28 @@ ranks among scored players only, and the profile shows the same sum under
 its tiles (Score = Avg season + Round Podium Pts + Season Podium Pts, with each
 part's working).
 
-## Profiles, the inbox and the account menu
+## The top bar, profiles and the inbox
+
+**Top bar.** Home, one season button, then All-Time (the Career page,
+`career.html`, titled All-Time League Stats). The season button names the
+season being viewed, or the one in progress on any other page, and opens
+a list of every season, newest first (`seasonPicker` in `app.js`). All-Time
+also has a card on the Home page, next to the season cards.
 
 **Account menu.** `account.js` adds two buttons to the right of the top bar
 on every members-only page once `auth.js` lets a member in: the inbox, and
-the member's initials in the same coloured circle the round pages use
-(same formula as `rounds.js`'s `avatar()`; a test keeps the two in step).
-The initials open a menu with My profile and Sign out. At phone widths the
-corner stays on the wordmark's row and the season tabs take the row below.
+the member's initials in a coloured circle. The initials open a menu with
+My profile and Sign out. At phone widths the corner stays on the wordmark's
+row and the season tabs take the row below.
+
+`account.js` is also the one home of three helpers the other pages share,
+so a person, a reaction and a time look the same everywhere: `PFML.avatar`
+(the initials circle, its colour fixed per player id), `PFML.reactionGlyph`
+(the 6 stored names to their emoji; see Reactions) and `PFML.when` ("3h ago", "2d
+ago", then a date after a week). They used to be copied into `rounds.js`,
+where the time had drifted to a date after one day. Every members-only page
+loads `auth.js`, then `account.js`, then its page scripts, and a test
+checks that order, since the page scripts use these without checking.
 
 **Inbox.** Reactions and replies other members left on the signed-in
 member's own vote comments, newest first, 40 at most. A comment id ends
@@ -714,6 +732,12 @@ requests point at the same track. The message names the entry
 (`requests[2]`). A request whose
 submitter doesn't match the track's submitter is ignored with a warning.
 
+**Checking a publish.** The season file's `dailyDouble` records what the
+build did: the Daily Doubles applied (`used`), and how many rounds have
+been reviewed and which haven't (`reviewedRounds`, `unreviewedRounds`).
+The page reads only the per-player and per-track entries, but this is the
+quickest way to confirm a new round's review landed.
+
 Seasons without a `daily_doubles.json` file (Seasons 1 and 2) don't use
 the rule at all.
 
@@ -793,7 +817,7 @@ word, words are also lowercased with apostrophes stripped, so "Don't",
 The denominator is every row they filed, including the zero-point rows
 that exist only to carry a comment.
 
-**Style rates** (exclamation, question, ALL-CAPS, emoji) — the share of a
+**Style rates** (exclamation, question, ALL-CAPS) — the share of a
 player's comments containing *at least one*, not an average count per
 comment. One comment shouting "YES!!!!!!!!" would drag a per-comment
 average into nonsense; "what fraction of their comments do this" is robust
@@ -811,9 +835,9 @@ league's real data that inversion is nearly total: on a raw ratio the top
 of the ranking is the player with 813 words and the bottom is the player
 with 13,549. Chunking fixes the denominator so everyone is compared over
 the same amount of text. Anyone with fewer than 500 words is left out of
-the comparison rather than given a flattering number. `vocabRichness` in
-the JSON is still the raw ratio, kept for reference; nothing ranks on it,
-and `vocabRichnessSampled` is what the page shows. `VOCAB_SAMPLE_WORDS`
+the comparison rather than given a flattering number. Only the chunked
+figure is written (`vocabRichnessSampled`); the raw ratio used to sit next
+to it "for reference", but nothing read it, so it went. `VOCAB_SAMPLE_WORDS`
 in `build.py` is the chunk size.
 
 **Distinctive word** — the same share-versus-baseline shape as the taste
@@ -833,7 +857,10 @@ voter could have voted on, self-votes excluded) and its minimum-sample
 guard: a pair needs at least 5 chances before it counts, so one round
 can't read as a habit. **Silent treatment** is the pair with the lowest
 comment rate over the most chances: the person you have had every
-opportunity to say something to and never have.
+opportunity to say something to and never have. The build works the matrix
+out only for that and Most talked at; the matrix itself isn't written to
+the season file, since no page shows it (it was about 46KB of each
+finished season's download).
 
 **Longest comment** — ranked by word count, with character count as the
 tiebreak. The text is shown in full, because the length is the point; it
@@ -851,7 +878,7 @@ vote comment with any mix of *funny, witty, angry, mean, heartfelt,
 hot_take, appreciative, storytelling, analytical*, each with a strength
 from 1 (a touch) to 3 (the whole point of the comment), plus a one-line
 rationale. It is the only thing in this repo that calls an API and it
-costs money to run. It has not been run yet (as of 2026-09-22).
+costs money to run. It has not been run yet (checked 2026-10-05).
 
 **What the labels unlock** (all absent until the file exists, so the site
 looks exactly as without it): on the All-Time page, six quote cards judged
@@ -863,8 +890,10 @@ clown, sweetheart, resident grump, hot-take artist: the highest share of a
 player's comments carrying those labels, 10 comments minimum).
 `sentiment_awards()` in `build.py`. The first version's labels had no
 strengths and a *rude* label; a file in that shape still loads (strength
-1, *rude* dropped). The label list lives in both scripts, and a test keeps
-them identical.
+1, *rude* dropped). The label list lives in `build.py`
+(`SENTIMENT_LABELS`), and the script takes it from there, along with
+`comment_id()`, the CSV reader and the season-folder scan; it used to keep
+its own copies, and its CSV reader had already drifted.
 
 **Nothing automatic ever runs it.** `build.py` does not call it, and
 neither does the GitHub Action — the deploy has no API key and must never

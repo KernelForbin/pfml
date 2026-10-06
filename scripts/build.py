@@ -20,12 +20,12 @@ SCORING MODEL (verified against the real exports, not assumed):
     round total) rather than assuming it. A handful of Season 1
     voter-rounds total 11 instead of 16.
   - A votes.csv row with 0 points is a comment, not a vote. Every single
-    zero-point row in both seasons carries a comment. They are counted as
+    zero-point row in every season carries a comment. They are counted as
     commentary, never as scoring.
   - Self-voting is blocked. The only rows where voter == submitter are
     zero-point comments on your own track.
-  - Season 1 allowed negative points (35 downvotes, -5 to -1). Season 2
-    did not. Downvotes net against the same budget.
+  - Season 1 allowed negative points (35 downvotes, -5 to -1). Seasons 2
+    and 3 did not. Downvotes net against the same budget.
 
 Because the budget is fixed, "average points given" is not a measure of
 generosity: everyone gives exactly the same budget a round. The stats
@@ -75,9 +75,10 @@ MIN_SCORED_ROUNDS = 10
 # Absent is the normal case: the site just omits sentiment-based stats.
 SENTIMENT_PATH = DATA_DIR / "comment_sentiment.json"
 
-# The sentiment labels the site knows how to render. A label outside this
-# set in comment_sentiment.json is ignored rather than rendered blindly,
-# so a change to the enrichment prompt can't inject arbitrary keys here.
+# The sentiment labels the site knows how to render, and the only ones
+# enrich_comments.py asks for. A label outside this set in
+# comment_sentiment.json is ignored rather than rendered blindly, so a
+# change to the enrichment prompt can't inject arbitrary keys here.
 SENTIMENT_LABELS = ("funny", "witty", "angry", "mean", "heartfelt", "hot_take",
                     "appreciative", "storytelling", "analytical")
 SENTIMENT_STRENGTHS = (1, 2, 3)
@@ -199,10 +200,10 @@ def pair_label(x):
 
 
 def comment_id(round_id, uri, voter_id):
-    """Stable id for a single voter comment, matching the key
-    scripts/enrich_comments.py writes into data/comment_sentiment.json.
-    Round + track + voter is unique: a voter gets one vote row per track
-    per round."""
+    """Stable id for a single voter comment: the key in
+    data/comment_sentiment.json (enrich_comments.py uses this function) and
+    in the comment_* tables. Round + track + voter is unique: a voter gets
+    one vote row per track per round."""
     return "%s|%s|%s" % (round_id, uri, voter_id)
 
 
@@ -278,6 +279,7 @@ def sentiment_awards(entries, players):
 # made by reading them and recorded by hand in data/seasonN/daily_doubles.json;
 # this build only applies what that file says, and only where it exists.
 DAILY_DOUBLE_FILE = "daily_doubles.json"
+DD_DECISIONS = ("accepted", "rejected")
 
 
 def load_daily_doubles(folder):
@@ -299,9 +301,6 @@ def load_daily_doubles(folder):
         "reviewed": {r["roundId"] for r in raw.get("reviewedRounds", [])},
         "accepted": [r for r in requests if r["decision"] == "accepted"],
     }
-
-
-DD_DECISIONS = ("accepted", "rejected")
 
 
 def check_daily_doubles(path, raw):
@@ -333,6 +332,15 @@ def check_daily_doubles(path, raw):
             missing = [k for k in ("roundId", "spotifyUri", "submitterId") if not text(r, k)]
             if missing:
                 stop(f"requests[{i}] is accepted but has no {', '.join(missing)}")
+
+
+def season_folders():
+    """data/seasonN folders in season order, numerically, so season10 comes
+    after season9. publish.py and enrich_comments.py use this too."""
+    return sorted(
+        [p for p in DATA_DIR.iterdir() if p.is_dir() and re.fullmatch(r"season\d+", p.name)],
+        key=lambda p: int(re.search(r"\d+", p.name).group()),
+    )
 
 
 def read_csv(path):
@@ -386,8 +394,8 @@ def comment_text_stats(comments):
     word-based number counts the same thing (see comment_words): letters
     and apostrophes, so "don't" is one word and "2024" is none.
 
-    The four style rates (exclamation, question, ALL-CAPS, emoji) are all
-    the *share of that player's comments containing at least one*, not a
+    The three style rates (exclamation, question, ALL-CAPS) are all the
+    *share of that player's comments containing at least one*, not a
     per-comment average. One comment shouting "YES!!!!!!!!" would drag an
     average into nonsense; "what fraction of their comments do this" is
     robust to that and is what the page claims.
@@ -411,17 +419,10 @@ def comment_text_stats(comments):
         "exclamationRate": containing(lambda t: "!" in t),
         "questionRate": containing(lambda t: "?" in t),
         "allCapsRate": containing(lambda t: any(is_allcaps_word(w) for w in comment_words(t))),
-        "emojiRate": containing(lambda t: EMOJI_RE.search(t) is not None),
-        # unique words / total words, lowercased. Type-token ratio falls as
-        # a body of text grows, so this is only comparable between players
-        # with a similar number of comments; the page guards it with
-        # MIN_COMMENTS_FOR_RATES and the README says so.
-        # Raw unique/total. Kept because it's the number people expect to
-        # see, but it is NOT comparable between players: it falls as a
-        # corpus grows. Nothing ranks on it; vocabRichnessSampled does.
-        "vocabRichness": round(len(set(all_words)) / total_words, 3) if total_words else 0,
+        # Unique over total words on fixed-size chunks, not the whole corpus
+        # (see sampled_richness): a raw ratio falls as someone writes more,
+        # so it would rank people by how little they wrote.
         "vocabRichnessSampled": sampled_richness(all_words),
-        "uniqueWords": len(set(all_words)),
     }
 
 
@@ -530,6 +531,26 @@ def pair_superlatives(pairs):
     return out
 
 
+def point_budget(points_at):
+    """The points each voter spends a round: the most common per-voter round
+    total. It isn't the same in every season (16 in Seasons 1 and 2, 19 in
+    Season 3), so the page copy can't hard-code it. A voter who only left
+    zero-point comments totals 0 and says nothing about the budget, so those
+    are ignored, and the few Season 1 voter-rounds that total 11 lose the
+    vote to the 16s. Ties take the larger number, so the answer never
+    depends on dict order. None for a season with no votes.
+
+    points_at: {(round id, spotify uri, voter id): points}"""
+    round_totals = {}
+    for (rid, _uri, vid), pts in points_at.items():
+        round_totals[(rid, vid)] = round_totals.get((rid, vid), 0) + pts
+    counts = {}
+    for total in round_totals.values():
+        if total > 0:
+            counts[total] = counts.get(total, 0) + 1
+    return max(counts, key=lambda t: (counts[t], t)) if counts else None
+
+
 def build_season(folder: Path, season_key: str, label: str):
     competitor_rows = read_csv(folder / "competitors.csv")
     round_rows = read_csv(folder / "rounds.csv")
@@ -561,11 +582,10 @@ def build_season(folder: Path, season_key: str, label: str):
 
     # accumulators
     player = {cid: {"id": cid, "name": name, "points": 0, "votePoints": 0, "submissions": 0,
-                     "roundsWon": 0, "bestFinish": None, "podiums": 0}
+                     "roundsWon": 0, "podiums": 0}
               for cid, name in names.items()}
-    voter = {cid: {"id": cid, "name": name, "roundsVoted": 0, "pointsSpent": 0,
-                    "tracksBackedTotal": 0, "topBets": [], "kingmakerHits": 0,
-                    "kingmakerRounds": 0, "commentsLeft": 0}
+    voter = {cid: {"id": cid, "name": name, "roundsVoted": 0, "tracksBackedTotal": 0,
+                    "topBets": [], "kingmakerHits": 0, "kingmakerRounds": 0}
              for cid, name in names.items()}
     pair_points = {}        # (voter, submitter) -> points given
     pair_chances = {}       # (voter, submitter) -> tracks they could have voted on
@@ -593,7 +613,6 @@ def build_season(folder: Path, season_key: str, label: str):
         text = v.get("Comment", "").strip()
         if not text or vid not in voter:
             continue
-        voter[vid]["commentsLeft"] += 1
         sub = sub_by_key.get((v["Round ID"], v["Spotify URI"]))
         cid = comment_id(v["Round ID"], v["Spotify URI"], vid)
         entry = {
@@ -603,7 +622,6 @@ def build_season(folder: Path, season_key: str, label: str):
             "roundId": v["Round ID"],
             "roundName": round_name_by_id.get(v["Round ID"], ""),
             "trackTitle": sub.get("Title", "") if sub else "",
-            "trackArtist": sub.get("Artist(s)", "") if sub else "",
             "spotifyId": track_id(v["Spotify URI"]),
             "submitterId": sub.get("Submitter ID") if sub else None,
         }
@@ -615,7 +633,6 @@ def build_season(folder: Path, season_key: str, label: str):
 
     rounds_out = []
     all_songs = []
-    scoring_votes = 0
     comment_only_votes = 0
     downvotes = 0
 
@@ -654,7 +671,6 @@ def build_season(folder: Path, season_key: str, label: str):
                 if pts == 0:
                     comment_only_votes += 1
                     continue
-                scoring_votes += 1
                 if pts < 0:
                     downvotes += 1
                 received.append({"voterId": vid, "voterName": names.get(vid, "Unknown"), "points": pts})
@@ -676,7 +692,6 @@ def build_season(folder: Path, season_key: str, label: str):
                 "note": s.get("Comment", "").strip(),
                 "points": total,
                 "backers": len(received),
-                "topVote": received[0]["points"] if received else 0,
                 "spread": round(statistics.pstdev([r["points"] for r in received]), 2) if len(received) > 1 else 0,
                 "comments": comments_at.get((rid, uri), []),
                 "art": track_art.get(track_id(uri)),
@@ -731,14 +746,11 @@ def build_season(folder: Path, season_key: str, label: str):
                     player[pid]["roundsWon"] += 1
                 if rank <= 3:
                     player[pid]["podiums"] += 1
-                cur = player[pid]["bestFinish"]
-                player[pid]["bestFinish"] = rank if cur is None else min(cur, rank)
 
         winning_uris = {s["spotifyId"] for s in songs if s.get("place") == 1}
 
         # voter behaviour for this round
         for vid in electorate:
-            spent = 0
             backed = 0
             top_bet = 0
             top_uris = []
@@ -746,7 +758,6 @@ def build_season(folder: Path, season_key: str, label: str):
                 pts = points_at.get((rid, s["Spotify URI"], vid))
                 if pts is None or pts <= 0:
                     continue
-                spent += pts
                 backed += 1
                 if pts > top_bet:
                     top_bet = pts
@@ -755,7 +766,6 @@ def build_season(folder: Path, season_key: str, label: str):
                     top_uris.append(track_id(s["Spotify URI"]))
             if vid in voter and backed:
                 voter[vid]["roundsVoted"] += 1
-                voter[vid]["pointsSpent"] += spent
                 voter[vid]["tracksBackedTotal"] += backed
                 voter[vid]["topBets"].append(top_bet)
                 voter[vid]["kingmakerRounds"] += 1
@@ -787,11 +797,8 @@ def build_season(folder: Path, season_key: str, label: str):
             "description": rnd.get("Description", "").strip(),
             "created": rnd.get("Created", ""),
             "playlistUrl": rnd.get("Playlist URL", "").strip(),
-            "playlistId": playlist_id(rnd.get("Playlist URL", "")),
             "songs": songs,
             "margin": margin,
-            "voterCount": len(electorate),
-            "submissionCount": len(round_subs),
             # Whether anyone has a vote row for this round. Music League's
             # export only holds finished rounds (measured, see the season
             # timeline below), so in a real export this is always true; it
@@ -849,14 +856,7 @@ def build_season(folder: Path, season_key: str, label: str):
     # say which phase an unfinished round is in, and nothing here guesses;
     # this used to call the latest round "Voting" because it had votes.
     started_at = rounds_out[0]["created"] if rounds_out else None
-    live_round = None
-    if rounds_out:
-        latest = rounds_out[-1]
-        live_round = {
-            "number": len(rounds_out),
-            "name": latest["name"],
-            "submissionCount": latest["submissionCount"],
-        }
+    live_round = {"number": len(rounds_out), "name": rounds_out[-1]["name"]} if rounds_out else None
 
     # ---- voting style ----
     voters_out = []
@@ -921,11 +921,10 @@ def build_season(folder: Path, season_key: str, label: str):
         stats = comment_text_stats([{"text": e["text"], "points": e["points"]} for e in entries])
         stats["id"] = cid
         stats["name"] = names[cid]
-        stats["voteRows"] = vote_row_count
         # share of this player's vote rows that carried a comment. The
         # denominator is every row they filed, including the zero-point
         # rows that exist *only* to carry a comment.
-        stats["commentRate"] = round(len(entries) / vote_row_count, 3) if vote_row_count else 0
+        stats["commentRate"] = round(len(entries) / vote_row_count, 3)
         player_words = [w for e in entries for w in comment_words(e["text"])]
         stats["distinctiveWord"] = (
             distinctive_word(player_words, league_word_counts, league_word_total)
@@ -936,10 +935,8 @@ def build_season(folder: Path, season_key: str, label: str):
             stats["longest"] = {
                 "text": longest["text"],
                 "words": len(comment_words(longest["text"])),
-                "chars": len(longest["text"]),
                 "roundName": longest["roundName"],
                 "trackTitle": longest["trackTitle"],
-                "trackArtist": longest["trackArtist"],
                 "spotifyId": longest["spotifyId"],
                 "points": longest["points"],
             }
@@ -1013,7 +1010,6 @@ def build_season(folder: Path, season_key: str, label: str):
             "totalWords": sum(c["totalWords"] for c in commenters),
             "commentOnlyVotes": comment_only_votes,
             "minCommentsForRates": MIN_COMMENTS_FOR_RATES,
-            "minPairOpportunities": MIN_COMMENT_PAIR_OPPORTUNITIES,
             "submitterNoteCount": sum(s["notes"] for s in submitter_notes),
             "hasSentiment": any("sentiment" in c for c in commenters),
         }
@@ -1093,26 +1089,7 @@ def build_season(folder: Path, season_key: str, label: str):
         repeats = sorted([a for a in artist_counts.values() if a["count"] > 1],
                          key=lambda a: (-a["count"], -a["points"]))
         highlights["repeatArtists"] = repeats[:10]
-
-        highlights["commentOnlyVotes"] = comment_only_votes
         highlights["downvotes"] = downvotes
-
-    # ---- point budget ----
-    # Every voter spends the same fixed budget each round, but it isn't the
-    # same number in every season (16 in Seasons 1 and 2, 19 in Season 3),
-    # so the page copy can't hard-code it. It's the most common per-voter
-    # round total; a voter who only left zero-point comments totals 0 and
-    # says nothing about the budget, so those are ignored, and the few
-    # Season 1 voter-rounds that total 11 lose the vote to the 16s. Ties
-    # take the larger number so the answer never depends on dict order.
-    round_totals = {}
-    for (rid_, _uri, vid_), pts_ in points_at.items():
-        round_totals[(rid_, vid_)] = round_totals.get((rid_, vid_), 0) + pts_
-    total_counts = {}
-    for t_ in round_totals.values():
-        if t_ > 0:
-            total_counts[t_] = total_counts.get(t_, 0) + 1
-    point_budget = max(total_counts, key=lambda t_: (total_counts[t_], t_)) if total_counts else None
 
     data = {
         "key": season_key,
@@ -1123,14 +1100,11 @@ def build_season(folder: Path, season_key: str, label: str):
         "voters": voters_out,
         "taste": taste,
         "commenters": commenters,
-        "commentPairs": comment_pairs,
         "submitterNotes": submitter_notes,
         "commentSummary": comment_summary,
         "highlights": highlights,
         "songCount": len(all_songs),
-        "voteRowCount": len(vote_rows),
-        "scoringVoteCount": scoring_votes,
-        "pointBudget": point_budget,
+        "pointBudget": point_budget(points_at),
         "dailyDouble": daily_double,
         "startedAt": started_at,
         "liveRound": live_round,
@@ -1166,8 +1140,8 @@ SKIN_TONE_RE = re.compile("[\U0001F3FB-\U0001F3FF]")
 def quote_of(e, name):
     """One comment as the page shows it in a quote card."""
     return {
-        "text": e["text"], "name": name, "words": len(comment_words(e["text"])), "chars": len(e["text"]),
-        "roundName": e["roundName"], "trackTitle": e["trackTitle"], "trackArtist": e["trackArtist"],
+        "text": e["text"], "name": name, "words": len(comment_words(e["text"])),
+        "roundName": e["roundName"], "trackTitle": e["trackTitle"],
         "spotifyId": e["spotifyId"], "points": e["points"], "seasonLabel": e.get("seasonLabel", ""),
     }
 
@@ -1181,13 +1155,12 @@ def quote_awards(entries):
     needs comment_sentiment.json. An award is left out when its best count
     is under MIN_QUOTE_AWARD_COUNT.
     """
-    def best(count, extra=None):
+    def best(count):
         scored = [(count(e), e, n) for e, n in entries]
         scored = [s for s in scored if s[0] > 0]
         if not scored:
             return None
-        s = min(scored, key=lambda s: (-s[0], len(s[1]["text"]), s[1]["id"]))
-        return s
+        return min(scored, key=lambda s: (-s[0], len(s[1]["text"]), s[1]["id"]))
 
     def caps(t):
         return sum(1 for w in comment_words(t) if is_allcaps_word(w))
@@ -1239,13 +1212,12 @@ def build_career_comments(raw_seasons):
         for cid, name in raw["names"].items():
             names.setdefault(cid, name)
         for cid, entries in raw["voterComments"].items():
-            slot = by_player.setdefault(cid, {"entries": [], "voteRows": 0, "seasons": 0})
+            slot = by_player.setdefault(cid, {"entries": [], "voteRows": 0})
             rows = raw["voteRowsByVoter"].get(cid, 0)
             if not rows:
                 continue
             slot["entries"].extend(entries)
             slot["voteRows"] += rows
-            slot["seasons"] += 1
 
     league_word_counts = {}
     league_word_total = 0
@@ -1266,8 +1238,6 @@ def build_career_comments(raw_seasons):
         stats = comment_text_stats([{"text": e["text"], "points": e["points"]} for e in entries])
         stats["id"] = cid
         stats["name"] = names.get(cid, "Unknown")
-        stats["voteRows"] = slot["voteRows"]
-        stats["seasons"] = slot["seasons"]
         stats["commentRate"] = round(len(entries) / slot["voteRows"], 3)
         player_words = [w for e in entries for w in comment_words(e["text"])]
         stats["distinctiveWord"] = (
@@ -1279,10 +1249,8 @@ def build_career_comments(raw_seasons):
             stats["longest"] = {
                 "text": longest["text"],
                 "words": len(comment_words(longest["text"])),
-                "chars": len(longest["text"]),
                 "roundName": longest["roundName"],
                 "trackTitle": longest["trackTitle"],
-                "trackArtist": longest["trackArtist"],
                 "spotifyId": longest["spotifyId"],
                 "points": longest["points"],
                 "seasonLabel": longest.get("seasonLabel", ""),
@@ -1331,7 +1299,6 @@ def build_career_comments(raw_seasons):
         summary["totalComments"] = sum(p["comments"] for p in players)
         summary["totalWords"] = sum(p["totalWords"] for p in players)
         summary["minCommentsForRates"] = MIN_COMMENTS_FOR_RATES
-        summary["minPairOpportunities"] = MIN_COMMENT_PAIR_OPPORTUNITIES
         summary["hasSentiment"] = any("sentiment" in p for p in players)
         longest_overall = max((p for p in players if p.get("longest")),
                               key=lambda p: p["longest"]["words"], default=None)
@@ -1360,7 +1327,7 @@ def build_career_comments(raw_seasons):
             summary["mostSubmitterNotes"] = with_ties(g[0], g, lambda n: n["name"])
             summary["submitterNoteCount"] = sum(len(v) for v in notes.values())
 
-    return {"players": players, "pairs": pairs, "summary": summary}
+    return {"players": players, "summary": summary}
 
 
 def build_career(season_datas, raw_seasons=None):
@@ -1380,7 +1347,7 @@ def build_career(season_datas, raw_seasons=None):
             t = totals.setdefault(p["id"], {
                 "id": p["id"], "name": p["name"], "totalPoints": 0,
                 "roundsWon": 0, "podiums": 0, "submissions": 0,
-                "seasonsPlayed": 0, "bySeason": {}, "bestSeasonPoints": None, "bestSeasonKey": None,
+                "seasonsPlayed": 0, "bestSeasonPoints": None, "bestSeasonKey": None,
                 "roundFinishes": {"first": 0, "second": 0, "third": 0}, "seasonPodiums": [],
             })
             t["totalPoints"] += p["points"]
@@ -1388,7 +1355,6 @@ def build_career(season_datas, raw_seasons=None):
             t["podiums"] += p["podiums"]
             t["submissions"] += p["submissions"]
             t["seasonsPlayed"] += 1
-            t["bySeason"][d["key"]] = p["points"]
             if t["bestSeasonPoints"] is None or p["points"] > t["bestSeasonPoints"]:
                 t["bestSeasonPoints"] = p["points"]
                 t["bestSeasonKey"] = d["key"]
@@ -1451,7 +1417,6 @@ def build_career(season_datas, raw_seasons=None):
         "players": players,
         "highlights": highlights,
         "seasons": [{"key": d["key"], "label": d["label"]} for d in played_seasons],
-        "totalSeasons": len(played_seasons),
         "careerScoreFormula": {"perRoundScale": PER_ROUND_SCALE, "roundBonus": [ROUND_BONUS[1], ROUND_BONUS[2], ROUND_BONUS[3]],
                                "seasonBonus": [SEASON_BONUS[1], SEASON_BONUS[2], SEASON_BONUS[3]],
                                "minRounds": MIN_SCORED_ROUNDS},
@@ -1542,10 +1507,7 @@ def build_lookup(season_datas):
 
 def main():
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    folders = sorted(
-        [p for p in DATA_DIR.iterdir() if p.is_dir() and re.fullmatch(r"season\d+", p.name)],
-        key=lambda p: int(re.search(r"\d+", p.name).group()),
-    )
+    folders = season_folders()
     if not folders:
         raise SystemExit("No data/seasonN folders found.")
 
@@ -1592,26 +1554,20 @@ def main():
                      .replace("{{LABEL}}", label))
             (OUT_DIR.parent / f"{key}.html").write_text(page, encoding="utf-8")
 
-        print(f"{key}: {len(data['rounds'])} rounds, {data['songCount']} songs, "
-              f"{data['scoringVoteCount']} scoring votes")
+        scoring = sum(len(s["votes"]) for r in data["rounds"] for s in r["songs"])
+        print(f"{key}: {len(data['rounds'])} rounds, {data['songCount']} songs, {scoring} scoring votes")
 
-    # newest season with any rounds is the default tab; if none have rounds,
-    # fall back to the newest season overall
-    with_rounds = [s for s in index if s["roundCount"] > 0]
-    default_key = (with_rounds or index)[-1]["key"]
-    # if the newest season has started at all, prefer it
-    if index[-1]["roundCount"] > 0:
-        default_key = index[-1]["key"]
-
+    # The newest season is the current one: the home page marks it live and
+    # the season button names it (README, The "live" season).
+    current = index[-1]["key"]
     with open(OUT_DIR / "index.json", "w", encoding="utf-8") as f:
-        json.dump({"seasons": index, "defaultSeason": default_key,
-                   "currentSeason": index[-1]["key"]}, f, ensure_ascii=False, separators=(",", ":"))
-    print(f"index.json: {len(index)} seasons, default {default_key}")
+        json.dump({"seasons": index, "currentSeason": current}, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"index.json: {len(index)} seasons, current {current}")
 
     career = build_career(season_datas, raw_seasons)
     with open(OUT_DIR / "career.json", "w", encoding="utf-8") as f:
         json.dump(career, f, ensure_ascii=False, separators=(",", ":"))
-    print(f"career.json: {len(career['players'])} players across {career['totalSeasons']} played seasons")
+    print(f"career.json: {len(career['players'])} players across {len(career['seasons'])} played seasons")
 
     profiles = build_profiles(season_datas)
     with open(OUT_DIR / "profiles.json", "w", encoding="utf-8") as f:

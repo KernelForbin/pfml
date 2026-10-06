@@ -15,11 +15,13 @@
      ready     Promise, resolves with the member once they're let in
      member    { competitorId, name, role } after ready
      loadJSON  (name) -> Promise of parsed JSON from the private bucket
-     mediaUrl  (name) -> Promise of a signed URL for a file in that bucket
      api       the comment votes / reactions / replies operations, and the
                inbox's queries
      signOut   ()
-   The header's account menu and inbox live in account.js. */
+   The header's account menu and inbox live in account.js, which also adds
+   the display helpers the page scripts share (avatar, reactionGlyph, when).
+   Every members-only page loads auth.js, then account.js, then its page
+   scripts, so those can rely on all of this being there. */
 
 (function () {
   "use strict";
@@ -38,6 +40,9 @@
   var cfg = window.PFML_CONFIG || {};
   var INVITE_KEY = "pfml.invite";
   var BUCKET = "league-data";
+
+  var sessionUserId = null;   // set before any auth event fires; see start()
+  var inviteInMemory = null;  // the invite, when localStorage won't hold it
 
   var resolveReady;
   var PFML = window.PFML = {
@@ -119,7 +124,7 @@
     var code = params.get("invite");
     if (!code) return;
     try { localStorage.setItem(INVITE_KEY, code); } catch (e) { /* private mode: claimed below from memory */ }
-    PFML._inviteInMemory = code;
+    inviteInMemory = code;
     // Take it out of the address bar, so it isn't copied or bookmarked and
     // reused. It's one-time anyway, but no need to leave it lying around.
     params.delete("invite");
@@ -127,11 +132,11 @@
     history.replaceState(null, "", location.pathname + (rest ? "?" + rest : "") + location.hash);
   }
   function pendingInvite() {
-    try { return localStorage.getItem(INVITE_KEY) || PFML._inviteInMemory || null; }
-    catch (e) { return PFML._inviteInMemory || null; }
+    try { return localStorage.getItem(INVITE_KEY) || inviteInMemory; }
+    catch (e) { return inviteInMemory; }
   }
   function clearInvite() {
-    PFML._inviteInMemory = null;
+    inviteInMemory = null;
     try { localStorage.removeItem(INVITE_KEY); } catch (e) { /* nothing to clear */ }
   }
 
@@ -152,7 +157,6 @@
   var client = window.supabase.createClient(cfg.supabaseUrl, cfg.supabasePublishableKey, {
     auth: { flowType: "pkce", persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
   });
-  PFML.client = client;
 
   /* ---- where to land after sign-in ----
      Google sends people back to the bare page (location.pathname), the
@@ -240,7 +244,7 @@
       var session = res.data && res.data.session;
       if (!session) { showSignIn(); return; }
       var user = session.user;
-      sessionUserId = user.id;   // the API needs it before any auth event fires
+      sessionUserId = user.id;
       restoreReturn();
       return membership(user.id).then(function (member) {
         var code = pendingInvite();
@@ -278,17 +282,6 @@
         .catch(function (err) { delete jsonCache[name]; throw err; });   // a later call can retry
     }
     return jsonCache[name];
-  };
-
-  // A URL for a file in the private bucket that the browser can load
-  // directly (a <video> or <img> src), good for an hour. Signed rather
-  // than downloaded whole, so video seeks and streams instead of stalling
-  // until every byte is in. Members only, like everything in the bucket.
-  PFML.mediaUrl = function (name, seconds) {
-    return client.storage.from(BUCKET).createSignedUrl(name, seconds || 3600).then(function (res) {
-      if (res.error) throw new Error(name + ": " + res.error.message);
-      return res.data.signedUrl;
-    });
   };
 
   /* ---- comments: votes, reactions, replies ----
@@ -345,13 +338,14 @@
     // Reactions and replies other members left on this player's own vote
     // comments, newest first. A comment id ends "|<voter id>", so a suffix
     // match finds every comment they wrote, across every round and season.
+    // `limit` of each: the inbox shows that many in all, so it never needs more.
     inbox: function (competitorId, limit) {
-      var suffix = "%|" + competitorId, uid = currentUserId(), n = limit || 40;
+      var suffix = "%|" + competitorId, uid = currentUserId();
       return Promise.all([
         client.from("comment_reactions").select("comment_id, user_id, reaction, created_at")
-          .like("comment_id", suffix).neq("user_id", uid).order("created_at", { ascending: false }).limit(n).then(must),
+          .like("comment_id", suffix).neq("user_id", uid).order("created_at", { ascending: false }).limit(limit).then(must),
         client.from("comment_replies").select("id, comment_id, user_id, body, created_at")
-          .like("comment_id", suffix).neq("user_id", uid).order("created_at", { ascending: false }).limit(n).then(must)
+          .like("comment_id", suffix).neq("user_id", uid).order("created_at", { ascending: false }).limit(limit).then(must)
       ]).then(function (r) { return { reactions: r[0], replies: r[1] }; });
     },
     // When this member last opened their inbox (null before the first
@@ -374,7 +368,6 @@
     me: function () { return currentUserId(); }
   };
 
-  var sessionUserId = null;
   function currentUserId() { return sessionUserId; }
   client.auth.onAuthStateChange(function (_event, session) {
     sessionUserId = session && session.user ? session.user.id : null;

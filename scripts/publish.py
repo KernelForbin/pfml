@@ -42,18 +42,11 @@ DATA_BUCKET = "league-data"
 EXPORT_BUCKET = "league-exports"
 
 
-def season_folders():
-    return sorted(
-        [p for p in build.DATA_DIR.iterdir() if p.is_dir() and re.fullmatch(r"season\d+", p.name)],
-        key=lambda p: int(re.search(r"\d+", p.name).group()),
-    )
-
-
 def all_players():
     """Every competitor across every season. Same join as the Career page:
     the first name seen for an id wins."""
     names = {}
-    for folder in season_folders():
+    for folder in build.season_folders():
         for r in build.read_csv(folder / "competitors.csv"):
             names.setdefault(r["ID"], r["Name"])
     return [{"competitor_id": cid, "name": n} for cid, n in names.items()]
@@ -68,7 +61,7 @@ def backup_files():
     local-only files the build reads that would cost to rebuild: the
     comment sentiment labels (paid for per run of enrich_comments.py) and
     the album-art cache (hundreds of rate-limited Spotify lookups)."""
-    files = [p for f in season_folders() for p in sorted(f.iterdir()) if p.suffix in (".csv", ".json")]
+    files = [p for f in build.season_folders() for p in sorted(f.iterdir()) if p.suffix in (".csv", ".json")]
     files += [p for p in (build.SENTIMENT_PATH, ART_CACHE) if p.exists()]
     return files
 
@@ -107,7 +100,7 @@ def refresh_art():
     if ART_CACHE.exists():
         cache = json.loads(ART_CACHE.read_text(encoding="utf-8"))
     ids = set()
-    for folder in season_folders():
+    for folder in build.season_folders():
         for r in build.read_csv(folder / "submissions.csv"):
             tid = build.track_id(r.get("Spotify URI"))
             if tid:

@@ -9,12 +9,16 @@
      - season page  (<body data-page="season" data-season-key="seasonN">)
                                                   -> full season dashboard
      - career, round and profile pages (data-page="career" | "round" | "profile")
-   All render a season nav in the top bar from data/index.json. */
+   All render a season nav in the top bar from index.json.
+
+   Every page that loads this loads auth.js and account.js first (and
+   rounds.js, on season and round pages), so window.PFML is always there:
+   data comes from PFML.loadJSON, the private bucket, never a public file. */
 
 (function () {
   "use strict";
 
-  var DATA = "data";
+  var PFML = window.PFML;
 
   function $(id) { return document.getElementById(id); }
 
@@ -54,19 +58,9 @@
     if (!id) return esc(name);
     return '<a class="plink" href="profile?p=' + encodeURIComponent(id) + '">' + esc(name) + "</a>";
   }
+  // The noun alone, for "3 " + plural(3, "round"). (rounds.js's counted()
+  // includes the number.)
   function plural(n, one, many) { return n === 1 ? one : (many || one + "s"); }
-
-  function fetchJSON(url) {
-    // Members-only: season data comes from the private Supabase bucket via
-    // auth.js, not from a public file next to this page.
-    if (window.PFML && window.PFML.loadJSON) {
-      return window.PFML.loadJSON(url.replace(/^data\//, ""));
-    }
-    return fetch(url).then(function (r) {
-      if (!r.ok) throw new Error(url + ": HTTP " + r.status);
-      return r.json();
-    });
-  }
 
   /* ---- Spotify links -------------------------------------------------
      Track and playlist IDs are in the export, so those are exact links.
@@ -330,7 +324,7 @@
   }
 
   function initHome() {
-    fetchJSON(DATA + "/index.json").then(function (index) {
+    PFML.loadJSON("index.json").then(function (index) {
       renderNav(index, null);
       var grid = el("div", "season-grid");
       if (!index.seasons.length) {
@@ -345,8 +339,8 @@
       }
       // Stats are optional: without them the tiles just say "Open in Spotify".
       return Promise.all([
-        fetchJSON(DATA + "/playlists.json").catch(function () { return null; }),
-        fetchJSON(DATA + "/playlist_stats.json").catch(function () { return null; })
+        PFML.loadJSON("playlists.json").catch(function () { return null; }),
+        PFML.loadJSON("playlist_stats.json").catch(function () { return null; })
       ]);
     }).then(function (res) { renderPlaylists(res[0], res[1]); }).catch(function (err) {
       console.error(err);
@@ -407,7 +401,7 @@
     tag.innerHTML = "Filtered to " + selectedNamesHtml(d) + ". ";
     var clear = el("a", "filter-tag-clear", "Clear");
     clear.href = "#";
-    clear.addEventListener("click", function (ev) { ev.preventDefault && ev.preventDefault(); clearSelected(); });
+    clear.addEventListener("click", function (ev) { ev.preventDefault(); clearSelected(); });
     tag.appendChild(clear);
     host.appendChild(tag);
   }
@@ -512,7 +506,7 @@
         p.avgPerSubmission + " avg &middot; " + p.roundsWon + " won &middot; " + p.podiums + " top-3</span></div>";
       row.addEventListener("click", function () { toggleFromStandings(p.id, row); });
       row.addEventListener("keydown", function (ev) {
-        if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault && ev.preventDefault(); toggleFromStandings(p.id, row); }
+        if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); toggleFromStandings(p.id, row); }
       });
       box.appendChild(row);
     });
@@ -573,7 +567,7 @@
     var g = el("div", "hl-grid");
 
     g.appendChild(tile("Season standing", rank + " of " + d.standings.length,
-      standing.points + " points &middot; " + standing.roundsWon + " round" + (standing.roundsWon === 1 ? "" : "s") +
+      standing.points + " points &middot; " + standing.roundsWon + " " + plural(standing.roundsWon, "round") +
       " won &middot; " + standing.podiums + " top-3 finishes" +
       (standing.dailyDouble
         ? "<br>includes +" + standing.dailyDouble.bonus + " Daily Double (" + esc(standing.dailyDouble.trackTitle) +
@@ -675,7 +669,7 @@
     if (consideredRounds) {
       var title = el("h3", null, "Head-to-head");
       var note = el("p", "block-note",
-        "Across " + consideredRounds + " round" + (consideredRounds === 1 ? "" : "s") +
+        "Across " + consideredRounds + " " + plural(consideredRounds, "round") +
         " where at least two of them submitted, whoever placed best takes the point." +
         (ties ? " " + ties + " ended tied between them." : ""));
       host.appendChild(title);
@@ -690,7 +684,7 @@
           '<div class="stand-rank">' + tally[id] + "</div>" +
           '<div><div class="stand-name">' + esc(nameOf(d, id)) + "</div>" +
           '<div class="bar"><i style="width:' + pct + '%"></i></div></div>' +
-          '<div class="stand-score"><span>round' + (tally[id] === 1 ? "" : "s") + ' won</span></div>';
+          '<div class="stand-score"><span>' + plural(tally[id], "round") + ' won</span></div>';
         tbox.appendChild(row);
       });
       host.appendChild(tbox);
@@ -1128,7 +1122,7 @@
     }
     var host = $("topTracks");
     host.innerHTML = "";
-    attachFilterTag(host, seasonData);
+    attachFilterTag(host, d);
     if (!all.length) { host.appendChild(empty(selected.length ? "No tracks from this selection." : "No tracks submitted yet.")); return; }
     var top = all.slice().sort(function (a, b) { return b.points - a.points; }).slice(0, 20);
     var box = el("div", "framed");
@@ -1136,15 +1130,12 @@
     host.appendChild(box);
   }
 
-
   function renderRounds(d) {
     // The collapsible Results by round under the leaderboard: one card per
     // round, each linking to that round's own page (rounds.js).
-    var host = $("rounds");
-    if (!host || !window.PFMLRounds) return;
-    window.PFMLRounds.renderList(host, d, {
+    window.PFMLRounds.renderList($("rounds"), d, {
       selected: selected.slice(),
-      filterTag: function (h) { attachFilterTag(h, seasonData); }
+      filterTag: function (h) { attachFilterTag(h, d); }
     });
   }
 
@@ -1270,6 +1261,25 @@
 
   function pct(rate) { return Math.round(rate * 100) + "%"; }
 
+  // Each player's distinctive word (build.py's distinctive_word), for a
+  // season's comments or All-Time's. Nothing when nobody has one yet.
+  function renderDistinctiveWords(rows, host) {
+    var words = rows.filter(function (c) { return c.distinctiveWord; });
+    if (!words.length) return;
+    var wbox = el("div", "framed cmt-words");
+    wbox.appendChild(el("h3", null, "Words they reach for more than anyone else"));
+    var list = el("div", "cmt-word-row");
+    words.forEach(function (c) {
+      list.insertAdjacentHTML("beforeend",
+        '<span class="cmt-word" title="' + esc(c.name) + " used it " + c.distinctiveWord.uses +
+        " times, " + c.distinctiveWord.vsLeague + '&times; the league\'s rate">' +
+        who(c.name, c.id) + ' <b>&ldquo;' + esc(c.distinctiveWord.word) + '&rdquo;</b> &times;' +
+        c.distinctiveWord.uses + '</span>');
+    });
+    wbox.appendChild(list);
+    host.appendChild(wbox);
+  }
+
   function commentQuote(c, label, stats) {
     var meta = [];
     if (c.trackTitle) meta.push(extLink(trackLink(c.spotifyId), c.trackTitle));
@@ -1378,21 +1388,7 @@
     });
     host.appendChild(box);
 
-    var words = rows.filter(function (c) { return c.distinctiveWord; });
-    if (words.length) {
-      var wbox = el("div", "framed cmt-words");
-      wbox.appendChild(el("h3", null, "Words they reach for more than anyone else"));
-      var list = el("div", "cmt-word-row");
-      words.forEach(function (c) {
-        list.insertAdjacentHTML("beforeend",
-          '<span class="cmt-word" title="' + esc(c.name) + " used it " + c.distinctiveWord.uses +
-          " times, " + c.distinctiveWord.vsLeague + '&times; the league\'s rate">' +
-          who(c.name, c.id) + ' <b>&ldquo;' + esc(c.distinctiveWord.word) + '&rdquo;</b> &times;' +
-          c.distinctiveWord.uses + '</span>');
-      });
-      wbox.appendChild(list);
-      host.appendChild(wbox);
-    }
+    renderDistinctiveWords(rows, host);
 
     // The longest comment, in full, because the length is the point. When
     // a player is selected it's theirs; otherwise it's the season's.
@@ -1522,29 +1518,18 @@
   }
 
   function initSeason(key) {
-    Promise.all([fetchJSON(DATA + "/index.json"), fetchJSON(DATA + "/" + key + ".json")])
+    Promise.all([PFML.loadJSON("index.json"), PFML.loadJSON(key + ".json")])
       .then(function (res) {
         var index = res[0], d = res[1];
         seasonData = d;
         knowPeople(d.competitors);
-        selected = [];
-        trendSelected = d.standings.map(function (p) { return p.id; });
-        trendMode = "standing";
         renderNav(index, key);
         document.title = "PFML - " + d.label;
         initStandingsFold();
         renderHero(d);
-        renderStandings(d);
-        renderFocus(d);
-        renderHighlights(d);
-        renderTrend(d);
-        renderTopTracks(d);
-        renderRounds(d);
-        renderTaste(d);
-        renderVoters(d);
-        renderComments(d);
-        renderArtists(d);
-        renderJumpNav(d);
+        // nobody selected yet, so this draws every section for the whole
+        // field, with every player on the trend chart
+        rerenderFiltered();
         scrollToHash();
       })
       .catch(function (err) {
@@ -1630,22 +1615,7 @@
     renderCareerCommentTable(rows);
 
     renderQuoteAwards(s, host);
-
-    var words = rows.filter(function (p) { return p.distinctiveWord; });
-    if (words.length) {
-      var wbox = el("div", "framed cmt-words");
-      wbox.appendChild(el("h3", null, "Words they reach for more than anyone else"));
-      var list = el("div", "cmt-word-row");
-      words.forEach(function (p) {
-        list.insertAdjacentHTML("beforeend",
-          '<span class="cmt-word" title="' + esc(p.name) + " used it " + p.distinctiveWord.uses +
-          " times, " + p.distinctiveWord.vsLeague + '&times; the league\'s rate">' +
-          who(p.name, p.id) + ' <b>&ldquo;' + esc(p.distinctiveWord.word) + '&rdquo;</b> &times;' +
-          p.distinctiveWord.uses + '</span>');
-      });
-      wbox.appendChild(list);
-      host.appendChild(wbox);
-    }
+    renderDistinctiveWords(rows, host);
 
     host.insertAdjacentHTML("beforeend",
       '<p class="block-note cmt-foot">' + s.totalComments + " comments, " +
@@ -1782,16 +1752,14 @@
   // Columns that add up to the Score, left to right: Score = Avg season +
   // Round Podium Pts + Season Podium Pts. Rounds says why a short career can
   // rank high, and who hasn't played enough to be scored yet.
-  function careerColumns() {
-    return [
-      { key: "name", label: "Player", align: "left" },
-      { key: "careerScore", label: "Score" },
-      { key: "avgSeason", label: "Avg season" },
-      { key: "roundBonus", label: "Round Podium Pts" },
-      { key: "seasonBonus", label: "Season Podium Pts" },
-      { key: "rounds", label: "Rounds" }
-    ];
-  }
+  var CAREER_COLUMNS = [
+    { key: "name", label: "Player", left: true },
+    { key: "careerScore", label: "Score" },
+    { key: "avgSeason", label: "Avg season" },
+    { key: "roundBonus", label: "Round Podium Pts" },
+    { key: "seasonBonus", label: "Season Podium Pts" },
+    { key: "rounds", label: "Rounds" }
+  ];
 
   // Unscored players (too few rounds) have no score parts: null, so they
   // sink to the bottom of any sort rather than topping "Avg season" on the
@@ -1803,8 +1771,6 @@
     return p[key];
   }
 
-  var PLACE_NAMES = { 1: "1st", 2: "2nd", 3: "3rd" };
-
   function careerRowHtml(p) {
     var f = p.roundFinishes || {};
     var dash = '<div class="num">&ndash;</div>';
@@ -1813,7 +1779,7 @@
       return html + dash + dash + dash + dash +
         '<div class="num">' + p.rounds + '<small class="cs-sub">needs ' + careerData.careerScoreFormula.minRounds + "</small></div>";
     }
-    var podiums = (p.seasonPodiums || []).map(function (s) { return PLACE_NAMES[s.place] + " " + s.label.replace("Season ", "S"); }).join(", ");
+    var podiums = (p.seasonPodiums || []).map(function (s) { return ordinal(s.place) + " " + s.label.replace("Season ", "S"); }).join(", ");
     return html +
       '<div class="num"><b>' + Math.round(p.careerScore) + "</b></div>" +
       '<div class="num">' + Math.round(p.avgSeason) + "</div>" +
@@ -1853,14 +1819,13 @@
     host.innerHTML = "";
     if (!c.players.length) { host.appendChild(empty("No completed seasons yet.")); return; }
 
-    var cols = careerColumns();
-    var gridStyle = "grid-template-columns:1.6fr repeat(" + (cols.length - 1) + ",1fr);";
+    var gridStyle = "grid-template-columns:1.6fr repeat(" + (CAREER_COLUMNS.length - 1) + ",1fr);";
 
     var head = el("div", "vrow head career-head");
     head.setAttribute("style", gridStyle);
-    cols.forEach(function (col) {
+    CAREER_COLUMNS.forEach(function (col) {
       var active = careerSort.field === col.key;
-      var b = el("button", "career-sort-btn" + (active ? " is-active" : "") + (col.align === "left" ? " is-left" : ""));
+      var b = el("button", "career-sort-btn" + (active ? " is-active" : "") + (col.left ? " is-left" : ""));
       b.type = "button";
       b.innerHTML = esc(col.label) + (active ? '<span class="arrow">' + (careerSort.dir === "asc" ? " \u2191" : " \u2193") + "</span>" : "");
       b.addEventListener("click", function () { setCareerSort(col.key); });
@@ -1882,7 +1847,7 @@
   }
 
   function initCareer() {
-    Promise.all([fetchJSON(DATA + "/index.json"), fetchJSON(DATA + "/career.json")])
+    Promise.all([PFML.loadJSON("index.json"), PFML.loadJSON("career.json")])
       .then(function (res) {
         var index = res[0], c = res[1];
         careerData = c;
@@ -1913,7 +1878,6 @@
       });
   }
 
-
   /* ---- profile page (profile?p=<competitor id>; yours without ?p) ----
      Totals and comment stats come from career.json, the rest (season
      finishes, best tracks, fans) from profiles.json, both built by
@@ -1925,10 +1889,6 @@
   }
 
   function profileUrl(id) { return "profile?p=" + encodeURIComponent(id); }
-
-  function avatarOf(id, name, cls) {
-    return window.PFML && window.PFML.avatar ? window.PFML.avatar(id, name, cls) : "";
-  }
 
   // Career Score rank with ties, the way Standings shares places, among
   // scored players only. null for someone with too few rounds to score.
@@ -1951,9 +1911,7 @@
       return box;
     }
     var rf = p.roundFinishes || {};
-    var podiums = (p.seasonPodiums || []).map(function (s) {
-      return { 1: "1st", 2: "2nd", 3: "3rd" }[s.place] + " in " + s.label;
-    }).join(", ");
+    var podiums = (p.seasonPodiums || []).map(function (s) { return ordinal(s.place) + " in " + s.label; }).join(", ");
     function part(value, label, sub) {
       return '<span class="pf-part"><b>' + value + "</b><span>" + label + "</span>" + (sub ? "<small>" + esc(sub) + "</small>" : "") + "</span>";
     }
@@ -2035,7 +1993,7 @@
     if (!tracks.length) { host.appendChild(empty("No tracks submitted yet.")); return; }
     var list = el("div", "rl");
     list.innerHTML = tracks.map(function (t) {
-      // profile.html doesn't load rounds.js, so no PFMLRounds.roundUrl here.
+      // the same address rounds.js's roundUrl() builds; profile.html doesn't load rounds.js
       var href = "round?s=" + encodeURIComponent(t.seasonKey) + "&r=" + encodeURIComponent(t.roundId);
       var art = t.art ? '<img class="rl-art" src="' + esc(t.art) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
                       : '<span class="rl-art is-empty" aria-hidden="true">&#9835;</span>';
@@ -2052,7 +2010,7 @@
   function peopleList(title, people, note) {
     var col = el("div", "pf-people");
     col.innerHTML = "<h3>" + esc(title) + "</h3>" + (people.length ? "<ol>" + people.map(function (x) {
-      return '<li><a href="' + profileUrl(x.id) + '">' + avatarOf(x.id, x.name) + "<span>" + esc(x.name) + "</span></a>" +
+      return '<li><a href="' + profileUrl(x.id) + '">' + PFML.avatar(x.id, x.name) + "<span>" + esc(x.name) + "</span></a>" +
         "<b>" + x.points + " <small>pts</small></b></li>";
     }).join("") + "</ol>" : '<p class="pf-none">' + esc(note) + "</p>");
     return col;
@@ -2090,33 +2048,29 @@
   // Live from Supabase, leaving out any they left on their own comments.
   function fillProfileReactions(id) {
     var tile = $("pfReacts");
-    var api = window.PFML && window.PFML.api;
-    if (!tile || !api || !api.reactionsOn) { if (tile) tile.hidden = true; return; }
-    Promise.all([api.reactionsOn(id), api.people()]).then(function (res) {
+    Promise.all([PFML.api.reactionsOn(id), PFML.api.people()]).then(function (res) {
       var counts = {}, total = 0;
       res[0].forEach(function (r) {
-        var who = res[1][r.user_id];
-        if (who && who.competitorId === id) return;
+        var member = res[1][r.user_id];
+        if (member && member.competitorId === id) return;
         counts[r.reaction] = (counts[r.reaction] || 0) + 1;
         total++;
       });
       var top = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a] || (a < b ? -1 : 1); }).slice(0, 5);
-      var glyph = window.PFML.reactionGlyph || function (k) { return k; };
       tile.querySelector(".hl-value").textContent = String(total);
-      var meta = top.map(function (k) { return glyph(k) + " " + counts[k]; }).join("  ");
+      var meta = top.map(function (k) { return PFML.reactionGlyph(k) + " " + counts[k]; }).join("  ");
       tile.insertAdjacentHTML("beforeend", '<div class="hl-meta pf-reacts">' + esc(meta || "none yet") + "</div>");
     }).catch(function () { tile.hidden = true; });
   }
 
   function initProfile() {
-    var me = window.PFML && window.PFML.member;
-    var myId = me ? me.competitorId : null;
-    var id = new URLSearchParams(location.search).get("p") || myId || "";
+    var myId = PFML.member.competitorId;
+    var id = new URLSearchParams(location.search).get("p") || myId;
     Promise.all([
-      fetchJSON(DATA + "/index.json"),
-      fetchJSON(DATA + "/career.json"),
+      PFML.loadJSON("index.json"),
+      PFML.loadJSON("career.json"),
       // null if not published yet: the page still shows what career.json has
-      fetchJSON(DATA + "/profiles.json").catch(function () { return null; })
+      PFML.loadJSON("profiles.json").catch(function () { return null; })
     ]).then(function (res) {
       var c = res[1], profiles = res[2];
       knowPeople(c.players);
@@ -2132,7 +2086,7 @@
         return;
       }
       document.title = "PFML - " + p.name;
-      $("pfId").innerHTML = avatarOf(p.id, p.name, "pf-av") + "<h1>" + esc(p.name) + "</h1>";
+      $("pfId").innerHTML = PFML.avatar(p.id, p.name, "pf-av") + "<h1>" + esc(p.name) + "</h1>";
       var r = careerRank(c.players, p);
       $("heroLine").textContent = (p.id === myId ? "Your profile. " : "") +
         (r ? (r.tied ? "Tied " : "") + ordinal(r.rank) + " of " + r.of + " by Career Score" : "Not scored yet (" + p.rounds + " of " + c.careerScoreFormula.minRounds + " rounds)") +
@@ -2162,7 +2116,7 @@
       page.innerHTML = '<section class="shell rp-head"><h1>Round not found</h1><p class="hero-line">This link is missing its season. <a href="./">Back to the home page</a>.</p></section>';
       return;
     }
-    Promise.all([fetchJSON(DATA + "/index.json"), fetchJSON(DATA + "/" + key + ".json")])
+    Promise.all([PFML.loadJSON("index.json"), PFML.loadJSON(key + ".json")])
       .then(function (res) {
         renderNav(res[0], key);
         window.PFMLRounds.renderRoundPage(res[1], roundId);
@@ -2191,6 +2145,5 @@
   }
 
   // Wait for auth.js to let a member in before touching any data.
-  if (window.PFML && window.PFML.ready) window.PFML.ready.then(boot);
-  else boot();
+  PFML.ready.then(boot);
 })();

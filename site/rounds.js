@@ -17,29 +17,26 @@
    "art" URL per track (cached by scripts/publish.py). The member layer
    comes from the comment_* tables through window.PFML.api (auth.js).
    Comments are keyed "<round id>|<spotify uri>|<voter id>", the id build.py
-   writes on each one. */
+   writes on each one. Avatars, reaction glyphs and "3h ago" times come
+   from account.js, so they match the header and profiles. */
 
 (function () {
   "use strict";
 
-  // The 6 reactions PFML has offered since the feature shipped, stored by
-  // this short name, not the emoji itself: comment_reactions rows already
-  // in Supabase use these exact values. Kept as a one-tap "quick" row in
-  // the picker so they still store the same value and count together with
-  // any reaction of the same kind added before this. Anything picked from
-  // the searchable grid below is new, and is stored as the emoji character
-  // itself (see site/emoji-data.js) rather than needing a name for it.
-  var LEGACY_REACT = { fire: "\uD83D\uDD25", laugh: "\uD83D\uDE02", hundred: "\uD83D\uDCAF",
-                        eyes: "\uD83D\uDC40", grimace: "\uD83D\uDE2C", heart: "\u2764\uFE0F" };
-  var LEGACY_REACT_ORDER = ["fire", "laugh", "hundred", "eyes", "grimace", "heart"];
+  var PFML = window.PFML;
+  var avatar = PFML.avatar, reactionGlyph = PFML.reactionGlyph, when = PFML.when;
 
-  // The glyph to show for a stored reaction value: LEGACY_REACT[key] for
-  // one of the 6 old names, or the value itself, since anything else is
-  // already the emoji character that was clicked.
-  function reactionGlyph(key) { return LEGACY_REACT[key] || key; }
+  // The 6 reactions PFML has offered since the feature shipped, stored by
+  // name (account.js has the names' glyphs). They're the one-tap "quick"
+  // row in the picker, so they keep storing the same value and count
+  // together with every earlier reaction of the same kind. Anything picked
+  // from the searchable grid is stored as the emoji character itself (see
+  // site/emoji-data.js) rather than needing a name for it.
+  var LEGACY_REACT_ORDER = ["fire", "laugh", "hundred", "eyes", "grimace", "heart"];
 
   var state = {
     host: null,            // element holding the round page's tracks
+    roundId: null,         // the round on this page
     names: {},             // competitor id -> name
     social: null,          // { votes, reactions, replies }, each grouped by comment id
     people: null,          // member user_id -> { name }
@@ -59,25 +56,16 @@
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
     });
   }
-  function plural(n, one, many) { return n + " " + (n === 1 ? one : (many || one + "s")); }
-  function api() { return window.PFML && window.PFML.api; }
-  function me() { return api() ? api().me() : null; }
-  function isAdmin() { return !!(window.PFML && window.PFML.member && window.PFML.member.role === "admin"); }
+  // "3 tracks": the number and its noun. (app.js's plural() is the noun alone.)
+  function counted(n, one, many) { return n + " " + (n === 1 ? one : (many || one + "s")); }
+  function api() { return PFML.api; }
+  function me() { return api().me(); }
+  function isAdmin() { return PFML.member.role === "admin"; }
   function cssEscape(s) { return window.CSS && CSS.escape ? CSS.escape(s) : String(s).replace(/["\\]/g, "\\$&"); }
 
   function ordinal(n) {
     var s = ["th", "st", "nd", "rd"], v = n % 100;
     return n + (s[(v - 20) % 10] || s[v] || s[0]);
-  }
-
-  function when(iso) {
-    var d = new Date(iso);
-    if (isNaN(d.getTime())) return "";
-    var mins = Math.round((Date.now() - d.getTime()) / 60000);
-    if (mins < 1) return "just now";
-    if (mins < 60) return mins + "m ago";
-    if (mins < 60 * 24) return Math.round(mins / 60) + "h ago";
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   }
 
   function dateOf(iso) {
@@ -89,17 +77,6 @@
     var out = {};
     rows.forEach(function (r) { (out[r.comment_id] = out[r.comment_id] || []).push(r); });
     return out;
-  }
-
-  // Initials in a coloured circle, standing in for the profile photos
-  // Music League has and the export doesn't. The colour is fixed per
-  // player (from their id), so the same person always looks the same.
-  function avatar(id, name) {
-    var words = String(name || "?").trim().split(/\s+/);
-    var initials = (words.length > 1 ? words[0][0] + words[words.length - 1][0] : String(name || "?").slice(0, 2)).toUpperCase();
-    var h = 0;
-    String(id || name).split("").forEach(function (c) { h = (h * 31 + c.charCodeAt(0)) % 360; });
-    return '<span class="av" style="background:hsl(' + h + ',48%,42%)" aria-hidden="true">' + esc(initials) + "</span>";
   }
 
   function artHtml(url, cls) {
@@ -142,7 +119,7 @@
     });
 
     var count = document.getElementById("rrCount");
-    if (count) count.textContent = selected.length ? shown.length + " of " + plural(d.rounds.length, "round") : plural(d.rounds.length, "round");
+    if (count) count.textContent = selected.length ? shown.length + " of " + counted(d.rounds.length, "round") : counted(d.rounds.length, "round");
     renderPreview(shown);
 
     if (!d.rounds.length) { host.insertAdjacentHTML("beforeend", '<div class="empty">No rounds posted yet this season.</div>'); return; }
@@ -158,7 +135,7 @@
         '<span class="rl-text"><span class="rl-num">Round ' + x.n + (r.created ? " &middot; " + esc(dateOf(r.created)) : "") + "</span>" +
         '<span class="rl-name">' + esc(r.name) + "</span>" +
         (sub ? '<span class="rl-sub">' + sub + "</span>" : "") +
-        (status ? "" : '<span class="rl-counts">' + plural(c.tracks, "track") + " &middot; " + plural(c.votes, "vote") + " &middot; " + plural(c.comments, "comment") + "</span>") +
+        (status ? "" : '<span class="rl-counts">' + counted(c.tracks, "track") + " &middot; " + counted(c.votes, "vote") + " &middot; " + counted(c.comments, "comment") + "</span>") +
         '</span><span class="rl-go" aria-hidden="true">&rarr;</span></a>';
     }).join("") + "</div>");
   }
@@ -298,7 +275,7 @@
     LEGACY_REACT_ORDER.forEach(function (k) {
       var g = groups.indexOf(LEGACY_META[k][1]);
       if (g === -1) return;
-      var e = entry(LEGACY_REACT[k], k, LEGACY_META[k][0], g);
+      var e = entry(esc(reactionGlyph(k)), k, LEGACY_META[k][0], g);
       e.words.push(k);   // PFML's own name for it too, so "laugh" finds 😂
       legacy.push(e);
     });
@@ -344,7 +321,7 @@
     var quick = LEGACY_REACT_ORDER.map(function (k) {
       var on = reacts[k] && reacts[k].mine;
       return '<button type="button" class="cm-pick' + (on ? " is-on" : "") + '" data-act="react" data-r="' + k +
-        '" aria-label="' + k + '" aria-pressed="' + !!on + '">' + LEGACY_REACT[k] + "</button>";
+        '" aria-label="' + k + '" aria-pressed="' + !!on + '">' + esc(reactionGlyph(k)) + "</button>";
     }).join("");
     return '<div class="cm-picker" role="dialog" aria-label="Add a reaction">' +
       '<div class="cm-picker-quick">' + quick +
@@ -391,7 +368,7 @@
       list = found.slice(0, SEARCH_LIMIT);
       text = !found.length ? "No emoji match “" + input.value.trim() + "”."
         : found.length > SEARCH_LIMIT ? "Top " + SEARCH_LIMIT + " of " + found.length + " matches"
-        : plural(found.length, "match", "matches");
+        : counted(found.length, "match", "matches");
     } else {
       list = emojiIndex().filter(function (e) { return e.group === state.emojiGroup; });
       text = emojiGroups()[state.emojiGroup] || "";
@@ -436,7 +413,7 @@
 
     var thread = "";
     if (open) {
-      var self = window.PFML && window.PFML.member;
+      var self = PFML.member;
       var draft = state.drafts[c.id] || "";
       thread = '<div class="cm-thread">' + replies.map(function (r) {
         var canDelete = r.user_id === uid || admin;
@@ -447,8 +424,7 @@
             (canDelete ? '<button type="button" class="cm-del" data-act="delete" data-reply="' + r.id + '">Delete</button>' : "") +
           '</div><div class="cm-reply-body">' + esc(r.body) + "</div></div></div>";
       }).join("") +
-        '<form class="cm-form" data-act="reply">' +
-        (self ? avatar(self.competitorId, self.name) : "") +
+        '<form class="cm-form" data-act="reply">' + avatar(self.competitorId, self.name) +
         '<div class="cm-compose">' +
           '<label class="cm-sr" for="r-' + esc(c.id) + '">Reply to ' + esc(c.voterName) + "</label>" +
           '<textarea id="r-' + esc(c.id) + '" rows="1" maxlength="2000" placeholder="Reply to ' + esc(c.voterName) + '…">' + esc(draft) + "</textarea>" +
@@ -467,7 +443,7 @@
           (state.picker === c.id ? "&times;" : ADD_REACTION_ICON) + "</button>" + picker +
       "</span>" +
       '<button type="button" class="cm-chip cm-reply-btn' + (open ? " is-on" : "") + '" data-act="thread" aria-expanded="' + open + '" ' +
-        'aria-label="' + (open ? "Hide replies" : replies.length ? plural(replies.length, "reply", "replies") + ", show" : "Reply") + '">' +
+        'aria-label="' + (open ? "Hide replies" : replies.length ? counted(replies.length, "reply", "replies") + ", show" : "Reply") + '">' +
         REPLY_ICON + "<span>" + (replies.length ? replies.length : "Reply") + "</span></button>" +
       "</div>" + thread;
   }
@@ -511,7 +487,7 @@
           '<p class="rp-artist">' + esc(s.artistText) + "</p>" +
           (s.album ? '<p class="rp-album">' + esc(s.album) + "</p>" : "") +
         "</div>" +
-        '<div class="rp-score"><b>' + pointsLabel(s.points) + "</b><span>" + plural(voters, "voter") + "</span></div>" +
+        '<div class="rp-score"><b>' + pointsLabel(s.points) + "</b><span>" + counted(voters, "voter") + "</span></div>" +
       "</div>" +
       '<div class="rp-submitter">' + avatar(s.submitterId, s.submitterName) +
         "<span>Submitted by <b>" + personLink(s.submitterId, s.submitterName) + "</b></span>" +
@@ -562,6 +538,7 @@
       return;
     }
     var r = d.rounds[i], c = roundCounts(r), status = roundStatus(r), top = winners(r);
+    state.roundId = r.id;
     state.names = {};
     (d.competitors || []).forEach(function (p) { state.names[p.id] = p.name; });
     document.title = "PFML - " + r.name;
@@ -580,8 +557,8 @@
         (winLine ? '<p class="rp-winner">' + winLine + "</p>" : "") +
         '<div class="rp-meta">' +
           (status ? '<span class="rp-chip">' + esc(status) + "</span>"
-                  : '<span class="rp-chip">' + plural(c.tracks, "track") + '</span><span class="rp-chip">' + plural(c.votes, "vote") +
-                    '</span><span class="rp-chip">' + plural(c.comments, "comment") + "</span>") +
+                  : '<span class="rp-chip">' + counted(c.tracks, "track") + '</span><span class="rp-chip">' + counted(c.votes, "vote") +
+                    '</span><span class="rp-chip">' + counted(c.comments, "comment") + "</span>") +
           (r.playlistUrl ? '<a class="pill" href="' + esc(r.playlistUrl) + '" target="_blank" rel="noopener">Round playlist &nearr;</a>' : "") +
         "</div>" + navHtml(d, i, "top") +
       "</section>" +
@@ -617,7 +594,6 @@
       visualViewport.addEventListener("resize", fitSheetToViewport);
       visualViewport.addEventListener("scroll", fitSheetToViewport);
     }
-    if (!api()) return;
     Promise.all([api().people(), loadSocial(r.id)]).then(function (res) {
       state.people = res[0];
       renderTracks(r);
@@ -627,7 +603,6 @@
       state.host.insertAdjacentHTML("afterbegin",
         '<p class="rp-empty">Couldn\u2019t load member votes and replies: ' + esc(err && err.message ? err.message : err) + "</p>");
     });
-    state.roundId = r.id;
   }
 
   // Brings the linked comment into view and marks it briefly. Instant, not
@@ -852,5 +827,5 @@
     if (card) fillEmojiGrid(picker, card.getAttribute("data-id"));
   }
 
-  window.PFMLRounds = { renderList: renderList, renderRoundPage: renderRoundPage, roundUrl: roundUrl };
+  window.PFMLRounds = { renderList: renderList, renderRoundPage: renderRoundPage };
 })();

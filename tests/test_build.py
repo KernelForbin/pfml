@@ -1,6 +1,7 @@
 """scripts/build.py: the scoring rules the site shows. Offline, made-up data."""
 import json
 import os
+import re
 import subprocess
 import sys
 import textwrap
@@ -179,8 +180,7 @@ class Main(unittest.TestCase):
             make_season(root / "data" / "season1", [TIE_ROUND, SECOND_ROUND])
             build.main()
             index = json.loads((root / "site" / "data" / "index.json").read_text(encoding="utf-8"))
-        self.assertEqual(index["seasons"][0]["liveRound"],
-                         {"number": 2, "name": "Round Two", "submissionCount": 2})
+        self.assertEqual(index["seasons"][0]["liveRound"], {"number": 2, "name": "Round Two"})
 
 
 class CareerScore(unittest.TestCase):
@@ -415,6 +415,124 @@ class Lookup(unittest.TestCase):
             lookup = json.loads((out / "lookup.json").read_text(encoding="utf-8"))
         self.assertEqual(sorted(profiles["players"]), ["p1", "p2", "p3", "p4"])
         self.assertIn("r1", lookup["rounds"])
+
+
+class SeasonFolders(unittest.TestCase):
+    def test_numeric_order_and_only_season_folders(self):
+        # build.py, publish.py and enrich_comments.py all walk seasons with
+        # this; a plain sort would put season10 before season2.
+        with sandbox() as root:
+            for name in ("season10", "season2", "season1", "seasonX", "notes"):
+                (root / "data" / name).mkdir()
+            (root / "data" / "season3").write_text("a file, not a folder", encoding="utf-8")
+            self.assertEqual([p.name for p in build.season_folders()], ["season1", "season2", "season10"])
+
+
+class PointBudget(unittest.TestCase):
+    """The points every voter spends a round, read from the votes: 16 in
+    Seasons 1 and 2, 19 in Season 3 (README, Scoring model)."""
+
+    @staticmethod
+    def votes(*rows):
+        return {(r, f"t{i}", v): pts for i, (r, v, pts) in enumerate(rows)}
+
+    def test_most_common_round_total_wins(self):
+        self.assertEqual(build.point_budget(self.votes(
+            ("r1", "a", 10), ("r1", "a", 9), ("r1", "b", 19), ("r2", "a", 19), ("r2", "b", 11))), 19)
+
+    def test_comment_only_voters_say_nothing_about_it(self):
+        # three voters who only commented total 0; one real voter totals 16
+        self.assertEqual(build.point_budget(self.votes(
+            ("r1", "a", 0), ("r1", "b", 0), ("r1", "c", 0), ("r1", "d", 16))), 16)
+
+    def test_a_tie_takes_the_larger_number_and_no_votes_is_none(self):
+        self.assertEqual(build.point_budget(self.votes(("r1", "a", 11), ("r1", "b", 16))), 16)
+        self.assertIsNone(build.point_budget({}))
+
+
+def rich_season(tag, rounds=12):
+    """A made-up season with something in every section: comments from
+    everyone on everything (enough for rates, superlatives and distinctive
+    words), notes, zero-point rows, shouting, emoji and long comments."""
+    players = ["p1", "p2", "p3", "p4"]
+    words = ["banger", "groove", "vibes", "anthem", "melody", "tempo"]
+    out = []
+    for r in range(rounds):
+        subs = [(f"{tag}t{r}{p}", p, f"my note, {words[r % 6]}" if r % 2 == 0 else "") for p in players]
+        votes = []
+        for v in players:
+            pts = 3
+            for track, submitter, _ in subs:
+                if submitter == v:
+                    votes.append((v, track, 0, f"my own pick, {words[r % 6]} {words[r % 6]}"))
+                    continue
+                w = words[(r + int(v[1])) % 6]
+                votes.append((v, track, max(pts, 0),
+                              f"{w} {w} {w} LOVE THIS GROOVE!!! really??? \U0001F525\U0001F525\U0001F525 " + "word " * (r + 1)))
+                pts -= 1
+        out.append({"id": f"{tag}r{r}", "name": f"{tag} round {r}", "created": f"2025-01-{10 + r:02d}T00:00:00Z",
+                    "subs": subs, "votes": votes})
+    return out
+
+
+class EverythingWrittenIsRead(unittest.TestCase):
+    """Members download the season files on every season page, so a field
+    no page reads is weight for nothing. One did that unnoticed: the full
+    comment matrix, about 46 KB in each finished season, with ~20 smaller
+    fields. Every key the build writes must be read by the site's scripts,
+    or be listed here with why it stays."""
+
+    KEPT = {
+        # working values: the build computes with them on the way to
+        # something the page shows, and they land in the output with it
+        "votePoints": "avgPerSubmission, which leaves a Daily Double bonus out",
+        "roundsVoted": "the voting-style averages",
+        "tracksBackedTotal": "avgTracksBacked",
+        "vocabRichnessSampled": "Widest vocabulary",
+        "bestSeasonPoints": "Best single season",
+        "bestSeasonKey": "Best single season",
+        # the season's Daily Double record, for checking a publish
+        # (README, Daily Double); the page reads the per-player and
+        # per-track entries instead
+        "reviewedRounds": "Daily Double record", "unreviewedRounds": "Daily Double record",
+        "playerId": "Daily Double record", "playerName": "Daily Double record",
+        "basePoints": "Daily Double record",
+    }
+
+    def test_every_key_in_every_file_is_read_or_kept_on_purpose(self):
+        with sandbox() as root, quiet():
+            make_season(root / "data" / "season1", rich_season("a"))
+            s2 = rich_season("b")
+            make_season(root / "data" / "season2", s2, daily_doubles={
+                "reviewedRounds": [{"roundId": r["id"]} for r in s2],
+                "requests": [dd_request(s2[0]["id"], s2[0]["subs"][0][0], "p1")]})
+            build.main()
+            files = {f.name: json.loads(f.read_text(encoding="utf-8"))
+                     for f in (root / "site" / "data").glob("*.json")}
+        self.assertEqual(sorted(files), ["career.json", "index.json", "lookup.json", "profiles.json",
+                                         "season1.json", "season2.json"])
+        js = "".join((ROOT / "site" / f).read_text(encoding="utf-8")
+                     for f in ("app.js", "rounds.js", "account.js", "auth.js"))
+        id_like = re.compile(r"p\d|[ab]r\d+|season\d+|spotify:track:\w+")   # keys that are data, not names
+
+        def walk(node, path):
+            if isinstance(node, dict):
+                for k, v in node.items():
+                    yield k, path + "." + k
+                    yield from walk(v, path + "." + k)
+            elif isinstance(node, list):
+                for x in node:
+                    yield from walk(x, path + "[]")
+
+        seen = set()
+        for name, data in files.items():
+            for key, path in walk(data, name):
+                if id_like.fullmatch(key) or key in self.KEPT or key in seen:
+                    continue
+                seen.add(key)
+                with self.subTest(path):
+                    self.assertRegex(js, r"[.\"']" + re.escape(key) + r"\b", f"{path} is written but never read")
+        self.assertGreater(len(seen), 120, "the fixture should exercise most of the output")
 
 
 class Deterministic(unittest.TestCase):

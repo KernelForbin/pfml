@@ -12,16 +12,22 @@
 
    Round and track names for inbox items come from data/lookup.json (a few
    tens of KB, built by scripts/build.py), fetched only when the inbox is
-   first opened. Also exposes PFML.avatar and PFML.reactionGlyph for the
-   profile page. */
+   first opened.
+
+   Also the one home of three display helpers, so a person, a reaction and
+   a time look the same in the header, on a round page and on a profile:
+   PFML.avatar, PFML.reactionGlyph and PFML.when. Every members-only page
+   loads this right after auth.js and before rounds.js and app.js. */
 
 (function () {
   "use strict";
 
   var PFML = window.PFML;
-  if (!PFML || !PFML.ready) return;
 
-  // Same as rounds.js: the original 6 reactions are stored by name.
+  // The 6 reactions PFML has offered since the feature shipped are stored
+  // by these names, not as the emoji: comment_reactions rows already in
+  // Supabase use these exact values (README, Reactions). Anything else is
+  // stored as the emoji character itself, so it is its own glyph.
   var LEGACY_REACT = { fire: "\uD83D\uDD25", laugh: "\uD83D\uDE02", hundred: "\uD83D\uDCAF",
                         eyes: "\uD83D\uDC40", grimace: "\uD83D\uDE2C", heart: "\u2764\uFE0F" };
   function reactionGlyph(key) { return LEGACY_REACT[key] || key; }
@@ -32,8 +38,9 @@
     });
   }
 
-  // Same initials and colour as rounds.js's avatar(), so a person looks
-  // the same in the header, the inbox and on a round page.
+  // Initials in a coloured circle, standing in for the profile photos
+  // Music League has and the export doesn't. The colour is fixed per
+  // player (from their id), so the same person always looks the same.
   function avatar(id, name, cls) {
     var words = String(name || "?").trim().split(/\s+/);
     var initials = (words.length > 1 ? words[0][0] + words[words.length - 1][0] : String(name || "?").slice(0, 2)).toUpperCase();
@@ -42,9 +49,7 @@
     return '<span class="av' + (cls ? " " + cls : "") + '" style="background:hsl(' + h + ',48%,42%)" aria-hidden="true">' + esc(initials) + "</span>";
   }
 
-  PFML.avatar = avatar;
-  PFML.reactionGlyph = reactionGlyph;
-
+  // "just now", "5m ago", "3h ago", "2d ago", then a date after a week.
   function when(iso) {
     var d = new Date(iso);
     if (isNaN(d.getTime())) return "";
@@ -56,6 +61,10 @@
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   }
 
+  PFML.avatar = avatar;
+  PFML.reactionGlyph = reactionGlyph;
+  PFML.when = when;
+
   // A tray with a notch: an inbox, drawn rather than an emoji character,
   // so it's the same flat icon on every device (see ADD_REACTION_ICON).
   var INBOX_ICON =
@@ -65,6 +74,7 @@
     "</svg>";
 
   var REFRESH_MS = 60 * 1000;
+  var INBOX_SIZE = 40;      // items shown, newest first
 
   var state = {
     member: null,
@@ -105,7 +115,7 @@
 
     $("acctInboxBtn").addEventListener("click", function () { toggle("inbox"); });
     $("acctMeBtn").addEventListener("click", function () { toggle("menu"); });
-    $("acctSignOut").addEventListener("click", function () { if (PFML.signOut) PFML.signOut(); });
+    $("acctSignOut").addEventListener("click", function () { PFML.signOut(); });
     document.addEventListener("click", closeFromOutside);
     document.addEventListener("keydown", closeOnEscape);
     document.addEventListener("visibilitychange", function () {
@@ -150,10 +160,9 @@
   /* ---- the inbox ---- */
 
   function refresh() {
-    if (!api() || !api().inbox) return;
     state.fetchedAt = Date.now();
     Promise.all([
-      api().inbox(state.member.competitorId),
+      api().inbox(state.member.competitorId, INBOX_SIZE),
       // undefined when the database can't say (the migration adding
       // inbox_seen_at not run yet): the list still works, just no count
       api().inboxSeenAt().catch(function () { return undefined; })
@@ -164,7 +173,7 @@
         return { kind: "reply", commentId: r.comment_id, userId: r.user_id, at: r.created_at, body: r.body };
       }));
       items.sort(function (a, b) { return a.at < b.at ? 1 : a.at > b.at ? -1 : 0; });
-      state.items = items.slice(0, 40);
+      state.items = items.slice(0, INBOX_SIZE);
       // Keep the later time: a refresh that started before the inbox was
       // opened (and marked seen) mustn't bring the old count back.
       var seen = res[1];

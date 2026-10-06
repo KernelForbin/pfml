@@ -19,10 +19,10 @@ WHAT IT DOES
   hot_take, appreciative, storytelling, analytical. Each label comes with
   a strength from 1 (a touch) to 3 (the whole point of the comment), so the
   site can crown single comments (funniest, meanest...) and not just count
-  them, plus a one-line rationale. Results are keyed by
-  a stable comment id (round id + spotify uri + voter id), the same id
-  build.py computes in comment_id(), so a re-run after a fresh export only
-  pays for comments it hasn't already labelled.
+  them, plus a one-line rationale. Results are keyed by a stable comment
+  id (round id + spotify uri + voter id), made by build.py's comment_id(),
+  so a re-run after a fresh export only pays for comments it hasn't
+  already labelled.
 
 USAGE
   pip install anthropic            # local only; build.py stays stdlib-only
@@ -40,27 +40,26 @@ COST
   usually finishes well inside an hour.
 """
 import argparse
-import csv
 import json
 import os
-import re
 import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-DATA_DIR = ROOT / "data"
-OUT_PATH = DATA_DIR / "comment_sentiment.json"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import build  # noqa: E402  (stdlib only; read here, never the other way round)
+
+ROOT = build.ROOT
+OUT_PATH = build.SENTIMENT_PATH
 
 MODEL = "claude-opus-5"
 
-# Must match SENTIMENT_LABELS in build.py (a test checks). build.py drops
-# anything outside this set rather than rendering it, so adding a label here
-# means adding it there too. "rude" from the first version became "mean"
-# and "angry": nothing had ever been labelled with it.
-LABELS = ["funny", "witty", "angry", "mean", "heartfelt", "hot_take",
-          "appreciative", "storytelling", "analytical"]
-STRENGTHS = (1, 2, 3)
+# The labels and strengths build.py knows how to render. It drops anything
+# else, so they come from there: to add a label, add it to build.py's
+# SENTIMENT_LABELS. "rude" from the first version became "mean" and
+# "angry": nothing had ever been labelled with it.
+LABELS = list(build.SENTIMENT_LABELS)
+STRENGTHS = build.SENTIMENT_STRENGTHS
 
 # How many comments go in one request. They're short (~15 words average),
 # so batching many per request keeps the per-comment overhead of the system
@@ -107,34 +106,18 @@ what decided it. No preamble.
 - Judge only the comment text. You do not know who wrote it."""
 
 
-def comment_id(round_id, uri, voter_id):
-    """Must stay identical to comment_id() in build.py."""
-    return "%s|%s|%s" % (round_id, uri, voter_id)
-
-
-def read_csv(path):
-    if not path.exists():
-        return []
-    with open(path, newline="", encoding="utf-8-sig") as f:
-        return list(csv.DictReader(f))
-
-
 def collect_comments(season_filter=None):
     """Every voter comment across every season, in a stable order."""
     out = []
-    folders = sorted(
-        [p for p in DATA_DIR.iterdir() if p.is_dir() and re.fullmatch(r"season\d+", p.name)],
-        key=lambda p: int(re.search(r"\d+", p.name).group()),
-    )
-    for folder in folders:
+    for folder in build.season_folders():
         if season_filter and folder.name != season_filter:
             continue
-        for v in read_csv(folder / "votes.csv"):
+        for v in build.read_csv(folder / "votes.csv"):
             text = (v.get("Comment") or "").strip()
             if not text:
                 continue
             out.append({
-                "id": comment_id(v["Round ID"], v["Spotify URI"], v["Voter ID"]),
+                "id": build.comment_id(v["Round ID"], v["Spotify URI"], v["Voter ID"]),
                 "text": text,
                 "season": folder.name,
             })

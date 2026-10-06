@@ -1,5 +1,58 @@
 # Changelog
 
+## 2026-10-05 (follow-up 2): code review
+
+- **Members download about 118 KB less** (4.1% of the data files). Each
+  finished season's file carried the whole comment matrix, about 46 KB
+  that no page shows (only Silent treatment and Most talked at come from
+  it, and they're still worked out in the build), plus about 20 smaller
+  fields nothing read: `topVote`, `playlistId`, `voterCount`,
+  `submissionCount`, `emojiRate`, `uniqueWords`, the raw `vocabRichness`,
+  `voteRows`, `chars`, `trackArtist`, `defaultSeason`, `totalSeasons`,
+  `bySeason` and a few running totals the build never used. Rebuilt from
+  the real exports and compared with the published files, every one is
+  identical apart from those keys: no number on the site moves. A new test
+  builds a made-up league with something in every section and fails if
+  the build writes a field no page reads (a short list of working values
+  and the Daily Double record stays, each with its reason).
+- **One copy of the shared display helpers.** The initials avatar, the
+  reaction glyphs and the "3h ago" times live in `account.js` only;
+  `rounds.js` had its own copies, kept in step by tests, and its time had
+  drifted anyway: a reply a few days old read as a date on its round page
+  but "3d ago" in the inbox. Both now say "2d ago" up to a week, then the
+  date. That's the one thing a member could notice.
+- **Dead code out:** `PFML.mediaUrl` (the clip was its only user),
+  `PFML.client`, the unused `PFMLRounds.roundUrl` export, and every check
+  in `app.js`, `rounds.js` and `account.js` for scripts that always load
+  first (a test pins that load order now, including `rounds.js`). The
+  inbox limit is passed by `account.js` rather than being 40 in two files.
+  `app.js` had the "Words they reach for" block twice and its season
+  render list twice; each is one now. `rounds.js`'s `plural()`, which
+  includes the number unlike `app.js`'s, is renamed `counted()`.
+- **Python:** the season-folder scan is one function, `build.season_folders()`,
+  where build, publish and enrich_comments each had a copy.
+  `enrich_comments.py` takes its labels, comment ids and CSV reader from
+  `build.py` instead of keeping copies (its CSV reader had lost the CRLF
+  fix). The point budget is its own function, with tests. Stale docstrings
+  ("both seasons", "Season 2 did not") fixed.
+- **Docs:** README sections back where they belong (the top bar, links
+  surviving sign-in, local preview, partly played seasons), the file tree,
+  test coverage and comment metrics brought up to date. Ten CHANGELOG
+  headings dated 2026-09-22 and 2026-09-23 were work committed on the
+  evening of 2026-09-21; relabelled from git history as 2026-09-21
+  follow-ups 14 to 23, with the undated members-only entry dated. CLAUDE.md:
+  a page stub must now set `PFML.member` and load the real `account.js`.
+- **Repo:** a stray `.env - Copy.example` (byte-identical to the template,
+  git-ignored, no secret in it) and ten fully merged local branches
+  (bundled outside the repo first). `viewer-invites` stays, parked.
+- **Verified:** suite 194 passing (6 tests retired with what they pinned,
+  9 added); each new test fails on its own break in a scratch clone (11
+  breaks). In a browser against the new real-data build: Home, Seasons 1
+  and 3 (filtering, comparing), a round page (votes, both kinds of stored
+  reaction, replies, the picker and its search), All-Time (sorting) and
+  profiles, at 375px and 1280px, with no horizontal overflow and no script
+  errors.
+
 ## 2026-10-05 (follow-up): deploy timeouts, and a correction
 
 - **Job timeouts go 10 → 30 minutes; the tight bounds move to the steps**
@@ -254,7 +307,7 @@ a test shown to fail without it. Every page was checked at 375px and
   with "needs 10". The note, profile rank (among scored players) and the
   "Highest career score" highlight follow the new formula.
 
-## 2026-09-23 (follow-up 5)
+## 2026-09-21 (follow-up 23)
 
 - **Season page tables scroll sideways on phones too.** Voting style and
   the comment table keep every column (they used to drop one and four),
@@ -263,7 +316,7 @@ a test shown to fail without it. Every page was checked at 375px and
   heading (71px) ran into the next column at 56px, on All-Time as well.
   The season comment table also gets the standard space under its awards.
 
-## 2026-09-23 (follow-up 4)
+## 2026-09-21 (follow-up 22)
 
 - **All-Time tables on phones.** All-time standings and the comment table
   keep every column and scroll sideways inside their box, with names
@@ -277,7 +330,7 @@ a test shown to fail without it. Every page was checked at 375px and
   (starts by comments, most first).
 - **Standard spacing** between the comment awards and that table.
 
-## 2026-09-23 (follow-up 3)
+## 2026-09-21 (follow-up 21)
 
 - **Names link to profiles almost everywhere**, looking exactly as before:
   season highlights and comment awards (including "Tied with" lines), top
@@ -287,7 +340,7 @@ a test shown to fail without it. Every page was checked at 375px and
   tap targets already); tapping a row puts the name, as a link, at the top
   of the focus panel.
 
-## 2026-09-23 (follow-up 2)
+## 2026-09-21 (follow-up 20)
 
 - **Top bar: Home | Season ▾ | All-Time.** One season button replaces a tab
   per season: it names the season you're on (or the one in progress) and
@@ -307,7 +360,7 @@ a test shown to fail without it. Every page was checked at 375px and
 - **Names link to profiles** on round pages (voters, submitters, the
   winner line, reply authors), looking exactly as before.
 
-## 2026-09-23 (follow-up)
+## 2026-09-21 (follow-up 19)
 
 - **Profile tiles fit phones.** The six Career tiles sit three rows of two
   on a phone (smaller boxes, measured 163px wide at 390px, nothing
@@ -316,7 +369,7 @@ a test shown to fail without it. Every page was checked at 375px and
   top three, so consistency shows, not just wins. Rounds won now shows its
   share of their tracks instead of the podium count.
 
-## 2026-09-23
+## 2026-09-21 (follow-up 18)
 
 - **Inbox.** A tray icon at the top right of every members-only page
   lists reactions and replies other members leave on your vote comments,
@@ -338,7 +391,7 @@ a test shown to fail without it. Every page was checked at 375px and
   files are ~1MB each; these are ~50KB). Both published by `publish.py`
   like the rest.
 
-## 2026-09-22 (follow-up 3)
+## 2026-09-21 (follow-up 17)
 
 - **Emoji search didn't filter at all.** It set `hidden` on non-matching
   buttons, but the buttons' own CSS `display: inline-grid` beats the
@@ -347,7 +400,7 @@ a test shown to fail without it. Every page was checked at 375px and
   category headings vanished, which looked like partial filtering; on iOS
   it looked like nothing happened. The earlier check counted the attribute,
   not what was displayed, so it passed wrongly.
-- **The picker was slow to open.** Correction to follow-up 2: "about 9ms"
+- **The picker was slow to open.** Correction to follow-up 16: "about 9ms"
   timed only the script building the HTML. The browser then had to lay out
   all 1,908 buttons, which took about a second on a desktop the first time.
 - **Reaction picker rebuilt.** Tapping add now shows only the 6 quick
@@ -366,7 +419,7 @@ a test shown to fail without it. Every page was checked at 375px and
   name and points sit on a subtle full-width magenta gradient, so it's
   clear where one voter's comment ends and the next begins.
 
-## 2026-09-22 (follow-up 2)
+## 2026-09-21 (follow-up 16)
 
 - **"Standings" is now "Season Standings"** on season pages, so it reads
   apart from Career's "All-time standings". The jump-bar link stays
@@ -391,7 +444,7 @@ a test shown to fail without it. Every page was checked at 375px and
   run by hand in the SQL Editor. It finds the old constraint by its
   definition rather than a guessed name.
 
-## 2026-09-22 (follow-up)
+## 2026-09-21 (follow-up 15)
 
 - **Tapping names in Standings no longer shifts the list on a phone.**
   Measured on the live site at 375px with scroll anchoring off (Safari
@@ -409,7 +462,7 @@ a test shown to fail without it. Every page was checked at 375px and
   devices with a real hover (`@media (hover: hover)`), and the grey tap
   flash is off on them.
 
-## 2026-09-22
+## 2026-09-21 (follow-up 14)
 
 - **No "Signing you in" card when you're already signed in.** `auth.js`
   showed that card on every page load while it checked the session and
@@ -574,7 +627,7 @@ a test shown to fail without it. Every page was checked at 375px and
   content moved into Round results) and Career moved to a card on the Home
   page.
 
-## Members-only site and comments page (branch: members-only)
+## 2026-09-21: members-only site and comments page (branch members-only, merged)
 
 - **The site is members-only.** Every page is behind Google sign-in, and a
   Google account only gets in once it's linked to a Music League player

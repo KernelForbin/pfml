@@ -421,7 +421,7 @@ class ReactionPicker(unittest.TestCase):
         for key, _name, group in entries:
             self.assertIn(group, groups, key)
         index = self.function(js, "function emojiIndex()")
-        self.assertIn("entry(LEGACY_REACT[k], k,", index, "stored by its old name, not the glyph")
+        self.assertIn("entry(esc(reactionGlyph(k)), k,", index, "stored by its old name, not the glyph")
 
     def test_search_box_does_not_make_ios_zoom(self):
         # iOS Safari/Chrome zoom the whole page into any input under 16px.
@@ -483,12 +483,22 @@ class AccountCorner(unittest.TestCase):
     """account.js: the header's inbox and initials menu, on every page."""
 
     def test_every_member_page_loads_it_between_auth_and_the_page_code(self):
+        # app.js and rounds.js use window.PFML and account.js's helpers
+        # without checking they exist, so this order is what keeps them safe.
         for name in MEMBER_PAGES:
             srcs = [a.get("src") for a in Page(read(name)).find("script") if a.get("src")]
             with self.subTest(name):
                 self.assertIn("account.js", srcs)
+                self.assertLess(srcs.index("config.js"), srcs.index("auth.js"))
                 self.assertLess(srcs.index("auth.js"), srcs.index("account.js"))
                 self.assertLess(srcs.index("account.js"), srcs.index("app.js"))
+                if "rounds.js" in srcs:
+                    self.assertLess(srcs.index("account.js"), srcs.index("rounds.js"))
+                    self.assertLess(srcs.index("rounds.js"), srcs.index("app.js"))
+
+    def test_season_and_round_pages_load_rounds_js_which_app_js_calls(self):
+        for name in ("season.template.html", "round.html"):
+            self.assertIn('<script src="rounds.js"></script>', read(name), name)
 
     def test_sign_out_and_my_profile_live_in_the_initials_menu(self):
         js = read("account.js")
@@ -505,17 +515,22 @@ class AccountCorner(unittest.TestCase):
         self.assertNotIn("whoami", auth)
         self.assertNotIn("whoami", read("style.css"))
 
-    def test_initials_and_colour_match_the_round_page(self):
-        # The same person must look the same in the header, inbox and rounds.
-        def body(js):
-            return re.sub(r"\s+", " ", js_function(js, "function avatar(id, name")
-                          .split(") {", 1)[1].split("return", 1)[0])
-        self.assertEqual(body(read("account.js")), body(read("rounds.js")))
-
-    def test_reaction_names_match_the_round_page(self):
-        pattern = r"var LEGACY_REACT = (\{.*?\});"
-        self.assertEqual(re.search(pattern, read("account.js"), re.S).group(1),
-                         re.search(pattern, read("rounds.js"), re.S).group(1))
+    def test_avatars_reaction_glyphs_and_times_have_one_definition(self):
+        # The same person, reaction and time must look the same in the
+        # header, the inbox, a round page and a profile. Two copies of
+        # when() had drifted: a reply a few days old read as a date on its
+        # round page but "3d ago" in the inbox. So account.js has the only
+        # copy of each, and shares it.
+        account = read("account.js")
+        for name in ("avatar", "reactionGlyph", "when"):
+            self.assertIn(f"function {name}(", account)
+            self.assertIn(f"PFML.{name} = {name};", account)
+        self.assertIn("var LEGACY_REACT = {", account)
+        for page_js in ("rounds.js", "app.js"):
+            js = read(page_js)
+            for name in ("function avatar(", "function reactionGlyph(", "function when(", "var LEGACY_REACT = {"):
+                self.assertNotIn(name, js, f"{page_js} has its own {name}")
+        self.assertIn("var avatar = PFML.avatar, reactionGlyph = PFML.reactionGlyph, when = PFML.when;", read("rounds.js"))
 
     def test_inbox_asks_for_this_players_comments_and_not_their_own_reactions(self):
         inbox = js_function(read("auth.js"), "inbox: function (competitorId, limit)")
@@ -769,7 +784,7 @@ class NamesLinkToProfiles(unittest.TestCase):
 
 class CareerScoreTable(unittest.TestCase):
     def test_columns_add_up_to_the_score(self):
-        cols = js_function(read("app.js"), "function careerColumns()")
+        cols = read("app.js").split("var CAREER_COLUMNS = [", 1)[1].split("];", 1)[0]
         self.assertEqual(re.findall(r'key: "(\w+)"', cols),
                          ["name", "careerScore", "avgSeason", "roundBonus", "seasonBonus", "rounds"])
         self.assertEqual(re.findall(r'label: "([^"]+)"', cols),
@@ -850,7 +865,7 @@ class PlaylistTiles(unittest.TestCase):
         self.assertIn("runTime(st.durationMs, st.exact)", line)
         run = js_function(js, "function runTime(ms, exact)")
         self.assertIn('if (!exact) return "about "', run, "an estimate says so")
-        self.assertIn('fetchJSON(DATA + "/playlist_stats.json").catch(', js_function(js, "function initHome()"))
+        self.assertIn('PFML.loadJSON("playlist_stats.json").catch(', js_function(js, "function initHome()"))
 
     def test_phones_stack_the_count_over_the_time(self):
         # side by side, "648 tracks ·" / "about 43 hr" wrapped mid-phrase at 375px
@@ -1271,22 +1286,6 @@ class DeployWorkflow(unittest.TestCase):
         self.assertTrue(step_timeouts, "no step bounds its own run time")
         tests_step = self.build.split("- name: Run tests", 1)[1].split("- name:", 1)[0]
         self.assertRegex(tests_step, r"timeout-minutes: \d+", "the suite can hang")
-
-
-class SignedMediaUrls(unittest.TestCase):
-    """PFML.mediaUrl is how a page gets at a file in the private bucket. It
-    was added for the Season 3 round clip (removed 2026-10-05) and kept
-    because it's general: the bucket is the only place media can live, since
-    anything under site/ is public."""
-
-    def test_media_urls_are_signed_reads_of_the_private_bucket(self):
-        fn = js_function(read("auth.js"), "PFML.mediaUrl = function (name, seconds)")
-        self.assertIn("client.storage.from(BUCKET).createSignedUrl(name, seconds || 3600)", fn)
-
-    def test_no_page_hardcodes_a_media_url(self):
-        # a public URL would hand the file to anyone who knows it
-        for name in MEMBER_PAGES + ["features.html"]:
-            self.assertNotRegex(read(name), r"https?://[^\"']*\.(mp4|mov|jpg)", name)
 
 
 class CleanText(unittest.TestCase):

@@ -10,8 +10,8 @@ have to be told by hand.
 - `README.md` — architecture, how `build.py` works, season pages, the
   Career Score formula, the taste index math, and the scoring model quirks
   that aren't obvious from the CSVs (a fixed point budget per voter per
-  round, 16 in Seasons 1-2 and 19 in Season 3, a 0-point vote row is a comment not a vote, self-voting is
-  blocked).
+  round, 16 in Seasons 1-2 and 19 in Season 3; a 0-point vote row is a
+  comment, not a vote; self-voting is blocked).
 - `CHANGELOG.md` — what's shipped, in order, and why.
 
 ## The site is members-only: data never goes in this repo
@@ -41,13 +41,9 @@ See README, Members only, for the setup and the access model.
 `git init` once ran in a parent folder (`Downloads`) instead of inside the
 `pfml` project folder, so a push briefly carried two unrelated personal
 projects into the public PFML repo on GitHub. The repo was deleted and
-recreated to fix it.
-
-That stray repo is gone as of 2026-09-17: the `.git` in the home folder was
-deleted, after its history was bundled and the two trees that survived only
-inside it were extracted back to `Downloads`. This clone now lives in its
-own folder, `code/pfml`, well outside `Downloads`. So the hazard is fixed,
-not just documented, but nothing stops it recurring, so keep the habits:
+recreated, the stray `.git` is gone (2026-09-17), and this clone lives in
+its own folder, `code/pfml`, well outside `Downloads`. Nothing stops it
+recurring, so keep the habits:
 
 - `git remote -v` — confirm origin is `https://github.com/KernelForbin/pfml.git`
 - `git status` — confirm the changed files are only inside this project,
@@ -128,9 +124,10 @@ and refuses to build on malformed entries. See README, Daily Double.
 ## Keep the features page true
 
 `site/features.html` (pfml.fun/features) is a plain-language tour of what
-members can see and do, linked from the footer of every members-only page. **Any change that
-adds, removes or visibly alters a feature updates that page in the same
-change.** Every sentence on it has to be true of the code as it ships.
+members can see and do, linked from the footer of every members-only page.
+**Any change that adds, removes or visibly alters a feature updates that
+page in the same change.** Every sentence on it has to be true of the code
+as it ships.
 
 Scope rule, so it never turns into a changelog: it lists only features
 that are current, working and noticeable to an ordinary member, things
@@ -156,9 +153,10 @@ verified" has to be both.
 - Live tests (network): `PFML_LIVE=1 python -m unittest discover -s tests
   -p test_live_spotify.py -v` whenever the album-art or playlist-stats
   lookup in `publish.py` changes (the playlist one reads undocumented
-  Spotify pages, so also when tiles lose their numbers), and `-p test_live_emoji_data.py` whenever
-  `scripts/update_emoji_data.py` or its pinned version changes (it also
-  checks the committed `site/emoji-data.js` is what that version builds).
+  Spotify pages, so also when tiles lose their numbers), and
+  `-p test_live_emoji_data.py` whenever `scripts/update_emoji_data.py` or
+  its pinned version changes (it also checks the committed
+  `site/emoji-data.js` is what that version builds).
   Note: `python -m unittest tests.test_x` does not work here, since
   `tests/` isn't a package on the path; use `discover`.
 - Main branch: `main`. Work on a branch; don't merge or push to `main`
@@ -292,15 +290,20 @@ tested. To test `auth.js` itself, load it with a fake
 `window.supabase.createClient`, which is how the sign-in return path was
 checked. Keep stubs and copied data out of the repo, and delete them after.
 A page stub must also remove the `gated` class from `<body>`, or the page
-stays blank. For the header (`account.js`) and profiles the stub's `api`
-also needs `people`, `inbox`, `inboxSeenAt`, `markInboxSeen` and
+stays blank. It must set `PFML.member` (`{ competitorId, name, role }`)
+before `ready` resolves, and the page must still load the real
+`account.js` after it: `app.js` and `rounds.js` use `PFML.member`,
+`PFML.avatar`, `PFML.reactionGlyph` and `PFML.when` without checking for
+them, because on the real site `auth.js` and `account.js` always load
+first (a test pins that order). For the header and profiles the stub's
+`api` also needs `people`, `inbox`, `inboxSeenAt`, `markInboxSeen` and
 `reactionsOn`, and the scratch copy needs `profiles.json` and
 `lookup.json`: generate them there with `build.build_profiles` /
 `build.build_lookup` from the season JSON, rather than running `build.py`,
-which would rewrite `site/data/`. The browser caches `app.js` and friends between edits, so a
-fix can look like it did nothing: refetch with `fetch(url, {cache:
-"reload"})`, or check `performance` entries, before trusting a
-before/after comparison.
+which would rewrite `site/data/`. The browser caches `app.js` and friends
+between edits, so a fix can look like it did nothing: refetch with
+`fetch(url, {cache: "reload"})`, or check `performance` entries, before
+trusting a before/after comparison.
 Every link on the site is a clean address (`/career`, `/round?s=...`),
 never `.html` (README, Clean addresses); GitHub Pages resolves them, and a
 test fails if a page builds a `.html` link. Python's plain `http.server`

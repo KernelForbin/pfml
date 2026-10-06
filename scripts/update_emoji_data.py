@@ -20,10 +20,11 @@ it. Still stdlib-only.
 """
 import json
 import urllib.request
+from pathlib import Path
 
 VERSION = "0.9.0"
 SRC_URL = f"https://cdn.jsdelivr.net/npm/unicode-emoji-json@{VERSION}/data-by-emoji.json"
-OUT_PATH = __import__("pathlib").Path(__file__).resolve().parent.parent / "site" / "emoji-data.js"
+OUT_PATH = Path(__file__).resolve().parent.parent / "site" / "emoji-data.js"
 
 LEGACY_GLYPHS = {
     "\U0001F525",  # fire

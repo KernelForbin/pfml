@@ -16,13 +16,31 @@ import build
 import enrich_comments as ec
 
 
-class Labels(unittest.TestCase):
-    def test_script_and_build_agree_on_the_labels(self):
+class SharedWithBuild(unittest.TestCase):
+    """The script used to keep its own copies of the label list, the
+    comment id, the CSV reader and the season-folder scan, with tests to
+    keep them in step with build.py's. The CSV reader had drifted (no CRLF
+    fix). Now it uses build.py's, so they can't disagree."""
+
+    def test_labels_come_from_build(self):
         # build.py drops any label it doesn't know, so a mismatch would
         # silently throw away everything the script paid for.
         self.assertEqual(tuple(ec.LABELS), build.SENTIMENT_LABELS)
-        self.assertEqual(tuple(ec.STRENGTHS), build.SENTIMENT_STRENGTHS)
+        self.assertIs(ec.STRENGTHS, build.SENTIMENT_STRENGTHS)
+        src = (Path(ec.__file__)).read_text(encoding="utf-8")
+        self.assertIn("LABELS = list(build.SENTIMENT_LABELS)", src)
 
+    def test_no_copies_of_builds_helpers(self):
+        src = Path(ec.__file__).read_text(encoding="utf-8")
+        for copy in ("def comment_id(", "def read_csv(", 'fullmatch(r"season'):
+            self.assertNotIn(copy, src)
+        collect = src.split("def collect_comments(", 1)[1].split("\ndef ", 1)[0]
+        for used in ("build.season_folders()", "build.read_csv(", "build.comment_id("):
+            self.assertIn(used, collect)
+        self.assertEqual(ec.OUT_PATH, build.SENTIMENT_PATH, "writes where build.py reads")
+
+
+class Labels(unittest.TestCase):
     def test_prompt_defines_every_label_and_strength(self):
         for label in ec.LABELS:
             self.assertIn(f"- {label}:", ec.SYSTEM_PROMPT, label)
@@ -55,13 +73,6 @@ class Merge(unittest.TestCase):
         ]})
         self.assertEqual(added, 1)
         self.assertEqual(store, {"c1": {"labels": ["mean", "witty"], "strength": {"witty": 2, "mean": 1}, "rationale": "pun"}})
-
-
-class CommentIds(unittest.TestCase):
-    def test_script_and_build_make_the_same_comment_id(self):
-        # Labels are looked up by this id; if the two copies drift, every
-        # label silently stops matching.
-        self.assertEqual(ec.comment_id("r1", "spotify:track:x", "v1"), build.comment_id("r1", "spotify:track:x", "v1"))
 
 
 class Store(unittest.TestCase):
