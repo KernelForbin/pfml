@@ -1,4 +1,6 @@
 """scripts/build.py: the scoring rules the site shows. Offline, made-up data."""
+import contextlib
+import io
 import json
 import os
 import re
@@ -417,6 +419,76 @@ class Lookup(unittest.TestCase):
         self.assertIn("r1", lookup["rounds"])
 
 
+# A round with a comment and a submitter note that aren't in English.
+FOREIGN_ROUND = {
+    "id": "r9", "name": "Nordic", "created": "2025-02-01T00:00:00Z",
+    "subs": [("n1", "p1", "Ein gutes Lied"), ("n2", "p2")],
+    "votes": [("p3", "n1", 3, "Stutt og gott"), ("p4", "n2", 2, "plain english")],
+}
+FOREIGN_COMMENT = build.comment_id("r9", uri("n1"), "p3")
+FOREIGN_NOTE = "r9|" + uri("n1")
+
+
+class Translations(unittest.TestCase):
+    """English for comments and notes written in another language, from the
+    hand-kept data/translations.json (README, Translations)."""
+
+    ENTRIES = {
+        "comments": {FOREIGN_COMMENT: {"from": "Icelandic", "original": "Stutt og gott", "text": "Short and sweet"}},
+        "notes": {FOREIGN_NOTE: {"from": "German", "original": "Ein gutes Lied", "text": "A good song"}},
+    }
+
+    def build_with(self, translations):
+        out = io.StringIO()
+        with sandbox() as root, contextlib.redirect_stdout(out):
+            make_season(root / "data" / "season1", [FOREIGN_ROUND])
+            if translations is not None:
+                (root / "data" / "translations.json").write_text(
+                    translations if isinstance(translations, str) else json.dumps(translations), encoding="utf-8")
+            build.main()
+            read = lambda n: json.loads((root / "site" / "data" / n).read_text(encoding="utf-8"))
+            return read("season1.json"), read("career.json"), out.getvalue()
+
+    def test_comment_and_note_carry_their_english_everywhere_they_show(self):
+        season, career, _ = self.build_with(self.ENTRIES)
+        english = {"from": "Icelandic", "text": "Short and sweet"}
+        n1 = song(season, "n1")
+        self.assertEqual(n1["comments"][0]["translation"], english, "round page")
+        self.assertEqual(n1["noteTranslation"], {"from": "German", "text": "A good song"})
+        cat = next(c for c in season["commenters"] if c["id"] == "p3")
+        self.assertEqual(cat["longest"]["translation"], english, "a player's longest comment")
+        self.assertEqual(career["commentSummary"]["longestComment"]["translation"], english, "All-Time")
+        # nothing for the English comment, and the original text is never shipped twice
+        self.assertNotIn("translation", song(season, "n2")["comments"][0])
+        self.assertNotIn("original", json.dumps(season))
+
+    def test_a_translation_made_from_other_text_is_not_shown(self):
+        changed = json.loads(json.dumps(self.ENTRIES))
+        changed["comments"][FOREIGN_COMMENT]["original"] = "Stutt og ekki gott"
+        season, _, printed = self.build_with(changed)
+        self.assertNotIn("translation", song(season, "n1")["comments"][0])
+        self.assertIn("translated from different text", printed)
+
+    def test_an_id_that_matches_nothing_is_named(self):
+        typo = {"comments": {"r9|spotify:track:nope|p3": {"from": "Icelandic", "original": "x", "text": "y"}}}
+        _, _, printed = self.build_with(typo)
+        self.assertIn("r9|spotify:track:nope|p3", printed)
+
+    def test_a_broken_file_or_entry_is_skipped_not_fatal(self):
+        season, _, printed = self.build_with("{not json")
+        self.assertIn("unreadable", printed)
+        self.assertNotIn("translation", song(season, "n1")["comments"][0])
+        half = {"comments": {FOREIGN_COMMENT: {"from": "Icelandic", "original": "Stutt og gott"}}}
+        season, _, printed = self.build_with(half)
+        self.assertIn('needs "from", "original" and "text"', printed)
+        self.assertNotIn("translation", song(season, "n1")["comments"][0])
+
+    def test_no_file_means_no_translations(self):
+        season, _, printed = self.build_with(None)
+        self.assertNotIn("translation", json.dumps(season))
+        self.assertNotIn("translations.json", printed)
+
+
 class SeasonFolders(unittest.TestCase):
     def test_numeric_order_and_only_season_folders(self):
         # build.py, publish.py and enrich_comments.py all walk seasons with
@@ -506,6 +578,14 @@ class EverythingWrittenIsRead(unittest.TestCase):
             make_season(root / "data" / "season2", s2, daily_doubles={
                 "reviewedRounds": [{"roundId": r["id"]} for r in s2],
                 "requests": [dd_request(s2[0]["id"], s2[0]["subs"][0][0], "p1")]})
+            # and a translated comment and note, so their fields are checked too
+            voter, track, _, text = s2[0]["votes"][1]
+            note_track, _, note = s2[0]["subs"][0]
+            (root / "data" / "translations.json").write_text(json.dumps({
+                "comments": {build.comment_id(s2[0]["id"], uri(track), voter):
+                             {"from": "Icelandic", "original": text, "text": "in English"}},
+                "notes": {f"{s2[0]['id']}|{uri(note_track)}":
+                          {"from": "Swedish", "original": note, "text": "in English"}}}), encoding="utf-8")
             build.main()
             files = {f.name: json.loads(f.read_text(encoding="utf-8"))
                      for f in (root / "site" / "data").glob("*.json")}

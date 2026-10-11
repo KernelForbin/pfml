@@ -24,7 +24,8 @@
   "use strict";
 
   var PFML = window.PFML;
-  var avatar = PFML.avatar, reactionGlyph = PFML.reactionGlyph, when = PFML.when;
+  var avatar = PFML.avatar, reactionGlyph = PFML.reactionGlyph, when = PFML.when,
+      translationHtml = PFML.translationHtml;
 
   // The 6 reactions PFML has offered since the feature shipped, stored by
   // name (account.js has the names' glyphs). They're the one-tap "quick"
@@ -463,7 +464,7 @@
       '<span class="rp-voter">' + personLink(row.voterId, row.name) + "</span>" +
       '<span class="rp-pts' + (row.points === 0 ? " is-zero" : row.points < 0 ? " is-neg" : "") + '"' +
       (row.points === 0 ? ' title="Commented without giving points"' : "") + ">" + pointsLabel(row.points) + "</span></div>" +
-      (c ? '<p class="rp-comment">' + esc(c.comment) + "</p>" + socialHtml(c) : "") +
+      (c ? '<p class="rp-comment">' + esc(c.comment) + translationHtml(c.translation) + "</p>" + socialHtml(c) : "") +
       "</div>";
   }
 
@@ -492,7 +493,7 @@
       '<div class="rp-submitter">' + avatar(s.submitterId, s.submitterName) +
         "<span>Submitted by <b>" + personLink(s.submitterId, s.submitterName) + "</b></span>" +
         (s.dailyDouble ? '<span class="dd-badge">Daily Double +' + s.dailyDouble.bonus + "</span>" : "") + "</div>" +
-      (s.note ? '<p class="rp-note"><span>Their note</span>' + esc(s.note) + "</p>" : "") +
+      (s.note ? '<p class="rp-note"><span>Their note</span>' + esc(s.note) + translationHtml(s.noteTranslation) + "</p>" : "") +
       (rows.length ? '<div class="rp-votes">' + rows.map(voteHtml).join("") + "</div>"
                    : '<p class="rp-empty">No votes or comments on this one.</p>') +
       "</article>";

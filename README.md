@@ -28,6 +28,8 @@ data/season3/            ...plus daily_doubles.json
 data/track_art.json      album art URLs, cached by publish.py, read by build.py
 data/comment_sentiment.json   optional, written by enrich_comments.py, read
                               by build.py if present. Not required to build.
+data/translations.json   English for comments and notes in another language;
+                         hand-kept, read by build.py if present
 scripts/build.py         CSV -> JSON + season1.html, season2.html, ...
 scripts/publish.py       build, then upload the JSON to Supabase (private)
 scripts/invites.py       one-time invite links that link a Google account
@@ -370,9 +372,11 @@ save.
    Double requests and record the decision in
    `data/season3/daily_doubles.json` (see Daily Double below). The build
    prints a warning for any round that hasn't been reviewed.
-4. `python scripts/publish.py`. That builds and uploads, and the new data
+4. Translate any new comment or note that isn't in English into
+   `data/translations.json` (see Translations below).
+5. `python scripts/publish.py`. That builds and uploads, and the new data
    is live for members straight away; there's nothing to commit for data.
-5. Only if the build created or changed a `site/seasonN.html` page (a new
+6. Only if the build created or changed a `site/seasonN.html` page (a new
    season), commit and push that page so GitHub Pages serves it.
 
 A season with a `competitors.csv` and nothing else builds fine and renders
@@ -740,6 +744,45 @@ quickest way to confirm a new round's review landed.
 
 Seasons without a `daily_doubles.json` file (Seasons 1 and 2) don't use
 the rule at all.
+
+## Translations
+
+A vote comment or submitter note written in another language shows the
+original first, then its English underneath, labelled "Translated from
+Icelandic" (or whichever language), inside the same box: on the round
+page, and in the longest-comment and quote cards wherever that comment
+turns up. Mock languages count too ("Løpe Løpe Rudølf" is labelled as mock
+Norwegian). Names, song titles and the odd foreign word inside an English
+comment don't.
+
+**Kept by hand, like the Daily Double.** The build has no network and no
+API key, so nothing translates at build time. Translations are written when
+a round's export arrives (CLAUDE.md, Update the data) into
+`data/translations.json`, local-only and backed up by `publish.py`:
+
+```json
+{
+  "comments": { "<round id>|<spotify uri>|<voter id>":
+                { "from": "Icelandic", "original": "Stutt og gott", "text": "Short and sweet" } },
+  "notes":    { "<round id>|<spotify uri>":
+                { "from": "Swedish", "original": "...", "text": "..." } }
+}
+```
+
+Comments use the same id as everything else (`comment_id()` in
+`build.py`); a note has no id of its own, so it's keyed by its track.
+`original` is the exact text the translation was made from: the build shows
+a translation only while the comment still says that, so an edited export
+or a mistyped id never puts someone else's English under a comment. It
+prints a warning for a translation whose text no longer matches, or whose
+id matches nothing, and skips a broken entry or file rather than stopping
+(unlike the Daily Double, nothing here changes a score).
+
+First done 2026-10-11, over every season: 24 items, all but two from
+Season 3's Nordic round (Icelandic, Swedish, Dutch and two mock-Nordic
+jokes), plus one Spanish and one Portuguese comment from earlier rounds.
+Found by reading Round 4 in full and screening the rest for comments made
+mostly of words the league doesn't otherwise use, then reading every hit.
 
 ## Ties
 

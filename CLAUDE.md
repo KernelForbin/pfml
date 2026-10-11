@@ -95,8 +95,8 @@ the keyboard, so it has to run without a click anywhere. Measured
    CSVs are byte-identical means no new finished round (the export leaves
    out a round until it's over), so copy nothing and say so.
 5. When it does differ: copy the four CSVs in, do the Daily Double review
-   below for each new round, then run `python scripts/publish.py`, and
-   report what changed. The user gave a standing go-ahead (2026-09-23)
+   and the translation check below for each new round, then run
+   `python scripts/publish.py`, and report what changed. The user gave a standing go-ahead (2026-09-23)
    for the publish inside this flow, so it needs no separate ask; it
    uploads data only. Pushing the repo still does.
 6. Close the tab afterwards and delete any scratch copy.
@@ -120,6 +120,31 @@ total. Whenever the user uploads a new Season 3 export, before building:
 
 The build applies only what the file says. It warns about unreviewed rounds
 and refuses to build on malformed entries. See README, Daily Double.
+
+## Translate comments that aren't in English
+
+The user asked (2026-10-11) for every comment or note not in English to
+show its English underneath. The build can't translate (offline, no API
+key), so each new round gets a translation check, alongside the Daily
+Double review:
+
+1. Read the new round's vote comments (`votes.csv` "Comment") and
+   submitter notes (`submissions.csv` "Comment"), all of them. Translate
+   any written wholly or mainly in another language, mock languages
+   included (label those honestly, e.g. "mock Norwegian"). Names, song
+   titles and a stray foreign word in an English comment don't count.
+   Theme rounds are where they turn up: Round 4 (Nordic) had 22 at once.
+2. Add each to `data/translations.json` (local-only, git-ignored, backed
+   up by `publish.py`): comments under `comments`, keyed by
+   `build.comment_id(round id, spotify uri, voter id)`; notes under
+   `notes`, keyed `"<round id>|<spotify uri>"`. Each entry is `from`
+   (the language), `original` (the exact text, as `build.read_csv` gives
+   it, stripped) and `text` (the English). Match by exact text in a
+   script, never by retyping ids. The build skips an entry whose
+   `original` no longer matches and names any id that matches nothing.
+3. Tell the user what was translated, showing the original and the English.
+
+See README, Translations.
 
 ## Keep the features page true
 

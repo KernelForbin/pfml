@@ -14,10 +14,12 @@
    tens of KB, built by scripts/build.py), fetched only when the inbox is
    first opened.
 
-   Also the one home of three display helpers, so a person, a reaction and
-   a time look the same in the header, on a round page and on a profile:
-   PFML.avatar, PFML.reactionGlyph and PFML.when. Every members-only page
-   loads this right after auth.js and before rounds.js and app.js. */
+   Also the one home of the display helpers the pages share, so a person,
+   a reaction, a time and a translation look the same in the header, on a
+   round page, on a profile and in a quote card: PFML.avatar,
+   PFML.reactionGlyph, PFML.when and PFML.translationHtml. Every
+   members-only page loads this right after auth.js and before rounds.js
+   and app.js. */
 
 (function () {
   "use strict";
@@ -61,9 +63,19 @@
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   }
 
+  // The English under a comment or note written in another language
+  // (data/translations.json, attached by build.py), labelled as a
+  // translation. Goes inside the comment's own element; <small> and <b>,
+  // not spans, so the note's label styling (.rp-note span) stays off it.
+  function translationHtml(tr) {
+    if (!tr) return "";
+    return '<small class="tr"><b class="tr-label">Translated from ' + esc(tr.from) + "</b>" + esc(tr.text) + "</small>";
+  }
+
   PFML.avatar = avatar;
   PFML.reactionGlyph = reactionGlyph;
   PFML.when = when;
+  PFML.translationHtml = translationHtml;
 
   // A tray with a notch: an inbox, drawn rather than an emoji character,
   // so it's the same flat icon on every device (see ADD_REACTION_ICON).

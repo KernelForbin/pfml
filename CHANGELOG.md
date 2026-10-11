@@ -1,5 +1,32 @@
 # Changelog
 
+## 2026-10-11: translations
+
+- **Comments and notes in another language show their English
+  underneath**, labelled "Translated from Icelandic" (or whichever
+  language), inside the comment's own box, original first. On the round
+  page, and in any longest-comment or quote card the comment turns up in.
+  Asked for after Season 3's Nordic round, where one member wrote 18
+  comments in Icelandic and one in Dutch, another wrote two mock-Nordic
+  jokes, and a submitter note was in Swedish. Two older ones too: one
+  Spanish, one Portuguese. 24 in all, every season checked.
+- **Kept by hand, like the Daily Double**, in `data/translations.json`
+  (local-only, backed up by `publish.py`): the build has no network or API
+  key. Each entry stores the exact text it was made from, and the build
+  shows it only while the comment still says that, so a translation can't
+  land under the wrong comment; it names any id that matches nothing.
+  Translating a new round's non-English comments is now a step in
+  "Update the data" (CLAUDE.md), alongside the Daily Double review.
+- The three copies of "a comment as a card" in `build.py` (a season's
+  longest, the career longest, the quote awards) are one function,
+  `comment_card()`, so the translation is added in one place.
+- **Verified:** suite 203 passing (8 new tests); each fails on its own
+  break in a scratch clone (11 breaks). The real-data build attaches all
+  24 and is otherwise identical to a build without them (+2.3 KB on Season
+  3). In a browser, Round 4 shows all 22 of its translations, the note's
+  "Their note" label styling stays off its translation, and the page has
+  no horizontal overflow at 375px or 1280px.
+
 ## 2026-10-05 (follow-up 2): code review
 
 - **Members download about 118 KB less** (4.1% of the data files). Each

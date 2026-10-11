@@ -522,15 +522,17 @@ class AccountCorner(unittest.TestCase):
         # round page but "3d ago" in the inbox. So account.js has the only
         # copy of each, and shares it.
         account = read("account.js")
-        for name in ("avatar", "reactionGlyph", "when"):
+        for name in ("avatar", "reactionGlyph", "when", "translationHtml"):
             self.assertIn(f"function {name}(", account)
             self.assertIn(f"PFML.{name} = {name};", account)
         self.assertIn("var LEGACY_REACT = {", account)
         for page_js in ("rounds.js", "app.js"):
             js = read(page_js)
-            for name in ("function avatar(", "function reactionGlyph(", "function when(", "var LEGACY_REACT = {"):
+            for name in ("function avatar(", "function reactionGlyph(", "function when(",
+                         "function translationHtml(", "var LEGACY_REACT = {"):
                 self.assertNotIn(name, js, f"{page_js} has its own {name}")
-        self.assertIn("var avatar = PFML.avatar, reactionGlyph = PFML.reactionGlyph, when = PFML.when;", read("rounds.js"))
+        self.assertIn("var avatar = PFML.avatar, reactionGlyph = PFML.reactionGlyph, when = PFML.when,\n"
+                      "      translationHtml = PFML.translationHtml;", read("rounds.js"))
 
     def test_inbox_asks_for_this_players_comments_and_not_their_own_reactions(self):
         inbox = js_function(read("auth.js"), "inbox: function (competitorId, limit)")
@@ -1186,10 +1188,45 @@ class MemberTextIsEscaped(unittest.TestCase):
             for at in calls:
                 self.assertTrue(js[:at].endswith("esc("), f"{name}: unescaped reactionGlyph at {at}")
 
+    def test_translations_are_escaped(self):
+        # hand-typed into data/translations.json, so treated like any text
+        fn = js_function(read("account.js"), "function translationHtml(tr)")
+        self.assertIn("esc(tr.from)", fn)
+        self.assertIn("esc(tr.text)", fn)
+        self.assertNotRegex(fn, r"\+ tr\.(from|text)\b", "every field goes through esc()")
+
     def test_taste_panel_titles_escape_the_name(self):
         js = read("app.js")
         self.assertIn('renderTasteRowList("How " + esc(name) + " rates everyone else"', js)
         self.assertIn('renderTasteRowList("How everyone else rates " + esc(name)', js)
+
+
+class Translations(unittest.TestCase):
+    """A comment or note in another language shows the original first, then
+    its English underneath, marked as a translation (README, Translations)."""
+
+    def test_round_page_comments_and_notes_show_it_inside_the_original(self):
+        js = read("rounds.js")
+        vote = js_function(js, "function voteHtml(row)")
+        self.assertIn("esc(c.comment) + translationHtml(c.translation) + \"</p>\"", vote, "under the comment, in its box")
+        track = js_function(js, "function trackHtml(s, tiedPlaces)")
+        self.assertIn("esc(s.note) + translationHtml(s.noteTranslation) + \"</p>\"", track)
+
+    def test_quote_cards_show_it_inside_the_quote(self):
+        # inside the blockquote, so a long one is clipped and opened with it
+        quote = js_function(read("app.js"), "function commentQuote(c, label, stats)")
+        self.assertIn('"<blockquote>" + esc(c.text) + PFML.translationHtml(c.translation) + "</blockquote>"', quote)
+
+    def test_it_is_labelled_and_kept_out_of_the_note_label_styling(self):
+        fn = js_function(read("account.js"), "function translationHtml(tr)")
+        self.assertIn("Translated from ", fn)
+        self.assertIn('if (!tr) return "";', fn, "nothing at all for an English comment")
+        # .rp-note span styles the "Their note" label; the translation mustn't use spans
+        self.assertNotIn("<span", fn)
+        css = read("style.css")
+        self.assertTrue(css_rules(css, ".tr"))
+        self.assertTrue(any("display: block" in b for b in css_rules(css, ".tr")))
+        self.assertTrue(any("display: block" in b for b in css_rules(css, ".tr-label")))
 
 
 class PickerClosesCleanly(unittest.TestCase):

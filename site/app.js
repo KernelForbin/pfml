@@ -1289,7 +1289,8 @@
     var box = el("div", "cmt-quote");
     box.innerHTML =
       '<p class="cmt-label">' + esc(label) + "</p>" +
-      "<blockquote>" + esc(c.text) + "</blockquote>" +
+      // the translation sits inside the quote, so a long one clips with it
+      "<blockquote>" + esc(c.text) + PFML.translationHtml(c.translation) + "</blockquote>" +
       '<p class="cmt-src">' + (c.name ? "<b>" + who(c.name) + "</b> &middot; " : "") +
       meta.join(" &middot; ") + "</p>";
     return box;

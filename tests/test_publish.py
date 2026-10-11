@@ -104,9 +104,11 @@ class Backup(unittest.TestCase):
             make_season(root / "data" / "season1", [ROUND])
             (root / "data" / "comment_sentiment.json").write_text('{"comments": {}}')
             (root / "data" / "track_art.json").write_text("{}")
+            (root / "data" / "translations.json").write_text('{"comments": {}, "notes": {}}')
             backed_up = self.run_publish()
         self.assertIn("comment_sentiment.json", backed_up)
         self.assertIn("track_art.json", backed_up)
+        self.assertIn("translations.json", backed_up, "hand-made, so only the backup could replace it")
         self.assertIn("season1/votes.csv", backed_up)
 
     def test_missing_local_files_are_simply_skipped(self):

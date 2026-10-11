@@ -272,6 +272,51 @@ def sentiment_awards(entries, players):
     return {"quotes": quotes, "titles": titles, "labelled": len(labelled)}
 
 
+# English for comments and notes written in another language. Like the
+# Daily Double decisions, it's kept by hand (translated when a new export
+# arrives; README, Translations) rather than worked out here: the build has
+# no network and no API key. Optional: without the file nothing is shown.
+TRANSLATIONS_FILE = "translations.json"
+
+
+def load_translations():
+    """{comment id or "<round id>|<spotify uri>": {"from", "original", "text"}}
+    from data/translations.json; {} without it. Not a scoring input, so a
+    broken file or entry is skipped with a warning rather than stopping
+    the build."""
+    path = DATA_DIR / TRANSLATIONS_FILE
+    if not path.exists():
+        return {}
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"  ! {TRANSLATIONS_FILE} unreadable ({e}); building without translations")
+        return {}
+    out = {}
+    for section in ("comments", "notes"):
+        entries = raw.get(section, {}) if isinstance(raw, dict) else {}
+        for key, e in (entries.items() if isinstance(entries, dict) else []):
+            if isinstance(e, dict) and all(isinstance(e.get(k), str) and e[k].strip() for k in ("from", "original", "text")):
+                out[key] = {k: e[k].strip() for k in ("from", "original", "text")}
+            else:
+                print(f"  ! {TRANSLATIONS_FILE}: {section}[{key!r}] needs \"from\", \"original\" and \"text\"; skipped")
+    return out
+
+
+def translation_for(translations, key, text, used):
+    """The English for one comment or note, or None. Only when it was made
+    from this exact text, so an edited or mistyped entry never puts someone
+    else's words under a comment. Records the key in `used`."""
+    t = translations.get(key)
+    if not t:
+        return None
+    used.add(key)
+    if t["original"] != text:
+        print(f"  ! {TRANSLATIONS_FILE}: {key} was translated from different text; not shown")
+        return None
+    return {"from": t["from"], "text": t["text"]}
+
+
 # Season 3 rule: once per season, a submitter can ask in their own note on
 # a submission to have that track's points doubled toward their total. Which
 # notes are real requests is a judgement about intent (a note can mention the
@@ -551,13 +596,16 @@ def point_budget(points_at):
     return max(counts, key=lambda t: (counts[t], t)) if counts else None
 
 
-def build_season(folder: Path, season_key: str, label: str):
+def build_season(folder: Path, season_key: str, label: str, translations=None):
     competitor_rows = read_csv(folder / "competitors.csv")
     round_rows = read_csv(folder / "rounds.csv")
     sub_rows = read_csv(folder / "submissions.csv")
     vote_rows = read_csv(folder / "votes.csv")
 
     names = {r["ID"]: r["Name"] for r in competitor_rows}
+    if translations is None:
+        translations = load_translations()
+    translated = set()   # keys this season used, so main() can name any that match nothing
 
     subs_by_round = {}
     for r in sub_rows:
@@ -573,11 +621,13 @@ def build_season(folder: Path, season_key: str, label: str):
         points_at[key] = int(v["Points Assigned"])
         if v.get("Comment", "").strip():
             comments_by_vote.add(key)
-            comments_at.setdefault((v["Round ID"], v["Spotify URI"]), []).append(
-                {"id": comment_id(v["Round ID"], v["Spotify URI"], v["Voter ID"]),
-                 "voterId": v["Voter ID"], "voterName": names.get(v["Voter ID"], "Unknown"),
+            cid = comment_id(*key)
+            c = {"id": cid, "voterId": v["Voter ID"], "voterName": names.get(v["Voter ID"], "Unknown"),
                  "points": int(v["Points Assigned"]), "comment": v["Comment"].strip()}
-            )
+            tr = translation_for(translations, cid, c["comment"], translated)
+            if tr:
+                c["translation"] = tr
+            comments_at.setdefault((v["Round ID"], v["Spotify URI"]), []).append(c)
         voters_in_round.setdefault(v["Round ID"], set()).add(v["Voter ID"])
 
     # accumulators
@@ -629,6 +679,9 @@ def build_season(folder: Path, season_key: str, label: str):
         # this exact comment; never inferred here.
         if cid in sentiment:
             entry["sentiment"] = sentiment[cid]
+        tr = translation_for(translations, cid, text, translated)
+        if tr:
+            entry["translation"] = tr   # follows it into the longest comment and quote cards
         voter_comments[vid].append(entry)
 
     rounds_out = []
@@ -700,6 +753,9 @@ def build_season(folder: Path, season_key: str, label: str):
                 # already in "comments"); names come from "competitors".
                 "votes": [[r["voterId"], r["points"]] for r in received],
             }
+            tr = translation_for(translations, f"{rid}|{uri}", song["note"], translated) if song["note"] else None
+            if tr:
+                song["noteTranslation"] = tr
             songs.append(song)
             all_songs.append(song)
 
@@ -932,14 +988,7 @@ def build_season(folder: Path, season_key: str, label: str):
         )
         if entries:
             longest = max(entries, key=lambda e: (len(comment_words(e["text"])), len(e["text"])))
-            stats["longest"] = {
-                "text": longest["text"],
-                "words": len(comment_words(longest["text"])),
-                "roundName": longest["roundName"],
-                "trackTitle": longest["trackTitle"],
-                "spotifyId": longest["spotifyId"],
-                "points": longest["points"],
-            }
+            stats["longest"] = comment_card(longest)
         # only present when enrich_comments.py has run; never invented
         labelled = [e for e in entries if "sentiment" in e]
         if labelled:
@@ -1127,6 +1176,7 @@ def build_season(folder: Path, season_key: str, label: str):
         "pairComments": pair_comments,
         "notesByPlayer": notes_by_player,
         "subsByPlayer": subs_by_player,
+        "translated": translated,
     }
     return data, raw
 
@@ -1137,13 +1187,19 @@ MIN_QUOTE_AWARD_COUNT = 3
 SKIN_TONE_RE = re.compile("[\U0001F3FB-\U0001F3FF]")
 
 
+def comment_card(e):
+    """One comment as a quote card shows it: the text, its English when it
+    was written in another language, and the track and round it was on."""
+    card = {"text": e["text"], "words": len(comment_words(e["text"])), "roundName": e["roundName"],
+            "trackTitle": e["trackTitle"], "spotifyId": e["spotifyId"], "points": e["points"]}
+    if e.get("translation"):
+        card["translation"] = e["translation"]
+    return card
+
+
 def quote_of(e, name):
-    """One comment as the page shows it in a quote card."""
-    return {
-        "text": e["text"], "name": name, "words": len(comment_words(e["text"])),
-        "roundName": e["roundName"], "trackTitle": e["trackTitle"],
-        "spotifyId": e["spotifyId"], "points": e["points"], "seasonLabel": e.get("seasonLabel", ""),
-    }
+    """A comment card for the all-time awards: who wrote it, and when."""
+    return dict(comment_card(e), name=name, seasonLabel=e.get("seasonLabel", ""))
 
 
 def quote_awards(entries):
@@ -1246,15 +1302,7 @@ def build_career_comments(raw_seasons):
         )
         if entries:
             longest = max(entries, key=lambda e: (len(comment_words(e["text"])), len(e["text"])))
-            stats["longest"] = {
-                "text": longest["text"],
-                "words": len(comment_words(longest["text"])),
-                "roundName": longest["roundName"],
-                "trackTitle": longest["trackTitle"],
-                "spotifyId": longest["spotifyId"],
-                "points": longest["points"],
-                "seasonLabel": longest.get("seasonLabel", ""),
-            }
+            stats["longest"] = dict(comment_card(longest), seasonLabel=longest.get("seasonLabel", ""))
         # present only for comments enrich_comments.py actually labelled
         labelled = [e for e in entries if "sentiment" in e]
         if labelled:
@@ -1517,11 +1565,14 @@ def main():
     index = []
     season_datas = []
     raw_seasons = []
+    translations = load_translations()
+    translated = set()
     for folder in folders:
         num = int(re.search(r"\d+", folder.name).group())
         key = f"season{num}"
         label = f"Season {num}"
-        data, raw = build_season(folder, key, label)
+        data, raw = build_season(folder, key, label, translations)
+        translated |= raw["translated"]
         season_datas.append(data)
         # tag each comment with the season it came from, so a career
         # superlative can say which season it happened in
@@ -1556,6 +1607,11 @@ def main():
 
         scoring = sum(len(s["votes"]) for r in data["rounds"] for s in r["songs"])
         print(f"{key}: {len(data['rounds'])} rounds, {data['songCount']} songs, {scoring} scoring votes")
+
+    # an id that matches no comment is a typo, and its English would never show
+    unmatched = sorted(set(translations) - translated)
+    if unmatched:
+        print(f"  ! {TRANSLATIONS_FILE}: no comment or note has the id {', '.join(unmatched)}")
 
     # The newest season is the current one: the home page marks it live and
     # the season button names it (README, The "live" season).
