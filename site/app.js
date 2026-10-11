@@ -1167,7 +1167,8 @@
     }
     if (note) note.textContent =
       "Read a row as: this voter sends that submitter this much of their points, relative to spreading points evenly across every track they saw. " +
-      "1.00 is neutral, 2.00 is twice their usual share, 0.50 is half. Self-votes are excluded, and a pair needs at least five chances to vote before it shows.";
+      "1.00 is neutral, 2.00 is twice their usual share, 0.50 is half. Self-votes are excluded, and a pair needs at least " +
+      d.tasteMinChances + " chances to vote (one per round) before it shows.";
 
     attachFilterTag(host, d);
 

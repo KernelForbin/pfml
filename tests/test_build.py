@@ -547,6 +547,29 @@ def rich_season(tag, rounds=12):
     return out
 
 
+class TasteNeedsFourRounds(unittest.TestCase):
+    """A pair gets one chance per round, so the taste matrix shows a pair
+    after 4 rounds (from 2026-10-11; it was 5). The comment matrix behind
+    Silent treatment kept its 5."""
+
+    def season_after(self, rounds):
+        with sandbox() as root, quiet():
+            folder = make_season(root / "data" / "season1", rich_season("a", rounds))
+            data, _ = build.build_season(folder, "season1", "Season 1")
+        return data
+
+    def test_three_rounds_show_no_pairs_and_four_do(self):
+        self.assertEqual(self.season_after(3)["taste"], [])
+        four = self.season_after(4)
+        self.assertTrue(four["taste"])
+        self.assertTrue(all(t["chances"] == 4 for t in four["taste"]))
+        self.assertEqual(four["tasteMinChances"], 4, "the page's note says what the build used")
+
+    def test_silent_treatment_still_waits_for_five(self):
+        self.assertNotIn("silentTreatment", self.season_after(4)["commentSummary"])
+        self.assertIn("silentTreatment", self.season_after(5)["commentSummary"])
+
+
 class EverythingWrittenIsRead(unittest.TestCase):
     """Members download the season files on every season page, so a field
     no page reads is weight for nothing. One did that unnoticed: the full

@@ -42,13 +42,18 @@ DATA_DIR = ROOT / "data"
 OUT_DIR = ROOT / "site" / "data"
 
 # minimum chances-to-vote before a voter/submitter pair is shown in the
-# taste matrix, so one lucky round does not read as a lifelong grudge
-MIN_PAIR_OPPORTUNITIES = 5
+# taste matrix, so one lucky round does not read as a lifelong grudge. A
+# pair gets one chance per round they both play, so this is also how many
+# rounds a season needs before the matrix shows anything. 4 since
+# 2026-10-11 (it was 5): the league wanted Season 3's after four rounds.
+# The page's note reads it from the season file (tasteMinChances).
+MIN_PAIR_OPPORTUNITIES = 4
 
-# Same guard for the comment matrix. It's the same denominator (chances to
-# vote on that submitter's tracks), so a pair below this threshold is
-# hidden there too rather than reading a single round as a habit.
-MIN_COMMENT_PAIR_OPPORTUNITIES = MIN_PAIR_OPPORTUNITIES
+# The comment matrix's guard (Silent treatment, Most talked at). Same
+# denominator as the taste matrix, chances to vote on that submitter's
+# tracks, and the same number until the taste one came down to 4; this
+# one stayed at 5, since only the taste matrix was asked for.
+MIN_COMMENT_PAIR_OPPORTUNITIES = 5
 
 # Vocabulary richness is measured on fixed-size chunks of this many words
 # (see sampled_richness). 500 sits below the smallest real corpus in the
@@ -1148,6 +1153,7 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
         "standings": standings,
         "voters": voters_out,
         "taste": taste,
+        "tasteMinChances": MIN_PAIR_OPPORTUNITIES,
         "commenters": commenters,
         "submitterNotes": submitter_notes,
         "commentSummary": comment_summary,

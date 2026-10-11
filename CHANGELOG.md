@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-10-11 (follow-up): taste after four rounds
+
+- **"Who likes whose taste" shows a pair after 4 rounds, down from 5**, so
+  Season 3's fills in now rather than after Round 5. A pair gets one chance
+  per round they both play: 342 of Season 3's 380 pairs have 4. The other
+  38 involve a player who sat out Round 1, and join after Round 5. Season
+  3's numbers also gain Biggest fan and Coldest shoulder, which come from
+  the same matrix. Seasons 1 and 2 are unchanged (measured: every pair
+  there already had 5 or more).
+- Silent treatment and Most talked at keep their own minimum of 5; they
+  had shared the number in the code, and only the taste matrix was asked
+  for.
+- The section's note said "five chances" in words; it now reads the
+  number from the season file (`tasteMinChances`).
+- **Verified:** suite 206 passing (3 new tests, each failing on its own
+  break). Built from the real data at 5 and at 4: only Season 3's taste
+  and those two highlights differ.
+
 ## 2026-10-11: translations
 
 - **Comments and notes in another language show their English

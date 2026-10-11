@@ -1201,6 +1201,14 @@ class MemberTextIsEscaped(unittest.TestCase):
         self.assertIn('renderTasteRowList("How everyone else rates " + esc(name)', js)
 
 
+class TasteNote(unittest.TestCase):
+    def test_note_takes_the_minimum_from_the_data(self):
+        # it said "five" in words, and would have gone stale when it became 4
+        taste = js_function(read("app.js"), "function renderTaste(d)")
+        self.assertIn("d.tasteMinChances", taste)
+        self.assertNotRegex(taste, r"\b(four|five) chances\b")
+
+
 class Translations(unittest.TestCase):
     """A comment or note in another language shows the original first, then
     its English underneath, marked as a translation (README, Translations)."""

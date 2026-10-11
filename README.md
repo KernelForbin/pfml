@@ -386,9 +386,10 @@ round was exported.
 A season with exactly one round renders too, minus whatever needs more
 history: the trend chart stays hidden until there are two rounds (with one,
 every line is a single dot and the chart is a column of dots over an empty
-plot), and the taste matrix stays empty, and Silent treatment and Most
-talked at stay away, until a pair reaches its 5-chance minimum, which takes
-five rounds.
+plot). A pair of players gets one chance per round they both play, so the
+taste matrix (and Biggest fan, Coldest shoulder) stays empty until four
+rounds, and Silent treatment and Most talked at until five; someone who
+missed a round is a round later.
 
 ## Previewing locally
 
@@ -818,8 +819,12 @@ level on 29), so nothing that names a winner picks one silently:
 **Taste index** — the share of a voter's points that went to one submitter,
 divided by the share you would expect if they spread points evenly across
 every track they saw. 1.00 is neutral, 2.00 is twice their baseline. Self-
-votes are excluded and a pair needs at least 5 chances to vote before it is
-shown, so one lucky round does not read as a lifelong grudge.
+votes are excluded and a pair needs at least 4 chances to vote (one per
+round) before it is shown, so one lucky round does not read as a lifelong
+grudge. It was 5 until 2026-10-11, when the league asked to see Season 3's
+after four rounds rather than five; at 4 nothing in Seasons 1 and 2 changed
+(every pair there had at least 5). `MIN_PAIR_OPPORTUNITIES` in `build.py`
+sets it, and the page's note reads it from the season file.
 
 **Top bet** — the average size of a voter's single largest bet in a round.
 High means they concentrate, low means they spread.
@@ -896,9 +901,10 @@ answer for every player, telling you nothing about any of them.
 **Comment matrix** — how often a voter comments on a given submitter's
 tracks, out of the chances they had to. It shares the taste matrix's
 denominator exactly (one "chance" is one of that submitter's tracks the
-voter could have voted on, self-votes excluded) and its minimum-sample
-guard: a pair needs at least 5 chances before it counts, so one round
-can't read as a habit. **Silent treatment** is the pair with the lowest
+voter could have voted on, self-votes excluded), but keeps its own minimum:
+a pair needs at least 5 chances before it counts, so one round can't read
+as a habit (`MIN_COMMENT_PAIR_OPPORTUNITIES`; it stayed at 5 when the
+taste matrix's came down to 4). **Silent treatment** is the pair with the lowest
 comment rate over the most chances: the person you have had every
 opportunity to say something to and never have. The build works the matrix
 out only for that and Most talked at; the matrix itself isn't written to
