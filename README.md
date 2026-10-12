@@ -265,6 +265,21 @@ send keeps it). Drafts live in the page only; leaving the page loses them.
 A dropdown at the top of every round page jumps to any other round in that
 season, alongside the previous/next links.
 
+**The song stays in view.** Once a track's own header has scrolled up
+under the top bar, a slim bar with its art, title, artist and points stays
+pinned there while its votes and comments scroll past, until the card ends
+and the next track's bar takes over (`pinHtml` / `updatePins` in
+`rounds.js`, `.rp-pin` in `style.css`). Not the whole header: that's about
+160px, a third of a phone screen under a 107px top bar. The bar's wrapper
+is sticky and 0px tall, and the bar is shown by a class, so showing and
+hiding it never moves the page (measured: 0px with scroll anchoring off).
+It sits at `--topbar-h`, the top bar's real height, which `app.js` keeps
+current alongside the scroll padding. Two things it depends on: the card
+uses `overflow: clip`, since `overflow: hidden` makes the card a scroll
+container and nothing inside it can stick (Safari before 16 lacks clip, so
+there the bar just never appears); and the bar takes no taps and is hidden
+from screen readers, because it only repeats the header.
+
 Each voter's name and points row sits on a faint magenta gradient running
 the card's full width, so voters read as separate blocks.
 

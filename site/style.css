@@ -1089,9 +1089,13 @@ body.auth-checking::before {
 
 .rp-body { padding-top: 20px; }
 #rpTracks { display: grid; gap: 22px; }
+/* clip, not hidden: both keep the rounded corners, but hidden would make the
+   card a scroll container and stop .rp-pin sticking. hidden stays as the
+   fallback for browsers without clip (Safari before 16), where the pin
+   just never appears. */
 .rp-track {
   background: var(--card); border: 1px solid var(--border); border-radius: var(--r);
-  box-shadow: var(--shadow-md); overflow: hidden;
+  box-shadow: var(--shadow-md); overflow: hidden; overflow: clip;
 }
 .rp-track-main { display: grid; grid-template-columns: 132px 1fr auto; gap: 18px; align-items: center; padding: 16px; }
 .rp-art { width: 132px; height: 132px; border-radius: 12px; object-fit: cover; display: block; box-shadow: var(--shadow-sm); }
@@ -1123,6 +1127,30 @@ body.auth-checking::before {
   white-space: pre-wrap; overflow-wrap: anywhere;
 }
 .rp-note span { display: block; font-size: 0.72rem; font-weight: 600; color: var(--deep); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
+
+/* While a track's votes scroll past, a slim bar with its art, title and
+   points stays pinned under the top bar, so you can see which song the
+   comments are on (rounds.js updatePins). The wrapper is sticky and 0px
+   tall, so showing or hiding the bar never moves the page; the card's
+   overflow: clip slides it away as the card ends, and the next track's
+   takes over. Not interactive: it repeats the header, so screen readers
+   and taps skip it. */
+.rp-pin { position: sticky; top: var(--topbar-h, 0px); height: 0; z-index: 5; }
+.rp-pin-bar {
+  position: absolute; top: 0; left: 0; right: 0;
+  display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 12px; align-items: center;
+  padding: 8px 16px; background: var(--card); border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm); pointer-events: none;
+  opacity: 0; visibility: hidden; transition: opacity .15s ease, visibility .15s;
+}
+.rp-pin.is-stuck .rp-pin-bar { opacity: 1; visibility: visible; }
+.rp-pin-art { width: 36px; height: 36px; border-radius: 6px; object-fit: cover; display: block; }
+.rp-pin-art.is-empty { display: grid; place-items: center; background: var(--wash); color: var(--muted); }
+.rp-pin-text { min-width: 0; }
+.rp-pin-title, .rp-pin-artist { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-pin-title { font-family: "Archivo", sans-serif; font-weight: 700; color: var(--magenta); }
+.rp-pin-artist { font-size: 0.85rem; color: var(--muted); }
+.rp-pin-pts { font-family: "Archivo", sans-serif; font-weight: 800; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
 
 .rp-votes { border-top: 3px solid var(--border-soft); }
 .rp-vote { padding: 0 20px 16px; border-bottom: 1px solid var(--border-soft); }

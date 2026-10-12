@@ -1201,6 +1201,52 @@ class MemberTextIsEscaped(unittest.TestCase):
         self.assertIn('renderTasteRowList("How everyone else rates " + esc(name)', js)
 
 
+class PinnedTrackBar(unittest.TestCase):
+    """On a round page, the song being commented on stays pinned under the
+    top bar while its comments scroll past, until the next song's do."""
+
+    def test_bar_sits_in_the_card_just_before_the_votes(self):
+        # a direct child of the card, so it pins only within that card and
+        # the next card's takes over
+        track = js_function(read("rounds.js"), "function trackHtml(s, tiedPlaces)")
+        self.assertIn("pinHtml(s) + '<div class=\"rp-votes\">'", track)
+        pin = js_function(read("rounds.js"), "function pinHtml(s)")
+        self.assertIn('class="rp-pin" aria-hidden="true"', pin, "it repeats the header")
+        self.assertIn("esc(s.title)", pin)
+        self.assertIn("esc(s.artistText)", pin)
+
+    def test_it_never_moves_the_page(self):
+        # 0px tall and sticky: showing the bar overlays, it doesn't push
+        pin = " ".join(css_rules(read("style.css"), ".rp-pin"))
+        self.assertIn("position: sticky", pin)
+        self.assertIn("height: 0", pin)
+        self.assertIn("top: var(--topbar-h", pin)
+        bar = " ".join(css_rules(read("style.css"), ".rp-pin-bar"))
+        self.assertIn("position: absolute", bar)
+        self.assertIn("pointer-events: none", bar)
+        self.assertIn("visibility: hidden", bar)
+        self.assertTrue(css_rules(read("style.css"), ".rp-pin.is-stuck .rp-pin-bar"))
+
+    def test_the_card_clips_without_stopping_sticky(self):
+        # overflow: hidden makes the card a scroll container, and sticky
+        # children then never stick; clip keeps the corners without that
+        card = " ".join(css_rules(read("style.css"), ".rp-track"))
+        self.assertIn("overflow: clip", card)
+        self.assertGreater(card.index("overflow: clip"), card.index("overflow: hidden"), "clip wins where supported")
+
+    def test_it_sits_under_the_real_top_bar(self):
+        sync = js_function(read("app.js"), "function syncScrollPadding()")
+        self.assertIn('setProperty("--topbar-h", bar.offsetHeight + "px")', sync)
+
+    def test_shown_only_while_stuck_measured_then_toggled(self):
+        js = read("rounds.js")
+        update = js_function(js, "function updatePins()")
+        self.assertLess(update.index("getBoundingClientRect"), update.index('classList.toggle("is-stuck"'),
+                        "every read before any write")
+        self.assertIn('window.addEventListener("scroll", schedulePins, { passive: true })', js)
+        self.assertIn("updatePins();", js_function(js, "function renderTracks(r)"), "and after each redraw")
+
+
 class TasteNote(unittest.TestCase):
     def test_note_takes_the_minimum_from_the_data(self):
         # it said "five" in words, and would have gone stale when it became 4

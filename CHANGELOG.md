@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-10-11 (follow-up 2): the song stays pinned while you read its comments
+
+- **On a round page, the song being commented on stays in view.** Once a
+  track's header scrolls away, a slim bar with its art, title, artist and
+  points pins under the top bar while its comments scroll past, and the
+  next track's bar takes over when its comments start. A bar rather than
+  the whole header, which is about 160px: a third of a phone screen.
+- It never moves the page: the bar's wrapper is 0px tall, so showing it
+  only overlays. The cards now clip with `overflow: clip` instead of
+  `hidden`, which kept anything inside them from sticking.
+- **Verified:** suite 211 passing (5 new tests). In a browser at 375px and
+  1280px on Round 4: no bar at the top of the page; in a song's comments
+  its bar sits exactly under the top bar (107px down on a phone, 63px on
+  a desktop); at the next song's header neither shows; in its comments the
+  next one does; 0px of layout shift with scroll anchoring off, as on
+  Safari; and as a card ends its bar is cut off at the card's edge rather
+  than spilling into the gap (screenshot).
+
 ## 2026-10-11 (follow-up): taste after four rounds
 
 - **"Who likes whose taste" shows a pair after 4 rounds, down from 5**, so

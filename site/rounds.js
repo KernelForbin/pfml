@@ -475,6 +475,35 @@
       (s.place === 1 ? "&#9733; " : "") + ordinal(s.place) + " place" + (tied ? " &middot; tie" : "") + "</span>";
   }
 
+  // The slim bar that stays pinned under the top bar while this track's
+  // votes scroll past (see .rp-pin in style.css, and updatePins). It
+  // repeats the header, so it's hidden from screen readers.
+  function pinHtml(s) {
+    return '<div class="rp-pin" aria-hidden="true"><div class="rp-pin-bar">' + artHtml(s.art, "rp-pin-art") +
+      '<span class="rp-pin-text"><span class="rp-pin-title">' + esc(s.title) + '</span><span class="rp-pin-artist">' +
+      esc(s.artistText) + "</span></span>" + '<span class="rp-pin-pts">' + pointsLabel(s.points) + "</span></div></div>";
+  }
+
+  // Shows a track's pinned bar only while it's actually stuck: its own
+  // header has scrolled up under the top bar and the card hasn't ended.
+  // All the measuring first, then the class changes, so a frame never
+  // lays the page out more than once.
+  function updatePins() {
+    if (!state.host) return;
+    var bar = document.querySelector(".topbar");
+    var line = (bar ? bar.getBoundingClientRect().bottom : 0) + 1;
+    var pins = Array.prototype.slice.call(state.host.querySelectorAll(".rp-pin"));
+    var stuck = pins.map(function (pin) {
+      return pin.getBoundingClientRect().top <= line && pin.parentNode.getBoundingClientRect().bottom > line;
+    });
+    pins.forEach(function (pin, i) { pin.classList.toggle("is-stuck", stuck[i]); });
+  }
+
+  var pinFrame = 0;
+  function schedulePins() {
+    if (!pinFrame) pinFrame = requestAnimationFrame(function () { pinFrame = 0; updatePins(); });
+  }
+
   function trackHtml(s, tiedPlaces) {
     var rows = voteRows(s);
     var voters = (s.votes || []).length;
@@ -494,7 +523,7 @@
         "<span>Submitted by <b>" + personLink(s.submitterId, s.submitterName) + "</b></span>" +
         (s.dailyDouble ? '<span class="dd-badge">Daily Double +' + s.dailyDouble.bonus + "</span>" : "") + "</div>" +
       (s.note ? '<p class="rp-note"><span>Their note</span>' + esc(s.note) + translationHtml(s.noteTranslation) + "</p>" : "") +
-      (rows.length ? '<div class="rp-votes">' + rows.map(voteHtml).join("") + "</div>"
+      (rows.length ? pinHtml(s) + '<div class="rp-votes">' + rows.map(voteHtml).join("") + "</div>"
                    : '<p class="rp-empty">No votes or comments on this one.</p>') +
       "</article>";
   }
@@ -527,6 +556,7 @@
     songs.forEach(function (s) { if (s.place) tiedPlaces[s.place] = (tiedPlaces[s.place] || 0) + 1; });
     state.index = {};
     state.host.innerHTML = songs.map(function (s) { return trackHtml(s, tiedPlaces); }).join("");
+    updatePins();
   }
 
   function renderRoundPage(d, roundId) {
@@ -591,6 +621,8 @@
     state.host.addEventListener("keydown", onReplyKey);
     document.addEventListener("click", closePickerFromOutside);
     document.addEventListener("keydown", closePickerOnEscape);
+    window.addEventListener("scroll", schedulePins, { passive: true });
+    window.addEventListener("resize", schedulePins);
     if (window.visualViewport) {
       visualViewport.addEventListener("resize", fitSheetToViewport);
       visualViewport.addEventListener("scroll", fitSheetToViewport);

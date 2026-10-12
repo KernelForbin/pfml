@@ -181,9 +181,13 @@
   // offset fits both, so a #section link landed its section under the bar:
   // measured at 418px wide, 154px of the 188px Results by round bar was
   // hidden. Keep the scroll padding equal to the bar's real height.
+  // The round page's pinned track bar (.rp-pin) sits just under the top
+  // bar, so it needs the same real height: --topbar-h.
   function syncScrollPadding() {
     var bar = document.querySelector(".topbar");
-    if (bar) document.documentElement.style.scrollPaddingTop = (bar.offsetHeight + 12) + "px";
+    if (!bar) return;
+    document.documentElement.style.scrollPaddingTop = (bar.offsetHeight + 12) + "px";
+    document.documentElement.style.setProperty("--topbar-h", bar.offsetHeight + "px");
   }
   window.addEventListener("resize", syncScrollPadding);
 
