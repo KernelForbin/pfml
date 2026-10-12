@@ -1153,19 +1153,22 @@
   }
   function byPerRound(a, b) { return b.perRound - a.perRound || b.points - a.points; }
 
-  // `firstCol` heads the first column: whose songs ("Player") or who's voting.
-  function renderTasteRowList(title, rows, host, firstCol) {
-    var block = el("div");
+  // A taste list: rows of { label, cells }, under a header row. `firstCol`
+  // heads the names (whose songs, or who's voting); `cols` the numbers,
+  // TASTE_COLS unless given. On a phone the fourth column is dropped.
+  var TASTE_COLS = ["Points a round", "Points", "Rounds"];
+  function tasteCells(t) { return [t.perRound.toFixed(1), t.points, t.chances]; }
+
+  function renderTasteRowList(title, rows, host, firstCol, cols, cls) {
+    var block = el("div", cls || null);
     block.appendChild(el("h3", null, title));
     if (!rows.length) { block.appendChild(empty("Not enough voting history yet.")); host.appendChild(block); return; }
     var box = el("div", "framed");
-    box.insertAdjacentHTML("beforeend",
-      '<div class="vrow head"><div>' + esc(firstCol) + '</div><div class="num">Points a round</div>' +
-      '<div class="num">Points</div><div class="num">Rounds</div></div>');
+    box.insertAdjacentHTML("beforeend", '<div class="vrow head"><div>' + esc(firstCol) + "</div>" +
+      (cols || TASTE_COLS).map(function (c) { return '<div class="num">' + esc(c) + "</div>"; }).join("") + "</div>");
     rows.forEach(function (r) {
-      box.insertAdjacentHTML("beforeend",
-        '<div class="vrow"><div class="vname">' + esc(r.label) + '</div><div class="num">' + r.perRound.toFixed(1) +
-        '</div><div class="num">' + r.points + '</div><div class="num">' + r.chances + '</div></div>');
+      box.insertAdjacentHTML("beforeend", '<div class="vrow"><div class="vname">' + esc(r.label) + "</div>" +
+        r.cells.map(function (c) { return '<div class="num">' + esc(c) + "</div>"; }).join("") + "</div>");
     });
     block.appendChild(box);
     host.appendChild(block);
@@ -1176,27 +1179,54 @@
   function renderTasteLists(d, id, host) {
     var you = id === PFML.member.competitorId, name = esc(nameOf(d, id));
     var out = tasteFrom(d, id).slice().sort(byPerRound)
-      .map(function (t) { return { label: t.submitterName, perRound: t.perRound, points: t.points, chances: t.chances }; });
+      .map(function (t) { return { label: t.submitterName, cells: tasteCells(t) }; });
     var into = tasteTo(d, id).slice().sort(byPerRound)
-      .map(function (t) { return { label: t.voterName, perRound: t.perRound, points: t.points, chances: t.chances }; });
+      .map(function (t) { return { label: t.voterName, cells: tasteCells(t) }; });
     renderTasteRowList(you ? "How you rate everyone else" : "How " + name + " rates everyone else", out, host, "Player");
     renderTasteRowList(you ? "How everyone else rates you" : "How everyone else rates " + name, into, host, "Voter");
   }
 
-  // The league's five strongest and five coldest pairings: the grid's
-  // extremes as two short lists, so a phone gets the big picture without
-  // the grid. Ties: the strongest on more points, the coldest on more
-  // chances (a zero over more rounds says more), then by name.
+  // The league's five strongest, five coldest and five most lopsided
+  // pairings: the grid's extremes as short lists, so a phone gets the big
+  // picture without the grid. Ties: the strongest on more points, the
+  // coldest on more chances (a zero over more rounds says more), then by
+  // name.
   function renderTastePairs(d, host) {
-    var pairs = d.taste.map(function (t) {
-      return { label: t.voterName + " \u2192 " + t.submitterName, perRound: t.perRound, points: t.points, chances: t.chances };
-    });
-    var strongest = pairs.slice().sort(function (a, b) { return b.perRound - a.perRound || b.points - a.points || a.label.localeCompare(b.label); });
-    var coldest = pairs.slice().sort(function (a, b) { return a.perRound - b.perRound || b.chances - a.chances || a.label.localeCompare(b.label); });
+    var label = function (t) { return t.voterName + " \u2192 " + t.submitterName; };
+    var strongest = d.taste.slice().sort(function (a, b) { return b.perRound - a.perRound || b.points - a.points || label(a).localeCompare(label(b)); });
+    var coldest = d.taste.slice().sort(function (a, b) { return a.perRound - b.perRound || b.chances - a.chances || label(a).localeCompare(label(b)); });
+    var row = function (t) { return { label: label(t), cells: tasteCells(t) }; };
     var wrap = el("div", "taste-pairs");
-    renderTasteRowList("Strongest pairings", strongest.slice(0, 5), wrap, "Voter \u2192 player");
-    renderTasteRowList("Coldest pairings", coldest.slice(0, 5), wrap, "Voter \u2192 player");
+    renderTasteRowList("Strongest pairings", strongest.slice(0, 5).map(row), wrap, "Voter \u2192 player");
+    renderTasteRowList("Coldest pairings", coldest.slice(0, 5).map(row), wrap, "Voter \u2192 player");
+    renderTasteRowList("Most lopsided pairings", lopsidedPairs(d).slice(0, 5).map(function (x) {
+      return { label: label(x.gives), cells: [x.gives.perRound.toFixed(1), x.back.perRound.toFixed(1), x.gap.toFixed(1)] };
+    }), wrap, "Gives \u2192 gets back", ["Gives a round", "Gets back", "Gap"], "taste-lopsided");
     host.appendChild(wrap);
+  }
+
+  // Who gives someone's songs far more a round than that person gives
+  // back. Each pair once, from the side that gives more, and only where
+  // both directions have had enough rounds to show; a pair that gives each
+  // other the same isn't lopsided at all. The gap is worked out from the
+  // two figures as shown (one decimal, as every taste list shows them), so
+  // the row always adds up: unrounded, 1.15 and 0.35 showed as 1.1 and 0.4
+  // with a gap of 0.8. Biggest gap first, then the one giving more.
+  function lopsidedPairs(d) {
+    var shown = function (n) { return +n.toFixed(1); };
+    var byKey = {};
+    d.taste.forEach(function (t) { byKey[t.voterId + "|" + t.submitterId] = t; });
+    var out = [];
+    d.taste.forEach(function (t) {
+      var back = byKey[t.submitterId + "|" + t.voterId];
+      if (!back) return;
+      var gives = shown(t.perRound), gets = shown(back.perRound);
+      if (gives > gets) out.push({ gives: t, back: back, gap: Math.round((gives - gets) * 10) / 10 });
+    });
+    return out.sort(function (a, b) {
+      return b.gap - a.gap || b.gives.perRound - a.gives.perRound ||
+        (a.gives.voterName + a.gives.submitterName).localeCompare(b.gives.voterName + b.gives.submitterName);
+    });
   }
 
   // Phones get one player's lists instead of the grid, which is about six

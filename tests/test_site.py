@@ -1293,8 +1293,8 @@ class TasteOnPhones(unittest.TestCase):
         pairs = js_function(self.js, "function renderTastePairs(d, host)")
         self.assertIn("b.perRound - a.perRound || b.points - a.points", pairs)
         self.assertIn("a.perRound - b.perRound || b.chances - a.chances", pairs, "a zero over more rounds is colder")
-        self.assertIn('renderTasteRowList("Strongest pairings", strongest.slice(0, 5), wrap,', pairs)
-        self.assertIn('renderTasteRowList("Coldest pairings", coldest.slice(0, 5), wrap,', pairs)
+        self.assertIn('renderTasteRowList("Strongest pairings", strongest.slice(0, 5).map(row), wrap,', pairs)
+        self.assertIn('renderTasteRowList("Coldest pairings", coldest.slice(0, 5).map(row), wrap,', pairs)
 
     def test_players_with_nothing_to_show_are_named_not_blank_rows(self):
         self.assertIn("var people = pool.filter(function (p) { return inTaste[p.id]; });", self.taste)
@@ -1306,7 +1306,7 @@ class TasteInPointsARound(unittest.TestCase):
     """Members didn't follow "1.97x", even with the note. Taste now reads in
     the league's own units, points a round, with column headers."""
 
-    FUNCTIONS = ["function renderTasteRowList(title, rows, host, firstCol)", "function renderTasteGrid(d, people, host, phoneToo)",
+    FUNCTIONS = ["function renderTasteRowList(title, rows, host, firstCol, cols, cls)", "function renderTasteGrid(d, people, host, phoneToo)",
                  "function renderTastePairs(d, host)", "function renderTasteLists(d, id, host)",
                  "function renderFocusIndividual(d, id, host)", "function renderFocusGroup(d, ids, host)",
                  "function renderHighlights(d)", "function renderTaste(d)"]
@@ -1320,10 +1320,12 @@ class TasteInPointsARound(unittest.TestCase):
                 self.assertNotRegex(body, r"\.index\b")
 
     def test_lists_have_column_headers(self):
-        lists = js_function(read("app.js"), "function renderTasteRowList(title, rows, host, firstCol)")
-        self.assertIn('<div class="vrow head"><div>\' + esc(firstCol) + \'</div><div class="num">Points a round</div>', lists)
-        self.assertIn('<div class="num">Points</div><div class="num">Rounds</div>', lists)
-        self.assertIn("r.perRound.toFixed(1)", lists)
+        js = read("app.js")
+        lists = js_function(js, "function renderTasteRowList(title, rows, host, firstCol, cols, cls)")
+        self.assertIn("esc(firstCol)", lists)
+        self.assertIn("(cols || TASTE_COLS).map(", lists, "every list has a header row")
+        self.assertIn('var TASTE_COLS = ["Points a round", "Points", "Rounds"];', js)
+        self.assertIn("return [t.perRound.toFixed(1), t.points, t.chances];", js_function(js, "function tasteCells(t)"))
 
     def test_figures_say_what_an_even_split_is(self):
         js = read("app.js")
@@ -1332,6 +1334,34 @@ class TasteInPointsARound(unittest.TestCase):
         note = js_function(js, "function renderTaste(d)")
         self.assertIn("d.pointBudget", note)
         self.assertIn("d.tasteEvenSplit.toFixed(1)", note)
+
+
+class LopsidedPairings(unittest.TestCase):
+    """Who gives someone's songs far more a round than they get back: a
+    third list beside strongest and coldest."""
+
+    def setUp(self):
+        self.js = read("app.js")
+        self.fn = js_function(self.js, "function lopsidedPairs(d)")
+
+    def test_each_pair_once_from_the_bigger_giver_and_only_both_ways(self):
+        self.assertIn('var back = byKey[t.submitterId + "|" + t.voterId];', self.fn)
+        # needs the return direction, and an equal pair isn't lopsided
+        self.assertIn("if (!back) return;", self.fn)
+        self.assertIn("if (gives > gets) out.push(", self.fn)
+
+    def test_the_gap_is_the_difference_of_the_figures_shown(self):
+        # rounded apart, 1.15 and 0.35 showed as 1.1 and 0.4 with a gap of 0.8
+        self.assertIn("var shown = function (n) { return +n.toFixed(1); };", self.fn)
+        self.assertIn("var gives = shown(t.perRound), gets = shown(back.perRound);", self.fn)
+        self.assertIn("gap: Math.round((gives - gets) * 10) / 10", self.fn)
+        self.assertIn("return b.gap - a.gap || b.gives.perRound - a.gives.perRound ||", self.fn)
+
+    def test_listed_with_its_own_columns_full_width_on_desktop(self):
+        pairs = js_function(self.js, "function renderTastePairs(d, host)")
+        self.assertIn('renderTasteRowList("Most lopsided pairings", lopsidedPairs(d).slice(0, 5).map(', pairs)
+        self.assertIn('["Gives a round", "Gets back", "Gap"], "taste-lopsided")', pairs)
+        self.assertIn("grid-column: 1 / -1", " ".join(css_rules(read("style.css"), ".taste-lopsided")))
 
 
 class TasteNote(unittest.TestCase):

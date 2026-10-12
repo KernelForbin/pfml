@@ -860,7 +860,12 @@ instead (how they rate everyone, how everyone rates them), opening on the
 signed-in member as "you", with a menu for anyone else. Everyone also gets
 the league's five strongest and five coldest pairings (side by side, or
 stacked on a phone); coldest ties go to the pair with more chances, since a
-zero over more rounds says more. Pick one player in Standings and both
+zero over more rounds says more. Under them, the five most lopsided
+(`lopsidedPairs`): who gives someone's songs far more a round than they get
+back, each pair once from the bigger giver, and only where both directions
+show. Its gap is the difference of the two figures as displayed (one
+decimal), so a row always adds up: rounded apart, 1.15 and 0.35 showed as
+1.1 and 0.4 with a gap of 0.8. Pick one player in Standings and both
 widths show their lists; pick several and both show a grid of just them,
 small enough for a phone. A player with no pair to show yet (hasn't played,
 or not enough rounds together) is named under it rather than drawn as a

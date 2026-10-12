@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-10-11 (follow-up 5): most lopsided pairings
+
+- **A third list beside strongest and coldest: who gives someone's songs
+  far more than they get back.** Each pair once, from the side giving more:
+  Gives a round · Gets back · Gap (the gap drops on a phone, like Rounds).
+  Season 3 is led by Memo → Rick D, 3.3 a round with 0.3 back. Full width
+  under the other two on a desktop; stacked on a phone.
+- The gap is the difference of the two figures as shown, so every row adds
+  up. The first browser check caught Season 2 reading "1.1 | 0.4 | 0.8":
+  each number had been rounded on its own.
+- The taste lists take their columns as a parameter now (the old header and
+  cells were fixed), so the lopsided list reuses the same component.
+- **Verified:** suite 226 passing (3 new tests). In a browser at 375px and
+  1280px on all three seasons: rows add up and run biggest gap first, the
+  layout is right at each width, nothing clipped or overflowing.
+
 ## 2026-10-11 (follow-up 4): taste in points a round
 
 - **Taste reads in points now, not "1.97×".** Members didn't follow the
