@@ -597,20 +597,20 @@
       }
     }
 
-    var fansOf = tasteTo(d, id).slice().sort(function (a, b) { return b.index - a.index; });
+    var fansOf = tasteTo(d, id).slice().sort(byPerRound);
     if (fansOf.length) {
       g.appendChild(tile("Biggest fan", who(fansOf[0].voterName, fansOf[0].voterId),
-        "sends " + fansOf[0].index + "&times; their baseline share of points to " + esc(name)));
+        "gives " + esc(name) + "&rsquo;s songs " + aRound(fansOf[0].perRound) + evenSplit(d)));
       if (fansOf.length >= 2) {
         var cold = fansOf[fansOf.length - 1];
         g.appendChild(tile("Hardest to win over", who(cold.voterName, cold.voterId),
-          "only " + cold.index + "&times; their baseline share"));
+          "only " + aRound(cold.perRound) + evenSplit(d)));
       }
     }
-    var favorsOf = tasteFrom(d, id).slice().sort(function (a, b) { return b.index - a.index; });
+    var favorsOf = tasteFrom(d, id).slice().sort(byPerRound);
     if (favorsOf.length) {
       g.appendChild(tile("Favorite to vote for", who(favorsOf[0].submitterName, favorsOf[0].submitterId),
-        esc(name) + " sends " + favorsOf[0].index + "&times; baseline their way"));
+        esc(name) + " gives their songs " + aRound(favorsOf[0].perRound) + evenSplit(d)));
     }
 
     var voter = null;
@@ -700,12 +700,12 @@
       var ab = tastePair(d, a, b), ba = tastePair(d, b, a);
       var g = el("div", "hl-grid focus-grid-spaced");
       if (ab) {
-        g.appendChild(tile(esc(nameOf(d, a)) + " &rarr; " + esc(nameOf(d, b)), ab.index + "&times; baseline",
-          ab.points + " points across " + ab.chances + " chances to vote"));
+        g.appendChild(tile(esc(nameOf(d, a)) + " &rarr; " + esc(nameOf(d, b)), aRound(ab.perRound),
+          ab.points + " " + plural(ab.points, "point") + " over " + ab.chances + " rounds" + evenSplit(d)));
       }
       if (ba) {
-        g.appendChild(tile(esc(nameOf(d, b)) + " &rarr; " + esc(nameOf(d, a)), ba.index + "&times; baseline",
-          ba.points + " points across " + ba.chances + " chances to vote"));
+        g.appendChild(tile(esc(nameOf(d, b)) + " &rarr; " + esc(nameOf(d, a)), aRound(ba.perRound),
+          ba.points + " " + plural(ba.points, "point") + " over " + ba.chances + " rounds" + evenSplit(d)));
       }
       if (!ab && !ba) {
         g.appendChild(tile("Mutual taste", "Not enough data", "needs a few more rounds of head-to-head voting history"));
@@ -815,11 +815,11 @@
     }
     if (h.biggestFan) {
       g.appendChild(tile("Biggest fan", who(h.biggestFan.voterName) + " &rarr; " + who(h.biggestFan.submitterName),
-        "sends " + h.biggestFan.index + "&times; their baseline share of points that way", false, h.biggestFan.tiedWith));
+        "gives their songs " + aRound(h.biggestFan.perRound) + evenSplit(d), false, h.biggestFan.tiedWith));
     }
     if (h.coldestShoulder) {
       g.appendChild(tile("Coldest shoulder", who(h.coldestShoulder.voterName) + " &rarr; " + who(h.coldestShoulder.submitterName),
-        "only " + h.coldestShoulder.index + "&times; their baseline share", false, h.coldestShoulder.tiedWith));
+        "gives their songs only " + aRound(h.coldestShoulder.perRound) + evenSplit(d), false, h.coldestShoulder.tiedWith));
     }
     if (h.boldestVoter) {
       g.appendChild(tile("Boldest voter", who(h.boldestVoter.name),
@@ -1145,15 +1145,27 @@
 
   /* ---- taste matrix (filterable) ---- */
 
-  function renderTasteRowList(title, rows, host) {
+  // Taste in the league's own units: the points a voter gives someone's
+  // songs a round, against an even split of about 1 (tasteEvenSplit).
+  function aRound(n) { return n.toFixed(1) + " points a round"; }
+  function evenSplit(d) {
+    return d.tasteEvenSplit == null ? "" : " (an even split is " + d.tasteEvenSplit.toFixed(1) + ")";
+  }
+  function byPerRound(a, b) { return b.perRound - a.perRound || b.points - a.points; }
+
+  // `firstCol` heads the first column: whose songs ("Player") or who's voting.
+  function renderTasteRowList(title, rows, host, firstCol) {
     var block = el("div");
     block.appendChild(el("h3", null, title));
     if (!rows.length) { block.appendChild(empty("Not enough voting history yet.")); host.appendChild(block); return; }
     var box = el("div", "framed");
+    box.insertAdjacentHTML("beforeend",
+      '<div class="vrow head"><div>' + esc(firstCol) + '</div><div class="num">Points a round</div>' +
+      '<div class="num">Points</div><div class="num">Rounds</div></div>');
     rows.forEach(function (r) {
       box.insertAdjacentHTML("beforeend",
-        '<div class="vrow"><div class="vname">' + esc(r.label) + '</div><div class="num">' + r.index.toFixed(2) +
-        '&times;</div><div class="num">' + r.points + ' pts</div><div class="num">' + r.chances + ' ch.</div></div>');
+        '<div class="vrow"><div class="vname">' + esc(r.label) + '</div><div class="num">' + r.perRound.toFixed(1) +
+        '</div><div class="num">' + r.points + '</div><div class="num">' + r.chances + '</div></div>');
     });
     block.appendChild(box);
     host.appendChild(block);
@@ -1163,12 +1175,12 @@
   // everyone else rates them. "You" for the signed-in member.
   function renderTasteLists(d, id, host) {
     var you = id === PFML.member.competitorId, name = esc(nameOf(d, id));
-    var out = tasteFrom(d, id).slice().sort(function (a, b) { return b.index - a.index; })
-      .map(function (t) { return { label: t.submitterName, index: t.index, points: t.points, chances: t.chances }; });
-    var into = tasteTo(d, id).slice().sort(function (a, b) { return b.index - a.index; })
-      .map(function (t) { return { label: t.voterName, index: t.index, points: t.points, chances: t.chances }; });
-    renderTasteRowList(you ? "How you rate everyone else" : "How " + name + " rates everyone else", out, host);
-    renderTasteRowList(you ? "How everyone else rates you" : "How everyone else rates " + name, into, host);
+    var out = tasteFrom(d, id).slice().sort(byPerRound)
+      .map(function (t) { return { label: t.submitterName, perRound: t.perRound, points: t.points, chances: t.chances }; });
+    var into = tasteTo(d, id).slice().sort(byPerRound)
+      .map(function (t) { return { label: t.voterName, perRound: t.perRound, points: t.points, chances: t.chances }; });
+    renderTasteRowList(you ? "How you rate everyone else" : "How " + name + " rates everyone else", out, host, "Player");
+    renderTasteRowList(you ? "How everyone else rates you" : "How everyone else rates " + name, into, host, "Voter");
   }
 
   // The league's five strongest and five coldest pairings: the grid's
@@ -1177,13 +1189,13 @@
   // chances (a zero over more rounds says more), then by name.
   function renderTastePairs(d, host) {
     var pairs = d.taste.map(function (t) {
-      return { label: t.voterName + " \u2192 " + t.submitterName, index: t.index, points: t.points, chances: t.chances };
+      return { label: t.voterName + " \u2192 " + t.submitterName, perRound: t.perRound, points: t.points, chances: t.chances };
     });
-    var strongest = pairs.slice().sort(function (a, b) { return b.index - a.index || b.points - a.points || a.label.localeCompare(b.label); });
-    var coldest = pairs.slice().sort(function (a, b) { return a.index - b.index || b.chances - a.chances || a.label.localeCompare(b.label); });
+    var strongest = pairs.slice().sort(function (a, b) { return b.perRound - a.perRound || b.points - a.points || a.label.localeCompare(b.label); });
+    var coldest = pairs.slice().sort(function (a, b) { return a.perRound - b.perRound || b.chances - a.chances || a.label.localeCompare(b.label); });
     var wrap = el("div", "taste-pairs");
-    renderTasteRowList("Strongest pairings", strongest.slice(0, 5), wrap);
-    renderTasteRowList("Coldest pairings", coldest.slice(0, 5), wrap);
+    renderTasteRowList("Strongest pairings", strongest.slice(0, 5), wrap, "Voter \u2192 player");
+    renderTasteRowList("Coldest pairings", coldest.slice(0, 5), wrap, "Voter \u2192 player");
     host.appendChild(wrap);
   }
 
@@ -1216,7 +1228,7 @@
   function renderTasteGrid(d, people, host, phoneToo) {
     var byKey = {};
     d.taste.forEach(function (t) { byKey[t.voterId + "|" + t.submitterId] = t; });
-    var vals = d.taste.map(function (t) { return t.index; });
+    var vals = d.taste.map(function (t) { return t.perRound; });
     var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
 
     var head = "<thead><tr><th class=\"corner\">Voter &darr; / Submitter &rarr;</th>";
@@ -1230,12 +1242,12 @@
         if (voter.id === sub.id) { body += '<td class="nil">&mdash;</td>'; return; }
         var t = byKey[voter.id + "|" + sub.id];
         if (!t) { body += '<td class="nil">&middot;</td>'; return; }
-        var f = hi > lo ? (t.index - lo) / (hi - lo) : 0.5;
+        var f = hi > lo ? (t.perRound - lo) / (hi - lo) : 0.5;
         var alpha = (0.06 + f * 0.62).toFixed(2);
         var dark = f > 0.62;
         body += '<td style="background:rgba(158,0,196,' + alpha + ')' + (dark ? ";color:#fff" : "") + '" title="' +
-          esc(voter.name) + " gave " + esc(sub.name) + " " + t.points + " points over " + t.chances + ' chances">' +
-          t.index.toFixed(2) + "</td>";
+          esc(voter.name) + " gave " + esc(sub.name) + "&rsquo;s songs " + t.points + " " + plural(t.points, "point") + " over " + t.chances + ' rounds">' +
+          t.perRound.toFixed(1) + "</td>";
       });
       body += "</tr>";
     });
@@ -1250,8 +1262,8 @@
     scroll.appendChild(table);
     wrap.appendChild(scroll);
     wrap.insertAdjacentHTML("beforeend",
-      '<div class="legend"><span>' + lo.toFixed(2) + '</span><span class="ramp"></span><span>' + hi.toFixed(2) +
-      "</span><span>darker means a bigger share of that voter's points</span></div>");
+      '<div class="legend"><span>' + lo.toFixed(1) + '</span><span class="ramp"></span><span>' + hi.toFixed(1) +
+      "</span><span>points a round: darker means more</span></div>");
     host.appendChild(wrap);
   }
 
@@ -1266,9 +1278,9 @@
       return;
     }
     if (note) note.textContent =
-      "Read a row as: this voter sends that submitter this much of their points, relative to spreading points evenly across every track they saw. " +
-      "1.00 is neutral, 2.00 is twice their usual share, 0.50 is half. Self-votes are excluded, and a pair needs at least " +
-      d.tasteMinChances + " chances to vote (one per round) before it shows.";
+      "How many points a voter gives someone's songs each round, on average. Everyone spends the same " + d.pointBudget +
+      " points a round, so an even split is about " + d.tasteEvenSplit.toFixed(1) + ": above that, they're a fan; below it, not so much. " +
+      "A pair shows once they've had " + d.tasteMinChances + " rounds together.";
 
     attachFilterTag(host, d);
 

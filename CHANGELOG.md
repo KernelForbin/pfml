@@ -1,5 +1,31 @@
 # Changelog
 
+## 2026-10-11 (follow-up 4): taste in points a round
+
+- **Taste reads in points now, not "1.97×".** Members didn't follow the
+  ratio, even with the note. The number is the points a voter gives
+  someone's songs each round, on average: "Memo gives Rick D's songs 3.3
+  points a round (an even split is 1.0)". Every voter spends the same
+  points a round across nearly the same songs, so this compares fairly as
+  it stands; an even split comes out near 1 in every season.
+- **The lists have column headers**: Player (or Voter) · Points a round ·
+  Points · Rounds (Rounds hidden on a phone, as before).
+- Everywhere the × was: the lists, the grid and its legend, the strongest
+  and coldest pairings, Biggest fan and Coldest shoulder, and the focus
+  panel's fan and comparison tiles. The section note explains it in one
+  line from the season's own numbers.
+- Measured on the real data first: the new number picks the same top five
+  pairs and the same Biggest fan and Coldest shoulder in every season. The
+  one visible difference is honest ties (Season 1's coldest shoulder now
+  says "tied with 3 more": four pairs gave exactly 0.5 a round).
+- **Verified:** suite 223 passing (7 new tests; the seventh added when a
+  break-check showed the first six would miss Biggest fan being ranked by
+  total points instead). In a browser: on a phone,
+  headers fit and nothing is cut off or overflows; on a desktop, the
+  19-player grid shows one-decimal values and the legend in points;
+  one-player and two-player focus tiles read in points; no × left on the
+  page apart from the remove-filter buttons.
+
 ## 2026-10-11 (follow-up 3): Who likes whose taste, on a phone
 
 - **On a phone, the section opens on you**: how you rate everyone else,

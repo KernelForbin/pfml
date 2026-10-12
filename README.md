@@ -496,8 +496,8 @@ favorite to vote for, voting style.
 
 Click a second name to compare instead of filter: the panel switches to a
 side-by-side standings comparison, a head-to-head tally (whoever placed
-best in each round both submitted to), and, for exactly two people, their
-mutual taste index in both directions. Select a third, fourth, etc. and the
+best in each round both submitted to), and, for exactly two people, the
+points a round each gives the other's songs. Select a third, fourth, etc. and the
 comparison table and head-to-head tally extend to the whole group; the
 two-way mutual taste tiles only make sense for a pair, so they drop out
 once a third person joins.
@@ -831,12 +831,23 @@ level on 29), so nothing that names a winner picks one silently:
 
 ## Derived metrics
 
-**Taste index** — the share of a voter's points that went to one submitter,
-divided by the share you would expect if they spread points evenly across
-every track they saw. 1.00 is neutral, 2.00 is twice their baseline. Self-
-votes are excluded and a pair needs at least 4 chances to vote (one per
-round) before it is shown, so one lucky round does not read as a lifelong
-grudge. It was 5 until 2026-10-11, when the league asked to see Season 3's
+**Taste: points a round** — how many points a voter gave one submitter's
+songs, divided by the rounds they could have voted on them (`perRound`).
+Because every voter spends the same fixed budget a round across nearly the
+same songs, this compares fairly between voters as it stands, in the
+league's own units; an even split comes out near 1 (`tasteEvenSplit`: all
+points given over all chances, 1.08, 1.07 and 1.01 in Seasons 1-3), so 3.3
+is a big fan and 0.0 never gave them a point. Self-votes are excluded and a
+pair needs at least 4 chances to vote (one per round) before it is shown,
+so one lucky round does not read as a lifelong grudge.
+
+It replaced a **taste index** on 2026-10-11: the voter's share of points
+to that submitter over the share an even spread would give, shown as
+"1.97×". Members didn't follow it, even with the note. Measured on the real
+data before switching: both measures picked the same top five pairs and
+the same Biggest fan and Coldest shoulder in every season. The visible
+difference is honest ties: in Season 1 four pairs gave exactly 0.5 a round
+over 20 rounds, which the ratio's decimals had split. It was 5 until 2026-10-11, when the league asked to see Season 3's
 after four rounds rather than five; at 4 nothing in Seasons 1 and 2 changed
 (every pair there had at least 5). `MIN_PAIR_OPPORTUNITIES` in `build.py`
 sets it, and the page's note reads it from the season file.
@@ -917,9 +928,9 @@ figure is written (`vocabRichnessSampled`); the raw ratio used to sit next
 to it "for reference", but nothing read it, so it went. `VOCAB_SAMPLE_WORDS`
 in `build.py` is the chunk size.
 
-**Distinctive word** — the same share-versus-baseline shape as the taste
-index, applied to vocabulary: the player's share of a word divided by the
-league's share of that word. A word must appear at least 3 times for that
+**Distinctive word** — a share-versus-baseline ratio, applied to
+vocabulary: the player's share of a word divided by the league's share of
+that word. A word must appear at least 3 times for that
 player to qualify, so a one-off can't win on a denominator of one, and
 stopwords are removed first. The stopword list is hand-written in
 `build.py` (`STOPWORDS`), deliberately small and dependency-free. It

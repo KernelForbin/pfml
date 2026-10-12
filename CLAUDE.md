@@ -8,7 +8,7 @@ have to be told by hand.
 ## Read first
 
 - `README.md` — architecture, how `build.py` works, season pages, the
-  Career Score formula, the taste index math, and the scoring model quirks
+  Career Score formula, the taste (points a round) math, and the scoring model quirks
   that aren't obvious from the CSVs (a fixed point budget per voter per
   round, 16 in Seasons 1-2 and 19 in Season 3; a 0-point vote row is a
   comment, not a vote; self-voting is blocked).

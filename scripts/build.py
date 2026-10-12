@@ -645,8 +645,6 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
     pair_points = {}        # (voter, submitter) -> points given
     pair_chances = {}       # (voter, submitter) -> tracks they could have voted on
     pair_comments = {}      # (voter, submitter) -> comments left on their tracks
-    voter_total_points = {}
-    voter_total_chances = {}
     # every voter comment with the context the page needs to show it
     voter_comments = {cid: [] for cid in names}
     vote_rows_by_voter = {}
@@ -843,9 +841,7 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
                 pts = max(pts, 0)
                 pair_points[(vid, submitter)] = pair_points.get((vid, submitter), 0) + pts
                 pair_chances[(vid, submitter)] = pair_chances.get((vid, submitter), 0) + 1
-                voter_total_points[vid] = voter_total_points.get(vid, 0) + pts
-                voter_total_chances[vid] = voter_total_chances.get(vid, 0) + 1
-                # same denominator as the taste index above: a "chance" is
+                # same denominator as the taste matrix: a "chance" is
                 # one of that submitter's tracks this voter could have
                 # voted on. Here we count how often they said something.
                 if (rid, s["Spotify URI"], vid) in comments_by_vote:
@@ -931,30 +927,30 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
         voters_out.append(v)
     voters_out.sort(key=lambda v: v["avgTopBet"], reverse=True)
 
-    # ---- taste index ----
-    # share of a voter's points that went to one submitter, divided by the
-    # share you'd expect if they spread points evenly across every track
-    # they saw. 1.00 is neutral. 2.00 is twice their baseline.
+    # ---- taste: points a round ----
+    # How many points a voter gave one submitter's songs, per round they
+    # could have voted on them (a "chance"). Every voter spends the same
+    # fixed budget a round across nearly the same songs, so this compares
+    # fairly between voters as it is, in the league's own units, and an even
+    # split comes out near 1 (tasteEvenSplit: 1.08, 1.07 and 1.03 in Seasons
+    # 1-3). It replaced a share-of-points ratio ("1.97x") on 2026-10-11 that
+    # members found hard to read; both ranked the same top five, every season.
     taste = []
     for (vid, sid), pts in pair_points.items():
         chances = pair_chances[(vid, sid)]
         if chances < MIN_PAIR_OPPORTUNITIES:
             continue
-        vtp = voter_total_points.get(vid, 0)
-        vtc = voter_total_chances.get(vid, 0)
-        if not vtp or not vtc:
-            continue
-        actual_share = pts / vtp
-        expected_share = chances / vtc
         taste.append({
             "voterId": vid,
             "voterName": names.get(vid, "Unknown"),
             "submitterId": sid,
             "submitterName": names.get(sid, "Unknown"),
-            "index": round(actual_share / expected_share, 2) if expected_share else 0,
+            "perRound": round(pts / chances, 2),
             "points": pts,
             "chances": chances,
         })
+    chances_all = sum(pair_chances.values())
+    taste_even_split = round(sum(pair_points.values()) / chances_all, 2) if chances_all else None
 
     # ---- comment stats ----
     # Voter comments only. A submitter's own note on their track lives in
@@ -1118,9 +1114,11 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
                                                        g, lambda r: r["name"])
 
         if taste:
-            g = best_of(taste, lambda t: t["index"], order=pair_order)
+            # at the same points a round, more rounds of it is the stronger
+            # case, both ways
+            g = best_of(taste, lambda t: (t["perRound"], t["chances"]), order=pair_order)
             highlights["biggestFan"] = with_ties(g[0], g, pair_label)
-            g = best_of(taste, lambda t: t["index"], lowest=True, order=pair_order)
+            g = best_of(taste, lambda t: (t["perRound"], -t["chances"]), lowest=True, order=pair_order)
             highlights["coldestShoulder"] = with_ties(g[0], g, pair_label)
 
         if voters_out:
@@ -1154,6 +1152,7 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
         "voters": voters_out,
         "taste": taste,
         "tasteMinChances": MIN_PAIR_OPPORTUNITIES,
+        "tasteEvenSplit": taste_even_split,
         "commenters": commenters,
         "submitterNotes": submitter_notes,
         "commentSummary": comment_summary,

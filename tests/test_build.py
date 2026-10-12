@@ -570,6 +570,51 @@ class TasteNeedsFourRounds(unittest.TestCase):
         self.assertIn("silentTreatment", self.season_after(5)["commentSummary"])
 
 
+class TasteInPointsARound(unittest.TestCase):
+    """Taste is the points a voter gives someone's songs per round they
+    could have voted on them, against an even split (2026-10-11; it was a
+    ratio, "1.97x", that members found hard to read)."""
+
+    def setUp(self):
+        with sandbox() as root, quiet():
+            folder = make_season(root / "data" / "season1", rich_season("a", 6))
+            self.d, _ = build.build_season(folder, "season1", "Season 1")
+
+    def test_each_pair_is_its_points_over_its_rounds(self):
+        self.assertTrue(self.d["taste"])
+        for t in self.d["taste"]:
+            self.assertEqual(t["perRound"], round(t["points"] / t["chances"], 2))
+            self.assertNotIn("index", t, "the old ratio is gone, not shipped alongside")
+
+    def test_even_split_is_all_points_over_all_chances(self):
+        # every pair here has played every round, so the shown pairs are all of them
+        pts = sum(t["points"] for t in self.d["taste"])
+        chances = sum(t["chances"] for t in self.d["taste"])
+        self.assertEqual(self.d["tasteEvenSplit"], round(pts / chances, 2))
+
+    def test_biggest_fan_and_coldest_shoulder_are_the_ends_of_that_list(self):
+        per = [t["perRound"] for t in self.d["taste"]]
+        self.assertEqual(self.d["highlights"]["biggestFan"]["perRound"], max(per))
+        self.assertEqual(self.d["highlights"]["coldestShoulder"]["perRound"], min(per))
+
+    def test_biggest_fan_is_the_most_a_round_not_the_most_in_total(self):
+        # Cat gives Ann 2 a round for 7 rounds (14 in all); Ben gives Dan,
+        # who joined in round 4, 3 a round for 4 (12 in all). Ben is the fan.
+        rounds = []
+        for r in range(7):
+            subs = [(f"x{r}1", "p1"), (f"x{r}2", "p2"), (f"x{r}3", "p3")]
+            votes = [("p3", f"x{r}1", 2)]
+            if r >= 3:
+                subs.append((f"x{r}4", "p4"))
+                votes.append(("p2", f"x{r}4", 3))
+            rounds.append({"id": f"q{r}", "name": f"R{r}", "created": f"2025-03-{10 + r:02d}T00:00:00Z",
+                           "subs": subs, "votes": votes})
+        with sandbox() as root, quiet():
+            d, _ = build.build_season(make_season(root / "data" / "season1", rounds), "season1", "Season 1")
+        fan = d["highlights"]["biggestFan"]
+        self.assertEqual((fan["voterName"], fan["submitterName"], fan["perRound"]), ("Ben", "Dan", 3.0))
+
+
 class EverythingWrittenIsRead(unittest.TestCase):
     """Members download the season files on every season page, so a field
     no page reads is weight for nothing. One did that unnoticed: the full

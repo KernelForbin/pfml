@@ -1291,15 +1291,47 @@ class TasteOnPhones(unittest.TestCase):
 
     def test_pairs_are_the_five_strongest_and_five_coldest(self):
         pairs = js_function(self.js, "function renderTastePairs(d, host)")
-        self.assertIn("b.index - a.index || b.points - a.points", pairs)
-        self.assertIn("a.index - b.index || b.chances - a.chances", pairs, "a zero over more rounds is colder")
-        self.assertIn('renderTasteRowList("Strongest pairings", strongest.slice(0, 5), wrap)', pairs)
-        self.assertIn('renderTasteRowList("Coldest pairings", coldest.slice(0, 5), wrap)', pairs)
+        self.assertIn("b.perRound - a.perRound || b.points - a.points", pairs)
+        self.assertIn("a.perRound - b.perRound || b.chances - a.chances", pairs, "a zero over more rounds is colder")
+        self.assertIn('renderTasteRowList("Strongest pairings", strongest.slice(0, 5), wrap,', pairs)
+        self.assertIn('renderTasteRowList("Coldest pairings", coldest.slice(0, 5), wrap,', pairs)
 
     def test_players_with_nothing_to_show_are_named_not_blank_rows(self):
         self.assertIn("var people = pool.filter(function (p) { return inTaste[p.id]; });", self.taste)
         self.assertIn("var waiting = pool.filter(function (p) { return !inTaste[p.id]; });", self.taste)
         self.assertIn("Not shown until they've played enough rounds: ", self.taste)
+
+
+class TasteInPointsARound(unittest.TestCase):
+    """Members didn't follow "1.97x", even with the note. Taste now reads in
+    the league's own units, points a round, with column headers."""
+
+    FUNCTIONS = ["function renderTasteRowList(title, rows, host, firstCol)", "function renderTasteGrid(d, people, host, phoneToo)",
+                 "function renderTastePairs(d, host)", "function renderTasteLists(d, id, host)",
+                 "function renderFocusIndividual(d, id, host)", "function renderFocusGroup(d, ids, host)",
+                 "function renderHighlights(d)", "function renderTaste(d)"]
+
+    def test_no_ratio_left_anywhere_taste_shows(self):
+        js = read("app.js")
+        for name in self.FUNCTIONS:
+            with self.subTest(name):
+                body = js_function(js, name)
+                self.assertNotIn("&times;", body)
+                self.assertNotRegex(body, r"\.index\b")
+
+    def test_lists_have_column_headers(self):
+        lists = js_function(read("app.js"), "function renderTasteRowList(title, rows, host, firstCol)")
+        self.assertIn('<div class="vrow head"><div>\' + esc(firstCol) + \'</div><div class="num">Points a round</div>', lists)
+        self.assertIn('<div class="num">Points</div><div class="num">Rounds</div>', lists)
+        self.assertIn("r.perRound.toFixed(1)", lists)
+
+    def test_figures_say_what_an_even_split_is(self):
+        js = read("app.js")
+        self.assertIn('return n.toFixed(1) + " points a round";', js_function(js, "function aRound(n)"))
+        self.assertIn('" (an even split is " + d.tasteEvenSplit.toFixed(1) + ")"', js_function(js, "function evenSplit(d)"))
+        note = js_function(js, "function renderTaste(d)")
+        self.assertIn("d.pointBudget", note)
+        self.assertIn("d.tasteEvenSplit.toFixed(1)", note)
 
 
 class TasteNote(unittest.TestCase):
