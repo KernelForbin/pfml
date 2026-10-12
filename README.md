@@ -878,7 +878,13 @@ High means they concentrate, low means they spread.
 round. The other half of the same picture.
 
 **Top pick won** — how often the track a voter gave their most points to
-went on to win the round.
+went on to win the round (a tie for their top pick, or for the win, counts).
+Its award is **Tastemaker**, on a season page (5 rounds voted to qualify,
+`MIN_TASTEMAKER_ROUNDS`) and on All-Time, summed over every season (10
+rounds, `MIN_SCORED_ROUNDS`, as the Career Score: without a minimum, 3 of
+4 rounds at 75% topped it). Both read "23 of 44 rounds (52%)", from one
+tile (`tastemakerTile`); at the same rate, more rounds wins. The season
+award was called Best read on the room until 2026-10-12.
 
 **Divisive track** — the widest standard deviation of points among the
 voters who actually backed it, limited to tracks with at least 3 backers.

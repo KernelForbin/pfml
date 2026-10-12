@@ -66,6 +66,10 @@ VOCAB_SAMPLE_WORDS = 500
 # exclamation mark would read as a 33% exclamation rate.
 MIN_COMMENTS_FOR_RATES = 10
 
+# Tastemaker (whose biggest vote of a round most often won it): rounds voted
+# before someone qualifies in a season. All-Time uses MIN_SCORED_ROUNDS.
+MIN_TASTEMAKER_ROUNDS = 5
+
 # Career Score (chosen by the league, 2026-09-22; README, Career Score):
 #   PER_ROUND_SCALE x points per round played    ("Avg season")
 # + ROUND_BONUS for each 1st / 2nd / 3rd place in a round
@@ -1127,7 +1131,7 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
             highlights["boldestVoter"] = with_ties(g[0], g, name)
             g = best_of(voters_out, lambda v: v["avgTracksBacked"], order=by_name)
             highlights["hedgiestVoter"] = with_ties(g[0], g, name)
-            eligible = [v for v in voters_out if v["kingmakerRounds"] >= 5]
+            eligible = [v for v in voters_out if v["kingmakerRounds"] >= MIN_TASTEMAKER_ROUNDS]
             if eligible:
                 g = best_of(eligible, lambda v: v["kingmakerRate"], order=by_name)
                 highlights["bestTastemaker"] = with_ties(g[0], g, name)
@@ -1458,6 +1462,25 @@ def build_career(season_datas, raw_seasons=None):
         highlights["mostWins"] = with_ties({"name": g[0]["name"], "roundsWon": g[0]["roundsWon"]}, g, name)
         g = best_of(players, lambda p: p["podiums"], order=by_name)
         highlights["mostPodiums"] = with_ties({"name": g[0]["name"], "podiums": g[0]["podiums"]}, g, name)
+        # Tastemaker, all-time: how often a player's biggest vote
+        # of a round went to that round's winner, summed over every season
+        # (each season's voters carry kingmakerHits and kingmakerRounds, the
+        # rounds they voted in). Scored after MIN_SCORED_ROUNDS rounds, like
+        # the Career Score: measured, 3 of 4 rounds (75%) would otherwise
+        # top it. At the same rate, more hits wins.
+        reads = {}
+        for d in season_datas:
+            for v in d["voters"]:
+                r = reads.setdefault(v["id"], {"name": names.get(v["id"], v["name"]), "kingmakerHits": 0, "kingmakerRounds": 0})
+                r["kingmakerHits"] += v["kingmakerHits"]
+                r["kingmakerRounds"] += v["kingmakerRounds"]
+        eligible = [r for r in reads.values() if r["kingmakerRounds"] >= MIN_SCORED_ROUNDS]
+        for r in eligible:
+            r["kingmakerRate"] = round(r["kingmakerHits"] / r["kingmakerRounds"], 3)
+        if eligible:
+            g = best_of(eligible, lambda r: (r["kingmakerRate"], r["kingmakerHits"]), order=by_name)
+            highlights["bestTastemaker"] = with_ties(g[0], g, name)
+
         labels = {d["key"]: d["label"] for d in season_datas}
         g = best_of(players, lambda p: p["bestSeasonPoints"], order=by_name)
         highlights["bestSingleSeason"] = with_ties(

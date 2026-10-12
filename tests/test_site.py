@@ -1364,6 +1364,24 @@ class LopsidedPairings(unittest.TestCase):
         self.assertIn("grid-column: 1 / -1", " ".join(css_rules(read("style.css"), ".taste-lopsided")))
 
 
+class Tastemaker(unittest.TestCase):
+    """Whose biggest vote of a round most often went to the winner: one
+    award, one name and one wording on a season page and All-Time."""
+
+    def test_one_tile_says_rounds_of_rounds_and_the_percent(self):
+        js = read("app.js")
+        fn = js_function(js, "function tastemakerTile(t)")
+        self.assertIn('tile("Tastemaker", who(t.name),', fn)
+        self.assertIn('t.kingmakerHits + " of " +', fn)
+        self.assertIn('t.kingmakerRounds + " rounds (" + pct(t.kingmakerRate) + ")", false, t.tiedWith)', fn)
+
+    def test_season_and_all_time_both_use_it(self):
+        js = read("app.js")
+        for fn in ("function renderHighlights(d)", "function renderCareerHighlights(c)"):
+            self.assertIn("g.appendChild(tastemakerTile(h.bestTastemaker))", js_function(js, fn), fn)
+        self.assertNotIn("Best read on the room", js)
+
+
 class TasteNote(unittest.TestCase):
     def test_note_takes_the_minimum_from_the_data(self):
         # it said "five" in words, and would have gone stale when it became 4

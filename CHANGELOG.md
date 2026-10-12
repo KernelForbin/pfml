@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-10-12: Tastemaker, all-time and per season
+
+- **New All-Time award, Tastemaker:** whose biggest vote of a round most
+  often went to the round's winner, over every season. It's josh storm:
+  23 of the 44 rounds he voted in (52%). Ten rounds voted to qualify, as
+  for the Career Score; without a minimum, 3 of 4 rounds (75%) would top
+  it. At the same rate, more rounds wins.
+- **The season award of the same thing is called Tastemaker too** (it was
+  Best read on the room), with the same wording: Season 1 Dianna Hank, 9
+  of 16 rounds (56%); Season 2 josh storm, 14 of 20 (70%). A season's
+  needs 5 rounds voted, so Season 3's appears after Round 5. One tile
+  draws both.
+- League Highlights is five tiles now, so its last row holds one.
+- **Verified:** suite 231 passing (5 new tests; one existing test's
+  hand-made season was missing the voters list every real season has).
+  In a browser at 375px and 1280px: the tile reads as above on All-Time
+  and both finished seasons, no overflow.
+
 ## 2026-10-11 (follow-up 5): most lopsided pairings
 
 - **A third list beside strongest and coldest: who gives someone's songs

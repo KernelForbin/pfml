@@ -240,13 +240,44 @@ class CareerScore(unittest.TestCase):
         def standing(pid, name, pts, subs):
             return {"id": pid, "name": name, "points": pts, "roundsWon": 0, "podiums": 0,
                     "submissions": subs, "rank": 9, "tied": False}
-        season = {"key": "season1", "label": "Season 1", "rounds": [{"songs": []}],
+        season = {"key": "season1", "label": "Season 1", "rounds": [{"songs": []}], "voters": [],
                   "competitors": [{"id": "x", "name": "Xan"}, {"id": "y", "name": "Yul"}, {"id": "z", "name": "Zed"}],
                   "standings": [standing("y", "Yul", 120, 12), standing("x", "Xan", 200, 10), standing("z", "Zed", 90, 3)]}
         with quiet():
             c = build.build_career([season])
         self.assertEqual([(p["name"], p["careerScore"]) for p in c["players"]],
                          [("Xan", 400.0), ("Yul", 200.0), ("Zed", None)])
+
+    @staticmethod
+    def seasons_with_voters(*seasons):
+        """Hand-made seasons for the all-time Tastemaker award: each is
+        {name: (rounds where their biggest vote won, rounds voted)}."""
+        out = []
+        for n, voters in enumerate(seasons, 1):
+            out.append({"key": f"season{n}", "label": f"Season {n}", "rounds": [{"songs": []}],
+                        "competitors": [{"id": v, "name": v} for v in voters],
+                        "standings": [{"id": v, "name": v, "points": 1, "roundsWon": 0, "podiums": 0,
+                                       "submissions": 1, "rank": 1, "tied": False} for v in voters],
+                        "voters": [{"id": v, "name": v, "kingmakerHits": h, "kingmakerRounds": r}
+                                   for v, (h, r) in voters.items()]})
+        with quiet():
+            return build.build_career(out)["highlights"].get("bestTastemaker")
+
+    def test_tastemaker_adds_up_every_season(self):
+        best = self.seasons_with_voters({"Ann": (5, 8), "Bo": (3, 3), "Cy": (4, 8), "Di": (6, 10)},
+                                        {"Ann": (3, 4), "Cy": (4, 4)})
+        # Ann 8 of 12 and Cy 8 of 12 share it; Bo's 3 of 3 is too few rounds
+        self.assertEqual((best["name"], best["kingmakerHits"], best["kingmakerRounds"], best["kingmakerRate"]),
+                         ("Ann", 8, 12, 0.667))
+        self.assertEqual(best["tiedWith"], ["Cy"])
+
+    def test_tastemaker_at_the_same_rate_more_rounds_wins(self):
+        best = self.seasons_with_voters({"Ed": (5, 10), "Flo": (10, 20)})
+        self.assertEqual((best["name"], best["kingmakerHits"]), ("Flo", 10))
+        self.assertNotIn("tiedWith", best)
+
+    def test_tastemaker_needs_ten_rounds(self):
+        self.assertIsNone(self.seasons_with_voters({"Gus": (3, 4), "Hal": (9, 9)}))
 
     def test_default_minimum_is_ten_rounds(self):
         c = self.career()

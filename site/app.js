@@ -776,6 +776,14 @@
     return names.slice(0, -1).join(", ") + " &amp; " + names[names.length - 1];
   }
 
+  // Tastemaker, on a season page and All-Time alike: whose biggest vote of
+  // a round most often went to the round's winner (build.py's
+  // bestTastemaker, from each voter's kingmakerHits / kingmakerRounds).
+  function tastemakerTile(t) {
+    return tile("Tastemaker", who(t.name), "their biggest vote went to the winner in " + t.kingmakerHits + " of " +
+      t.kingmakerRounds + " rounds (" + pct(t.kingmakerRate) + ")", false, t.tiedWith);
+  }
+
   // Standings places: equal points share one, shown as "T1".
   function placeLabel(p) { return (p.tied ? "T" : "") + p.rank; }
 
@@ -829,11 +837,7 @@
       g.appendChild(tile("Widest spreader", who(h.hedgiestVoter.name),
         "backs " + h.hedgiestVoter.avgTracksBacked + " tracks a round, top bet averages only " + h.hedgiestVoter.avgTopBet, false, h.hedgiestVoter.tiedWith));
     }
-    if (h.bestTastemaker) {
-      g.appendChild(tile("Best read on the room", who(h.bestTastemaker.name),
-        "their top pick won the round " + Math.round(h.bestTastemaker.kingmakerRate * 100) + "% of the time (" +
-        h.bestTastemaker.kingmakerHits + " of " + h.bestTastemaker.kingmakerRounds + ")", false, h.bestTastemaker.tiedWith));
-    }
+    if (h.bestTastemaker) g.appendChild(tastemakerTile(h.bestTastemaker));
     if (typeof h.shutOutCount === "number") {
       g.appendChild(tile("Shut out", String(h.shutOutCount), "tracks finished the season on zero points or worse", true));
     }
@@ -1860,6 +1864,7 @@
     if (h.mostWins) g.appendChild(careerTile("Most rounds won", who(h.mostWins.name), h.mostWins.roundsWon + " round wins", h.mostWins.tiedWith));
     if (h.mostPodiums) g.appendChild(careerTile("Most podiums", who(h.mostPodiums.name), h.mostPodiums.podiums + " top-3 finishes", h.mostPodiums.tiedWith));
     if (h.bestSingleSeason) g.appendChild(careerTile("Best single season", who(h.bestSingleSeason.name), h.bestSingleSeason.points + " points in " + esc(h.bestSingleSeason.season), h.bestSingleSeason.tiedWith));
+    if (h.bestTastemaker) g.appendChild(tastemakerTile(h.bestTastemaker));
     setBlock("highlights", g);
   }
 
