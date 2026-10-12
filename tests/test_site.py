@@ -753,7 +753,7 @@ class NamesLinkToProfiles(unittest.TestCase):
         "function renderFocusIndividual(d, id, host)": "who(fansOf[0].voterName, fansOf[0].voterId)",
         "function renderHighlights(d)": "who(h.biggestFan.voterName) + \" &rarr; \" + who(h.biggestFan.submitterName)",
         "function trackRow(s, pos, showRound, highlightSet)": "who(s.submitterName, s.submitterId)",
-        "function renderTaste(d)": "who(voter.name, voter.id)",
+        "function renderTasteGrid(d, people, host, phoneToo)": "who(voter.name, voter.id)",
         "function renderVoters(d)": "who(v.name, v.id)",
         "function commentQuote(c, label, stats)": "who(c.name)",
         "function renderComments(d)": "who(summary.chattiest.name)",
@@ -1197,8 +1197,13 @@ class MemberTextIsEscaped(unittest.TestCase):
 
     def test_taste_panel_titles_escape_the_name(self):
         js = read("app.js")
-        self.assertIn('renderTasteRowList("How " + esc(name) + " rates everyone else"', js)
-        self.assertIn('renderTasteRowList("How everyone else rates " + esc(name)', js)
+        lists = js_function(js, "function renderTasteLists(d, id, host)")
+        self.assertIn("name = esc(nameOf(d, id))", lists)
+        self.assertIn('"How " + name + " rates everyone else"', lists)
+        self.assertIn('"How everyone else rates " + name', lists)
+        # the phone's player menu and the "not shown yet" names too
+        self.assertIn("esc(p.name)", js_function(js, "function renderTastePhone(d, people, host)"))
+        self.assertIn("esc(p.name)", js_function(js, "function renderTaste(d)"))
 
 
 class PinnedTrackBar(unittest.TestCase):
@@ -1245,6 +1250,56 @@ class PinnedTrackBar(unittest.TestCase):
                         "every read before any write")
         self.assertIn('window.addEventListener("scroll", schedulePins, { passive: true })', js)
         self.assertIn("updatePins();", js_function(js, "function renderTracks(r)"), "and after each redraw")
+
+
+class TasteOnPhones(unittest.TestCase):
+    """The taste grid is about six screens wide on a phone (one column
+    visible at a time), so phones get one player's lists instead, opening
+    on the signed-in member; everyone gets the league's strongest and
+    coldest pairings; and nobody shows as a blank row."""
+
+    def setUp(self):
+        self.js = read("app.js")
+        self.taste = js_function(self.js, "function renderTaste(d)")
+
+    def test_unfiltered_it_draws_the_phone_lists_the_pairs_and_the_grid(self):
+        unfiltered = self.taste.split("if (!selected.length) {", 1)[1].split("}", 1)[0]
+        self.assertIn("renderTastePhone(d, people, host)", unfiltered)
+        self.assertIn("renderTastePairs(d, host)", unfiltered)
+        # the grid is wide-screen only unless players are picked in Standings
+        self.assertIn("renderTasteGrid(d, people, host, selected.length > 0)", self.taste)
+        grid = js_function(self.js, "function renderTasteGrid(d, people, host, phoneToo)")
+        self.assertIn('"taste-grid" + (phoneToo ? "" : " is-wide-only")', grid)
+        self.assertIn("if (selected.length === 1) { renderTasteLists(d, selected[0], host); return; }", self.taste)
+
+    def test_css_swaps_the_grid_for_the_lists_on_phones_only(self):
+        css = read("style.css")
+        self.assertIn("display: none", " ".join(css_rules(css, ".taste-phone")))
+        self.assertIn("display: block", " ".join(phone_rules(css, ".taste-phone")))
+        self.assertIn("display: none", " ".join(phone_rules(css, ".taste-grid.is-wide-only")))
+        self.assertIn("1fr", " ".join(phone_rules(css, ".taste-pairs")), "the two pairing lists stack")
+
+    def test_phone_view_opens_on_you_and_can_switch(self):
+        phone = js_function(self.js, "function renderTastePhone(d, people, host)")
+        self.assertIn("var me = PFML.member.competitorId;", phone)
+        self.assertIn("ids.indexOf(me) !== -1 ? me :", phone, "you, when you played this season")
+        self.assertIn('(p.id === me ? " (you)" : "")', phone)
+        self.assertIn("tasteFocus = ev.target.value;", phone)
+        lists = js_function(self.js, "function renderTasteLists(d, id, host)")
+        self.assertIn('"How you rate everyone else"', lists)
+        self.assertIn('"How everyone else rates you"', lists)
+
+    def test_pairs_are_the_five_strongest_and_five_coldest(self):
+        pairs = js_function(self.js, "function renderTastePairs(d, host)")
+        self.assertIn("b.index - a.index || b.points - a.points", pairs)
+        self.assertIn("a.index - b.index || b.chances - a.chances", pairs, "a zero over more rounds is colder")
+        self.assertIn('renderTasteRowList("Strongest pairings", strongest.slice(0, 5), wrap)', pairs)
+        self.assertIn('renderTasteRowList("Coldest pairings", coldest.slice(0, 5), wrap)', pairs)
+
+    def test_players_with_nothing_to_show_are_named_not_blank_rows(self):
+        self.assertIn("var people = pool.filter(function (p) { return inTaste[p.id]; });", self.taste)
+        self.assertIn("var waiting = pool.filter(function (p) { return !inTaste[p.id]; });", self.taste)
+        self.assertIn("Not shown until they've played enough rounds: ", self.taste)
 
 
 class TasteNote(unittest.TestCase):

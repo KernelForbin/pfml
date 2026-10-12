@@ -298,6 +298,16 @@ table.taste tbody th {
 table.taste td { text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; }
 table.taste td.nil { color: #C6BDCC; font-weight: 400; }
 
+/* Phones get one player's two lists instead of the grid (app.js
+   renderTastePhone): the grid is about six screens wide at 375px. The grid
+   still shows on a phone for a few players picked in Standings. The
+   league's strongest and coldest pairings sit side by side on wider
+   screens and stack on a phone. */
+.taste-phone { display: none; }
+.taste-pick { margin-bottom: 4px; }
+.taste-pairs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px; margin-bottom: 18px; }
+.taste-waiting { margin-top: 12px; }
+
 .legend { margin-top: 12px; display: flex; align-items: center; gap: 10px; font-size: 0.8rem; color: var(--muted); flex-wrap: wrap; }
 .legend .ramp { width: 130px; height: 10px; border-radius: 5px; border: 1px solid var(--border); background: linear-gradient(90deg, #fff, var(--magenta)); }
 
@@ -654,6 +664,9 @@ button.trend-chip.is-on .dot { opacity: 1; }
   .framed:not(.career-table):not(.table-wide) > .vrow { grid-template-columns: 1fr 4.2rem 4.2rem; }
   .framed:not(.career-table):not(.table-wide) > .vrow > :nth-child(4) { display: none; }
   .stand-row, .trk { padding-left: 14px; padding-right: 14px; }
+  .taste-phone { display: block; }
+  .taste-grid.is-wide-only { display: none; }
+  .taste-pairs { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

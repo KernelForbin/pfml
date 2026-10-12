@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-10-11 (follow-up 3): Who likes whose taste, on a phone
+
+- **On a phone, the section opens on you**: how you rate everyone else,
+  and how everyone else rates you, as two ranked lists, with a menu to see
+  anyone else's. The grid stays on wider screens. Measured at 375px, it was
+  2,070px wide, about six screens, with one column visible at a time.
+- **The league's five strongest and five coldest pairings**, on every
+  screen: side by side on a desktop, stacked on a phone.
+- **No blank rows**: players with no pair to show yet (Clavenna Vision
+  hasn't played; Scott Menke needs one more round) are named under the
+  section instead of filling a row and a column with dots.
+- Picking players in Standings works as before: one shows their lists,
+  several show a grid of just them, which fits a phone.
+- **Verified:** suite 216 passing (5 new tests, two updated to follow the
+  code). In a browser on Season 3: at 375px the grid is hidden, your lists
+  and the pairings show stacked, and the menu switches player; at 1280px
+  the 19-player grid shows with the pairings side by side; one and two
+  Standings picks behave as above; no horizontal overflow or clipped names
+  at either width.
+
 ## 2026-10-11 (follow-up 2): the song stays pinned while you read its comments
 
 - **On a round page, the song being commented on stays in view.** Once a

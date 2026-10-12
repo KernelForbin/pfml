@@ -1159,38 +1159,61 @@
     host.appendChild(block);
   }
 
-  function renderTaste(d) {
-    var note = $("tasteNote");
-    var host = $("taste");
-    host.innerHTML = "";
+  // One player's two ranked lists: how they rate everyone else, and how
+  // everyone else rates them. "You" for the signed-in member.
+  function renderTasteLists(d, id, host) {
+    var you = id === PFML.member.competitorId, name = esc(nameOf(d, id));
+    var out = tasteFrom(d, id).slice().sort(function (a, b) { return b.index - a.index; })
+      .map(function (t) { return { label: t.submitterName, index: t.index, points: t.points, chances: t.chances }; });
+    var into = tasteTo(d, id).slice().sort(function (a, b) { return b.index - a.index; })
+      .map(function (t) { return { label: t.voterName, index: t.index, points: t.points, chances: t.chances }; });
+    renderTasteRowList(you ? "How you rate everyone else" : "How " + name + " rates everyone else", out, host);
+    renderTasteRowList(you ? "How everyone else rates you" : "How everyone else rates " + name, into, host);
+  }
 
-    if (!d.taste.length) {
-      if (note) note.textContent = "";
-      host.appendChild(empty("Needs a few rounds of voting history before this says anything."));
-      return;
+  // The league's five strongest and five coldest pairings: the grid's
+  // extremes as two short lists, so a phone gets the big picture without
+  // the grid. Ties: the strongest on more points, the coldest on more
+  // chances (a zero over more rounds says more), then by name.
+  function renderTastePairs(d, host) {
+    var pairs = d.taste.map(function (t) {
+      return { label: t.voterName + " \u2192 " + t.submitterName, index: t.index, points: t.points, chances: t.chances };
+    });
+    var strongest = pairs.slice().sort(function (a, b) { return b.index - a.index || b.points - a.points || a.label.localeCompare(b.label); });
+    var coldest = pairs.slice().sort(function (a, b) { return a.index - b.index || b.chances - a.chances || a.label.localeCompare(b.label); });
+    var wrap = el("div", "taste-pairs");
+    renderTasteRowList("Strongest pairings", strongest.slice(0, 5), wrap);
+    renderTasteRowList("Coldest pairings", coldest.slice(0, 5), wrap);
+    host.appendChild(wrap);
+  }
+
+  // Phones get one player's lists instead of the grid, which is about six
+  // screens wide there (measured: one column visible at a time). It opens
+  // on the signed-in member, with a menu for anyone else.
+  var tasteFocus = null;
+  function renderTastePhone(d, people, host) {
+    var ids = people.map(function (p) { return p.id; });
+    var me = PFML.member.competitorId;
+    if (ids.indexOf(tasteFocus) === -1) {
+      var leader = d.standings.filter(function (p) { return ids.indexOf(p.id) !== -1; })[0];
+      tasteFocus = ids.indexOf(me) !== -1 ? me : (leader ? leader.id : ids[0]);
     }
-    if (note) note.textContent =
-      "Read a row as: this voter sends that submitter this much of their points, relative to spreading points evenly across every track they saw. " +
-      "1.00 is neutral, 2.00 is twice their usual share, 0.50 is half. Self-votes are excluded, and a pair needs at least " +
-      d.tasteMinChances + " chances to vote (one per round) before it shows.";
+    var wrap = el("div", "taste-phone");
+    var sorted = people.slice().sort(function (a, b) { return a.name.localeCompare(b.name); });
+    wrap.innerHTML = '<label class="cm-sr" for="tastePick">Show another player</label>' +
+      '<div class="rp-jump taste-pick"><select id="tastePick" class="rp-jump-select">' + sorted.map(function (p) {
+        return '<option value="' + esc(p.id) + '"' + (p.id === tasteFocus ? " selected" : "") + ">" +
+          esc(p.name) + (p.id === me ? " (you)" : "") + "</option>";
+      }).join("") + "</select></div>";
+    wrap.querySelector("select").addEventListener("change", function (ev) {
+      tasteFocus = ev.target.value;
+      renderTaste(seasonData);
+    });
+    renderTasteLists(d, tasteFocus, wrap);
+    host.appendChild(wrap);
+  }
 
-    attachFilterTag(host, d);
-
-    if (selected.length === 1) {
-      var id = selected[0], name = nameOf(d, id);
-      var out = tasteFrom(d, id).slice().sort(function (a, b) { return b.index - a.index; })
-        .map(function (t) { return { label: t.submitterName, index: t.index, points: t.points, chances: t.chances }; });
-      var into = tasteTo(d, id).slice().sort(function (a, b) { return b.index - a.index; })
-        .map(function (t) { return { label: t.voterName, index: t.index, points: t.points, chances: t.chances }; });
-      renderTasteRowList("How " + esc(name) + " rates everyone else", out, host);
-      renderTasteRowList("How everyone else rates " + esc(name), into, host);
-      return;
-    }
-
-    var people = selected.length >= 2
-      ? d.competitors.filter(function (p) { return selected.indexOf(p.id) !== -1; })
-      : d.competitors;
-
+  function renderTasteGrid(d, people, host, phoneToo) {
     var byKey = {};
     d.taste.forEach(function (t) { byKey[t.voterId + "|" + t.submitterId] = t; });
     var vals = d.taste.map(function (t) { return t.index; });
@@ -1218,14 +1241,57 @@
     });
     body += "</tbody>";
 
+    // the grid and its legend, together; on a phone only for a few
+    // players picked in Standings, where it's small enough to read
+    var wrap = el("div", "taste-grid" + (phoneToo ? "" : " is-wide-only"));
     var table = el("table", "taste");
     table.innerHTML = head + body;
     var scroll = el("div", "taste-scroll");
     scroll.appendChild(table);
-    host.appendChild(scroll);
-    host.insertAdjacentHTML("beforeend",
+    wrap.appendChild(scroll);
+    wrap.insertAdjacentHTML("beforeend",
       '<div class="legend"><span>' + lo.toFixed(2) + '</span><span class="ramp"></span><span>' + hi.toFixed(2) +
       "</span><span>darker means a bigger share of that voter's points</span></div>");
+    host.appendChild(wrap);
+  }
+
+  function renderTaste(d) {
+    var note = $("tasteNote");
+    var host = $("taste");
+    host.innerHTML = "";
+
+    if (!d.taste.length) {
+      if (note) note.textContent = "";
+      host.appendChild(empty("Needs a few rounds of voting history before this says anything."));
+      return;
+    }
+    if (note) note.textContent =
+      "Read a row as: this voter sends that submitter this much of their points, relative to spreading points evenly across every track they saw. " +
+      "1.00 is neutral, 2.00 is twice their usual share, 0.50 is half. Self-votes are excluded, and a pair needs at least " +
+      d.tasteMinChances + " chances to vote (one per round) before it shows.";
+
+    attachFilterTag(host, d);
+
+    if (selected.length === 1) { renderTasteLists(d, selected[0], host); return; }
+
+    // Only players with at least one pair to show. Anyone else, who hasn't
+    // played or hasn't played enough rounds yet, would be a blank row and
+    // column, so they're named below instead.
+    var inTaste = {};
+    d.taste.forEach(function (t) { inTaste[t.voterId] = inTaste[t.submitterId] = true; });
+    var pool = selected.length ? d.competitors.filter(function (p) { return selected.indexOf(p.id) !== -1; }) : d.competitors;
+    var people = pool.filter(function (p) { return inTaste[p.id]; });
+    var waiting = pool.filter(function (p) { return !inTaste[p.id]; });
+
+    if (!selected.length) {
+      renderTastePhone(d, people, host);
+      renderTastePairs(d, host);
+    }
+    if (people.length) renderTasteGrid(d, people, host, selected.length > 0);
+    if (waiting.length) {
+      host.appendChild(el("p", "block-note taste-waiting",
+        "Not shown until they've played enough rounds: " + waiting.map(function (p) { return esc(p.name); }).join(", ") + "."));
+    }
   }
 
   /* ---- voters / artists (filterable) ---- */

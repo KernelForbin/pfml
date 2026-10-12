@@ -841,6 +841,20 @@ after four rounds rather than five; at 4 nothing in Seasons 1 and 2 changed
 (every pair there had at least 5). `MIN_PAIR_OPPORTUNITIES` in `build.py`
 sets it, and the page's note reads it from the season file.
 
+**How the section shows it** (`renderTaste` in `app.js`). On a wide screen,
+the full grid. On a phone it isn't usable: measured at 375px, 21 players
+made it 2,070px wide, about six screens, with one column visible at a time
+beside the pinned names. So a phone gets one player's two ranked lists
+instead (how they rate everyone, how everyone rates them), opening on the
+signed-in member as "you", with a menu for anyone else. Everyone also gets
+the league's five strongest and five coldest pairings (side by side, or
+stacked on a phone); coldest ties go to the pair with more chances, since a
+zero over more rounds says more. Pick one player in Standings and both
+widths show their lists; pick several and both show a grid of just them,
+small enough for a phone. A player with no pair to show yet (hasn't played,
+or not enough rounds together) is named under it rather than drawn as a
+blank row and column.
+
 **Top bet** — the average size of a voter's single largest bet in a round.
 High means they concentrate, low means they spread.
 
