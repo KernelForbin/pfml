@@ -159,7 +159,9 @@ that are current, working and noticeable to an ordinary member, things
 they see on screen or do themselves. No bug fixes, refactors, performance
 work, data pipeline or backend changes, admin-only powers, or anything not
 shipped yet. The test: would a regular member notice if this disappeared?
-If not, it stays off.
+If not, it stays off. One deliberate exception: the Round 7 hint crossword
+(`/round7hint2`) stays off, since listing a hint gives it away (README,
+Round 7 hint crossword).
 
 It's standalone on purpose: public, no sign-in, no `style.css`, no
 `app.js`, no data, nothing loaded but itself and its fonts. Its colour

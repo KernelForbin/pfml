@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-10-18: the Round 7 hint crossword, /round7hint2
+
+- **A playable, members-only 15x15 crossword** at pfml.fun/round7hint2:
+  4-Across L4LM ("Kunj conglomerate"), 5-Down 4NONBLONDES, with GONG and
+  SOLO crossing it, as asked; 84 entries, every one clued. Plays like a
+  newspaper app: pick a square, pick again to turn, type to fill; arrows,
+  Tab and Space on a computer, the page's own keyboard on a touch screen
+  (docked under the grid, 123 key for the 4). Check and Reveal by square,
+  word or puzzle; Pause; Clear; a clock. Progress stays in the browser.
+- The brief's grid couldn't be filled (four 15-letter downs), so the black
+  squares were redrawn, symmetric, with the four requested answers where
+  they were. The row between L4LM and GONG can only be vowel-N-vowel-vowel,
+  so 15-Across is UNAU (a sloth). README, Round 7 hint crossword, has the
+  rest, including that the answers sit in public page code, lightly
+  scrambled.
+- Not on the features page, on purpose: it's a hint.
+- **Verified:** suite 241 passing (10 new in `tests/test_crossword.py`,
+  plus the page joins the member-page checks); 18 deliberate breaks in a
+  scratch clone, each caught. In a browser with a sign-in stub: typing,
+  auto-advance, direction switching, check, reveal, pause, clear and
+  saved progress; at 375x812 the grid and keyboard dock fit one screen,
+  and at 375, 768 and 1280px nothing scrolls sideways.
+
 ## 2026-10-12: Tastemaker, all-time and per season
 
 - **New All-Time award, Tastemaker:** whose biggest vote of a round most

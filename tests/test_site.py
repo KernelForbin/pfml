@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 from support import ROOT
 
 SITE = ROOT / "site"
-MEMBER_PAGES = ["index.html", "career.html", "round.html", "season.template.html", "profile.html"]
+MEMBER_PAGES = ["index.html", "career.html", "round.html", "season.template.html", "profile.html", "round7hint2.html"]
 FONT_HOSTS = {"fonts.googleapis.com", "fonts.gstatic.com"}
 
 

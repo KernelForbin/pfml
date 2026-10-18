@@ -110,7 +110,9 @@ the playlist-size parsing, and what gets backed up. Then the site's static
 contracts (the features page loads nothing but its fonts, every page links
 to it, the scripts load in the order they depend on, generated season pages
 match the template, no `.html` links, the local preview server, no data or
-secret keys are tracked), the deploy workflow, the profile and inbox data,
+secret keys are tracked), that the Round 7 hint crossword can be finished
+(every square checked both ways, every entry clued), the deploy workflow,
+the profile and inbox data,
 the database schema and migrations, the committed emoji data, and the parts
 of `enrich_comments.py` that decide what gets stored. The deploy runs it
 before publishing.
@@ -680,6 +682,47 @@ targets already; the focus panel's title links instead), buttons (filter
 and focus chips, trend legend) and cards that are links themselves. If `profiles.json` hasn't
 been published yet, the page shows what `career.json` has and hides the
 rest.
+
+## Round 7 hint crossword (/round7hint2)
+
+A one-off, members-only 15x15 crossword, made as the second hint for
+Season 3's Round 7 (`site/round7hint2.html`, played by `site/crossword.js`).
+It loads like any member page (gated by `auth.js`; `app.js` only fills the
+header) and reads no league data.
+
+**The answers the league asked for.** 4-Across is L4LM, clued "Kunj
+conglomerate"; 5-Down is 4NONBLONDES; GONG and SOLO cross it at its O's.
+The rest is ordinary fill with its own clues. The grid in the brief
+wasn't fillable (four 15-letter downs among other things), so the black
+squares were redrawn, symmetric, keeping those four answers where they
+were. One constraint shows in the fill: the row between L4LM and GONG has
+to read vowel-N-vowel-vowel, and the only real word that fits with the rest
+is UNAU (a two-toed sloth), which in turn forces MUGGY and NEGS. The fill
+came from a backtracking filler over the Hunspell en_US word list, then a
+hand review that blocked abbreviations and junk; the weakest survivors
+are UNAU, NEGS, DUGS, GIT and OTIOSE, each clued fairly.
+
+**How it plays.** Pick a square; pick it again to switch direction.
+Typing fills and moves on to the next empty square of the entry, then the
+next unfinished clue. Backspace, arrows (an arrow across the current
+direction turns first), Tab/Shift+Tab or Enter for the next clue, Space to
+switch. Touch screens get the page's own keyboard, docked under the clue
+bar (the phone's keyboard would cover the grid), with a 123 key for the
+digit. Check and Reveal work on a square, the word or the puzzle; Pause
+blurs the grid; Clear starts over. Progress and time are kept in that
+browser's localStorage only.
+
+**The answers are in the public page code.** `SOLUTION` is base64 of the
+grid reversed, enough that a glance at the source doesn't solve it, not a
+lock. If it ever needs to be truly secret it belongs in the private bucket
+like the league data.
+
+**Changing it:** edit `SOLUTION` and `CLUES` together.
+`tests/test_crossword.py` checks every square crosses an Across and a
+Down of three or more, every entry has a clue and every clue an entry,
+symmetry, one connected grid, no answer used twice, and the requested
+answers in place. It's left off the features page on purpose: a hint
+page, not a standing feature, and listing it would give the hint away.
 
 ## Scoring model
 

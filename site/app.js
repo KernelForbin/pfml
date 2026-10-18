@@ -2260,6 +2260,11 @@
       initRound();
     } else if (page === "profile") {
       initProfile();
+    } else if (page === "crossword") {
+      // the puzzle itself is crossword.js's; this only fills the header
+      PFML.loadJSON("index.json")
+        .then(function (index) { renderNav(index, "crossword"); })
+        .catch(function (err) { console.error(err); });
     }
   }
 
