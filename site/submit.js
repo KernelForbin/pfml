@@ -236,14 +236,42 @@
   // is redrawn only when the choice changes, so typing around a good link
   // doesn't reload it.
   var shownKey = "";
-  function setPick(p) {
+  function setPick(p, about) {
     state.pasted = p;
     var key = p ? p.platform + ":" + p.track : "";
     if (key !== shownKey) {
       $("subPreview").innerHTML = p ? embedHtml(p) : "";
       shownKey = key;
+      gaugeFor(p, about);
     }
     $("subSend").disabled = !p;
+  }
+
+  // Estimated League Sentiment (sentiment.js) for the picked track: from
+  // what the search said it is, or, for a pasted Spotify link, from the
+  // catalog when it's been submitted before. A YouTube or SoundCloud link
+  // says nothing about itself, so it gets no gauge.
+  var gaugeKey = "";
+  function gaugeFor(p, about) {
+    $("subGauge").innerHTML = "";
+    gaugeKey = p ? p.platform + ":" + p.track : "";
+    if (!p) return;
+    var key = gaugeKey;
+    PFMLSentiment.load().then(function () {
+      if (gaugeKey !== key) return;               // picked something else meanwhile
+      var pick = about || (p.platform === "spotify" ? PFMLSentiment.known(p.track) : null);
+      if (pick) $("subGauge").innerHTML = PFMLSentiment.gaugeHtml(PFMLSentiment.judge(pick));
+    }).catch(function (err) { console.error(err); });
+  }
+
+  // what a search result is, for the gauge: Spotify says; a YouTube video
+  // usually titles itself "Artist - Song", else the channel is the artist
+  function aboutResult(service, r) {
+    if (service === "spotify") {
+      return { spotifyId: r.id, title: r.title, artists: String(r.artist || "").split(", "), album: r.album };
+    }
+    var split = /^(.+?)\s[-\u2013\u2014]\s(.+)$/.exec(r.title || "");
+    return split ? { title: split[2], artists: [split[1]] } : { title: r.title, artists: [r.artist] };
   }
 
   var CHECK = "Check the player shows the right recording, then submit.";
@@ -349,7 +377,8 @@
     if (!b || !state.results) return;
     $("subResults").querySelectorAll(".sub-result").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
     state.pickFrom = "search";
-    setPick({ platform: state.results.service, track: state.results.items[+b.dataset.i].id });
+    var r = state.results.items[+b.dataset.i];
+    setPick({ platform: state.results.service, track: r.id }, aboutResult(state.results.service, r));
     showMsg(CHECK, "");
   }
 

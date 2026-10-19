@@ -694,6 +694,37 @@ the song, and more by the same artist. The search sits in the address
 (`/repeats?q=steely%20dan`), so it can be shared. It's reached from the
 initials menu and the Submit page.
 
+**Estimated League Sentiment.** A gauge, green to red, for how much the
+league will care about a repeat. It's shown for a picked track: on the
+repeat checker, from a list of Spotify matches under the box ("How will
+the league feel about it?"), and on the Submit page, for a search result
+or a pasted Spotify link the catalog already has. A pasted YouTube or
+SoundCloud link says nothing about itself, so it gets no gauge. It shows a
+verdict ("Barely a blip" through "The league will care", and "Exact
+repeat" with an extra warning) and the reasons, each with the earlier
+submission. It never shows a number.
+
+The kinds of repeat it weighs, each by this season or an earlier one:
+- the exact recording;
+- the same song by the same artist in another version;
+- a cover;
+- a different artist's song with the same one-word title (maybe not the
+  same song);
+- the same artist and album;
+- an artist already submitted twice this season, or in the last round;
+- the same artist;
+- an artist who was a featured guest.
+
+The verdict follows the strongest. **The weights are the user's (decided
+2026-10-19) and are kept off the site and out of these docs on purpose.**
+They live only in `site/sentiment.js`, which is public in this repo like
+all page code. Comparisons use `catalog.json` plus `index.json`'s current
+season. Names are matched as runs of neighbouring pieces, because the
+export (and the search's "A, B" artist line) can split a name at a comma.
+The album rule needs the search function's `album` field, added
+2026-10-19, which ships only when the function is redeployed. Every rule
+was checked in a browser against the real catalog.
+
 **Data:** `catalog.json`, written by `build.py` (`build_catalog`) with the
 rest and uploaded by `publish.py`. It holds every track from every round,
 with title, artists, album, round, submitter, place, Spotify id and art:

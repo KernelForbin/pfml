@@ -9,7 +9,7 @@
 //                                             100-searches-a-day allowance
 //
 // POST {"service": "spotify" | "youtube", "q": "..."} as a signed-in
-// member; answers {"results": [{id, title, artist, seconds, image}]} or
+// member; answers {"results": [{id, title, artist, album, seconds, image}]} or
 // {"error": "..."}. Members only: it asks the database is_member() with the
 // caller's own sign-in, which also checks that sign-in is genuine.
 //
@@ -62,7 +62,7 @@ async function isMember(authorization: string | null): Promise<boolean> {
   return res.ok && (await res.json()) === true;
 }
 
-type Result = { id: string; title: string; artist: string; seconds: number | null; image: string | null };
+type Result = { id: string; title: string; artist: string; album: string | null; seconds: number | null; image: string | null };
 
 // ---- Spotify: the app's own sign-in (client credentials), no user involved
 
@@ -91,6 +91,7 @@ async function spotifySearch(q: string): Promise<Result[]> {
       id: t.id,
       title: t.name,
       artist: (t.artists ?? []).map((a: any) => a.name).join(", "),
+      album: t.album?.name ?? null,                     // for the repeat gauge's album rule
       seconds: Math.round(t.duration_ms / 1000),
       image: images.length ? images[images.length - 1].url : null,   // the smallest
     };
@@ -130,6 +131,7 @@ async function youtubeSearch(q: string): Promise<Result[]> {
       id,
       title: v.snippet.title,
       artist: String(v.snippet.channelTitle ?? "").replace(/ - Topic$/, ""),
+      album: null,
       seconds: isoSeconds(v.contentDetails?.duration),
       image: v.snippet.thumbnails?.default?.url ?? null,
     };

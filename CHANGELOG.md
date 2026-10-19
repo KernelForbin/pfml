@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-10-19 (follow-up 6): Estimated League Sentiment
+
+- **A gauge, green to red, for how much the league will care about a
+  repeat**, with a verdict and the reasons, each linking to the earlier
+  submission. An exact repeat gets an extra warning. No number is ever
+  shown.
+- **On the repeat checker:** a list of Spotify matches under the box ("How
+  will the league feel about it?"); pick the exact track for its gauge.
+  **On the Submit page:** the gauge appears for the track you pick, from
+  search or a pasted Spotify link the catalog knows.
+- It weighs exact repeats, other versions, covers, one-word titles, same
+  artist and album, an artist twice this season or in the last round, the
+  same artist, and featured guests, each by this season or an earlier one.
+  The weights are the user's and stay off the site and out of the docs;
+  they live in `site/sentiment.js`.
+- The search function now returns each Spotify track's album, for the
+  album rule. That needs the function redeployed.
+- **Verified:** suite passing, with 11 new tests (the score is never
+  printed, an exact repeat warns, commas in names, wiring); 15 deliberate
+  breaks, each caught. In a browser
+  against the real catalog, every rule scored as designed, including the
+  "twice this season" rule, tested by briefly making Season 2 current in
+  a scratch copy. The pages: the pick list, the gauge at 375px, Spotify
+  and YouTube results, and pasted links, known and unknown.
+
 ## 2026-10-19 (follow-up 5): the repeat checker, /repeats
 
 - **Has it been submitted before?** One box takes an artist, song or

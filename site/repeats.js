@@ -142,6 +142,54 @@
     $("rcResults").innerHTML = html;
   }
 
+  /* ---- the gauge: pick the exact track on Spotify ---- */
+
+  // Spotify's matches for the words typed (through the search-tracks Edge
+  // Function), so the gauge knows exactly which track is meant.
+  var asked = "", picks = [];
+
+  function spotifyPicks(text) {
+    asked = text;
+    if (text.length < 3 || SPOTIFY_TRACK.test(text)) { $("rcPick").hidden = true; return; }
+    PFML.api.searchTracks("spotify", text).then(function (res) {
+      if (asked !== text) return;                 // a newer search is under way
+      picks = ((res && res.results) || []).slice(0, 5);
+      if (!picks.length) { $("rcPick").hidden = true; return; }
+      $("rcSpotify").innerHTML = picks.map(function (r, i) {
+        return '<li><button type="button" class="sub-result" data-i="' + i + '" aria-pressed="false">' +
+          (r.image ? '<img src="' + esc(r.image) + '" alt="" width="44" height="44" loading="lazy">' : '<span class="sub-result-noart"></span>') +
+          '<span class="sub-result-text"><b>' + esc(r.title) + "</b><small>" + esc(r.artist) +
+          (r.album ? " · " + esc(r.album) : "") + "</small></span></button></li>";
+      }).join("");
+      $("rcPick").hidden = false;
+    }).catch(function (err) {
+      // search is a help here, not the point: the checker still works
+      console.error(err);
+      $("rcPick").hidden = true;
+    });
+  }
+
+  function showGauge(pick) {
+    PFMLSentiment.load().then(function () {
+      $("rcGauge").innerHTML = PFMLSentiment.gaugeHtml(PFMLSentiment.judge(pick));
+    }).catch(function (err) { console.error(err); });
+  }
+
+  function onPick(ev) {
+    var b = ev.target.closest(".sub-result");
+    if (!b) return;
+    $("rcSpotify").querySelectorAll(".sub-result").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+    var r = picks[+b.dataset.i];
+    showGauge({ spotifyId: r.id, title: r.title, artists: String(r.artist).split(", "), album: r.album });
+  }
+
+  // a pasted link the catalog knows is judged straight away
+  function gaugeForLink(text) {
+    var link = SPOTIFY_TRACK.exec(text);
+    var known = link && tracks.filter(function (x) { return x.t.spotifyId === link[1]; })[0];
+    if (known) showGauge({ spotifyId: known.t.spotifyId, title: known.t.title, artists: known.t.artists, album: known.t.album });
+  }
+
   /* ---- start ---- */
 
   function remember(q) {
@@ -157,12 +205,18 @@
         rounds.length + " finished rounds, every season.";
       var box = $("rcQuery"), timer = 0;
       box.disabled = false;
+      var spotifyTimer = 0;
+      $("rcSpotify").addEventListener("click", onPick);
       box.addEventListener("input", function () {
         clearTimeout(timer);
-        timer = setTimeout(function () { search(box.value); remember(box.value.trim()); }, 120);
+        clearTimeout(spotifyTimer);
+        $("rcGauge").innerHTML = "";
+        var text = box.value.trim();
+        timer = setTimeout(function () { search(box.value); remember(text); gaugeForLink(text); }, 120);
+        spotifyTimer = setTimeout(function () { spotifyPicks(text); }, 450);
       });
       var start = new URLSearchParams(location.search).get("q");
-      if (start) { box.value = start; search(start); }
+      if (start) { box.value = start; search(start); gaugeForLink(start.trim()); spotifyPicks(start.trim()); }
       if (window.matchMedia("(pointer: fine)").matches) box.focus();
     }).catch(function (err) {
       console.error(err);

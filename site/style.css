@@ -1587,3 +1587,23 @@ body.auth-checking::before {
 .rc-where a { color: var(--deep); }
 .rc-play { flex: none; align-self: center; padding: 8px; text-decoration: none; font-size: 1.05rem; color: var(--muted); }
 @media (hover: hover) { .rc-play:hover { color: var(--magenta); } }
+
+/* Estimated League Sentiment (sentiment.js) */
+.sg { margin-top: 14px; padding: 14px 16px 16px; max-width: 520px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow-sm); }
+.sg-kicker { margin: 0; font: 700 0.74rem/1 "Archivo", sans-serif; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.sg-dial { display: block; width: 100%; max-width: 260px; margin: 8px auto 0; }
+.sg-needle { stroke: var(--ink); stroke-width: 4; stroke-linecap: round; }
+.sg-hub { fill: var(--ink); }
+.sg-label { margin: 4px 0 0; text-align: center; font: 800 1.2rem/1.25 "Archivo", sans-serif; }
+.sg-green .sg-label, .sg-lime .sg-label { color: #2E7D32; }
+.sg-yellow .sg-label, .sg-amber .sg-label { color: #9A6B00; }
+.sg-orange .sg-label { color: #C2410C; }
+.sg-red .sg-label, .sg-exact .sg-label { color: #B71C1C; }
+.sg-warning { margin: 12px 0 0; padding: 10px 12px; border-radius: var(--r-sm); background: #FDECEA; color: #8E1B1B; font-size: 0.92rem; }
+.sg-reasons { margin: 12px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 0.9rem; }
+.sg-reasons li { display: flex; flex-direction: column; gap: 2px; }
+.sg-reasons span { color: var(--muted); overflow-wrap: anywhere; }
+.rc-pick { margin-top: 18px; max-width: 640px; }
+.rc-pick[hidden] { display: none; }
+.rc-pick h2 { margin: 0 0 2px; font-size: 1.05rem; }
+.rc-pick .block-note { margin-bottom: 8px; }
