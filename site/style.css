@@ -1420,3 +1420,80 @@ body.auth-checking::before {
   .xw-key:active { background: var(--wash); }
   .xw-key-wide { flex: 1.5 1 0; max-width: 66px; font-size: 0.82rem; }
 }
+
+/* ---------- submitting on the site (/submit) ---------- */
+
+.sub-banner { padding-top: 22px; }
+.sub-banner-link {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 16px 20px;
+  border-radius: var(--r); background: var(--ink); color: var(--paper); text-decoration: none;
+  box-shadow: var(--shadow-md);
+}
+.sub-banner-link b { font: 800 1.15rem/1.25 "Archivo", sans-serif; }
+.sub-banner-kicker { width: 100%; font: 700 0.74rem/1 "Archivo", sans-serif; text-transform: uppercase; letter-spacing: 0.08em; color: var(--acid); }
+.sub-banner-go { margin-left: auto; font-weight: 600; }
+@media (hover: hover) { .sub-banner-link:hover { color: var(--paper); transform: translateY(-1px); } }
+
+.sub-round-card { padding: 20px 22px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow-sm); }
+.sub-round-card h2 { margin: 2px 0 6px; font-size: 1.45rem; letter-spacing: -0.02em; }
+.sub-season { margin: 0; font: 700 0.76rem/1 "Archivo", sans-serif; text-transform: uppercase; letter-spacing: 0.08em; color: var(--deep); }
+.sub-prompt { margin: 0; white-space: pre-wrap; max-width: 65ch; }
+.sub-count { margin: 10px 0 0; color: var(--muted); font-size: 0.9rem; }
+
+.sub-tag-card { display: flex; align-items: center; gap: 16px; margin: 8px 0 14px; }
+.sub-tag-card p { margin: 0; max-width: 52ch; }
+.sub-tag {
+  flex: none; display: inline-flex; align-items: center; justify-content: center; min-width: 64px; height: 64px; padding: 0 10px;
+  border-radius: 14px; background: var(--magenta); color: #fff; font: 800 1.9rem/1 "Archivo", sans-serif; letter-spacing: 0.02em;
+}
+.sub-tag-sm { min-width: 40px; height: 32px; border-radius: 8px; font-size: 1rem; }
+
+.sub-embed { margin-top: 10px; }
+.sub-embed:empty { display: none; }
+.sub-embed[hidden] { display: none; }
+.sub-frame { display: block; width: 100%; border: 0; border-radius: 12px; }
+.sub-frame-video { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; background: var(--ink); }
+.sub-frame-video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.sub-link { margin: 8px 0 0; font-size: 0.9rem; }
+
+.sub-form, .sub-admin-form { display: flex; flex-direction: column; gap: 6px; max-width: 640px; }
+.sub-label { font: 600 0.84rem/1.2 "Archivo", sans-serif; margin-top: 6px; }
+.sub-input {
+  width: 100%; padding: 11px 13px; border: 1px solid var(--border); border-radius: var(--r-sm);
+  background: var(--card); color: var(--ink); font: 400 16px/1.4 "Inter", sans-serif;   /* 16px: iOS doesn't zoom */
+}
+.sub-input:focus { outline: 2px solid var(--magenta); outline-offset: 1px; }
+.sub-textarea { resize: vertical; min-height: 84px; }
+.sub-msg { margin: 2px 0 0; font-size: 0.9rem; color: var(--muted); }
+.sub-msg.is-error { color: var(--neg); }
+.sub-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.sub-actions[hidden] { display: none; }
+.sub-btn {
+  font: 700 0.92rem/1 "Archivo", sans-serif; padding: 12px 18px; border: 1px solid var(--magenta); border-radius: 999px;
+  background: var(--magenta); color: #fff; cursor: pointer;
+}
+.sub-btn:disabled { opacity: 0.45; cursor: default; }
+.sub-btn-quiet { background: var(--card); color: var(--ink); border-color: var(--border); }
+@media (hover: hover) { .sub-btn:not(:disabled):hover { box-shadow: var(--shadow-md); } }
+
+.sub-tracks { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-width: 640px; }
+.sub-track {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 12px;
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--r-sm);
+}
+.sub-track-btn {
+  flex: 1; display: flex; align-items: center; gap: 12px; padding: 0; border: 0; background: none;
+  color: var(--ink); font: 600 0.95rem/1.2 "Inter", sans-serif; text-align: left; cursor: pointer;
+}
+.sub-track-open { font-size: 0.88rem; }
+.sub-track .sub-embed { flex-basis: 100%; margin-top: 2px; }
+.sub-empty { color: var(--muted); }
+.sub-anon { font-size: 0.86rem; }
+.sub-admin { border-top: 1px dashed var(--border); }
+.sub-admin h3 { margin: 4px 0 4px; font-size: 1.05rem; }
+
+@media (max-width: 620px) {
+  .sub-round-card { padding: 16px; }
+  .sub-tag-card { align-items: flex-start; gap: 12px; }
+  .sub-tag { min-width: 56px; height: 56px; font-size: 1.6rem; }
+}

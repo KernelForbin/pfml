@@ -1,5 +1,47 @@
 # Changelog
 
+## 2026-10-18 (follow-up): submitting tracks on the site, stage 1
+
+- **The plan**, agreed today: members submit their real track on pfml.fun
+  (Spotify, YouTube or SoundCloud) and still enter a placeholder in Music
+  League, where voting stays. When submissions close, the round is
+  shuffled once and built as a Spotify playlist and a YouTube playlist in
+  the same order, each track matched to its copy on the other service
+  (stage 2), so everyone can listen in the app they use, screen locked.
+  A web page can't do that: YouTube's embedded player stops when the
+  screen locks, phones won't start the next track in the background, and
+  Spotify's web player doesn't run in phone browsers. A mixed player on the
+  round page comes in stage 3, for desktop and screen-on listening. A
+  track on only one service is allowed, with a gap in the other playlist.
+- **Stage 1, this change:** the Submit page (`/submit`), reached from a
+  Home page banner while a round is open and from the initials menu. Paste
+  a link, check it in the service's own player, submit, get a tag (like
+  Q7) for the Music League note. Change or withdraw until the deadline.
+  After it, everyone sees and plays the list. The admin opens, edits and
+  closes rounds on the same page.
+- **Anonymous, even to the admin:** tracks are stored with no name or
+  time; who sent which sits in a table nothing signed in can read. Only a
+  deliberate lookup with the secret key could join them (agreed as enough).
+- **Measured:** song.link's public API answers `401
+  PUBLIC_API_ACCESS_DEPRECATED`, so stage 2 will match tracks itself.
+- **Waiting on:** `supabase/migrations/2026-10-18_site_submissions.sql`,
+  run in the SQL Editor, before this ships. Until then the Home banner just
+  doesn't show.
+- Privacy page: submissions, the services' players on the Submit page, and
+  the crossword's saved progress (which it should already have said).
+  Features page: a Submit your track card.
+- **Verified:** suite 259 passing (18 new in `tests/test_submissions.py`:
+  the anonymity rules, schema and migration agreeing, the link shapes
+  matching the database's, every rpc existing, the page wiring). In a
+  browser against a stand-in following the database's rules: 22 link
+  shapes, open/edit/close as admin, submit, change (same tag), a duplicate
+  refused, withdraw, the closed list playing in place, the Home banner,
+  no admin panel for a member; no overflow at 375 or 1280px. 28
+  deliberate breaks in a scratch clone, each caught; the first run let a
+  withdraw-after-the-deadline slip through (the test saw the check but not
+  that it refuses), so each check is now pinned to its `raise`. Not run
+  against Postgres; there's none here.
+
 ## 2026-10-18: the Round 7 hint crossword, /round7hint2
 
 - **A playable, members-only 15x15 crossword** at pfml.fun/round7hint2:

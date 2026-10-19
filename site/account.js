@@ -116,6 +116,7 @@
       '<div class="acct-pop acct-menu" id="acctMenu" hidden>' +
         '<div class="acct-menu-head">' + avatar(member.competitorId, member.name) +
           '<span class="acct-menu-who"><b>' + esc(member.name) + "</b><small>Signed in</small></span></div>" +
+        '<a class="acct-item" href="submit">Submit a track</a>' +
         '<a class="acct-item" href="profile">My profile</a>' +
         '<button type="button" class="acct-item" id="acctSignOut">Sign out</button>' +
       "</div>" +

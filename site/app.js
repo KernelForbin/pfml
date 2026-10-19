@@ -327,7 +327,23 @@
     host.appendChild(grid);
   }
 
+  // A round open for submissions on the site gets a banner on the home
+  // page. Without the tables (a database the migration hasn't reached) it
+  // just doesn't show.
+  function renderSubmitBanner() {
+    var box = $("submitBanner");
+    if (!box) return;
+    PFML.api.siteRounds().then(function (rounds) {
+      var open = (rounds || []).filter(function (r) { return !r.closed_at && Date.now() < Date.parse(r.closes_at); })[0];
+      if (!open) return;
+      box.innerHTML = '<a class="sub-banner-link" href="submit"><span class="sub-banner-kicker">Open for submissions</span>' +
+        "<b>" + esc(open.name) + "</b><span class=\"sub-banner-go\">Submit your track \u2192</span></a>";
+      box.hidden = false;
+    }).catch(function (err) { console.error(err); });
+  }
+
   function initHome() {
+    renderSubmitBanner();
     PFML.loadJSON("index.json").then(function (index) {
       renderNav(index, null);
       var grid = el("div", "season-grid");
@@ -2260,10 +2276,10 @@
       initRound();
     } else if (page === "profile") {
       initProfile();
-    } else if (page === "crossword") {
-      // the puzzle itself is crossword.js's; this only fills the header
+    } else if (page === "crossword" || page === "submit") {
+      // the page itself is crossword.js's or submit.js's; this only fills the header
       PFML.loadJSON("index.json")
-        .then(function (index) { renderNav(index, "crossword"); })
+        .then(function (index) { renderNav(index, page); })
         .catch(function (err) { console.error(err); });
     }
   }

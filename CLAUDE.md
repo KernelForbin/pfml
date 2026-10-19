@@ -327,7 +327,11 @@ first (a test pins that order). For the header and profiles the stub's
 `reactionsOn`, and the scratch copy needs `profiles.json` and
 `lookup.json`: generate them there with `build.build_profiles` /
 `build.build_lookup` from the season JSON, rather than running `build.py`,
-which would rewrite `site/data/`. The browser caches `app.js` and friends
+which would rewrite `site/data/`. The Home page and the Submit page also
+call `siteRounds`; the Submit page needs the rest of the site-round calls
+in `auth.js` too, and a stub for them should follow the database's rules
+(closed rounds refuse writes, nobody reads tracks before the close, one
+track per member), or it proves nothing. The browser caches `app.js` and friends
 between edits, so a fix can look like it did nothing: refetch with
 `fetch(url, {cache: "reload"})`, or check `performance` entries, before
 trusting a before/after comparison.

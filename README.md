@@ -683,6 +683,64 @@ and focus chips, trend legend) and cards that are links themselves. If `profiles
 been published yet, the page shows what `career.json` has and hides the
 rest.
 
+## Submissions on the site (/submit)
+
+From Season 3 Round 7 the league can submit its real tracks on pfml.fun:
+Spotify, YouTube or SoundCloud. Voting stays in Music League, which has
+no way to take submissions from outside, so each member also enters a
+placeholder there. Stage 1 (this) collects the tracks; stage 2 builds a
+Spotify and a YouTube playlist in one shuffled order; stage 3 adds a mixed
+player to the page. The plan and its reasons are in the 2026-10-18
+CHANGELOG entry.
+
+**How a round runs.** The admin opens a round on the Submit page (season,
+name, prompt, closing time) and can edit it or close it early there. A
+banner on the Home page and a Submit a track link in the initials menu
+lead to it. A member pastes a link, checks it in the service's own player,
+and submits. They get a **tag** (a letter and a digit, like Q7) and put it
+in their Music League placeholder's note; voters match placeholders to
+tracks by tag. Changing the track keeps the tag; withdrawing and
+submitting again draws a new one. One track per member per round, and the
+same track can't go in twice. At the deadline (or when the admin closes
+it) the page shows every track, sorted by tag, playable in place.
+
+**Anonymous, even to the admin.** `site_submissions` holds the round, tag,
+platform and track, with no user and no time. Who sent which is in
+`site_submission_owners`, which has row level security on and no policies,
+so nothing signed in can read it. Every write goes through four security
+definer functions (`submit_track`, `my_submission`, `withdraw_submission`,
+`site_submission_count`), and the only ones that touch owners match on
+`auth.uid()`, so a member only ever learns their own. Nobody reads
+submissions before the round closes, the admin included; after, members
+read them all. The secret key in `.env` bypasses all of this, so a
+deliberate lookup in Supabase could still join the two tables: agreed as
+anonymous enough (2026-10-18).
+
+**Links.** `submit.js` reads a pasted link into what the database stores:
+a Spotify track id, a YouTube video id, or `user/track` on SoundCloud.
+It takes open.spotify.com (with or without `intl-xx`), `spotify:track:`,
+youtube.com (`watch`, `shorts`, `live`, `embed`), music.youtube.com,
+youtu.be and soundcloud.com, with any tracking query on the end. It turns
+away albums, playlists, channels, private SoundCloud links and the short
+share links (`spotify.link`, `on.soundcloud.com`), which can't be read
+without following them, with a message saying what to paste instead.
+`submit_track` checks the same shapes again, and so does the table.
+YouTube previews use `youtube-nocookie.com`.
+
+**SoundCloud** is accepted now; a SoundCloud track only makes the
+playlists (stage 2) if it also has a copy on Spotify or YouTube, and the
+page says so.
+
+**Measured:** song.link's public API, the obvious way to match a track
+across services, answers `401 PUBLIC_API_ACCESS_DEPRECATED` (2026-10-18),
+so stage 2 matches tracks itself.
+
+**Database:** `supabase/migrations/2026-10-18_site_submissions.sql`, the
+same blocks as `schema.sql`. Nothing here was run against Postgres before
+it shipped (there's none on this machine); `tests/test_submissions.py`
+pins the rules as text, and the page was checked in a browser against a
+stand-in that follows them.
+
 ## Round 7 hint crossword (/round7hint2)
 
 A one-off, members-only 15x15 crossword, made as the second hint for

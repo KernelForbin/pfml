@@ -135,7 +135,7 @@ class Page(unittest.TestCase):
     def test_app_js_fills_the_header_on_the_crossword_page(self):
         boot = read("app.js").split("function boot() {", 1)[1].split("\n  }\n", 1)[0]
         branch = boot.split('page === "crossword"', 1)[1].split("}", 1)[0]
-        self.assertIn('renderNav(index, "crossword")', branch)
+        self.assertIn("renderNav(index, page)", branch)
 
     def test_every_element_the_code_looks_up_exists_on_the_page(self):
         html = read("round7hint2.html")

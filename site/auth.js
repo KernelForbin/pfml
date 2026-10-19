@@ -365,6 +365,39 @@
       return client.from("comment_reactions").select("comment_id, user_id, reaction")
         .like("comment_id", "%|" + competitorId).then(must);
     },
+    // ---- submitting on the site (README, Submissions on the site) ----
+    // Rounds opened on the site, newest first.
+    siteRounds: function () {
+      return client.from("site_rounds").select("id, season_key, name, prompt, closes_at, closed_at, created_at")
+        .order("created_at", { ascending: false }).limit(20).then(must);
+    },
+    // The caller's own track for a round, or null. Nothing else on the
+    // site can tell whose track is whose.
+    mySubmission: function (roundId) {
+      return client.rpc("my_submission", { p_round: roundId }).then(must)
+        .then(function (rows) { return rows && rows.length ? rows[0] : null; });
+    },
+    // Resolves to the submission's tag (the same one again on a change).
+    submitTrack: function (roundId, platform, track) {
+      return client.rpc("submit_track", { p_round: roundId, p_platform: platform, p_track: track }).then(must);
+    },
+    withdrawSubmission: function (roundId) {
+      return client.rpc("withdraw_submission", { p_round: roundId }).then(must);
+    },
+    submissionCount: function (roundId) {
+      return client.rpc("site_submission_count", { p_round: roundId }).then(must);
+    },
+    // Readable only once the round has closed (row level security).
+    roundSubmissions: function (roundId) {
+      return client.from("site_submissions").select("tag, platform, track").eq("round_id", roundId).then(must);
+    },
+    // Admin only (row level security): open a round, or change one.
+    openSiteRound: function (fields) {
+      return client.from("site_rounds").insert(fields).select("id").then(must);
+    },
+    updateSiteRound: function (roundId, fields) {
+      return client.from("site_rounds").update(fields).eq("id", roundId).select("id").then(must);
+    },
     me: function () { return currentUserId(); }
   };
 
