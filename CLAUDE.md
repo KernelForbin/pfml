@@ -101,6 +101,18 @@ the keyboard, so it has to run without a click anywhere. Measured
    uploads data only. Pushing the repo still does.
 6. Close the tab afterwards and delete any scratch copy.
 
+## Building a closed site round's playlists
+
+When a round on the Submit page has closed: `python scripts/round_playlists.py
+--dry-run` first, and show the user the report: every track, what matched
+where, and any match it was unsure of (with its link). Ask before using
+`--accept` or setting a match by hand in `data/playlist_overrides.json`
+(local, git-ignored). Then run it for real, which builds both playlists
+on the user's own Spotify and YouTube accounts. That writes to their
+accounts and to the database, so it needs their go-ahead each time. Never
+read `site_submission_owners`; the script doesn't, and a test holds it.
+README, Submissions on the site.
+
 ## Season 3: review every new export for Daily Double requests
 
 Season 3 has a Daily Double rule: once per season, a submitter can ask in
@@ -183,7 +195,10 @@ verified" has to be both.
   Spotify pages, so also when tiles lose their numbers), and
   `-p test_live_emoji_data.py` whenever `scripts/update_emoji_data.py` or
   its pinned version changes (it also checks the committed
-  `site/emoji-data.js` is what that version builds).
+  `site/emoji-data.js` is what that version builds), and
+  `-p test_live_playlists.py` whenever `scripts/round_playlists.py`'s
+  lookups or matching change (read-only; Spotify and YouTube parts need
+  their keys in `.env` and skip without them).
   Note: `python -m unittest tests.test_x` does not work here, since
   `tests/` isn't a package on the path; use `discover`.
 - Main branch: `main`. Work on a branch; don't merge or push to `main`

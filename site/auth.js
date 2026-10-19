@@ -368,7 +368,7 @@
     // ---- submitting on the site (README, Submissions on the site) ----
     // Rounds opened on the site, newest first.
     siteRounds: function () {
-      return client.from("site_rounds").select("id, season_key, name, prompt, closes_at, closed_at, created_at")
+      return client.from("site_rounds").select("id, season_key, name, prompt, closes_at, closed_at, created_at, spotify_playlist, youtube_playlist")
         .order("created_at", { ascending: false }).limit(20).then(must);
     },
     // The caller's own track for a round, or null. Nothing else on the
@@ -389,7 +389,7 @@
     },
     // Readable only once the round has closed (row level security).
     roundSubmissions: function (roundId) {
-      return client.from("site_submissions").select("tag, platform, track").eq("round_id", roundId).then(must);
+      return client.from("site_submissions").select("tag, platform, track, position, title, artist, spotify_match, youtube_match").eq("round_id", roundId).then(must);
     },
     // Admin only (row level security): open a round, or change one.
     openSiteRound: function (fields) {

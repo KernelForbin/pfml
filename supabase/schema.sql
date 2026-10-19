@@ -373,6 +373,27 @@ create policy "members read a closed round's submissions" on public.site_submiss
       select 1 from public.site_rounds r
        where r.id = round_id and (r.closed_at is not null or now() >= r.closes_at)));
 
+-- Written by scripts/round_playlists.py once a round has closed (the
+-- shuffled order, what each track is, its copy on the other service, the
+-- playlists); supabase/migrations/2026-10-19_round_playlists.sql adds the
+-- same to the live project.
+alter table public.site_rounds add column if not exists spotify_playlist text
+  check (spotify_playlist ~ '^[A-Za-z0-9]{22}$');
+alter table public.site_rounds add column if not exists youtube_playlist text
+  check (youtube_playlist ~ '^[A-Za-z0-9_-]{10,64}$');
+alter table public.site_rounds add column if not exists playlists_built_at timestamptz;
+
+alter table public.site_submissions add column if not exists position integer
+  check (position between 1 and 150);
+alter table public.site_submissions add column if not exists title text
+  check (char_length(title) <= 300);
+alter table public.site_submissions add column if not exists artist text
+  check (char_length(artist) <= 300);
+alter table public.site_submissions add column if not exists spotify_match text
+  check (spotify_match ~ '^[A-Za-z0-9]{22}$');
+alter table public.site_submissions add column if not exists youtube_match text
+  check (youtube_match ~ '^[A-Za-z0-9_-]{11}$');
+
 -- ---------------------------------------------------------------- storage
 
 insert into storage.buckets (id, name, public)

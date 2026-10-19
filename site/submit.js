@@ -270,20 +270,61 @@
 
   /* ---- a closed round: every track, nobody's name ---- */
 
+  // Built by scripts/round_playlists.py once the round has closed: the
+  // shuffled order, titles, each track's copy on the other service, and the
+  // two playlists. Before that, the list is by tag with no titles.
+  function playlistButtons(r) {
+    var out = [];
+    if (r.spotify_playlist) {
+      out.push('<a class="sub-btn sub-play sub-play-spotify" href="https://open.spotify.com/playlist/' +
+        encodeURIComponent(r.spotify_playlist) + '" target="_blank" rel="noopener">Play on Spotify</a>');
+    }
+    if (r.youtube_playlist) {
+      out.push('<a class="sub-btn sub-play sub-play-youtube" href="https://www.youtube.com/playlist?list=' +
+        encodeURIComponent(r.youtube_playlist) + '" target="_blank" rel="noopener">Play on YouTube</a>');
+    }
+    return out.join("");
+  }
+
+  // "Not on Spotify" / "Not on YouTube", for a track the playlist skips
+  function gapNote(s) {
+    if (!s.position) return "";
+    var missing = [];
+    if (!s.spotify_match) missing.push("Spotify");
+    if (!s.youtube_match) missing.push("YouTube");
+    return missing.length ? '<span class="sub-gap">Not on ' + missing.join(" or ") + "</span>" : "";
+  }
+
   function renderList() {
     var r = state.round;
-    $("subListNote").textContent = "Sorted by tag. Tap a track to play it here.";
-    $("subTracks").innerHTML = '<li class="sub-empty">Loading…</li>';
+    var built = !!(r.spotify_playlist || r.youtube_playlist);
+    $("subPlaylists").innerHTML = built
+      ? '<p class="sub-play-note">The whole round, shuffled, in one tap. Same order in both apps; ' +
+        "they keep playing with your phone locked (YouTube needs Premium for that).</p>" +
+        '<div class="sub-actions">' + playlistButtons(r) + "</div>"
+      : "";
+    $("subPlaylists").hidden = !built;
+    $("subListNote").textContent = built
+      ? "In playlist order. Tap a track to play it here."
+      : "Sorted by tag until the playlists are built. Tap a track to play it here.";
+    $("subTracks").innerHTML = '<li class="sub-empty">Loading\u2026</li>';
     $("subList").hidden = false;
     api().roundSubmissions(r.id).then(function (rows) {
-      rows = (rows || []).slice().sort(function (a, b) { return a.tag < b.tag ? -1 : 1; });
+      rows = (rows || []).slice().sort(function (a, b) {
+        if (a.position && b.position) return a.position - b.position;
+        return a.tag < b.tag ? -1 : 1;
+      });
       if (!rows.length) { $("subTracks").innerHTML = '<li class="sub-empty">No tracks were submitted.</li>'; return; }
       $("subTracks").innerHTML = rows.map(function (s, i) {
+        var name = s.title
+          ? '<span class="sub-track-name"><b>' + esc(s.title) + "</b>" + (s.artist ? "<small>" + esc(s.artist) + "</small>" : "") + "</span>"
+          : '<span class="sub-track-where">' + NAMES[s.platform] + "</span>";
         return '<li class="sub-track">' +
           '<button type="button" class="sub-track-btn" data-i="' + i + '" aria-expanded="false">' +
-            '<span class="sub-tag sub-tag-sm">' + esc(s.tag) + "</span>" +
-            '<span class="sub-track-where">' + NAMES[s.platform] + "</span></button>" +
-          '<a class="sub-track-open" href="' + esc(trackUrl(s)) + '" target="_blank" rel="noopener">Open</a>' +
+            (s.position ? '<span class="sub-pos">' + s.position + "</span>" : "") +
+            '<span class="sub-tag sub-tag-sm">' + esc(s.tag) + "</span>" + name + "</button>" +
+          gapNote(s) +
+          '<a class="sub-track-open" href="' + esc(trackUrl(s)) + '" target="_blank" rel="noopener">Open on ' + NAMES[s.platform] + "</a>" +
           '<div class="sub-embed" hidden></div></li>';
       }).join("");
       $("subTracks").onclick = function (ev) {
@@ -296,7 +337,7 @@
         b.setAttribute("aria-expanded", String(opening));
       };
     }).catch(function (err) {
-      $("subTracks").innerHTML = '<li class="sub-empty">Couldn’t load the tracks: ' + esc(errText(err)) + "</li>";
+      $("subTracks").innerHTML = '<li class="sub-empty">Couldn\u2019t load the tracks: ' + esc(errText(err)) + "</li>";
     });
   }
 

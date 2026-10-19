@@ -1482,12 +1482,24 @@ body.auth-checking::before {
   background: var(--card); border: 1px solid var(--border); border-radius: var(--r-sm);
 }
 .sub-track-btn {
-  flex: 1; display: flex; align-items: center; gap: 12px; padding: 0; border: 0; background: none;
+  flex: 1 1 100%; display: flex; align-items: center; gap: 12px; padding: 0; border: 0; background: none;
   color: var(--ink); font: 600 0.95rem/1.2 "Inter", sans-serif; text-align: left; cursor: pointer;
 }
 .sub-track-open { font-size: 0.88rem; }
 .sub-track .sub-embed { flex-basis: 100%; margin-top: 2px; }
 .sub-empty { color: var(--muted); }
+.sub-playlists { margin: 4px 0 18px; padding: 16px 18px; border-radius: var(--r); background: var(--wash); }
+.sub-playlists[hidden] { display: none; }
+.sub-play-note { margin: 0; max-width: 60ch; font-size: 0.92rem; }
+.sub-play { text-decoration: none; display: inline-flex; align-items: center; }
+.sub-play-spotify { background: #1DB954; border-color: #1DB954; color: #fff; }
+.sub-play-youtube { background: #FF0000; border-color: #FF0000; color: #fff; }
+@media (hover: hover) { .sub-play:hover { color: #fff; } }
+.sub-pos { flex: none; min-width: 1.6em; font: 700 0.95rem/1 "Archivo", sans-serif; color: var(--muted); text-align: right; }
+.sub-track-name { display: flex; flex-direction: column; min-width: 0; }
+.sub-track-name b { font-weight: 600; overflow-wrap: anywhere; }
+.sub-track-name small { color: var(--muted); font-size: 0.84rem; overflow-wrap: anywhere; }
+.sub-gap { font-size: 0.78rem; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 3px 8px; white-space: nowrap; }
 .sub-anon { font-size: 0.86rem; }
 .sub-admin { border-top: 1px dashed var(--border); }
 .sub-admin h3 { margin: 4px 0 4px; font-size: 1.05rem; }
@@ -1495,5 +1507,5 @@ body.auth-checking::before {
 @media (max-width: 620px) {
   .sub-round-card { padding: 16px; }
   .sub-tag-card { align-items: flex-start; gap: 12px; }
-  .sub-tag { min-width: 56px; height: 56px; font-size: 1.6rem; }
+  .sub-tag-card .sub-tag { min-width: 56px; height: 56px; font-size: 1.6rem; }
 }

@@ -688,9 +688,9 @@ rest.
 From Season 3 Round 7 the league can submit its real tracks on pfml.fun:
 Spotify, YouTube or SoundCloud. Voting stays in Music League, which has
 no way to take submissions from outside, so each member also enters a
-placeholder there. Stage 1 (this) collects the tracks; stage 2 builds a
-Spotify and a YouTube playlist in one shuffled order; stage 3 adds a mixed
-player to the page. The plan and its reasons are in the 2026-10-18
+placeholder there. Stage 1 collects the tracks; stage 2 builds a Spotify
+and a YouTube playlist in one shuffled order (both below); stage 3 will add
+a mixed player to the page. The plan and its reasons are in the 2026-10-18
 CHANGELOG entry.
 
 **How a round runs.** The admin opens a round on the Submit page (season,
@@ -702,7 +702,9 @@ in their Music League placeholder's note; voters match placeholders to
 tracks by tag. Changing the track keeps the tag; withdrawing and
 submitting again draws a new one. One track per member per round, and the
 same track can't go in twice. At the deadline (or when the admin closes
-it) the page shows every track, sorted by tag, playable in place.
+it) the page shows every track, sorted by tag, playable in place; once
+the playlists are built, in playlist order with titles and two Play
+buttons.
 
 **Anonymous, even to the admin.** `site_submissions` holds the round, tag,
 platform and track, with no user and no time. Who sent which is in
@@ -727,9 +729,10 @@ without following them, with a message saying what to paste instead.
 `submit_track` checks the same shapes again, and so does the table.
 YouTube previews use `youtube-nocookie.com`.
 
-**SoundCloud** is accepted now; a SoundCloud track only makes the
-playlists (stage 2) if it also has a copy on Spotify or YouTube, and the
-page says so.
+**SoundCloud** is accepted; a SoundCloud track only makes the playlists if
+it also has a copy on Spotify or YouTube, and the page says so. SoundCloud's
+oEmbed gives a title and artist but no length, so a SoundCloud match is
+never "sure" on its own: it always comes up for `--accept`.
 
 **Measured:** song.link's public API, the obvious way to match a track
 across services, answers `401 PUBLIC_API_ACCESS_DEPRECATED` (2026-10-18),
@@ -740,6 +743,93 @@ same blocks as `schema.sql`. Nothing here was run against Postgres before
 it shipped (there's none on this machine); `tests/test_submissions.py`
 pins the rules as text, and the page was checked in a browser against a
 stand-in that follows them.
+
+### Stage 2: the round playlists
+
+Once a round closes, `python scripts/round_playlists.py` builds it as a
+Spotify playlist and an unlisted YouTube playlist, in one shuffled order,
+so everyone can play the whole round in one tap in the app they use, with
+the phone locked. It's local, like `publish.py` (the keys are in `.env`),
+and it never reads who submitted what.
+
+    python scripts/round_playlists.py --dry-run       # look everything up, write nothing
+    python scripts/round_playlists.py                 # build the newest closed round
+    python scripts/round_playlists.py --accept B4     # take a match it was unsure of
+    python scripts/round_playlists.py --round <id>    # rebuild a round (same order, same playlists)
+
+What it does: shuffles the round once (later runs keep the order); looks
+each track up on its own service; searches the other service for the same
+recording and compares title, artist and length; fills both playlists in
+order, skipping a track with no copy; and saves the order, titles, matches
+and playlist ids, which the Submit page then shows.
+
+**Matching never guesses.** A candidate is "sure" when the cleaned titles
+agree, the artist matches, and the lengths are within 3 seconds; "unsure"
+when the title is close and the length within 20 (a music video with an
+intro, say). Sure matches go in; unsure ones are left out and printed with a
+link, for `--accept TAG` or a hand-set match. Version words have to agree
+on both sides (live, cover, remix, acoustic, demo, instrumental, session
+and a few more), so a live take never stands in for the studio one.
+Remaster, single, mono and edit labels don't count as a different version.
+By hand: `data/playlist_overrides.json` (local, git-ignored, like
+translations), `{"<round id>": {"Q7": {"spotify": "<link or id>", "youtube":
+null}}}`, where null means "no copy, leave the gap".
+
+**Measured or read, 2026-10-19:**
+- **Spotify** changed its API in February 2026. Playlists are now created
+  with `POST /me/playlists` and filled with `PUT /playlists/{id}/items`;
+  the old `/users/{id}/playlists` and `/tracks` paths are gone. Search
+  returns at most 10 results, and the batch track lookup is gone (one
+  call per track). A new Development Mode app works only while its owner
+  has Premium, and allows 5 users; the script is the only user. Read from
+  Spotify's changelog and migration guide.
+- **YouTube** search has its own allowance of 100 calls a day. Adding or
+  removing a playlist item costs 50 of the 10,000 daily units, so a
+  20-track round costs about 2,000. From Google's quota table.
+- **Google sign-ins** from an app left in "Testing" expire after 7 days, so
+  the app gets published (below).
+- **SoundCloud's** oEmbed answers without any account; measured.
+- **Not yet measured:** whether members who don't own it can open a
+  Spotify playlist that isn't public by its link. Check on the first real
+  round. If they can't, make it public in `Spotify.create_playlist`.
+
+**Setting up the accounts (once).** These are your own accounts (decided
+2026-10-19). Put the ids and secrets in `.env` yourself: never in chat,
+never in a commit.
+
+*Spotify:*
+1. developer.spotify.com/dashboard, Create app. Name it "PFML playlists".
+   Under Redirect URIs, add exactly `http://127.0.0.1:8888/callback`.
+   Under APIs used, tick Web API. Save.
+2. In the app's Settings, copy the Client ID and Client secret into
+   `.env` as `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET`.
+3. Run `python scripts/connect_accounts.py spotify`, sign in, and Agree.
+   It saves `SPOTIFY_REFRESH_TOKEN` in `.env`.
+
+*YouTube (Google):*
+1. console.cloud.google.com, New project, "PFML playlists".
+2. APIs & Services, Library, "YouTube Data API v3", Enable.
+3. Google Auth Platform (OAuth consent screen): External; app name "PFML
+   playlists"; your email. Under Data access, add the scope
+   `.../auth/youtube`. Under Audience, **Publish app** (In production), so
+   the sign-in doesn't expire every 7 days. It stays unverified, which
+   is fine for one user: Google shows a warning screen at sign-in.
+4. Clients, Create client, type **Desktop app**. Copy the Client ID and
+   secret into `.env` as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
+5. Run `python scripts/connect_accounts.py youtube`. At "Google hasn't
+   verified this app" choose Advanced, then Go to PFML playlists, then
+   Continue. It saves `YOUTUBE_REFRESH_TOKEN` in `.env`.
+
+Then `PFML_LIVE=1 python -m unittest discover -s tests -p
+test_live_playlists.py -v` checks the lookups work against the real
+services; it only reads. If the script ever says a sign-in failed, run
+`connect_accounts.py` for that service again.
+
+**Database:** `supabase/migrations/2026-10-19_round_playlists.sql` adds
+the columns (`position`, `title`, `artist`, `spotify_match`,
+`youtube_match` on submissions; the two playlist ids and when they were
+built on rounds). None says who or when anything was submitted, and a test
+holds that.
 
 ## Round 7 hint crossword (/round7hint2)
 

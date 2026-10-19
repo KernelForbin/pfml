@@ -1,5 +1,45 @@
 # Changelog
 
+## 2026-10-19 (follow-up): site rounds, stage 2: the round playlists
+
+- **`scripts/round_playlists.py`** turns a closed site round into a Spotify
+  playlist and an unlisted YouTube playlist, shuffled once, in the same
+  order. Each track is looked up on its own service and searched for on
+  the other. A match goes in only when title, artist and length (within 3
+  seconds) agree, and live has to match live. Anything less is left out and
+  listed, for `--accept` or a hand-set match. `--dry-run` reports and writes
+  nothing. Re-running keeps the order and updates the same two playlists.
+  It never reads who submitted what.
+- **`scripts/connect_accounts.py`**: a one-time browser sign-in for each
+  service that saves a long-lived token in `.env`, never printed.
+- **The Submit page**, once a round is built: Play on Spotify and Play on
+  YouTube buttons, the tracks in playlist order with title and artist, and
+  "Not on Spotify" where a playlist skips one.
+- **Accounts:** the user's own Spotify (Premium) and Google accounts.
+  Playlists are link-only (decided today).
+- **Read from Spotify's and Google's docs, 2026-10-19:**
+  - Spotify's February 2026 API changes: new playlist endpoints, search
+    capped at 10 results, Premium required for a Development Mode app's
+    owner.
+  - YouTube: a 100-a-day search allowance, and 50 units per playlist item.
+  - Google: Testing-mode sign-ins expire in 7 days, so the Google app gets
+    published.
+  - Measured: SoundCloud oEmbed works without an account.
+- **Not yet measured:** whether a non-owner can open a non-public Spotify
+  playlist by its link. The first real round checks it.
+- **Waiting on:**
+  - `supabase/migrations/2026-10-19_round_playlists.sql`, run in the SQL
+    Editor, before this ships (the page reads the new columns).
+  - The two app registrations and sign-ins (README walks through them).
+- **Verified:** suite 299 passing (7 live tests skipped), with 33 new offline tests: matching, order,
+  overrides, the exact Spotify and YouTube calls (fakes), a full build and
+  rebuild with fakes, dry run, never touching the owners table, and the
+  schema. A live read-only test skips until the keys exist; its SoundCloud
+  part passes now. In a browser, against a stand-in: the built and unbuilt
+  views at 375 and 1280px. The phone check caught small tags drawn at full
+  size and titles squeezed beside the gap marker; both fixed. 24 deliberate
+  breaks in a scratch clone, each caught.
+
 ## 2026-10-19: a deploy no longer leaves pages running old scripts
 
 - **What happened:** straight after the Submit page shipped, it sat at
