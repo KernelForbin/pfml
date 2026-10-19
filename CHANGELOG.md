@@ -25,6 +25,12 @@
   - Google: Testing-mode sign-ins expire in 7 days, so the Google app gets
     published.
   - Measured: SoundCloud oEmbed works without an account.
+- **Measured once the accounts were connected:** the live test passes for
+  all three services. A trial on 9 real tracks matched 8 correctly (live
+  to live, within a second). The 9th, PSY's music video, is 34s longer
+  than the song and was rightly left out. The trial also caught a duo
+  credited on Spotify ("Gil Scott-Heron, Brian Jackson") failing against
+  a channel named for one of them, now fixed: any credited name counts.
 - **Not yet measured:** whether a non-owner can open a non-public Spotify
   playlist by its link. The first real round checks it.
 - **Waiting on:**

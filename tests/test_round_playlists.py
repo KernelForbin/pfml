@@ -97,6 +97,14 @@ class Judging(unittest.TestCase):
             with self.subTest(title):
                 self.assertIsNotNone(rp.judge(src, {"title": title, "artist": "Earth, Wind & Fire", "seconds": 170}))
 
+    def test_a_duo_matches_a_channel_named_for_one_of_them(self):
+        # measured: Spotify credits "Gil Scott-Heron, Brian Jackson"; the
+        # YouTube upload is on Gil Scott-Heron's channel
+        src = {"title": "H2Ogate Blues", "artist": "Gil Scott-Heron, Brian Jackson", "seconds": 506}
+        cand = {"title": "H2Ogate Blues", "artist": "Gil Scott-Heron Gil Scott-Heron - Topic", "seconds": 506}
+        self.assertEqual(rp.judge(src, cand), "sure")
+        self.assertIsNone(rp.judge(src, dict(cand, artist="Some Cover Band")))
+
     def test_soundcloud_has_no_length_so_it_is_never_sure_on_its_own(self):
         src = {"title": "Flickermood", "artist": "Forss", "seconds": None}
         self.assertEqual(rp.judge(src, {"title": "Flickermood", "artist": "Forss", "seconds": 300}), "unsure")

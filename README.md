@@ -789,6 +789,12 @@ null}}}`, where null means "no copy, leave the gap".
 - **Google sign-ins** from an app left in "Testing" expire after 7 days, so
   the app gets published (below).
 - **SoundCloud's** oEmbed answers without any account; measured.
+- **Matching on real tracks** (measured 2026-10-19, after the accounts
+  were connected): 8 of 9 matched correctly, mostly to "Artist - Topic"
+  uploads within a second. A live Grateful Dead take matched its live
+  upload. PSY's music video (34s longer than the song) was rightly left
+  out. A duo credit on Spotify has to match a channel named for either
+  artist, which the first trial got wrong.
 - **Not yet measured:** whether members who don't own it can open a
   Spotify playlist that isn't public by its link. Check on the first real
   round. If they can't, make it public in `Spotify.create_playlist`.

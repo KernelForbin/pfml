@@ -175,6 +175,25 @@ def clean_artist(s):
     return re.sub(r"\s+", " ", s).strip()
 
 
+def artist_names(s):
+    """Each credited name: "A, B", "A & B", "A feat. B" give A and B."""
+    parts = re.split(r",| and | x | feat\.? | ft\.? | featuring | with ", " " + fold(s) + " ")
+    return [n for n in (clean_artist(p) for p in parts) if len(n) >= 2]
+
+
+def same_artist(a, b):
+    """True when any credited name on one side is found on the other: Spotify
+    credits a duo where the YouTube channel names one of them (measured
+    2026-10-19 on "Gil Scott-Heron, Brian Jackson")."""
+    whole_a, whole_b = clean_artist(a), clean_artist(b)
+    if not whole_a or not whole_b:
+        return False
+    for name, other in [(n, whole_b) for n in artist_names(a)] + [(n, whole_a) for n in artist_names(b)]:
+        if name in other or similar(name, other) >= 0.8:
+            return True
+    return similar(whole_a, whole_b) >= 0.8
+
+
 def version_words(s):
     s = " " + fold(s) + " "
     return {w for w in VERSION_WORDS if re.search(r"[^a-z]" + re.escape(w) + r"[^a-z]", s)}
@@ -215,9 +234,7 @@ def judge(src, cand):
     if version_words(src["title"]) != version_words(cand["title"]):
         return None
     t = similar(clean_title(src["title"]), clean_title(cand["title"]))
-    a_src, a_cand = clean_artist(src["artist"]), clean_artist(cand["artist"])
-    artist_ok = bool(a_src) and (a_src in a_cand or a_cand in a_src or similar(a_src, a_cand) >= 0.8)
-    if not artist_ok:
+    if not same_artist(src["artist"], cand["artist"]):
         return None
     if src.get("seconds") is None or cand.get("seconds") is None:
         gap = None
