@@ -686,9 +686,9 @@ rest.
 ## Submissions on the site (/submit)
 
 From Season 3 Round 7 the league can submit its real tracks on pfml.fun:
-Spotify, YouTube or SoundCloud. Voting stays in Music League, which has
-no way to take submissions from outside, so each member also enters a
-placeholder there. Stage 1 collects the tracks; stage 2 builds a Spotify
+Spotify, YouTube or SoundCloud. Voting stays in Music League, as usual;
+nobody is asked to link a site submission to their Music League entry
+(decided 2026-10-19). Stage 1 collects the tracks; stage 2 builds a Spotify
 and a YouTube playlist in one shuffled order; stage 3 adds a player on the
 page that plays the round through, across services (both below). The plan and its reasons are in the 2026-10-18
 CHANGELOG entry.
@@ -697,10 +697,11 @@ CHANGELOG entry.
 name, prompt, closing time) and can edit it or close it early there. A
 banner on the Home page and a Submit a track link in the initials menu
 lead to it. A member pastes a link, checks it in the service's own player,
-and submits. They get a **tag** (a letter and a digit, like Q7) and put it
-in their Music League placeholder's note; voters match placeholders to
-tracks by tag. Changing the track keeps the tag; withdrawing and
-submitting again draws a new one. One track per member per round, and the
+and submits. Each submission gets a **tag** (a letter and a digit, like
+Q7) that labels it on the list and in the playlists' gap notes. Members
+were first meant to copy it into a Music League note so voters could
+match the two, but that was dropped (2026-10-19), so the page no longer
+mentions it. One track per member per round, and the
 same track can't go in twice. At the deadline (or when the admin closes
 it) the page shows every track, sorted by tag, playable in place; once
 the playlists are built, in playlist order with titles and two Play

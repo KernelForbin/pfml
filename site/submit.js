@@ -3,9 +3,9 @@
 
    The open round's prompt and deadline; a box to paste a Spotify,
    YouTube or SoundCloud link, previewed in that service's own player
-   before it's sent; then the member's tag, which goes in the note of
-   their Music League placeholder (voting stays there). Once the round
-   closes, everyone sees the list of tracks, never who sent which.
+   before it's sent. Voting stays in Music League. Once the round closes,
+   everyone sees the list of tracks, never who sent which; a tag like Q7
+   labels each one.
 
    All the database rules live in supabase/schema.sql: the page can't
    see whose track is whose, and neither can the admin. README,
@@ -201,8 +201,6 @@
 
   function renderMine(open) {
     var m = state.mine;
-    $("subTag").textContent = m.tag;
-    $("subTagInline").textContent = m.tag;
     $("subMineEmbed").innerHTML = embedHtml(m) +
       '<p class="sub-link"><a href="' + esc(trackUrl(m)) + '" target="_blank" rel="noopener">Open on ' + NAMES[m.platform] + "</a></p>";
     $("subMineActions").hidden = !open || state.changing;
@@ -261,7 +259,7 @@
   }
 
   function withdraw() {
-    if (!window.confirm("Withdraw your track? You can submit again while the round is open, but you'll get a new tag.")) return;
+    if (!window.confirm("Withdraw your track? You can submit again while the round is open.")) return;
     api().withdrawSubmission(state.round.id).then(function () {
       state.mine = null;
       render();

@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-19 (follow-up 3): no more "put your tag in Music League"
+
+- Voting stays in Music League as usual, and nobody needs to link a site
+  submission to their Music League entry (decided today). So the Submit
+  page no longer shows the big tag with "put it in your placeholder's
+  note". The features page and the playlists' descriptions no longer
+  mention it either. The tag stays only as a small label on the track
+  list (and in the playlists' "Not on Spotify: Q7" notes).
+- **Verified:** suite passing, with one new test that no page or
+  playlist asks for it, shown to fail when the wording comes back. In a
+  browser, the "Your track" view reads cleanly with no tag anywhere.
+
 ## 2026-10-19 (follow-up 2): site rounds, stage 3: the round player
 
 - **Play the round** on a closed round's Submit page plays every track in

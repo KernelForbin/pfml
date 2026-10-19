@@ -604,7 +604,7 @@ def playlist_text(r, rows):
     def desc(svc):
         missing = gaps[svc]
         tail = (f" Not on {'Spotify' if svc == 'spotify' else 'YouTube'}: {', '.join(missing)}." if missing else "")
-        return ("Every track from the round, shuffled. Tags match the Music League notes." + tail)[:300]
+        return ("Every track from the round, shuffled." + tail)[:300]
     return name, desc("spotify"), desc("youtube")
 
 

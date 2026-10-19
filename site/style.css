@@ -1440,8 +1440,6 @@ body.auth-checking::before {
 .sub-prompt { margin: 0; white-space: pre-wrap; max-width: 65ch; }
 .sub-count { margin: 10px 0 0; color: var(--muted); font-size: 0.9rem; }
 
-.sub-tag-card { display: flex; align-items: center; gap: 16px; margin: 8px 0 14px; }
-.sub-tag-card p { margin: 0; max-width: 52ch; }
 .sub-tag {
   flex: none; display: inline-flex; align-items: center; justify-content: center; min-width: 64px; height: 64px; padding: 0 10px;
   border-radius: 14px; background: var(--magenta); color: #fff; font: 800 1.9rem/1 "Archivo", sans-serif; letter-spacing: 0.02em;
@@ -1534,6 +1532,4 @@ body.auth-checking::before {
 
 @media (max-width: 620px) {
   .sub-round-card { padding: 16px; }
-  .sub-tag-card { align-items: flex-start; gap: 12px; }
-  .sub-tag-card .sub-tag { min-width: 56px; height: 56px; font-size: 1.6rem; }
 }

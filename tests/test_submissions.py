@@ -170,6 +170,13 @@ class PageCode(unittest.TestCase):
         boot = app.split("function boot() {", 1)[1].split("\n  }\n", 1)[0]
         self.assertIn('page === "submit"', boot)
 
+    def test_members_arent_asked_to_link_a_submission_in_music_league(self):
+        # Dropped 2026-10-19: voting stays in Music League as usual, so no
+        # page or playlist asks anyone to copy a tag into a Music League note.
+        for path in (SITE / "submit.html", SITE / "submit.js", SITE / "features.html", ROOT / "scripts" / "round_playlists.py"):
+            with self.subTest(path.name):
+                self.assertNotRegex(read(path), r"(?i)placeholder['’]s note|in its note|Music League notes?\b")
+
     def test_boxes_the_code_hides_really_hide(self):
         # The emoji search lesson (CLAUDE.md): a class that sets display
         # beats [hidden] unless [hidden] is restated for it.
