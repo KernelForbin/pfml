@@ -22,7 +22,12 @@
   var RULES = {
     exact:        { now: 100, past: 100, says: "This exact recording has been submitted before" },
     version:      { now: 95, past: 90, says: "The same song by the same artist, in another version" },
+    // From free text (a YouTube or SoundCloud title and channel): the past
+    // track's title and one of its artists both appear in it. It can't be
+    // checked that it's the very same recording, so it warns just as high.
+    crossService: { now: 95, past: 90, says: "Looks like the same song by the same artist, on another service (it can’t be confirmed identical)" },
     cover:        { now: 90, past: 80, says: "The same song by a different artist" },
+    titleOnly:    { now: 60, past: 45, says: "A song with the same title as one already submitted (the artist isn’t clear)" },
     sameTitle:    { now: 50, past: 30, says: "A different artist’s song with the same one-word title (it may be a different song)" },
     artistAlbum:  { now: 85, past: 30, says: "The same artist, from the same album" },
     artistTwice:  { now: 85, past: 0, says: "An artist already submitted twice or more this season" },
@@ -82,7 +87,10 @@
         lastRound: lastRound,
         current: current,
         tracks: cat.tracks.map(function (t) {
-          return { t: t, song: songKey(t.title), album: fold(t.album), names: names(t.artists),
+          var n = names(t.artists);
+          return { t: t, song: songKey(t.title), album: fold(t.album), names: n,
+                   songWords: songKey(t.title).split(" ").filter(Boolean),
+                   nameWords: Object.keys(n.all).map(function (k) { return k.split(" "); }),
                    now: cat.rounds[t.round].season === current };
         })
       };
@@ -90,10 +98,33 @@
     });
   }
 
+  // whether the words of `needle` appear together, in order, in `hay`
+  function phrase(hay, needle) {
+    if (!needle.length || needle.length > hay.length) return false;
+    for (var i = 0; i + needle.length <= hay.length; i++) {
+      for (var j = 0; j < needle.length && hay[i + j] === needle[j]; j++) { /* keep matching */ }
+      if (j === needle.length) return true;
+    }
+    return false;
+  }
+
+  // For a pick known only by free text (a YouTube video's title and channel,
+  // a SoundCloud "Song by Artist", a Spotify title): which side of a dash is
+  // the artist can't be trusted ("Righteously - Anna Ash" is song first,
+  // measured 2026-10-19), so look for the past track's title and artist
+  // anywhere in it. A one-word title alone is too common to count.
+  function textKind(textWords, p) {
+    if (!phrase(textWords, p.songWords)) return null;
+    if (p.nameWords.some(function (n) { return phrase(textWords, n); })) return "crossService";
+    return p.songWords.length > 1 ? "titleOnly" : null;
+  }
+
   // The strongest kind of repeat between the picked track and one earlier
-  // submission, or null.
+  // submission, or null. Without artists (a link whose service gave only a
+  // title), only an exact match counts here; the text does the rest.
   function kind(pick, p) {
     if (pick.spotifyId && pick.spotifyId === p.t.spotifyId) return "exact";
+    if (!Object.keys(pick.names.all).length) return null;
     var leadSame = Object.keys(pick.names.lead).some(function (n) { return p.names.lead[n]; });
     var shared = Object.keys(pick.names.all).some(function (n) { return p.names.all[n]; });
     if (pick.song && pick.song === p.song) {
@@ -106,7 +137,7 @@
     return null;
   }
 
-  // pick: {spotifyId?, title, artists: [names or pieces], album?}. The
+  // pick: {spotifyId?, title, artists: [names or pieces], album?, text?}. The
   // search answers with artists as one "A, B" line, which may split a name
   // that has a comma in it, so the picked track is read the same way as
   // the catalog: any run of neighbouring pieces is a name.
@@ -116,7 +147,8 @@
       spotifyId: pick.spotifyId || "",
       song: songKey(pick.title),
       album: fold(pick.album),
-      names: names(pick.artists || [])
+      names: names(pick.artists || []),
+      text: pick.text ? fold(pick.text).split(" ").filter(Boolean) : null
     };
     var found = {};        // rule -> {weight, matches}
     function add(rule, when, p) {
@@ -127,9 +159,17 @@
     }
     var leadThisSeason = 0, inLastRound = false;
     d.tracks.forEach(function (p) {
+      var when = p.now ? "now" : "past";
       var k = kind(me, p);
+      if (me.text) {
+        // free text may see what the guessed fields missed; keep the
+        // stronger, and on a tie say "another service": from YouTube or
+        // SoundCloud, "another version" may really be the same recording
+        var t = textKind(me.text, p);
+        if (t && (!k || RULES[t][when] >= RULES[k][when])) k = t;
+      }
       if (!k) return;
-      add(k, p.now ? "now" : "past", p);
+      add(k, when, p);
       if ((k === "artist" || k === "artistAlbum" || k === "version" || k === "exact") && p.now) {
         leadThisSeason += 1;
         if (p.t.round === d.lastRound) inLastRound = true;

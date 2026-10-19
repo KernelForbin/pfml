@@ -698,8 +698,10 @@ initials menu and the Submit page.
 league will care about a repeat. It's shown for a picked track: on the
 repeat checker, from a list of Spotify matches under the box ("How will
 the league feel about it?"), and on the Submit page, for a search result
-or a pasted Spotify link the catalog already has. A pasted YouTube or
-SoundCloud link says nothing about itself, so it gets no gauge. It shows a
+or any pasted link. A pasted link is looked up in the catalog (a Spotify
+track submitted before) or, failing that, in its service's own oEmbed:
+YouTube and SoundCloud give the title and channel, Spotify the title only.
+All three answer browsers on pfml.fun (measured 2026-10-19). It shows a
 verdict ("Barely a blip" through "The league will care", and "Exact
 repeat" with an extra warning) and the reasons, each with the earlier
 submission. It never shows a number.
@@ -707,13 +709,29 @@ submission. It never shows a number.
 The kinds of repeat it weighs, each by this season or an earlier one:
 - the exact recording;
 - the same song by the same artist in another version;
+- from YouTube or SoundCloud, the same song by the same artist on another
+  service. It can't be confirmed to be the identical recording, so it
+  warns as high as another version;
 - a cover;
+- a multi-word title matching, with the artist unclear;
 - a different artist's song with the same one-word title (maybe not the
   same song);
 - the same artist and album;
 - an artist already submitted twice this season, or in the last round;
 - the same artist;
 - an artist who was a featured guest.
+
+**YouTube titles can't be split reliably** (measured 2026-10-19). Anna
+Ash's own upload of a Season 1 track is titled "Righteously - Anna Ash",
+song first. Splitting it at the dash made "Righteously" the artist, and
+the gauge said Fresh. So a YouTube or SoundCloud pick, or a pasted
+link's oEmbed, goes in as free text: a past track counts when its title
+and one of its artists both appear in it, in any order. A one-word
+title on its own is too common to count. On a tie the gauge says
+"another service", not "another version". Checked against the real
+uploads: the official one, a fan upload, the karaoke version and
+pasted links all warn high; Lucinda Williams' different "Righteously"
+only notes the shared one-word title.
 
 The verdict follows the strongest. **The weights are the user's (decided
 2026-10-19) and are kept off the site and out of these docs on purpose.**

@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-10-19 (follow-up 8): the gauge spots a repeat on another service
+
+- **The bug, reproduced against the real YouTube:** submitting Anna Ash's
+  "Righteously" (Season 1, from Spotify) as a YouTube pick said Fresh.
+  Her own upload is titled "Righteously - Anna Ash", song first, and the
+  Submit page split YouTube titles as "Artist - Song", so "Righteously"
+  became the artist.
+- **Now a YouTube or SoundCloud pick is free text.** A past track counts
+  when its title and one of its artists both appear in it, in any order.
+  It's flagged high: "Looks like the same song by the same artist, on
+  another service (it can't be confirmed identical)". A multi-word title
+  with no artist in sight gets a lower "same title, artist unclear".
+- **Pasted links now get a gauge too**, from the catalog or the service's
+  own oEmbed. All three services answer browsers on pfml.fun; measured.
+- **Checked against the real uploads:**
+  - "The league will care": the official one, a fan upload, the karaoke
+    version, and pasted links.
+  - "A few might notice": Lucinda Williams' different song with the same
+    one-word title.
+  - "Barely a blip": Anna Ash's other song.
+- **Verified:** suite passing, gauge tests updated for the new behaviour
+  plus 5 new ones. In a browser against the real catalog and the real
+  oEmbed services.
+
 ## 2026-10-19 (follow-up 7): the repeat checker's example
 
 - The search box's example is now a Season 1 track (Lee Oskar, "Feelin'

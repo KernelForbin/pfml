@@ -248,9 +248,10 @@
   }
 
   // Estimated League Sentiment (sentiment.js) for the picked track: from
-  // what the search said it is, or, for a pasted Spotify link, from the
-  // catalog when it's been submitted before. A YouTube or SoundCloud link
-  // says nothing about itself, so it gets no gauge.
+  // what the search said it is, or, for a pasted link, from the catalog
+  // (a Spotify track submitted before) or the service's own oEmbed, which
+  // answers browsers from pfml.fun (measured 2026-10-19): YouTube and
+  // SoundCloud give a title and channel, Spotify a title only.
   var gaugeKey = "";
   function gaugeFor(p, about) {
     $("subGauge").innerHTML = "";
@@ -258,20 +259,48 @@
     if (!p) return;
     var key = gaugeKey;
     PFMLSentiment.load().then(function () {
-      if (gaugeKey !== key) return;               // picked something else meanwhile
-      var pick = about || (p.platform === "spotify" ? PFMLSentiment.known(p.track) : null);
-      if (pick) $("subGauge").innerHTML = PFMLSentiment.gaugeHtml(PFMLSentiment.judge(pick));
+      if (about) return about;
+      if (p.platform === "spotify" && PFMLSentiment.known(p.track)) return PFMLSentiment.known(p.track);
+      return aboutLink(p);
+    }).then(function (pick) {
+      if (gaugeKey !== key || !pick) return;      // picked something else meanwhile, or nothing known
+      $("subGauge").innerHTML = PFMLSentiment.gaugeHtml(PFMLSentiment.judge(pick));
     }).catch(function (err) { console.error(err); });
   }
 
-  // what a search result is, for the gauge: Spotify says; a YouTube video
-  // usually titles itself "Artist - Song", else the channel is the artist
+  var OEMBED = {
+    youtube: function (id) { return "https://www.youtube.com/oembed?format=json&url=" + encodeURIComponent("https://www.youtube.com/watch?v=" + id); },
+    soundcloud: function (path) { return "https://soundcloud.com/oembed?format=json&url=" + encodeURIComponent("https://soundcloud.com/" + path); },
+    spotify: function (id) { return "https://open.spotify.com/oembed?url=" + encodeURIComponent("https://open.spotify.com/track/" + id); }
+  };
+
+  // A pasted link's title and channel, as free text for the gauge, which
+  // looks for a past track's title and artist anywhere in it. Null when the
+  // service doesn't answer.
+  function aboutLink(p) {
+    return fetch(OEMBED[p.platform](p.track)).then(function (res) {
+      return res.ok ? res.json() : null;
+    }).then(function (o) {
+      if (!o || !o.title) return null;
+      var author = o.author_name || "";
+      return {
+        spotifyId: p.platform === "spotify" ? p.track : "",
+        title: o.title,
+        artists: p.platform === "spotify" ? [] : [author],   // Spotify's oEmbed names no artist
+        text: o.title + " " + author
+      };
+    }).catch(function () { return null; });
+  }
+
+  // What a search result is, for the gauge. Spotify says. A YouTube video's
+  // title may read "Artist - Song" or "Song - Artist" ("Righteously - Anna
+  // Ash" is the latter, measured 2026-10-19), so its whole title and channel
+  // go in as free text and the channel stands in as the artist.
   function aboutResult(service, r) {
     if (service === "spotify") {
       return { spotifyId: r.id, title: r.title, artists: String(r.artist || "").split(", "), album: r.album };
     }
-    var split = /^(.+?)\s[-\u2013\u2014]\s(.+)$/.exec(r.title || "");
-    return split ? { title: split[2], artists: [split[1]] } : { title: r.title, artists: [r.artist] };
+    return { title: r.title, artists: [r.artist], text: r.title + " " + r.artist };
   }
 
   var CHECK = "Check the player shows the right recording, then submit.";
