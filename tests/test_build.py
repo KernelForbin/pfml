@@ -688,10 +688,10 @@ class EverythingWrittenIsRead(unittest.TestCase):
             build.main()
             files = {f.name: json.loads(f.read_text(encoding="utf-8"))
                      for f in (root / "site" / "data").glob("*.json")}
-        self.assertEqual(sorted(files), ["career.json", "index.json", "lookup.json", "profiles.json",
+        self.assertEqual(sorted(files), ["career.json", "catalog.json", "index.json", "lookup.json", "profiles.json",
                                          "season1.json", "season2.json"])
         js = "".join((ROOT / "site" / f).read_text(encoding="utf-8")
-                     for f in ("app.js", "rounds.js", "account.js", "auth.js"))
+                     for f in ("app.js", "rounds.js", "account.js", "auth.js", "repeats.js"))
         id_like = re.compile(r"p\d|[ab]r\d+|season\d+|spotify:track:\w+")   # keys that are data, not names
 
         def walk(node, path):
@@ -712,6 +712,41 @@ class EverythingWrittenIsRead(unittest.TestCase):
                 with self.subTest(path):
                     self.assertRegex(js, r"[.\"']" + re.escape(key) + r"\b", f"{path} is written but never read")
         self.assertGreater(len(seen), 120, "the fixture should exercise most of the output")
+
+
+class Catalog(unittest.TestCase):
+    """catalog.json: every track from every round, for the repeat checker."""
+
+    def build(self):
+        with sandbox() as root, quiet():
+            make_season(root / "data" / "season1", [TIE_ROUND, SECOND_ROUND])
+            make_season(root / "data" / "season2", [TIE_ROUND])
+            build.main()
+            cat = json.loads((root / "site" / "data" / "catalog.json").read_text(encoding="utf-8"))
+            seasons = [json.loads((root / "site" / "data" / f"season{n}.json").read_text(encoding="utf-8")) for n in (1, 2)]
+        return cat, seasons
+
+    def test_every_submitted_track_once_with_its_round(self):
+        cat, seasons = self.build()
+        expected = [(d["label"], n, r["name"], s["spotifyId"], s["title"], s["submitterName"], s["place"])
+                    for d in seasons for n, r in enumerate(d["rounds"], 1) for s in r["songs"]]
+        got = [(cat["rounds"][t["round"]]["seasonLabel"], cat["rounds"][t["round"]]["number"],
+                cat["rounds"][t["round"]]["name"], t["spotifyId"], t["title"], t["submitterName"], t["place"])
+               for t in cat["tracks"]]
+        self.assertEqual(got, expected)
+        self.assertEqual(len(cat["rounds"]), 3)
+
+    def test_rounds_are_oldest_first_and_link_to_their_page(self):
+        cat, seasons = self.build()
+        self.assertEqual([(r["season"], r["number"]) for r in cat["rounds"]],
+                         [("season1", 1), ("season1", 2), ("season2", 1)])
+        self.assertEqual([r["id"] for r in cat["rounds"]], [r["id"] for d in seasons for r in d["rounds"]])
+
+    def test_artists_and_album_come_through_as_the_season_file_has_them(self):
+        cat, seasons = self.build()
+        song = seasons[0]["rounds"][0]["songs"][0]
+        first = cat["tracks"][0]
+        self.assertEqual((first["artists"], first["album"]), (song["artists"], song["album"]))
 
 
 class Deterministic(unittest.TestCase):

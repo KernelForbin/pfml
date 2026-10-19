@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PFML - Repeat checker</title>
+<meta name="description" content="Has this artist, song or album been submitted before?">
+<meta name="theme-color" content="#9E00C4">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%239E00C4'/><path d='M30 74V26h22a14 14 0 010 28H44v20z' fill='%23F8F9FA'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="gated" data-page="repeats">
+
+<header class="topbar">
+  <div class="shell topbar-inner">
+    <a class="wordmark" href="./">PFML</a>
+    <nav class="seasons" id="seasonTabs" aria-label="Season"></nav>
+  </div>
+</header>
+
+<main>
+  <section class="shell hero">
+    <h1>Repeat checker</h1>
+    <p class="hero-line" id="rcLine">Has it been submitted before? Loading every past round.</p>
+  </section>
+
+  <section class="shell block block-first">
+    <label class="sub-label" for="rcQuery">Artist, song or album, or a Spotify link</label>
+    <input class="sub-input rc-input" id="rcQuery" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="off"
+           spellcheck="false" placeholder="e.g. Wilson Pickett, Stagger Lee" disabled>
+    <p class="rc-verdict" id="rcVerdict" role="status" aria-live="polite"></p>
+    <div id="rcResults"></div>
+  </section>
+</main>
+
+<footer class="shell site-footer">
+  <p>Built from Music League's exports, so it covers finished rounds: a round still in progress isn't in it yet.</p>
+  <p><a href="features">What this site can do</a> &middot; <a href="privacy">Privacy</a></p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="auth.js"></script>
+<script src="account.js"></script>
+<script src="repeats.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

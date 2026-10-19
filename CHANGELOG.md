@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-10-19 (follow-up 5): the repeat checker, /repeats
+
+- **Has it been submitted before?** One box takes an artist, song or
+  album and answers as you type, with every past submission that matches,
+  grouped by Artist, Song and Album, newest first. Each match shows its
+  round (linked), who submitted it, and its place. A Spotify link checks
+  that exact recording, other versions of the song, and more by the
+  artist. The search stays in the address, for sharing. It's in the
+  initials menu and linked from the Submit page.
+- **`catalog.json`**, new from `build.py`, holds every track from every
+  round: 733 tracks from 45 rounds, about 200 KB. It's searched on the
+  device, so the season files are never fetched. It covers finished
+  rounds only.
+- **Found while checking against the real data:** the export separates
+  artists with commas, so Earth, Wind & Fire (submitted once) arrived as
+  "Earth" and "Wind & Fire", and searching its name found nothing. The
+  checker now searches the whole artist line too. The same split affects
+  other artist counts on the site; that isn't fixed here.
+- **Verified:** suite passing, with 11 new tests (the catalog, the
+  every-field-is-read contract, the page's wiring, the comma regression);
+  12 deliberate breaks, each caught. In a browser against the real
+  catalog: Steely Dan 3, Rasputin 1, Pickett 0 and the Grateful Dead
+  results all match the raw exports; accents, "&"/"and", Spotify links,
+  the address prefill, and a phone at 375px.
+
 ## 2026-10-19 (follow-up 4): search on the Submit page
 
 - **Search instead of a link:** three buttons pick Spotify, YouTube or

@@ -2276,8 +2276,8 @@
       initRound();
     } else if (page === "profile") {
       initProfile();
-    } else if (page === "crossword" || page === "submit") {
-      // the page itself is crossword.js's or submit.js's; this only fills the header
+    } else if (page === "crossword" || page === "submit" || page === "repeats") {
+      // the page itself is crossword.js's, submit.js's or repeats.js's; this only fills the header
       PFML.loadJSON("index.json")
         .then(function (index) { renderNav(index, page); })
         .catch(function (err) { console.error(err); });

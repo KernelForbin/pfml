@@ -1581,6 +1581,23 @@ def build_lookup(season_datas):
     return {"rounds": rounds}
 
 
+def build_catalog(season_datas):
+    """Every track ever submitted, for the repeat checker (site/repeats.html;
+    README, Repeat checker), so it can search artists, songs and albums on
+    a phone without fetching the ~1MB season files. Rounds are listed once,
+    oldest first, and each track points at its round by position."""
+    rounds, tracks = [], []
+    for d in season_datas:
+        for n, r in enumerate(d["rounds"], 1):
+            rounds.append({"season": d["key"], "seasonLabel": d["label"], "number": n,
+                           "name": r["name"], "id": r["id"]})
+            for s in r["songs"]:
+                tracks.append({"title": s["title"], "artists": s["artists"], "album": s["album"],
+                               "round": len(rounds) - 1, "submitterName": s["submitterName"],
+                               "place": s.get("place"), "spotifyId": s["spotifyId"], "art": s.get("art")})
+    return {"rounds": rounds, "tracks": tracks}
+
+
 def main():
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     folders = season_folders()
@@ -1659,7 +1676,11 @@ def main():
     lookup = build_lookup(season_datas)
     with open(OUT_DIR / "lookup.json", "w", encoding="utf-8") as f:
         json.dump(lookup, f, ensure_ascii=False, separators=(",", ":"))
-    print(f"profiles.json: {len(profiles['players'])} players; lookup.json: {len(lookup['rounds'])} rounds")
+    catalog = build_catalog(season_datas)
+    with open(OUT_DIR / "catalog.json", "w", encoding="utf-8") as f:
+        json.dump(catalog, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"profiles.json: {len(profiles['players'])} players; lookup.json: {len(lookup['rounds'])} rounds; "
+          f"catalog.json: {len(catalog['tracks'])} tracks")
 
 
 if __name__ == "__main__":

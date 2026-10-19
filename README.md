@@ -683,6 +683,37 @@ and focus chips, trend legend) and cards that are links themselves. If `profiles
 been published yet, the page shows what `career.json` has and hides the
 rest.
 
+## Repeat checker (/repeats)
+
+Has an artist, song or album been submitted before? Members type into one
+box and the page answers as they type: "Yes: 3 past submissions match", in
+groups for Artist, Song and Album, newest first. Each match shows the
+round (a link to its round page), who submitted it, and its place. A
+Spotify track link checks for that exact recording, other versions of
+the song, and more by the same artist. The search sits in the address
+(`/repeats?q=steely%20dan`), so it can be shared. It's reached from the
+initials menu and the Submit page.
+
+**Data:** `catalog.json`, written by `build.py` (`build_catalog`) with the
+rest and uploaded by `publish.py`. It holds every track from every round,
+with title, artists, album, round, submitter, place, Spotify id and art:
+733 tracks from 45 rounds, about 200 KB (58 KB compressed) on 2026-10-19.
+It's searched on the device, so the ~1MB season files are never fetched.
+It only covers **finished rounds**, since Music League's export leaves a
+round out until it's over; the page's footer says so.
+
+**Matching:** every word typed has to start a word of the artist, song or
+album, so "pick" finds Dick's Picks and "stagger lee" finds Stagger Lee.
+Accents and "&" don't matter ("lubke" finds Lübke). A song is compared
+without its version labels (" - 2011 Remaster", "(Live)"), so any version
+counts as the song. No fuzzy spelling: "birelli" doesn't find Biréli.
+
+**Gotcha, measured 2026-10-19:** the export separates a track's artists
+with commas, so "Earth, Wind & Fire" arrives as two artists, "Earth" and
+"Wind & Fire", and its name found nothing. The checker now also searches
+the whole artist line. The same split affects anything else that counts
+artists, such as Repeat artists on season pages, and isn't fixed there.
+
 ## Submissions on the site (/submit)
 
 From Season 3 Round 7 the league can submit its real tracks on pfml.fun:
