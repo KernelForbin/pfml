@@ -142,7 +142,15 @@
 
   function load() {
     clearTimeout(state.timer);
-    return api().siteRounds().then(function (rounds) {
+    // Inside the chain, so any failure lands in the catch below and says
+    // so, instead of the page sitting at "Loading the round." for good.
+    return Promise.resolve().then(function () {
+      // a browser still holding an auth.js from before the Submit page
+      if (typeof api().siteRounds !== "function") {
+        throw new Error("part of the site is still the version from before an update. Reload the page.");
+      }
+      return api().siteRounds();
+    }).then(function (rounds) {
       state.rounds = rounds || [];
       state.round = state.rounds.filter(isOpen)[0] || state.rounds[0] || null;
       var r = state.round;

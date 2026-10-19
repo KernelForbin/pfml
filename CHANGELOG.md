@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-10-19: a deploy no longer leaves pages running old scripts
+
+- **What happened:** straight after the Submit page shipped, it sat at
+  "Loading the round." with an empty top bar. GitHub Pages tells browsers
+  to keep every file for 10 minutes (`max-age=600`, measured), and a
+  browser that had `auth.js` and `app.js` from an earlier visit ran the new
+  page with them: the old `auth.js` has none of the Submit page's calls, and
+  the old `app.js` doesn't fill the Submit page's header. Reproduced with
+  the new page and the previous `app.js`/`auth.js` api: same screen.
+- **Fix, for every page:** the deploy stamps each page's own scripts and
+  stylesheet with the commit (`app.js?v=…`), so a page always loads the
+  scripts it was built with. Pages ignores the query (measured). The repo's
+  files are unchanged; only the deploy's copy is stamped
+  (`scripts/stamp_assets.py`).
+- **And on the Submit page:** a failure while loading now shows a message
+  (with "Reload the page" for this case) instead of hanging.
+- **Verified:** suite 263 passing (4 new); 6 deliberate breaks, each
+  caught after one fix (the order test was finding the script's name in a
+  comment, not the step). The stale case checked in a browser: it now
+  says to reload.
+
 ## 2026-10-18 (follow-up): submitting tracks on the site, stage 1
 
 - **The plan**, agreed today: members submit their real track on pfml.fun

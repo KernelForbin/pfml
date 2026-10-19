@@ -1513,6 +1513,56 @@ class DeployWorkflow(unittest.TestCase):
         tests_step = self.build.split("- name: Run tests", 1)[1].split("- name:", 1)[0]
         self.assertRegex(tests_step, r"timeout-minutes: \d+", "the suite can hang")
 
+    def test_pages_ask_for_this_deploys_scripts_not_a_cached_copy(self):
+        # Pages caches every file for 10 minutes; without the stamp a new
+        # page ran with an old auth.js (2026-10-19). It runs after the tests
+        # (which read the unstamped files) and before the upload.
+        step = 'run: python scripts/stamp_assets.py site "${GITHUB_SHA::12}"'
+        self.assertIn(step, self.build)
+        # the step itself, not the comment above it that names the script
+        order = [self.build.index(s) for s in ("- name: Run tests", step, "uses: actions/upload-pages-artifact")]
+        self.assertEqual(order, sorted(order))
+
+
+class StampAssets(unittest.TestCase):
+    """scripts/stamp_assets.py, which the deploy runs on its checkout."""
+
+    def setUp(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("stamp_assets", ROOT / "scripts" / "stamp_assets.py")
+        self.mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.mod)
+
+    def test_local_scripts_and_styles_get_the_version_and_nothing_else_changes(self):
+        cdn = '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js"></script>'
+        page = (cdn + '\n<link rel="stylesheet" href="style.css">\n<script src="auth.js"></script>\n'
+                '<a href="features">x</a> <a href="./">home</a> <link rel="icon" href="data:image/svg+xml,<svg/>">')
+        out = self.mod.stamp(page, "abc123def456")
+        self.assertIn('href="style.css?v=abc123def456"', out)
+        self.assertIn('src="auth.js?v=abc123def456"', out)
+        self.assertIn(cdn, out)
+        self.assertIn('<a href="features">x</a> <a href="./">home</a>', out)
+        self.assertIn('href="data:image/svg+xml,<svg/>"', out)
+
+    def test_every_page_stamps_every_local_script_and_only_those(self):
+        for path in sorted(SITE.glob("*.html")):
+            with self.subTest(path.name):
+                html = read(path.name)
+                out = self.mod.stamp(html, "abc123def456")
+                local = [s for s in re.findall(r'(?:src|href)="([^"]+\.(?:js|css))"', html) if "/" not in s]
+                for name in local:
+                    self.assertIn(f'"{name}?v=abc123def456"', out)
+                self.assertEqual(out.replace("?v=abc123def456", ""), html)
+
+    def test_refuses_a_version_that_isnt_a_commit_hash(self):
+        import subprocess
+        import sys
+        for bad in ("", "a b", "x" * 50, "../x"):
+            with self.subTest(bad):
+                r = subprocess.run([sys.executable, str(ROOT / "scripts" / "stamp_assets.py"), str(SITE), bad],
+                                   capture_output=True, text=True)
+                self.assertNotEqual(r.returncode, 0)
+
 
 class CleanText(unittest.TestCase):
     def test_no_control_characters_in_site_files(self):

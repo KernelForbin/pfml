@@ -65,6 +65,14 @@ jobs:
             exit 1
           fi
 
+      # Pages tells browsers to keep each file for 10 minutes (max-age=600),
+      # so straight after a deploy a new page could run with a cached old
+      # app.js or auth.js (it did, 2026-10-19). Every page's own scripts and
+      # stylesheet get ?v=<this commit>, in this checkout only; the repo's
+      # files stay as they are. scripts/stamp_assets.py says more.
+      - name: Stamp scripts and styles with this commit
+        run: python scripts/stamp_assets.py site "${GITHUB_SHA::12}"
+
       # No configure-pages step: it only reports the site's base URL for
       # static site generators, which plain HTML doesn't need, and it would
       # want Pages access in this job, the one that runs repo code.

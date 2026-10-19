@@ -245,7 +245,9 @@ at the end. Exercise anything members see in a real browser at phone
 (375px) and desktop widths, and measure layout claims (for example
 `scrollWidth` against `innerWidth`) rather than eyeballing a screenshot.
 After a deploy, fetch the live files and compare them with the commit.
-`gh run list` can return the previous run for a moment after a push, so
+The live pages have `?v=<first 12 of the sha>` on their own scripts and
+stylesheet (Deploy, below), so strip that before comparing an `.html`,
+and check the stamp is this commit's. `gh run list` can return the previous run for a moment after a push, so
 match the run to the commit's sha before watching it.
 
 **Testing on a phone viewport:** Chrome's scroll anchoring quietly hides
@@ -370,6 +372,17 @@ out dotfiles, so `site/.nojekyll` isn't uploaded; that's fine, since an
 Actions deploy never runs Jekyll. A new push waits for a deploy in
 progress rather than cancelling it. `tests/test_site.py` (DeployWorkflow)
 pins all of this.
+
+**Browsers keep every file for 10 minutes** (Pages sends
+`Cache-Control: max-age=600`, measured 2026-10-19), so right after a
+deploy a new page can run with an old cached `app.js` or `auth.js`. It
+did: the Submit page sat at "Loading the round." with an empty top bar.
+The build job now runs `scripts/stamp_assets.py` after the tests, giving
+every page's own scripts and stylesheet `?v=<commit>` in its checkout (the
+repo's files stay unstamped; Pages ignores the query, measured). A page
+then always asks for the files it was built with. A new script or
+stylesheet needs nothing extra, as long as it's linked by a plain local
+name like `src="x.js"`.
 
 Timeouts are lopsided: 30 minutes on each job, 5 on the test step and 10
 on the Pages call. The job numbers are slack, not protection, and the real
