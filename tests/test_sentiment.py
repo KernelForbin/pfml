@@ -90,11 +90,14 @@ class SubmitPage(unittest.TestCase):
         js = read("submit.js")
         gauge = js.split("function gaugeFor(p, about) {", 1)[1].split("\n  }\n", 1)[0]
         self.assertIn('if (p.platform === "spotify" && PFMLSentiment.known(p.track)) return PFMLSentiment.known(p.track);', gauge)
-        self.assertIn("return aboutLink(p);", gauge)
+        self.assertIn("return PFMLSentiment.aboutLink(p.platform, p.track);", gauge)
         self.assertIn("if (gaugeKey !== key || !pick) return;", gauge)
+        # one shared lookup, in sentiment.js, for both pages
+        shared = read("sentiment.js")
         for url in ("https://www.youtube.com/oembed?format=json&url=", "https://soundcloud.com/oembed?format=json&url=",
                     "https://open.spotify.com/oembed?url="):
-            self.assertIn(url, js)
+            self.assertIn(url, shared)
+            self.assertNotIn(url, js)
 
     def test_a_youtube_pick_is_free_text_not_a_guessed_artist_and_song(self):
         # Measured 2026-10-19: Anna Ash's own upload is titled "Righteously -
@@ -104,14 +107,37 @@ class SubmitPage(unittest.TestCase):
         about = js.split("function aboutResult(service, r) {", 1)[1].split("\n  }\n", 1)[0]
         self.assertIn("return { title: r.title, artists: [r.artist], text: r.title + \" \" + r.artist };", about)
         self.assertNotRegex(about, r"split\[\d\]")
-        link = js.split("function aboutLink(p) {", 1)[1].split("\n  }\n", 1)[0]
+        link = read("sentiment.js").split("function aboutLink(platform, id) {", 1)[1].split("\n  }\n", 1)[0]
         self.assertIn('text: o.title + " " + author', link)
+        # an "Artist - Topic" channel is the artist (measured on a real upload)
+        self.assertIn('var author = String(o.author_name || "").replace(/ - Topic$/, "");', link)
 
     def test_the_repeat_checker_offers_spotify_picks_only_for_words(self):
         js = read("repeats.js")
         picks = js.split("function spotifyPicks(text) {", 1)[1].split("\n  }\n", 1)[0]
-        self.assertIn("if (text.length < 3 || SPOTIFY_TRACK.test(text))", picks)
+        self.assertIn("if (text.length < 3 || SPOTIFY_TRACK.test(text) || YOUTUBE_VIDEO.test(text))", picks)
         self.assertIn('PFML.api.searchTracks("spotify", text)', picks)
+
+    def test_the_repeat_checker_gauges_a_youtube_link_instead_of_searching_its_words(self):
+        js = read("repeats.js")
+        searching = js.split("function search(raw) {", 1)[1].split("\n  }\n", 1)[0]
+        self.assertRegex(searching, r'if \(YOUTUBE_VIDEO\.test\(text\)\) \{[^}]*\$\("rcResults"\)\.innerHTML = "";\s*return;')
+        link = js.split("function gaugeForLink(text) {", 1)[1].split("\n  }\n", 1)[0]
+        self.assertIn('PFMLSentiment.aboutLink("youtube", video[1])', link)
+        self.assertIn('if ($("rcQuery").value.trim() !== text) return;', link)
+
+    def test_youtube_link_shapes_the_repeat_checker_reads(self):
+        js = read("repeats.js")
+        pattern = re.search(r"var YOUTUBE_VIDEO = /(.+)/;", js).group(1)
+        rx = re.compile(pattern.replace("\\/", "/"))
+        for url, vid in (("https://www.youtube.com/watch?v=8VcONCM0BzY", "8VcONCM0BzY"),
+                         ("https://www.youtube.com/watch?feature=share&v=8VcONCM0BzY", "8VcONCM0BzY"),
+                         ("https://music.youtube.com/watch?v=8VcONCM0BzY&si=x", "8VcONCM0BzY"),
+                         ("https://youtu.be/8VcONCM0BzY?si=abc", "8VcONCM0BzY"),
+                         ("https://youtube.com/shorts/8VcONCM0BzY", "8VcONCM0BzY")):
+            with self.subTest(url):
+                self.assertEqual(rx.search(url).group(1), vid)
+        self.assertIsNone(rx.search("https://www.youtube.com/@annaash"))
 
     def test_the_pick_list_really_hides(self):
         css = re.sub(r"/\*.*?\*/", "", read("style.css"), flags=re.S)

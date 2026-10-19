@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-10-19 (follow-up 9): YouTube links on the repeat checker
+
+- **Paste a YouTube link into the repeat checker** (youtube.com,
+  music.youtube.com, youtu.be or shorts) and it names the video ("On
+  YouTube: Righteously - Anna Ash (Anna Ash)") and shows its gauge,
+  instead of searching the link's words. A video YouTube won't describe
+  (private or removed) says so.
+- The link lookup now lives once, in `sentiment.js`, for both pages.
+- **Found while checking against real uploads:** YouTube's oEmbed names
+  auto-generated channels "Artist - Topic", which hid "same artist" (Anna
+  Ash's "Player" from "Anna Ash - Topic" said Fresh). The " - Topic" is now
+  dropped, on both pages.
+- The video's name now shows above the gauge.
+- **Verified:** suite passing, with 3 new gauge tests and 3 updated. In a
+  browser against the real catalog and YouTube: the official, fan and
+  Topic uploads, a different song with the same title, a dead video, a
+  link in the address, word searches, the Submit page's pasted links,
+  375px.
+
 ## 2026-10-19 (follow-up 8): the gauge spots a repeat on another service
 
 - **The bug, reproduced against the real YouTube:** submitting Anna Ash's

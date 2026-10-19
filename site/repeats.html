@@ -28,16 +28,16 @@
   </section>
 
   <section class="shell block block-first">
-    <label class="sub-label" for="rcQuery">Artist, song or album, or a Spotify link</label>
+    <label class="sub-label" for="rcQuery">Artist, song or album, or a Spotify or YouTube link</label>
     <input class="sub-input rc-input" id="rcQuery" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="off"
            spellcheck="false" placeholder="e.g. Lee Oskar, Feelin’ Happy" disabled>
+    <p class="rc-verdict" id="rcVerdict" role="status" aria-live="polite"></p>
     <div class="rc-pick" id="rcPick" hidden>
       <h2>How will the league feel about it?</h2>
       <p class="block-note">Pick the exact track for its Estimated League Sentiment.</p>
       <ul class="sub-results" id="rcSpotify"></ul>
     </div>
     <div id="rcGauge"></div>
-    <p class="rc-verdict" id="rcVerdict" role="status" aria-live="polite"></p>
     <div id="rcResults"></div>
   </section>
 </main>

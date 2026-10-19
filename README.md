@@ -690,7 +690,11 @@ box and the page answers as they type: "Yes: 3 past submissions match", in
 groups for Artist, Song and Album, newest first. Each match shows the
 round (a link to its round page), who submitted it, and its place. A
 Spotify track link checks for that exact recording, other versions of
-the song, and more by the same artist. The search sits in the address
+the song, and more by the same artist. A YouTube link (youtube.com,
+music.youtube.com, youtu.be, shorts) is looked up through YouTube's oEmbed
+instead of searched as words: the page names the video and shows its
+gauge. An "Artist - Topic" channel counts as the artist (measured
+2026-10-19: oEmbed gives "Lucinda Williams - Topic"). The search sits in the address
 (`/repeats?q=steely%20dan`), so it can be shared. It's reached from the
 initials menu and the Submit page.
 

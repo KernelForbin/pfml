@@ -44,6 +44,8 @@
   }
 
   var SPOTIFY_TRACK = /(?:open\.spotify\.com\/(?:intl-[a-z-]+\/)?track\/|spotify:track:)([A-Za-z0-9]{22})/;
+  // youtube.com and music.youtube.com (watch, shorts, live, embed), youtu.be
+  var YOUTUBE_VIDEO = /(?:youtube\.com\/(?:watch\?(?:[^#\s]*&)?v=|shorts\/|live\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/;
 
   /* ---- the catalog ---- */
 
@@ -100,6 +102,14 @@
     var html = "", total = 0, seen = {};
     function count(list) { list.forEach(function (x) { seen[x.i] = true; }); }
 
+    // a YouTube link isn't words to search: gaugeForLink looks the video up
+    if (YOUTUBE_VIDEO.test(text)) {
+      $("rcVerdict").className = "rc-verdict";
+      $("rcVerdict").textContent = "Looking the video up on YouTube\u2026";
+      $("rcResults").innerHTML = "";
+      return;
+    }
+
     if (link) {
       var exact = tracks.filter(function (x) { return x.t.spotifyId === link[1]; }).sort(newest);
       if (!exact.length) {
@@ -150,7 +160,7 @@
 
   function spotifyPicks(text) {
     asked = text;
-    if (text.length < 3 || SPOTIFY_TRACK.test(text)) { $("rcPick").hidden = true; return; }
+    if (text.length < 3 || SPOTIFY_TRACK.test(text) || YOUTUBE_VIDEO.test(text)) { $("rcPick").hidden = true; return; }
     PFML.api.searchTracks("spotify", text).then(function (res) {
       if (asked !== text) return;                 // a newer search is under way
       picks = ((res && res.results) || []).slice(0, 5);
@@ -183,11 +193,29 @@
     showGauge({ spotifyId: r.id, title: r.title, artists: String(r.artist).split(", "), album: r.album });
   }
 
-  // a pasted link the catalog knows is judged straight away
+  // A pasted link gets a gauge: a Spotify track the catalog knows straight
+  // away, a YouTube video through YouTube's oEmbed (its title and channel,
+  // which the gauge searches for a past track's title and artist).
   function gaugeForLink(text) {
     var link = SPOTIFY_TRACK.exec(text);
     var known = link && tracks.filter(function (x) { return x.t.spotifyId === link[1]; })[0];
-    if (known) showGauge({ spotifyId: known.t.spotifyId, title: known.t.title, artists: known.t.artists, album: known.t.album });
+    if (known) {
+      showGauge({ spotifyId: known.t.spotifyId, title: known.t.title, artists: known.t.artists, album: known.t.album });
+      return;
+    }
+    var video = YOUTUBE_VIDEO.exec(text);
+    if (!video) return;
+    PFMLSentiment.load().then(function () {
+      return PFMLSentiment.aboutLink("youtube", video[1]);
+    }).then(function (pick) {
+      if ($("rcQuery").value.trim() !== text) return;      // typed something else meanwhile
+      if (!pick) {
+        $("rcVerdict").textContent = "YouTube didn\u2019t answer for that video (private or removed?). Type its name instead.";
+        return;
+      }
+      $("rcVerdict").innerHTML = "On YouTube: <b>" + esc(pick.title) + "</b>" + (pick.author ? " (" + esc(pick.author) + ")" : "");
+      $("rcGauge").innerHTML = PFMLSentiment.gaugeHtml(PFMLSentiment.judge(pick));
+    }).catch(function (err) { console.error(err); });
   }
 
   /* ---- start ---- */

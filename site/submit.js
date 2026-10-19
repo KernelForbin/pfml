@@ -249,9 +249,8 @@
 
   // Estimated League Sentiment (sentiment.js) for the picked track: from
   // what the search said it is, or, for a pasted link, from the catalog
-  // (a Spotify track submitted before) or the service's own oEmbed, which
-  // answers browsers from pfml.fun (measured 2026-10-19): YouTube and
-  // SoundCloud give a title and channel, Spotify a title only.
+  // (a Spotify track submitted before) or, through sentiment.js, the
+  // service's own oEmbed.
   var gaugeKey = "";
   function gaugeFor(p, about) {
     $("subGauge").innerHTML = "";
@@ -261,35 +260,11 @@
     PFMLSentiment.load().then(function () {
       if (about) return about;
       if (p.platform === "spotify" && PFMLSentiment.known(p.track)) return PFMLSentiment.known(p.track);
-      return aboutLink(p);
+      return PFMLSentiment.aboutLink(p.platform, p.track);
     }).then(function (pick) {
       if (gaugeKey !== key || !pick) return;      // picked something else meanwhile, or nothing known
       $("subGauge").innerHTML = PFMLSentiment.gaugeHtml(PFMLSentiment.judge(pick));
     }).catch(function (err) { console.error(err); });
-  }
-
-  var OEMBED = {
-    youtube: function (id) { return "https://www.youtube.com/oembed?format=json&url=" + encodeURIComponent("https://www.youtube.com/watch?v=" + id); },
-    soundcloud: function (path) { return "https://soundcloud.com/oembed?format=json&url=" + encodeURIComponent("https://soundcloud.com/" + path); },
-    spotify: function (id) { return "https://open.spotify.com/oembed?url=" + encodeURIComponent("https://open.spotify.com/track/" + id); }
-  };
-
-  // A pasted link's title and channel, as free text for the gauge, which
-  // looks for a past track's title and artist anywhere in it. Null when the
-  // service doesn't answer.
-  function aboutLink(p) {
-    return fetch(OEMBED[p.platform](p.track)).then(function (res) {
-      return res.ok ? res.json() : null;
-    }).then(function (o) {
-      if (!o || !o.title) return null;
-      var author = o.author_name || "";
-      return {
-        spotifyId: p.platform === "spotify" ? p.track : "",
-        title: o.title,
-        artists: p.platform === "spotify" ? [] : [author],   // Spotify's oEmbed names no artist
-        text: o.title + " " + author
-      };
-    }).catch(function () { return null; });
   }
 
   // What a search result is, for the gauge. Spotify says. A YouTube video's

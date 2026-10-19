@@ -234,6 +234,36 @@
     return html + "</div>";
   }
 
+  // Each service's public oEmbed, which answers browsers on pfml.fun
+  // (measured 2026-10-19): YouTube and SoundCloud give a title and channel,
+  // Spotify a title only.
+  var OEMBED = {
+    youtube: function (id) { return "https://www.youtube.com/oembed?format=json&url=" + encodeURIComponent("https://www.youtube.com/watch?v=" + id); },
+    soundcloud: function (path) { return "https://soundcloud.com/oembed?format=json&url=" + encodeURIComponent("https://soundcloud.com/" + path); },
+    spotify: function (id) { return "https://open.spotify.com/oembed?url=" + encodeURIComponent("https://open.spotify.com/track/" + id); }
+  };
+
+  // A pasted link as a pick: its title and channel as free text, which
+  // judge() searches for a past track's title and artist. Null when the
+  // service doesn't answer. Used by the Submit page and the repeat checker.
+  function aboutLink(platform, id) {
+    return fetch(OEMBED[platform](id)).then(function (res) {
+      return res.ok ? res.json() : null;
+    }).then(function (o) {
+      if (!o || !o.title) return null;
+      // YouTube's own uploads come from "Artist - Topic" channels (measured
+      // 2026-10-19: "Lucinda Williams - Topic"); the artist is the name
+      var author = String(o.author_name || "").replace(/ - Topic$/, "");
+      return {
+        spotifyId: platform === "spotify" ? id : "",
+        title: o.title,
+        author: author,
+        artists: platform === "spotify" ? [] : [author],   // Spotify's oEmbed names no artist
+        text: o.title + " " + author
+      };
+    }).catch(function () { return null; });
+  }
+
   // A Spotify track the catalog already has, as a pick (for a pasted link,
   // where nothing else says what the track is), or null. After load().
   function known(spotifyId) {
@@ -241,5 +271,5 @@
     return hit ? { spotifyId: spotifyId, title: hit.t.title, artists: hit.t.artists, album: hit.t.album } : null;
   }
 
-  window.PFMLSentiment = { load: load, judge: judge, gaugeHtml: gaugeHtml, known: known };
+  window.PFMLSentiment = { load: load, judge: judge, gaugeHtml: gaugeHtml, known: known, aboutLink: aboutLink };
 })();
