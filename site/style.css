@@ -1486,8 +1486,36 @@ body.auth-checking::before {
   color: var(--ink); font: 600 0.95rem/1.2 "Inter", sans-serif; text-align: left; cursor: pointer;
 }
 .sub-track-open { font-size: 0.88rem; }
-.sub-track .sub-embed { flex-basis: 100%; margin-top: 2px; }
 .sub-empty { color: var(--muted); }
+.sub-track.is-playing { border-color: var(--magenta); box-shadow: 0 0 0 1px var(--magenta); }
+
+/* the round player (player.js) */
+.rp { margin: 0 0 16px; }
+.rp:empty { display: none; }
+.rp-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.rp-controls { display: flex; gap: 6px; }
+.rp-controls[hidden] { display: none; }
+.rp-start[hidden] { display: none; }
+.rp-btn {
+  width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border); background: var(--card);
+  color: var(--ink); font-size: 1.05rem; line-height: 1; cursor: pointer; touch-action: manipulation;
+}
+@media (hover: hover) { .rp-btn:hover { box-shadow: var(--shadow-md); } }
+.rp-pref { font-size: 0.88rem; color: var(--muted); }
+.rp-pref select { font: inherit; color: var(--ink); padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); max-width: 100%; }
+.rp-now { margin: 12px 0 0; font-size: 0.95rem; }
+.rp-from { color: var(--muted); }
+.rp-stage-wrap { position: relative; margin-top: 10px; max-width: 640px; }
+.rp-stage-wrap[hidden] { display: none; }
+.rp-video { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; background: var(--ink); }
+.rp-video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.rp-stage iframe { display: block; width: 100%; border: 0; border-radius: 12px; }
+.rp-tap {
+  position: absolute; inset: 0; width: 100%; border: 0; border-radius: 12px; background: rgba(22, 17, 26, 0.78);
+  color: #fff; font: 800 1.2rem/1.2 "Archivo", sans-serif; cursor: pointer;
+}
+.rp-tap[hidden] { display: none; }
+.rp-note { margin: 10px 0 0; font-size: 0.82rem; color: var(--muted); max-width: 64ch; }
 .sub-playlists { margin: 4px 0 18px; padding: 16px 18px; border-radius: var(--r); background: var(--wash); }
 .sub-playlists[hidden] { display: none; }
 .sub-play-note { margin: 0; max-width: 60ch; font-size: 0.92rem; }

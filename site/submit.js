@@ -305,8 +305,9 @@
       : "";
     $("subPlaylists").hidden = !built;
     $("subListNote").textContent = built
-      ? "In playlist order. Tap a track to play it here."
-      : "Sorted by tag until the playlists are built. Tap a track to play it here.";
+      ? "In playlist order. Tap a track to play the round from there."
+      : "Sorted by tag until the playlists are built. Tap a track to play the round from there.";
+    $("subPlayer").innerHTML = "";
     $("subTracks").innerHTML = '<li class="sub-empty">Loading\u2026</li>';
     $("subList").hidden = false;
     api().roundSubmissions(r.id).then(function (rows) {
@@ -320,21 +321,24 @@
           ? '<span class="sub-track-name"><b>' + esc(s.title) + "</b>" + (s.artist ? "<small>" + esc(s.artist) + "</small>" : "") + "</span>"
           : '<span class="sub-track-where">' + NAMES[s.platform] + "</span>";
         return '<li class="sub-track">' +
-          '<button type="button" class="sub-track-btn" data-i="' + i + '" aria-expanded="false">' +
+          '<button type="button" class="sub-track-btn" data-i="' + i + '" aria-current="false">' +
             (s.position ? '<span class="sub-pos">' + s.position + "</span>" : "") +
             '<span class="sub-tag sub-tag-sm">' + esc(s.tag) + "</span>" + name + "</button>" +
           gapNote(s) +
-          '<a class="sub-track-open" href="' + esc(trackUrl(s)) + '" target="_blank" rel="noopener">Open on ' + NAMES[s.platform] + "</a>" +
-          '<div class="sub-embed" hidden></div></li>';
+          '<a class="sub-track-open" href="' + esc(trackUrl(s)) + '" target="_blank" rel="noopener">Open on ' + NAMES[s.platform] + "</a></li>";
       }).join("");
+      // the round player (player.js) plays them all in this order; the list
+      // marks the one playing, and a tap starts the round from that track
+      var items = $("subTracks").querySelectorAll(".sub-track");
+      var player = window.PFMLPlayer.mount($("subPlayer"), rows, function (playing) {
+        items.forEach(function (li, i) {
+          li.classList.toggle("is-playing", i === playing);
+          li.querySelector(".sub-track-btn").setAttribute("aria-current", String(i === playing));
+        });
+      });
       $("subTracks").onclick = function (ev) {
         var b = ev.target.closest(".sub-track-btn");
-        if (!b) return;
-        var holder = b.parentNode.querySelector(".sub-embed");
-        var opening = holder.hidden;
-        if (opening && !holder.innerHTML) holder.innerHTML = embedHtml(rows[+b.dataset.i]);
-        holder.hidden = !opening;
-        b.setAttribute("aria-expanded", String(opening));
+        if (b) player.playAt(+b.dataset.i);
       };
     }).catch(function (err) {
       $("subTracks").innerHTML = '<li class="sub-empty">Couldn\u2019t load the tracks: ' + esc(errText(err)) + "</li>";

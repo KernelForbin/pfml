@@ -689,8 +689,8 @@ From Season 3 Round 7 the league can submit its real tracks on pfml.fun:
 Spotify, YouTube or SoundCloud. Voting stays in Music League, which has
 no way to take submissions from outside, so each member also enters a
 placeholder there. Stage 1 collects the tracks; stage 2 builds a Spotify
-and a YouTube playlist in one shuffled order (both below); stage 3 will add
-a mixed player to the page. The plan and its reasons are in the 2026-10-18
+and a YouTube playlist in one shuffled order; stage 3 adds a player on the
+page that plays the round through, across services (both below). The plan and its reasons are in the 2026-10-18
 CHANGELOG entry.
 
 **How a round runs.** The admin opens a round on the Submit page (season,
@@ -836,6 +836,50 @@ the columns (`position`, `title`, `artist`, `spotify_match`,
 `youtube_match` on submissions; the two playlist ids and when they were
 built on rounds). None says who or when anything was submitted, and a test
 holds that.
+
+### Stage 3: the round player
+
+A closed round's Submit page has **Play the round**. It plays every track
+in order (playlist order once built, else by tag), each in its own
+service's official player, moving on by itself across Spotify, YouTube and
+SoundCloud. There are Previous, Pause and Next buttons, and tapping a
+track in the list plays the round from there. Once the playlists step has
+found copies, a picker plays YouTube (or Spotify) copies where there are
+any: the way to hear full tracks without being signed in to Spotify in the
+browser, which otherwise gives 30-second previews. The choice is kept in
+that browser only.
+
+`site/player.js` drives each service through its own API, loaded only
+when someone presses Play: Spotify's iFrame API (EmbedController;
+`playback_update` carries the position, length and which track it's
+about), YouTube's IFrame API on the nocookie host (the ENDED state), and
+SoundCloud's Widget API (FINISH). A service's player is kept from track to
+track while the service stays the same, since a player that's already
+playing is likeliest to be allowed to start the next. Only one plays at a
+time. A track that can't play (removed, not embeddable) is noted and
+skipped. If a track hasn't started 6 seconds after the last one ended (12
+after a button press), a full-size **Tap to play next** button covers the
+player, for browsers that won't start one without a tap; Spotify's docs
+say Safari is one.
+
+**For a screen that's on.** It stops when a phone locks; the playlists
+are for that, and the page says so.
+
+**Measured 2026-10-19, in Chromium with real embeds** (a 19-second YouTube
+video, a Spotify track as its 30-second preview, a SoundCloud track):
+- One real click started it, and each track moved on to the next by
+  itself: YouTube ended at 0:20 and Spotify started, Spotify's preview
+  ended and SoundCloud started.
+- Pause/resume, previous, next, the YouTube-copies picker (it replays
+  the current track from YouTube), jumping from the list, and the end of
+  the round ("That's the whole round.") all worked.
+- A video id that doesn't exist was reported and skipped.
+- The tap button was checked by making YouTube refuse to start: it
+  appeared and covered the player. A real autoplay block couldn't be
+  produced here, since Chromium had already let the site play sound.
+- Phone width (375px): fits, nothing scrolls sideways.
+- **Not measured:** Safari on an iPhone, where a tap per track may be
+  needed; the button is there for exactly that.
 
 ## Round 7 hint crossword (/round7hint2)
 

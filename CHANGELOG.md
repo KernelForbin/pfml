@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-10-19 (follow-up 2): site rounds, stage 3: the round player
+
+- **Play the round** on a closed round's Submit page plays every track in
+  order, moving from Spotify to YouTube to SoundCloud by itself, each in
+  its own official player (`site/player.js`). Previous, pause and next;
+  tap a track in the list to play from there. Once matches exist, a picker
+  plays YouTube or Spotify copies where there are any. That's the way to
+  hear full tracks without being signed in to Spotify in the browser.
+- **For a screen that's on.** A phone stops it when it locks (the
+  playlists cover that), and the page says so. A browser that won't
+  start the next track without a tap gets a full-size **Tap to play
+  next** button after 6 seconds. A track that can't play is skipped.
+- The list's own per-track players are gone: the round player replaces
+  them.
+- **Measured in Chromium with real embeds:** one click and the round ran
+  by itself, YouTube to Spotify (preview) to SoundCloud. Every control
+  worked. A missing video was skipped. The tap button appeared when
+  YouTube was made to refuse. Fits at 375px. Not measured: Safari on an
+  iPhone.
+- **Verified:** suite 311 passing with 11 new tests (wiring, the three
+  official script URLs and that only player.js loads them, nocookie
+  YouTube, the fallback, skipping, one player at a time, the source
+  fallback, safe storage, hidden rules); 12 deliberate breaks, each caught.
+
 ## 2026-10-19 (follow-up): site rounds, stage 2: the round playlists
 
 - **`scripts/round_playlists.py`** turns a closed site round into a Spotify
