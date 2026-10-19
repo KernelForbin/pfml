@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-19 (follow-up 7): the repeat checker's example
+
+- The search box's example is now a Season 1 track (Lee Oskar, "Feelin'
+  Happy", Round 1). The old example was never submitted and could have
+  hinted at a pick for a round in progress.
+
 ## 2026-10-19 (follow-up 6): Estimated League Sentiment
 
 - **A gauge, green to red, for how much the league will care about a
