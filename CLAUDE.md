@@ -222,6 +222,9 @@ verified" has to be both.
     Reactions).
 - Deploys by: push to `main` -> GitHub Actions -> GitHub Pages (pages
   only). Data goes separately, by `python scripts/publish.py` to Supabase.
+  The search Edge Function (`supabase/functions/search-tracks/`) goes
+  separately too: the user redeploys it from the Supabase dashboard
+  (README, Searching), so a change to it ships only then. Say so.
 - Docs to keep current: CLAUDE.md, README.md, CHANGELOG.md, and
   `site/features.html` for anything a member can see.
 

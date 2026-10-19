@@ -14,6 +14,7 @@
 --   site_rounds, site_submissions, site_submission_owners
 --                    rounds open for submissions on the site, the
 --                    tracks, and (readable by nobody) who sent which
+--   search_cache     the Submit page's YouTube search answers (no policies)
 --   two private storage buckets: league-data (the site's JSON, readable by
 --   members only) and league-exports (raw CSV backups, no client access)
 --
@@ -393,6 +394,19 @@ alter table public.site_submissions add column if not exists spotify_match text
   check (spotify_match ~ '^[A-Za-z0-9]{22}$');
 alter table public.site_submissions add column if not exists youtube_match text
   check (youtube_match ~ '^[A-Za-z0-9_-]{11}$');
+
+-- Search answers kept by the search-tracks Edge Function (YouTube's, for a
+-- week). Service, text and day only, never who searched; no policies.
+-- supabase/migrations/2026-10-19_search_cache.sql adds it to the live project.
+create table if not exists public.search_cache (
+  service   text not null check (service in ('spotify', 'youtube')),
+  query     text not null check (char_length(query) between 1 and 120),
+  results   jsonb not null,
+  cached_on date not null default current_date,
+  primary key (service, query)
+);
+
+alter table public.search_cache enable row level security;   -- no policies: secret key only
 
 -- ---------------------------------------------------------------- storage
 

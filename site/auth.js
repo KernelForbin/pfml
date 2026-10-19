@@ -391,6 +391,15 @@
     roundSubmissions: function (roundId) {
       return client.from("site_submissions").select("tag, platform, track, position, title, artist, spotify_match, youtube_match").eq("round_id", roundId).then(must);
     },
+    // Track search on the Submit page, through the search-tracks Edge
+    // Function (supabase/functions/), which holds the services' keys.
+    // Resolves to {results: [...]} or {error: "quota" | ...}.
+    searchTracks: function (service, q) {
+      return client.functions.invoke("search-tracks", { body: { service: service, q: q } }).then(function (res) {
+        if (res.error) throw res.error;
+        return res.data;
+      });
+    },
     // Admin only (row level security): open a round, or change one.
     openSiteRound: function (fields) {
       return client.from("site_rounds").insert(fields).select("id").then(must);

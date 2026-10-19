@@ -745,6 +745,53 @@ it shipped (there's none on this machine); `tests/test_submissions.py`
 pins the rules as text, and the page was checked in a browser against a
 stand-in that follows them.
 
+### Searching
+
+The Submit page's box takes words as well as links. Three buttons pick the
+service; Enter or Search looks the words up there and lists up to 10
+results (artwork, title, artist, length); tapping one previews it like a
+pasted link. A link pasted in the same box still works on any service.
+Enter only ever searches; it never sends a track.
+
+- **Spotify** search uses the Spotify app's own login (client credentials,
+  no user): measured 2026-10-19, it answers, returns 10 results with
+  64px artwork, and refuses 11.
+- **YouTube** search uses an API key from a **second Google project**
+  ("PFML search"), so its own 100-searches-a-day allowance can never eat
+  the playlist builder's. Answers are kept for a week in `search_cache`,
+  so a repeated search is free. When the day's allowance is used up, the
+  page says so and links to YouTube's own search instead.
+- **SoundCloud** has no search here yet: its button opens SoundCloud's
+  search in a new tab, to copy a link back. In-page search needs a
+  registered SoundCloud app, and whether SoundCloud still accepts new ones
+  is unconfirmed (2026-10-19; the user is checking soundcloud.com/you/apps).
+
+**`supabase/functions/search-tracks/index.ts`** does the searching (the
+keys can't be in page code). It answers only signed-in members: it asks
+the database `is_member()` with the caller's own sign-in, which also proves
+the sign-in is genuine. It answers only pfml.fun (and the local preview).
+It never stores who searched, because "searched Stagger Lee" next to a
+name could give a submitter away: `search_cache` holds the service, the
+text and the day, and has no policies. It's plain `fetch`, with no
+libraries.
+
+**Deploying it is by hand** (Claude has no access to the Supabase
+account). Changing the function means redeploying it:
+1. Supabase dashboard, Edge Functions, Deploy a new function, Via Editor.
+   Name it exactly `search-tracks`, paste `index.ts`, and Deploy.
+2. In the function's settings, turn **Verify JWT off**. The function
+   checks membership itself, and the gateway's own check can reject
+   sign-ins made with the newer signing keys.
+3. Edge Functions, Secrets: `SPOTIFY_CLIENT_ID` and
+   `SPOTIFY_CLIENT_SECRET` (the same values as in `.env`), and
+   `YOUTUBE_SEARCH_KEY`.
+4. `YOUTUBE_SEARCH_KEY`: console.cloud.google.com, New project "PFML
+   search", enable YouTube Data API v3, then Credentials, Create
+   credentials, API key. Restrict the key to the YouTube Data API v3. No
+   sign-in screen is needed.
+5. Run `supabase/migrations/2026-10-19_search_cache.sql` in the SQL
+   Editor. Without it, search still works, just with no cache.
+
 ### Stage 2: the round playlists
 
 Once a round closes, `python scripts/round_playlists.py` builds it as a

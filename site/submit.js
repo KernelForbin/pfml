@@ -118,7 +118,8 @@
 
   /* ---- the round ---- */
 
-  var state = { rounds: [], round: null, mine: null, index: null, pasted: null, changing: false, timer: 0 };
+  var state = { rounds: [], round: null, mine: null, index: null, pasted: null, changing: false, timer: 0,
+                service: "spotify", pickFrom: null, results: null, asked: null };
 
   function isOpen(r) { return !r.closed_at && Date.now() < Date.parse(r.closes_at); }
 
@@ -212,7 +213,7 @@
     $("subCancel").hidden = !state.mine;
     $("subSend").textContent = state.mine ? "Use this track instead" : "Submit";
     $("subForm").hidden = false;
-    showPasted();
+    $("subSend").disabled = !state.pasted;
   }
 
   function showMsg(text, kind) {
@@ -222,21 +223,148 @@
     msg.hidden = !text;
   }
 
-  // Redraws the preview only when the pasted track changes, so typing
-  // around a good link doesn't reload the player.
+  /* ---- picking a track: a pasted link, or a search result ---- */
+
+  // The box takes either: a link is read as it's typed; anything else is
+  // words to search for, on Enter or the Search button.
+  function looksLikeLink(text) {
+    return /^(?:[a-z]+:\/\/|spotify:|www\.|(?:open|play)\.spotify\.com|spotify\.link|spoti\.fi|youtu\.be|(?:m\.|music\.)?youtube\.com|(?:m\.|on\.)?soundcloud\.com)/i
+      .test(String(text).trim());
+  }
+
+  // The chosen track, from either, previewed in its own player. The player
+  // is redrawn only when the choice changes, so typing around a good link
+  // doesn't reload it.
   var shownKey = "";
-  function showPasted() {
-    var p = parseLink($("subLink").value);
-    state.pasted = p && !p.error ? p : null;
-    var key = state.pasted ? state.pasted.platform + ":" + state.pasted.track : "";
+  function setPick(p) {
+    state.pasted = p;
+    var key = p ? p.platform + ":" + p.track : "";
     if (key !== shownKey) {
-      $("subPreview").innerHTML = state.pasted ? embedHtml(state.pasted) : "";
+      $("subPreview").innerHTML = p ? embedHtml(p) : "";
       shownKey = key;
     }
-    if (p && p.error) showMsg(p.error, "error");
-    else if (state.pasted) showMsg("Check the player shows the right recording, then submit.", "");
-    else showMsg("");
-    $("subSend").disabled = !state.pasted;
+    $("subSend").disabled = !p;
+  }
+
+  var CHECK = "Check the player shows the right recording, then submit.";
+
+  function onType() {
+    var text = $("subLink").value;
+    if (looksLikeLink(text)) {
+      clearResults();
+      var p = parseLink(text);
+      state.pickFrom = "link";
+      setPick(p && !p.error ? p : null);
+      if (p && p.error) showMsg(p.error, "error");
+      else if (p) showMsg(CHECK, "");
+    } else if (state.pickFrom === "link") {
+      // was a link, now words: that link no longer counts
+      state.pickFrom = null;
+      setPick(null);
+      showMsg("");
+    }
+  }
+
+  function resetPicker() {
+    $("subLink").value = "";
+    clearResults();
+    state.pickFrom = null;
+    setPick(null);
+    showMsg("");
+  }
+
+  // Searching each service's own site, for SoundCloud (no search here yet)
+  // and for when search here isn't working or YouTube's allowance is spent.
+  var SEARCH_SITES = {
+    spotify: function (q) { return "https://open.spotify.com/search/" + encodeURIComponent(q); },
+    youtube: function (q) { return "https://www.youtube.com/results?search_query=" + encodeURIComponent(q); },
+    soundcloud: function (q) { return "https://soundcloud.com/search/sounds?q=" + encodeURIComponent(q); }
+  };
+
+  function linkOut(svc, q, text) {
+    clearResults();
+    var msg = $("subMsg");
+    msg.className = "sub-msg";
+    msg.innerHTML = esc(text) + ' <a href="' + esc(SEARCH_SITES[svc](q)) + '" target="_blank" rel="noopener">Search on ' +
+      NAMES[svc] + " ↗</a>";
+    msg.hidden = false;
+  }
+
+  // Through supabase/functions/search-tracks, which holds the services'
+  // keys and answers members only.
+  function search() {
+    var q = $("subLink").value.trim(), svc = state.service;
+    if (!q || looksLikeLink(q)) return;
+    if (svc === "soundcloud") {
+      linkOut(svc, q, "SoundCloud is searched on SoundCloud itself: find the track, copy its link and paste it here.");
+      return;
+    }
+    var asked = svc + "|" + q;
+    state.asked = asked;
+    showMsg("Searching " + NAMES[svc] + "…", "");
+    api().searchTracks(svc, q).then(function (res) {
+      if (state.asked !== asked) return;              // a newer search is under way
+      if (res && res.error === "quota") {
+        linkOut(svc, q, "YouTube searching here is used up for today. Search on YouTube, copy the video's link and paste it here.");
+        return;
+      }
+      if (!res || res.error) throw new Error((res && res.error) || "no answer");
+      showResults(svc, res.results || []);
+    }).catch(function (err) {
+      console.error(err);
+      if (state.asked !== asked) return;
+      linkOut(svc, q, "Search isn’t working right now. Search on " + NAMES[svc] + ", copy the link and paste it here.");
+    });
+  }
+
+  function length(s) {
+    return s ? Math.floor(s / 60) + ":" + (s % 60 < 10 ? "0" : "") + (s % 60) : "";
+  }
+
+  function showResults(svc, results) {
+    if (!results.length) {
+      clearResults();
+      showMsg("Nothing found on " + NAMES[svc] + ". Try other words, or paste a link.", "");
+      return;
+    }
+    state.results = { service: svc, items: results };
+    showMsg("Pick one to hear it.", "");
+    $("subResults").innerHTML = results.map(function (r, i) {
+      return '<li><button type="button" class="sub-result" data-i="' + i + '" aria-pressed="false">' +
+        (r.image ? '<img src="' + esc(r.image) + '" alt="" width="44" height="44" loading="lazy">' : '<span class="sub-result-noart"></span>') +
+        '<span class="sub-result-text"><b>' + esc(r.title) + "</b><small>" + esc(r.artist) +
+        (r.seconds ? " · " + length(r.seconds) : "") + "</small></span></button></li>";
+    }).join("");
+    $("subResults").hidden = false;
+  }
+
+  function clearResults() {
+    state.results = null;
+    $("subResults").innerHTML = "";
+    $("subResults").hidden = true;
+  }
+
+  function pickResult(ev) {
+    var b = ev.target.closest(".sub-result");
+    if (!b || !state.results) return;
+    $("subResults").querySelectorAll(".sub-result").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+    state.pickFrom = "search";
+    setPick({ platform: state.results.service, track: state.results.items[+b.dataset.i].id });
+    showMsg(CHECK, "");
+  }
+
+  function setService(svc) {
+    state.service = svc;
+    $("subServices").querySelectorAll(".sub-svc").forEach(function (b) {
+      b.setAttribute("aria-checked", String(b.getAttribute("data-svc") === svc));
+    });
+    $("subLinkLabel").textContent = svc === "soundcloud"
+      ? "Paste a SoundCloud link, or search on SoundCloud"
+      : "Search " + NAMES[svc] + ", or paste a link";
+    $("subSearch").textContent = svc === "soundcloud" ? "Search on SoundCloud ↗" : "Search";
+    if (state.pickFrom === "search") { state.pickFrom = null; setPick(null); }
+    clearResults();
+    showMsg("");
   }
 
   function send(ev) {
@@ -248,8 +376,7 @@
     api().submitTrack(r.id, p.platform, p.track).then(function (tag) {
       state.mine = { tag: tag, platform: p.platform, track: p.track };
       state.changing = false;
-      $("subLink").value = "";
-      showPasted();
+      resetPicker();
       render();
       $("subMine").scrollIntoView({ behavior: "smooth", block: "start" });
     }).catch(function (err) {
@@ -409,7 +536,18 @@
   /* ---- start ---- */
 
   function boot() {
-    $("subLink").addEventListener("input", showPasted);
+    $("subLink").addEventListener("input", onType);
+    $("subLink").addEventListener("keydown", function (ev) {
+      // Enter searches; it never sends a track by surprise
+      if (ev.key === "Enter") { ev.preventDefault(); search(); }
+    });
+    $("subSearch").addEventListener("click", search);
+    $("subServices").addEventListener("click", function (ev) {
+      var b = ev.target.closest(".sub-svc");
+      if (b) setService(b.getAttribute("data-svc"));
+    });
+    $("subResults").addEventListener("click", pickResult);
+    setService(state.service);
     $("subFormEl").addEventListener("submit", send);
     $("subChange").addEventListener("click", function () {
       state.changing = true;
@@ -418,8 +556,7 @@
     });
     $("subCancel").addEventListener("click", function () {
       state.changing = false;
-      $("subLink").value = "";
-      showPasted();
+      resetPicker();
       render();
     });
     $("subWithdraw").addEventListener("click", withdraw);

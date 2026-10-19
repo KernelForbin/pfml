@@ -1,5 +1,33 @@
 # Changelog
 
+## 2026-10-19 (follow-up 4): search on the Submit page
+
+- **Search instead of a link:** three buttons pick Spotify, YouTube or
+  SoundCloud. Type the song and press Enter (or Search) to get up to 10
+  results with artwork; tap one to hear it, then submit. A pasted link
+  still works in the same box, on any service. Enter only ever searches.
+- **SoundCloud** opens SoundCloud's own search in a new tab for now.
+  In-page search needs a SoundCloud app, and whether new ones are still
+  accepted is unconfirmed.
+- **`supabase/functions/search-tracks`**, a small Supabase Edge Function,
+  holds the keys and answers signed-in members only, from pfml.fun only.
+  - Spotify search uses the playlists' Spotify app, logging in as the app
+    rather than a person. Measured: 10 results with artwork, and 11 refused.
+  - YouTube search uses a second Google project's key, so it can't use up
+    the playlist builder's 100 searches a day. Answers are kept a week.
+    When the allowance runs out, the page links to YouTube's own search.
+  - It never stores who searched (`search_cache`: service, text and day,
+    no policies).
+- **Waiting on the user:** the second Google project's API key, deploying
+  the function from the dashboard with its secrets, and the
+  `search_cache` migration. README, Searching, has the steps. Not pushed
+  until then.
+- **Verified:** suite passing, 15 new tests; 18 deliberate breaks, each
+  caught. In a browser, against a stand-in for the function: search,
+  pick, switching service, pasting a link, the quota and failure
+  link-outs, nothing found, SoundCloud's link-out, and submitting; fits at
+  375px. The function itself is unrun until deployed (no Deno here).
+
 ## 2026-10-19 (follow-up 3): no more "put your tag in Music League"
 
 - Voting stays in Music League as usual, and nobody needs to link a site

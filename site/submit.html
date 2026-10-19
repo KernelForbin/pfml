@@ -41,12 +41,27 @@
 
   <section class="shell block" id="subForm" hidden>
     <h2 id="subFormTitle">Your pick</h2>
-    <p class="block-note">Paste a link to the track on Spotify, YouTube or SoundCloud. A SoundCloud track also needs a copy on Spotify or YouTube to make the round's playlists.</p>
+    <p class="block-note">Search Spotify or YouTube, or paste a link from Spotify, YouTube or SoundCloud. A SoundCloud track also needs a copy on Spotify or YouTube to make the round's playlists.</p>
     <form class="sub-form" id="subFormEl" novalidate>
-      <label class="sub-label" for="subLink">Track link</label>
-      <input class="sub-input" id="subLink" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false"
-             placeholder="https://open.spotify.com/track/…">
+      <div class="sub-services" id="subServices" role="radiogroup" aria-label="Search on">
+        <button type="button" class="sub-svc sub-svc-spotify" role="radio" aria-checked="true" data-svc="spotify">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M6.5 9.5c3.8-1.2 8-0.9 11 0.9M7.2 12.6c3.2-0.9 6.6-0.6 9.3 0.9M7.9 15.5c2.6-0.7 5.2-0.4 7.3 0.8" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <span>Spotify</span></button>
+        <button type="button" class="sub-svc sub-svc-youtube" role="radio" aria-checked="false" data-svc="youtube">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><rect x="2" y="5" width="20" height="14" rx="4" fill="currentColor"/><path d="M10 9l5 3-5 3z" fill="#fff"/></svg>
+          <span>YouTube</span></button>
+        <button type="button" class="sub-svc sub-svc-soundcloud" role="radio" aria-checked="false" data-svc="soundcloud">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path d="M9 17V9.5M6.5 17v-5M4 17v-3M11.5 17V8.2c.8-.4 1.7-.7 2.7-.7 2.6 0 4.7 1.9 5 4.4.3-.1.6-.1.9-.1 1.6 0 2.9 1.2 2.9 2.7S21.7 17 20.1 17z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>SoundCloud</span></button>
+      </div>
+      <label class="sub-label" for="subLink" id="subLinkLabel">Search Spotify, or paste a link</label>
+      <div class="sub-searchrow">
+        <input class="sub-input" id="subLink" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false"
+               placeholder="Song, artist, or a link">
+        <button type="button" class="sub-btn sub-btn-quiet" id="subSearch">Search</button>
+      </div>
       <p class="sub-msg" id="subMsg" role="status" hidden></p>
+      <ul class="sub-results" id="subResults" hidden></ul>
       <div class="sub-embed" id="subPreview"></div>
       <div class="sub-actions">
         <button type="submit" class="sub-btn" id="subSend" disabled>Submit</button>
