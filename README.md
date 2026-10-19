@@ -734,7 +734,7 @@ It only covers **finished rounds**, since Music League's export leaves a
 round out until it's over; the page's footer says so.
 
 **Matching:** every word typed has to start a word of the artist, song or
-album, so "pick" finds Dick's Picks and "stagger lee" finds Stagger Lee.
+album, so "pick" finds Dick's Picks and "feelin happy" finds Feelin' Happy.
 Accents and "&" don't matter ("lubke" finds Lübke). A song is compared
 without its version labels (" - 2011 Remaster", "(Live)"), so any version
 counts as the song. No fuzzy spelling: "birelli" doesn't find Biréli.
@@ -832,7 +832,7 @@ Enter only ever searches; it never sends a track.
 keys can't be in page code). It answers only signed-in members: it asks
 the database `is_member()` with the caller's own sign-in, which also proves
 the sign-in is genuine. It answers only pfml.fun (and the local preview).
-It never stores who searched, because "searched Stagger Lee" next to a
+It never stores who searched, because "searched Feelin' Happy" next to a
 name could give a submitter away: `search_cache` holds the service, the
 text and the day, and has no policies. It's plain `fetch`, with no
 libraries.

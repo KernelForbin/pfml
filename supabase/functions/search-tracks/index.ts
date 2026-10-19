@@ -16,7 +16,7 @@
 // YouTube answers are kept in search_cache (no policies: nothing signed in
 // can read it) for a week, so a repeated search costs nothing. Only the
 // service, the search text and the day go in it, never who searched:
-// "searched Stagger Lee" next to a name could give a submitter away.
+// "searched Feelin' Happy" next to a name could give a submitter away.
 // Plain fetch, no libraries.
 
 const ALLOWED_ORIGINS = ["https://pfml.fun", "http://localhost:8000", "http://127.0.0.1:8000"];

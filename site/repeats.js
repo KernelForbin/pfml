@@ -35,8 +35,8 @@
     return String(title || "").replace(/\s[-–—]\s.*$/, "").replace(/[\(\[][^\)\]]*[\)\]]/g, " ");
   }
 
-  // Every query word starts some word of the field, so "pick" finds
-  // Pickett and "stagger lee" finds Stagger Lee but not Lee Stagger's song.
+  // Every query word starts some word of the field, so "osk" finds
+  // Lee Oskar and "feelin happy" finds Feelin' Happy.
   function matches(fieldWords, query) {
     return query.every(function (q) {
       return fieldWords.some(function (w) { return w.indexOf(q) === 0; });

@@ -4,7 +4,9 @@
 
 - The search box's example is now a Season 1 track (Lee Oskar, "Feelin'
   Happy", Round 1). The old example was never submitted and could have
-  hinted at a pick for a round in progress.
+  hinted at a pick for a round in progress. The same names in the
+  README, two code comments and an earlier CHANGELOG entry are swapped
+  for Season 1 examples too. They remain in the repo's history.
 
 ## 2026-10-19 (follow-up 6): Estimated League Sentiment
 
@@ -52,7 +54,7 @@
 - **Verified:** suite passing, with 11 new tests (the catalog, the
   every-field-is-read contract, the page's wiring, the comma regression);
   12 deliberate breaks, each caught. In a browser against the real
-  catalog: Steely Dan 3, Rasputin 1, Pickett 0 and the Grateful Dead
+  catalog: Steely Dan 3, Rasputin 1, a never-submitted artist 0 and the Grateful Dead
   results all match the raw exports; accents, "&"/"and", Spotify links,
   the address prefill, and a phone at 375px.
 
