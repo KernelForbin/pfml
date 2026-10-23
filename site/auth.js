@@ -387,6 +387,21 @@
     submissionCount: function (roundId) {
       return client.rpc("site_submission_count", { p_round: roundId }).then(must);
     },
+    // A pick's fingerprint (folded song, artist names, free text; see
+    // submit.js), saved for the caller's own track so later picks can be
+    // checked against it, and the check itself: which kinds of repeat a
+    // pick would be in the round, never which track or whose.
+    describeSubmission: function (roundId, platform, track, fp) {
+      return client.rpc("describe_submission", { p_round: roundId, p_platform: platform, p_track: track,
+        p_song: fp.song, p_names: fp.names, p_text: fp.text }).then(must);
+    },
+    mySubmissionDescribed: function (roundId) {
+      return client.rpc("my_submission_described", { p_round: roundId }).then(must);
+    },
+    roundRepeats: function (roundId, platform, track, fp) {
+      return client.rpc("round_repeats", { p_round: roundId, p_platform: platform, p_track: track,
+        p_song: fp.song, p_names: fp.names, p_text: fp.text }).then(must);
+    },
     // Readable only once the round has closed (row level security).
     roundSubmissions: function (roundId) {
       return client.from("site_submissions").select("tag, platform, track, position, title, artist, spotify_match, youtube_match").eq("round_id", roundId).then(must);

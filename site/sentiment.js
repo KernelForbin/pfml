@@ -271,5 +271,10 @@
     return hit ? { spotifyId: spotifyId, title: hit.t.title, artists: hit.t.artists, album: hit.t.album } : null;
   }
 
-  window.PFMLSentiment = { load: load, judge: judge, gaugeHtml: gaugeHtml, known: known, aboutLink: aboutLink };
+  // Every name in an artist line, folded the way judge() compares them; used
+  // by the Submit page's check against its own round too
+  function nameList(pieces) { return Object.keys(names(pieces || []).all); }
+
+  window.PFMLSentiment = { load: load, judge: judge, gaugeHtml: gaugeHtml, known: known, aboutLink: aboutLink,
+                           fold: fold, songKey: songKey, nameList: nameList };
 })();

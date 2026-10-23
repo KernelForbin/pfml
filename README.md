@@ -123,7 +123,8 @@ playlist pages, `tests/test_live_emoji_data.py` checks the committed
 `site/emoji-data.js` is what its pinned version builds,
 `tests/test_live_playlists.py` checks the round-playlist lookups, and
 `tests/test_live_cdn.py` checks jsDelivr still serves the supabase-js file
-the pages' integrity hash describes. The browser
+the pages' integrity hash describes, and `tests/test_live_round_repeats.py`
+runs the round-repeat rules on the real database. The browser
 JavaScript isn't covered by the suite (there's no Node here); it's checked
 in a real browser, see CLAUDE.md.
 
@@ -825,7 +826,8 @@ definer functions (`submit_track`, `my_submission`, `withdraw_submission`,
 `site_submission_count`), and the only ones that touch owners match on
 `auth.uid()`, so a member only ever learns their own. Nobody reads
 submissions before the round closes, the admin included; after, members
-read them all. The secret key in `.env` bypasses all of this, so a
+read them all. The one thing an open round does tell members is what kind
+of repeat a pick would be (Repeats in this round, below). The secret key in `.env` bypasses all of this, so a
 deliberate lookup in Supabase could still join the two tables: agreed as
 anonymous enough (2026-10-18).
 
@@ -854,6 +856,58 @@ same blocks as `schema.sql`. Nothing here was run against Postgres before
 it shipped (there's none on this machine); `tests/test_submissions.py`
 pins the rules as text, and the page was checked in a browser against a
 stand-in that follows them.
+
+### Repeats in this round
+
+The Submit page warns, before you send, when a pick repeats one already in
+the open round (asked for 2026-10-23). The warning names the kind of
+repeat: the exact track (which `submit_track` refuses anyway), the same
+song by the same artist, the same song title by another artist, a song with
+the same title where the artist isn't clear or the title is one word, or
+the same artist with another song. It never says which track or whose.
+The box sits above the Estimated League Sentiment gauge, which covers
+finished rounds only.
+
+**How, without reading the round.** Tracks stay unread until the close, so
+the page can't compare them. Each submission keeps a **fingerprint**
+instead (`fp_song`, `fp_names`, `fp_text` on `site_submissions`): the song
+title and the artist names, folded to plain lowercase words the way the
+gauge folds them (`sentiment.js`), plus, for a YouTube or SoundCloud pick,
+its title and channel as free text. `round_repeats()` compares a pick's
+fingerprint with every other submission in the round, using `fp_kind()`,
+and returns the kinds only. It leaves out the caller's own track. The page
+saves the fingerprint with `describe_submission()` right after a submit.
+A track sent before this existed, or from an out-of-date page, gets its
+fingerprint on its owner's next visit (`my_submission_described()`).
+`fp_for` records which track a fingerprint was made for, so one left over
+after a swap is ignored rather than misread.
+
+**Naming a video.** A video's title doesn't say which part is the artist
+("Righteously - Anna Ash" is song first), and the channel often isn't the
+artist at all (KEXP, BBC, Austin City Limits). So the page asks Spotify:
+it searches the title, minus brackets and words like "live", "official"
+and years, and keeps the first result whose title and one of whose artists
+both appear in the video's title and channel. Measured 2026-10-23 on 22
+real live-video titles: 20 named, nearly all on the first search; the two
+misses ("Lake Street Dive Plays … On a Boston Sidewalk") fall back to the
+free text. A channel never stands in for the artist, since two KEXP
+sessions would otherwise count as the same artist. A Spotify link the
+catalog doesn't know is found by searching its title for the very track,
+because Spotify's oEmbed gives no artist.
+
+**Limits.** Only tracks sent on this site are checked; picks sent only in
+Music League aren't visible here (the export leaves out a round until it's
+over). Asking about a pick tells a member whether that song or artist is
+already in the round, so someone determined could probe for what's been
+submitted, though never who sent it. That's what the feature is for.
+`fp_ok()` takes plain lowercase words only, within the column limits.
+
+**Database:** `supabase/migrations/2026-10-23_round_repeats.sql`, the same
+lines as `schema.sql`; no new table, so the 2026-10-30 grant change doesn't
+apply. `fp_kind()` is pure, so `tests/test_live_round_repeats.py` runs its
+rules against the real database with the secret key once the migration is
+in. It also checks that `round_repeats` and `describe_submission` refuse
+anyone who isn't a member.
 
 ### Searching
 

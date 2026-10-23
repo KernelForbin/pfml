@@ -165,6 +165,7 @@
       state.mine = mine;
       state.changing = false;
       render();
+      describeIfMissing(state.round, mine);
     }).catch(function (err) {
       console.error(err);
       $("subLine").textContent = "Couldn’t load the round: " + errText(err);
@@ -254,16 +255,165 @@
   var gaugeKey = "";
   function gaugeFor(p, about) {
     $("subGauge").innerHTML = "";
+    showRepeats(null);
+    state.fp = null;
     gaugeKey = p ? p.platform + ":" + p.track : "";
     if (!p) return;
     var key = gaugeKey;
-    PFMLSentiment.load().then(function () {
-      if (about) return about;
-      if (p.platform === "spotify" && PFMLSentiment.known(p.track)) return PFMLSentiment.known(p.track);
-      return PFMLSentiment.aboutLink(p.platform, p.track);
-    }).then(function (pick) {
+    var known = about ? PFMLSentiment.load().then(function () { return about; }) : aboutPick(p);
+    // the round check runs whether or not the service says what the track is
+    state.fp = { key: key, promise: known.catch(function () { return null; }).then(function (pick) { return fingerprint(p, pick); }) };
+    checkRound(p, key);
+    known.then(function (pick) {
       if (gaugeKey !== key || !pick) return;      // picked something else meanwhile, or nothing known
       $("subGauge").innerHTML = PFMLSentiment.gaugeHtml(PFMLSentiment.judge(pick));
+    }).catch(function (err) { console.error(err); });
+  }
+
+  // What a pasted link is: a Spotify track the catalog already has, or the
+  // service's own oEmbed. Null when nothing says.
+  function aboutPick(p) {
+    return PFMLSentiment.load().then(function () {
+      if (p.platform === "spotify" && PFMLSentiment.known(p.track)) return PFMLSentiment.known(p.track);
+      return PFMLSentiment.aboutLink(p.platform, p.track);
+    });
+  }
+
+  /* ---- repeats within this round ---- */
+
+  // Nobody can read the round's tracks before it closes, so the page can't
+  // compare them itself. Each submission keeps a fingerprint instead (the
+  // song and artist names, folded the way the gauge folds them, and for a
+  // YouTube or SoundCloud pick its title and channel as free text), and the
+  // database's round_repeats() says which kinds of repeat a pick would be:
+  // kinds only, never which track or whose. README, Submissions on the site.
+
+  // Words a live video's title carries that a Spotify search can't use
+  var NOT_IN_SONGS = /\b(live|official|video|audio|lyrics?|hd|4k|remaster(ed)?|performance|full|watch|tv|19\d\d|20\d\d)\b/gi;
+
+  function spotifyQueries(title) {
+    var base = String(title || "").replace(/[\(\[][^\)\]]*[\)\]]/g, " ");
+    var out = [];
+    [base, base.split("|")[0], base.split(/\s[-–—|]\s/).slice(0, 2).join(" - ")].forEach(function (part) {
+      var q = part.replace(/["“”|:\-–—]/g, " ").replace(NOT_IN_SONGS, " ").replace(/\s+/g, " ").trim();
+      if (q && out.indexOf(q) === -1) out.push(q);
+    });
+    return out;
+  }
+
+  function hasWords(hay, needle) { return !!needle && (" " + hay + " ").indexOf(" " + needle + " ") !== -1; }
+
+  // A video's title doesn't say which part is the artist ("Righteously -
+  // Anna Ash" is song first), so Spotify names the song: the first result
+  // whose title and one of whose artists both appear in the free text.
+  // Measured 2026-10-23 on 22 real live-video titles: 20 named, nearly all on
+  // the first search; the other two fall back to the free text alone.
+  function nameFromSpotify(text, title) {
+    var S = PFMLSentiment, words = S.fold(text), queries = spotifyQueries(title);
+    function next(i) {
+      if (i >= queries.length) return null;
+      return api().searchTracks("spotify", queries[i]).then(function (res) {
+        var hit = ((res && res.results) || []).filter(function (r) {
+          return hasWords(words, S.songKey(r.title)) &&
+            S.nameList(String(r.artist || "").split(", ")).some(function (n) { return hasWords(words, n); });
+        })[0];
+        return hit || next(i + 1);
+      });
+    }
+    return Promise.resolve().then(function () { return next(0); }).catch(function (err) { console.error(err); return null; });
+  }
+
+  // song, names and text, folded to the plain lowercase words the database
+  // takes; each artist on its own first, then the runs a comma may have
+  // split ("Earth, Wind & Fire")
+  function fpOf(title, artists, text) {
+    var S = PFMLSentiment;
+    var names = artists.map(S.fold).concat(S.nameList(artists)).filter(function (n, i, all) {
+      return n && all.indexOf(n) === i;
+    }).slice(0, 12).map(function (n) { return n.slice(0, 120).trim(); });
+    return { song: S.songKey(title).slice(0, 300), names: names, text: S.fold(text).slice(0, 600) };
+  }
+
+  // The fingerprint for a pick, from what's known about it (null: nothing).
+  function fingerprint(p, about) {
+    if (!about) return fpOf("", [], "");
+    if (p.platform === "spotify") {
+      if (about.artists && about.artists.length) return fpOf(about.title, about.artists, "");
+      // a pasted link the catalog doesn't have: Spotify's oEmbed names no
+      // artist, so find the very track by searching its title
+      return api().searchTracks("spotify", about.title).then(function (res) {
+        var hit = ((res && res.results) || []).filter(function (r) { return r.id === p.track; })[0];
+        return hit ? fpOf(about.title, String(hit.artist || "").split(", "), "") : fpOf(about.title, [], about.title);
+      }).catch(function () { return fpOf(about.title, [], about.title); });
+    }
+    var text = about.text || about.title || "";
+    return nameFromSpotify(text, about.title).then(function (hit) {
+      return hit ? fpOf(hit.title, String(hit.artist || "").split(", "), text) : fpOf("", [], text);
+    });
+  }
+
+  var REPEAT_KINDS = [
+    ["track", "This exact track. The site won’t take it twice."],
+    ["version", "The same song by the same artist."],
+    ["song", "The same song title, by another artist (maybe a cover)."],
+    ["title", "A song with the same title (it may be a different song)."],
+    ["artist", "The same artist, with a different song."]
+  ];
+
+  function checkRound(p, key) {
+    var r = state.round;
+    if (!r || !isOpen(r) || typeof api().roundRepeats !== "function") return;
+    showRepeats("checking");
+    state.fp.promise.then(function (fp) {
+      if (gaugeKey !== key) return null;
+      return api().roundRepeats(r.id, p.platform, p.track, fp);
+    }).then(function (found) {
+      if (gaugeKey === key && found) showRepeats(found);
+    }).catch(function (err) {
+      console.error(err);
+      if (gaugeKey === key) showRepeats(null);
+    });
+  }
+
+  // null hides the box; "checking"; or the kinds round_repeats() found
+  function showRepeats(found) {
+    var box = $("subRepeats");
+    if (!found) { box.hidden = true; box.innerHTML = ""; return; }
+    if (found === "checking") {
+      box.className = "sub-repeats is-checking";
+      box.innerHTML = "<p>Checking this round…</p>";
+    } else if (!found.length) {
+      box.className = "sub-repeats is-clear";
+      box.innerHTML = "<p>Nothing like it among the tracks sent here so far.</p>";
+    } else {
+      box.className = "sub-repeats is-found";
+      box.innerHTML = '<p class="sub-rep-head">Already in this round</p><ul class="sub-rep-list">' +
+        REPEAT_KINDS.filter(function (k) { return found.indexOf(k[0]) !== -1; })
+          .map(function (k) { return "<li>" + esc(k[1]) + "</li>"; }).join("") + "</ul>" +
+        '<p class="sub-rep-note">Nobody can see whose, or which. Only tracks sent on this site are checked.</p>';
+    }
+    box.hidden = false;
+  }
+
+  function fingerprintOf(p) {
+    return aboutPick(p).catch(function () { return null; }).then(function (pick) { return fingerprint(p, pick); });
+  }
+
+  // Saves the fingerprint of the caller's own track, so picks after it are
+  // checked against it. Best effort: the submission stands either way.
+  function describe(r, p, fpPromise) {
+    if (typeof api().describeSubmission !== "function") return;
+    fpPromise.then(function (fp) {
+      return api().describeSubmission(r.id, p.platform, p.track, fp);
+    }).catch(function (err) { console.error(err); });
+  }
+
+  // A track sent before the round check existed, or from a page that was out
+  // of date, has no fingerprint yet: its owner's next visit adds one.
+  function describeIfMissing(r, mine) {
+    if (!r || !mine || !isOpen(r) || typeof api().mySubmissionDescribed !== "function") return;
+    api().mySubmissionDescribed(r.id).then(function (done) {
+      if (done === false) describe(r, mine, fingerprintOf(mine));
     }).catch(function (err) { console.error(err); });
   }
 
@@ -406,7 +556,10 @@
     if (!r || !p) return;
     $("subSend").disabled = true;
     showMsg("Sending…", "");
+    var key = p.platform + ":" + p.track;
+    var fp = state.fp && state.fp.key === key ? state.fp.promise : fingerprintOf(p);
     api().submitTrack(r.id, p.platform, p.track).then(function (tag) {
+      describe(r, p, fp);
       state.mine = { tag: tag, platform: p.platform, track: p.track };
       state.changing = false;
       resetPicker();

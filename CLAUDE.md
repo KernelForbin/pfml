@@ -200,7 +200,9 @@ verified" has to be both.
   lookups or matching change (read-only; Spotify and YouTube parts need
   their keys in `.env` and skip without them), and `-p test_live_cdn.py`
   whenever the supabase-js version or its integrity hash changes (a wrong
-  hash blanks every page).
+  hash blanks every page), and `-p test_live_round_repeats.py` whenever
+  `fp_kind()` or the round-check functions change (read-only; the only
+  place that SQL actually runs before members use it).
   Note: `python -m unittest tests.test_x` does not work here, since
   `tests/` isn't a package on the path; use `discover`.
 - Main branch: `main`. Work on a branch; don't merge or push to `main`

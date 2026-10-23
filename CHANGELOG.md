@@ -1,5 +1,33 @@
 # Changelog
 
+## 2026-10-23: the Submit page spots repeats within the open round
+
+- **Before you send a pick, the Submit page says if it repeats something
+  already in this round:** the exact track, the same song by the same
+  artist, the same song title by another artist, a song with the same
+  title, or the same artist with another song. It never says which track,
+  or whose. Asked for the day Round 7 (Live Tracks) opened on the site.
+- **How it stays anonymous:** tracks are still unread until the close.
+  Each submission keeps a fingerprint (song and artist names as plain
+  words, plus a video's title and channel), and a new database function
+  answers with the kinds only, leaving out the caller's own track. Needs
+  `supabase/migrations/2026-10-23_round_repeats.sql`.
+- **YouTube picks are named through Spotify**, because a video's title
+  doesn't say which part is the artist and the channel is often a session
+  (KEXP, BBC). Measured on 22 real live-video titles: 20 named correctly,
+  nearly all on the first search; the rest fall back to the title text.
+- **Limits:** only tracks sent on the site are checked, not picks made only
+  in Music League. Asking about a pick does tell a member whether that song
+  or artist is already in.
+- **Verified:** the suite passes, with 19 new tests (15 break-checked) and
+  one updated (break-checked). A new live test (`test_live_round_repeats.py`)
+  runs the matching rules on the real database once the migration is in.
+  In a browser, against a stand-in that follows the database's rules and
+  real Spotify and YouTube lookups: all five kinds, nothing, the caller's
+  own track left out, a stale fingerprint ignored, the fingerprint saved on
+  submit and on a later visit, and a failed check hiding quietly; 375px and
+  1280px with no sideways scroll.
+
 ## 2026-10-22: supabase-js pinned by hash, and the new-table grant rule
 
 - **Every members-only page now loads supabase-js with an `integrity`

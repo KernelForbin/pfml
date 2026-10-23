@@ -89,9 +89,12 @@ class SubmitPage(unittest.TestCase):
     def test_a_pasted_link_is_looked_up_by_the_catalog_then_the_services_oembed(self):
         js = read("submit.js")
         gauge = js.split("function gaugeFor(p, about) {", 1)[1].split("\n  }\n", 1)[0]
-        self.assertIn('if (p.platform === "spotify" && PFMLSentiment.known(p.track)) return PFMLSentiment.known(p.track);', gauge)
-        self.assertIn("return PFMLSentiment.aboutLink(p.platform, p.track);", gauge)
+        self.assertIn("var known = about ? PFMLSentiment.load().then(function () { return about; }) : aboutPick(p);", gauge)
         self.assertIn("if (gaugeKey !== key || !pick) return;", gauge)
+        # the lookup is shared with the round check (aboutPick)
+        lookup = js.split("function aboutPick(p) {", 1)[1].split("\n  }\n", 1)[0]
+        self.assertIn('if (p.platform === "spotify" && PFMLSentiment.known(p.track)) return PFMLSentiment.known(p.track);', lookup)
+        self.assertIn("return PFMLSentiment.aboutLink(p.platform, p.track);", lookup)
         # one shared lookup, in sentiment.js, for both pages
         shared = read("sentiment.js")
         for url in ("https://www.youtube.com/oembed?format=json&url=", "https://soundcloud.com/oembed?format=json&url=",
