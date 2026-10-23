@@ -178,11 +178,28 @@
     if (leadThisSeason >= 2) add("artistTwice", "now", null);
     if (inLastRound) add("artistLast", "now", null);
 
-    var reasons = Object.keys(found).map(function (k) { return found[k]; })
-      .sort(function (a, b) { return b.weight - a.weight; });
+    return verdict(Object.keys(found).map(function (k) { return found[k]; }), !!found.exact);
+  }
+
+  function verdict(reasons, exact) {
+    reasons = reasons.slice().sort(function (a, b) { return b.weight - a.weight; });
     var score = reasons.length ? reasons[0].weight : 0;
     var level = LEVELS.filter(function (l) { return score >= l.min; })[0];
-    return { score: score, level: level, reasons: reasons, exact: !!found.exact };
+    return { score: score, level: level, reasons: reasons, exact: exact };
+  }
+
+  // The Submit page's check against the open round (submit.js) says which
+  // kinds of repeat a pick is there, never which track. Each counts as that
+  // repeat this season, at the weights above, so the gauge can't read
+  // Fresh under an "Already in this round" warning (the user's call,
+  // 2026-10-23). result may be null: nothing known about the pick itself.
+  var ROUND_RULES = { track: "exact", version: "version", song: "cover", title: "titleOnly", artist: "artist" };
+  function withRound(result, kinds) {
+    var reasons = result ? result.reasons.slice() : [];
+    kinds.forEach(function (k) {
+      if (ROUND_RULES[k]) reasons.push({ rule: ROUND_RULES[k], weight: RULES[ROUND_RULES[k]].now, matches: [], round: true });
+    });
+    return verdict(reasons, (result ? result.exact : false) || kinds.indexOf("track") !== -1);
   }
 
   /* ---- the gauge ---- */
@@ -225,7 +242,8 @@
     }
     if (result.reasons.length) {
       html += '<ul class="sg-reasons">' + result.reasons.map(function (r) {
-        var when = r.matches.length ? r.matches.some(function (p) { return p.now; }) ? " (this season)" : " (an earlier season)" : "";
+        var when = r.round ? " (already in this round)"
+          : r.matches.length ? r.matches.some(function (p) { return p.now; }) ? " (this season)" : " (an earlier season)" : "";
         var list = r.matches.slice().sort(function (a, b) { return b.t.round - a.t.round; }).slice(0, 3).map(where).join("; ");
         var more = r.matches.length > 3 ? " and " + (r.matches.length - 3) + " more" : "";
         return "<li><b>" + esc(RULES[r.rule].says) + when + "</b>" + (list ? "<span>" + list + more + "</span>" : "") + "</li>";
@@ -275,6 +293,6 @@
   // by the Submit page's check against its own round too
   function nameList(pieces) { return Object.keys(names(pieces || []).all); }
 
-  window.PFMLSentiment = { load: load, judge: judge, gaugeHtml: gaugeHtml, known: known, aboutLink: aboutLink,
+  window.PFMLSentiment = { load: load, judge: judge, withRound: withRound, gaugeHtml: gaugeHtml, known: known, aboutLink: aboutLink,
                            fold: fold, songKey: songKey, nameList: nameList };
 })();

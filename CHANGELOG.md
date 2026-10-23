@@ -16,6 +16,15 @@
   doesn't say which part is the artist and the channel is often a session
   (KEXP, BBC). Measured on 22 real live-video titles: 20 named correctly,
   nearly all on the first search; the rest fall back to the title text.
+- **The gauge counts this round too**, so it no longer reads "Fresh"
+  under an "Already in this round" warning. Each kind counts as the matching
+  repeat this season, at the weights already set.
+- **Found by the live test, before members used it:** Postgres rejects regex
+  counts above 255, and the length limits were written as `{0,300}` and
+  `{0,600}`, so every check would have failed. The migration had run
+  clean, because a check on an empty column is never evaluated.
+  `2026-10-23_round_repeats_fix.sql` repairs the live project, and a new
+  test catches any count over 255.
 - **Limits:** only tracks sent on the site are checked, not picks made only
   in Music League. Asking about a pick does tell a member whether that song
   or artist is already in.

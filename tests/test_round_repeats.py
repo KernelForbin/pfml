@@ -109,20 +109,57 @@ class PageAndDatabaseAgree(unittest.TestCase):
         # fp_ok and the column checks allow [a-z0-9 ] only, with these limits
         self.assertIn(".replace(/[^a-z0-9]+/g, \" \").trim();", read(SITE / "sentiment.js"))
         ok = function(self.sql, "fp_ok")
-        self.assertIn("'^[a-z0-9 ]{0,300}$'", ok)
-        self.assertIn("'^[a-z0-9 ]{0,600}$'", ok)
-        self.assertIn("<= 12", ok)
-        self.assertIn("'^[a-z0-9 ]{1,120}$'", ok)
+        self.assertIn("char_length(coalesce(p_song, '')) <= 300 and coalesce(p_song, '') ~ '^[a-z0-9 ]*$'", ok)
+        self.assertIn("char_length(coalesce(p_text, '')) <= 600 and coalesce(p_text, '') ~ '^[a-z0-9 ]*$'", ok)
+        self.assertIn("coalesce(cardinality(p_names), 0) <= 12", ok)
+        self.assertIn("char_length(n) > 120 or n !~ '^[a-z0-9 ]+$'", ok)
         fp = self.js.split("function fpOf(title, artists, text) {", 1)[1].split("\n  }\n", 1)[0]
         for limit in (".slice(0, 12)", ".slice(0, 120)", "songKey(title).slice(0, 300)", "fold(text).slice(0, 600)"):
             self.assertIn(limit, fp)
         self.assertIn("return n && all.indexOf(n) === i;", fp)   # no empty or repeated names
 
     def test_the_columns_take_what_fp_ok_allows(self):
-        for line in ("add column if not exists fp_song text\n  check (fp_song ~ '^[a-z0-9 ]{0,300}$');",
+        for line in ("add column if not exists fp_song text\n  check (char_length(fp_song) <= 300 and fp_song ~ '^[a-z0-9 ]*$');",
                      "add column if not exists fp_names text[]\n  check (cardinality(fp_names) <= 12);",
-                     "add column if not exists fp_text text\n  check (fp_text ~ '^[a-z0-9 ]{0,600}$');"):
+                     "add column if not exists fp_text text\n  check (char_length(fp_text) <= 600 and fp_text ~ '^[a-z0-9 ]*$');"):
             self.assertIn(line, self.sql)
+
+
+class RepairOfTheLiveProject(unittest.TestCase):
+    """2026-10-23_round_repeats_fix.sql repairs the live project, where the
+    first version of the migration ran with regex counts Postgres rejects."""
+
+    def setUp(self):
+        self.fix = read(ROOT / "supabase" / "migrations" / "2026-10-23_round_repeats_fix.sql")
+        self.sql = schema()
+
+    def test_it_leaves_fp_ok_as_schema_has_it(self):
+        self.assertEqual(function(self.fix, "fp_ok"), function(self.sql, "fp_ok"))
+
+    def test_its_column_checks_are_schemas(self):
+        for col, limit in (("fp_song", 300), ("fp_text", 600)):
+            with self.subTest(col):
+                check = f"check (char_length({col}) <= {limit} and {col} ~ '^[a-z0-9 ]*$');"
+                self.assertIn(f"add constraint site_submissions_{col}_check\n  {check}", self.fix)
+                self.assertIn(f"add column if not exists {col} text\n  {check}", self.sql)
+
+    def test_it_drops_the_old_checks_whatever_they_were_named(self):
+        self.assertIn("pg_get_constraintdef(oid) ~ 'fp_(song|text)'", self.fix)
+        self.assertIn("execute format('alter table public.site_submissions drop constraint %I', c.conname);", self.fix)
+
+
+class PostgresRegexLimits(unittest.TestCase):
+    def test_no_regex_count_over_255(self):
+        # Postgres rejects {m,n} above 255 ("invalid repetition count(s)"),
+        # measured 2026-10-23 on the live project: fp_ok's {0,300} and
+        # {0,600} failed every call. Lengths go in char_length() instead.
+        files = [ROOT / "supabase" / "schema.sql"] + sorted((ROOT / "supabase" / "migrations").glob("*.sql"))
+        for path in files:
+            if path.name == "2026-10-23_round_repeats_fix.sql":
+                continue   # quotes the broken counts in its comment
+            with self.subTest(path.name):
+                counts = [int(n) for pair in re.findall(r"\{(\d+)(?:,(\d*))?\}", read(path)) for n in pair if n]
+                self.assertLessEqual(max(counts, default=0), 255)
 
 
 class PageWiring(unittest.TestCase):
@@ -147,7 +184,27 @@ class PageWiring(unittest.TestCase):
         self.assertIn("checkRound(p, key);", self.body("function gaugeFor(p, about) {"))
         check = self.body("function checkRound(p, key) {")
         self.assertIn("if (!r || !isOpen(r) || typeof api().roundRepeats !== \"function\") return;", check)
-        self.assertIn("if (gaugeKey === key && found) showRepeats(found);", check)
+        self.assertIn("if (gaugeKey !== key || !found) return;\n      showRepeats(found);", check)
+
+    def test_the_gauge_counts_what_the_round_check_found(self):
+        # so it can't read Fresh under an "Already in this round" warning
+        check = self.body("function checkRound(p, key) {")
+        self.assertIn("gauge.found = found;", check)
+        self.assertIn("if (gaugeKey === key) drawGauge();", check)
+        draw = self.body("function drawGauge() {")
+        self.assertIn("if (gauge.found && gauge.found.length) result = PFMLSentiment.withRound(result, gauge.found);", draw)
+        self.assertIn("gauge = { pick: null, found: null };", self.body("function gaugeFor(p, about) {"))
+
+    def test_every_kind_the_round_check_answers_moves_the_gauge(self):
+        js = read(SITE / "sentiment.js")
+        mapping = dict(re.findall(r'(\w+): "(\w+)"', js.split("var ROUND_RULES = {", 1)[1].split("};", 1)[0]))
+        kinds = re.findall(r'\["(\w+)", "', self.js.split("var REPEAT_KINDS = [", 1)[1].split("];", 1)[0])
+        self.assertEqual(sorted(mapping), sorted(kinds))
+        rules = re.findall(r"^    (\w+):\s+\{ now:", js, re.M)
+        for kind, rule in mapping.items():
+            with self.subTest(kind):
+                self.assertIn(rule, rules)
+        self.assertEqual(mapping["track"], "exact")
 
     def test_a_video_is_named_by_spotify_only_when_title_and_artist_both_appear_in_it(self):
         named = self.body("function nameFromSpotify(text, title) {")

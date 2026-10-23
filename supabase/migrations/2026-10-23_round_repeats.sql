@@ -16,11 +16,11 @@
 -- No new table, so the 2026-10-30 grant change doesn't apply.
 
 alter table public.site_submissions add column if not exists fp_song text
-  check (fp_song ~ '^[a-z0-9 ]{0,300}$');
+  check (char_length(fp_song) <= 300 and fp_song ~ '^[a-z0-9 ]*$');
 alter table public.site_submissions add column if not exists fp_names text[]
   check (cardinality(fp_names) <= 12);
 alter table public.site_submissions add column if not exists fp_text text
-  check (fp_text ~ '^[a-z0-9 ]{0,600}$');
+  check (char_length(fp_text) <= 600 and fp_text ~ '^[a-z0-9 ]*$');
 alter table public.site_submissions add column if not exists fp_for text
   check (char_length(fp_for) <= 320);
 
@@ -40,11 +40,11 @@ $$;
 
 create or replace function public.fp_ok(p_song text, p_names text[], p_text text)
 returns boolean language sql immutable set search_path = public as $$
-  select coalesce(p_song, '') ~ '^[a-z0-9 ]{0,300}$'
-     and coalesce(p_text, '') ~ '^[a-z0-9 ]{0,600}$'
+  select char_length(coalesce(p_song, '')) <= 300 and coalesce(p_song, '') ~ '^[a-z0-9 ]*$'
+     and char_length(coalesce(p_text, '')) <= 600 and coalesce(p_text, '') ~ '^[a-z0-9 ]*$'
      and coalesce(cardinality(p_names), 0) <= 12
      and not exists (select 1 from unnest(coalesce(p_names, '{}'::text[])) n
-                      where n is null or n !~ '^[a-z0-9 ]{1,120}$');
+                      where n is null or char_length(n) > 120 or n !~ '^[a-z0-9 ]+$');
 $$;
 
 -- Saves the fingerprint for the caller's own submission, while the round is

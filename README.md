@@ -865,8 +865,14 @@ repeat: the exact track (which `submit_track` refuses anyway), the same
 song by the same artist, the same song title by another artist, a song with
 the same title where the artist isn't clear or the title is one word, or
 the same artist with another song. It never says which track or whose.
-The box sits above the Estimated League Sentiment gauge, which covers
-finished rounds only.
+The box sits above the Estimated League Sentiment gauge, and the gauge
+counts what it found too (the user's call, 2026-10-23), so it can't read
+"Fresh" under an "Already in this round" warning. Each kind counts as the
+matching repeat this season, at the weights already set: the exact track
+as exact, same song and artist as version, same title by another artist as
+cover, a title alone as title-only, the same artist as artist. The reason
+line says "(already in this round)", with no link, since the check never
+says which track.
 
 **How, without reading the round.** Tracks stay unread until the close, so
 the page can't compare them. Each submission keeps a **fingerprint**
@@ -902,9 +908,18 @@ already in the round, so someone determined could probe for what's been
 submitted, though never who sent it. That's what the feature is for.
 `fp_ok()` takes plain lowercase words only, within the column limits.
 
-**Database:** `supabase/migrations/2026-10-23_round_repeats.sql`, the same
-lines as `schema.sql`; no new table, so the 2026-10-30 grant change doesn't
-apply. `fp_kind()` is pure, so `tests/test_live_round_repeats.py` runs its
+**Postgres takes no regex count above 255.** The first version of the
+migration wrote the limits as `{0,300}` and `{0,600}`. It ran clean on the
+live project, because a check on an empty column is never evaluated, but
+every `fp_ok()` call failed with "invalid repetition count(s)". The live
+test found this on 2026-10-23, before any page used it. Lengths now go in
+`char_length()`, and the regex only checks the characters.
+`2026-10-23_round_repeats_fix.sql` repairs the live project, and a test
+fails if any SQL file uses a count over 255.
+
+**Database:** `supabase/migrations/2026-10-23_round_repeats.sql` (since
+corrected) and then `2026-10-23_round_repeats_fix.sql`, the same lines as
+`schema.sql`; no new table, so the 2026-10-30 grant change doesn't apply. `fp_kind()` is pure, so `tests/test_live_round_repeats.py` runs its
 rules against the real database with the secret key once the migration is
 in. It also checks that `round_repeats` and `describe_submission` refuse
 anyone who isn't a member.

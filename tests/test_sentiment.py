@@ -53,6 +53,13 @@ class Rules(unittest.TestCase):
                 self.assertTrue(says)
         self.assertEqual(dict((n, (int(a), int(b))) for n, a, b, _ in entries)["exact"], (100, 100))
 
+    def test_a_repeat_in_this_round_counts_as_this_season_and_says_so(self):
+        withround = self.js.split("function withRound(result, kinds) {", 1)[1].split("\n  }\n", 1)[0]
+        self.assertIn("weight: RULES[ROUND_RULES[k]].now, matches: [], round: true", withround)
+        self.assertIn('kinds.indexOf("track") !== -1', withround)
+        gauge = self.js.split("function gaugeHtml(result) {", 1)[1].split("\n  }\n", 1)[0]
+        self.assertIn('var when = r.round ? " (already in this round)"', gauge)
+
     def test_an_exact_repeat_gets_the_extra_warning(self):
         self.assertIn("if (result.exact) {", self.js)
         self.assertIn('class="sg-warning"', self.js)

@@ -253,10 +253,12 @@
   // (a Spotify track submitted before) or, through sentiment.js, the
   // service's own oEmbed.
   var gaugeKey = "";
+  var gauge = { pick: null, found: null };      // what the gauge knows about the current pick
   function gaugeFor(p, about) {
     $("subGauge").innerHTML = "";
     showRepeats(null);
     state.fp = null;
+    gauge = { pick: null, found: null };
     gaugeKey = p ? p.platform + ":" + p.track : "";
     if (!p) return;
     var key = gaugeKey;
@@ -266,8 +268,17 @@
     checkRound(p, key);
     known.then(function (pick) {
       if (gaugeKey !== key || !pick) return;      // picked something else meanwhile, or nothing known
-      $("subGauge").innerHTML = PFMLSentiment.gaugeHtml(PFMLSentiment.judge(pick));
+      gauge.pick = pick;
+      drawGauge();
     }).catch(function (err) { console.error(err); });
+  }
+
+  // Past rounds, from the catalog, and this round, from the round check:
+  // whichever has answered so far
+  function drawGauge() {
+    var result = gauge.pick ? PFMLSentiment.judge(gauge.pick) : null;
+    if (gauge.found && gauge.found.length) result = PFMLSentiment.withRound(result, gauge.found);
+    $("subGauge").innerHTML = result ? PFMLSentiment.gaugeHtml(result) : "";
   }
 
   // What a pasted link is: a Spotify track the catalog already has, or the
@@ -368,7 +379,10 @@
       if (gaugeKey !== key) return null;
       return api().roundRepeats(r.id, p.platform, p.track, fp);
     }).then(function (found) {
-      if (gaugeKey === key && found) showRepeats(found);
+      if (gaugeKey !== key || !found) return;
+      showRepeats(found);
+      gauge.found = found;
+      return PFMLSentiment.load().then(function () { if (gaugeKey === key) drawGauge(); });
     }).catch(function (err) {
       console.error(err);
       if (gaugeKey === key) showRepeats(null);
