@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-10-22: supabase-js pinned by hash, and the new-table grant rule
+
+- **Every members-only page now loads supabase-js with an `integrity`
+  hash** (sha384, with `crossorigin="anonymous"`). The library runs with
+  the member's session, so a tampered copy on jsDelivr could have acted as
+  them. Now the browser refuses any file that doesn't match. This came out
+  of a check against the week's security news (PHP php2shell, Python TLS
+  and tarfile fixes, Linux PwnEscape, Node Brotli, the LiteLLM backdoor,
+  GhostAction): none of them reached the site, and this was the one
+  hardening step worth taking.
+- **Recorded Supabase's 2026-10-30 change:** new tables get no API grants
+  by default, so a future migration that creates a table states its
+  grants (README, Members only; CLAUDE.md).
+- **Verified:** the hash was measured three ways (jsDelivr's file, the npm
+  tarball, and jsDelivr's API), and all agreed. The suite passes, with a
+  new test that pins the tag on every page and a new live test
+  (`test_live_cdn.py`) that checks the real file and its CORS header. Both
+  were break-checked. The pages were checked in a browser: supabase-js
+  loads and sign-in starts at 375px and 1280px.
+
 ## 2026-10-19 (follow-up 9): YouTube links on the repeat checker
 
 - **Paste a YouTube link into the repeat checker** (youtube.com,

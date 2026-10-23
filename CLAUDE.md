@@ -198,7 +198,9 @@ verified" has to be both.
   `site/emoji-data.js` is what that version builds), and
   `-p test_live_playlists.py` whenever `scripts/round_playlists.py`'s
   lookups or matching change (read-only; Spotify and YouTube parts need
-  their keys in `.env` and skip without them).
+  their keys in `.env` and skip without them), and `-p test_live_cdn.py`
+  whenever the supabase-js version or its integrity hash changes (a wrong
+  hash blanks every page).
   Note: `python -m unittest tests.test_x` does not work here, since
   `tests/` isn't a package on the path; use `discover`.
 - Main branch: `main`. Work on a branch; don't merge or push to `main`
@@ -220,6 +222,10 @@ verified" has to be both.
     Before reading or writing the reaction column, note that the original 6
     reactions are stored by name, not as emoji, on purpose (README,
     Reactions).
+    From 2026-10-30 Supabase gives a new table no API grants by default,
+    so a migration that creates a table must `grant` what the site needs
+    explicitly, and nothing for tables only reached through security
+    definer functions (README, Members only).
 - Deploys by: push to `main` -> GitHub Actions -> GitHub Pages (pages
   only). Data goes separately, by `python scripts/publish.py` to Supabase.
   The search Edge Function (`supabase/functions/search-tracks/`) goes

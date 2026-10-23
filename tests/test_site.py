@@ -12,6 +12,11 @@ from urllib.parse import urlparse
 from support import ROOT
 
 SITE = ROOT / "site"
+# The one third-party script, pinned by version and by hash. Measured
+# 2026-10-22: jsDelivr's file, the npm tarball's and jsDelivr's own API hash
+# all agree. A new version needs a new hash: tests/test_live_cdn.py.
+SUPABASE_JS_URL = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js"
+SUPABASE_JS_INTEGRITY = "sha384-iLddHTLokph6Omwoyid4XKxHaWa6w41BnoEj0q5oOrzmYPpHIKt1wyjReA7s//pP"
 MEMBER_PAGES = ["index.html", "career.html", "round.html", "season.template.html", "profile.html", "round7hint2.html", "submit.html", "repeats.html"]
 FONT_HOSTS = {"fonts.googleapis.com", "fonts.gstatic.com"}
 
@@ -1107,6 +1112,23 @@ class QuietSignIn(unittest.TestCase):
             versions |= set(re.findall(r"@supabase/supabase-js@([\d.]+)/", read(name)))
         self.assertEqual(versions, {"2.116.0"})
         self.assertIn('"sb-" + ref + "-auth-token"', read("auth.js"))
+
+    def test_the_library_is_held_to_its_hash(self):
+        # supabase-js runs on every signed-in page with the member's session,
+        # so a tampered copy on the CDN could act as them. The integrity hash
+        # makes the browser refuse any file that isn't the one we checked
+        # (README, Members only). The live test checks the CDN still serves it.
+        tags = {}
+        for path in sorted(SITE.glob("*.html")):
+            for tag in re.findall(r"<script[^>]*supabase-js[^>]*>", read(path.name)):
+                tags.setdefault(path.name, []).append(tag)
+        self.assertEqual(sorted(tags), sorted(MEMBER_PAGES + ["season1.html", "season2.html", "season3.html"]))
+        for name, found in tags.items():
+            with self.subTest(name):
+                self.assertEqual(len(found), 1)
+                self.assertIn(f'integrity="{SUPABASE_JS_INTEGRITY}"', found[0])
+                self.assertIn('crossorigin="anonymous"', found[0])
+                self.assertIn(f'src="{SUPABASE_JS_URL}"', found[0])
 
     def test_the_checking_state_is_styled(self):
         self.assertIn('classList.add("auth-checking")', read("auth.js"))

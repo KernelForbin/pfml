@@ -117,10 +117,13 @@ the database schema and migrations, the committed emoji data, and the parts
 of `enrich_comments.py` that decide what gets stored. The deploy runs it
 before publishing.
 
-Two live tests skip unless `PFML_LIVE=1` is set:
+The live tests skip unless `PFML_LIVE=1` is set:
 `tests/test_live_spotify.py` calls Spotify's real oEmbed endpoint and
-playlist pages, and `tests/test_live_emoji_data.py` checks the committed
-`site/emoji-data.js` is what its pinned version builds. The browser
+playlist pages, `tests/test_live_emoji_data.py` checks the committed
+`site/emoji-data.js` is what its pinned version builds,
+`tests/test_live_playlists.py` checks the round-playlist lookups, and
+`tests/test_live_cdn.py` checks jsDelivr still serves the supabase-js file
+the pages' integrity hash describes. The browser
 JavaScript isn't covered by the suite (there's no Node here); it's checked
 in a real browser, see CLAUDE.md.
 
@@ -149,6 +152,29 @@ CSV, every season/career JSON, comments, votes, reactions and replies. The
 Supabase *secret* key lives only in the git-ignored `.env` used by the
 local scripts; it bypasses every access rule, so it never goes in the site
 or in a commit.
+
+**The one outside script is pinned by hash.** supabase-js comes from
+jsDelivr and runs on every signed-in page with the member's session, so a
+tampered copy on the CDN could act as them. Each page's tag pins version
+2.116.0 and carries an `integrity` hash (with `crossorigin="anonymous"`,
+which the hash needs), and a browser refuses any file that doesn't match.
+The hash was measured on 2026-10-22, and jsDelivr's file, the npm tarball's
+copy and jsDelivr's own API hash all agreed. To change the version, compute
+the new file's `sha384` and update every page's tag and the
+`SUPABASE_JS_*` constants in `tests/test_site.py` together. Then run the
+live test `test_live_cdn.py`, which fetches the real file and checks the
+hash and the CORS header. A wrong hash leaves every page stuck before
+sign-in.
+
+**New tables need explicit grants.** From 2026-10-30, Supabase stops
+granting `anon`/`authenticated`/`service_role` access to new tables in
+`public` by default. A table created after that date returns "permission
+denied" through the API until a `grant` says otherwise, even with row level
+security policies in place. Tables that already exist keep their grants.
+Any migration that creates a table therefore needs to state its grants
+alongside its policies. Grant only what the site reads or writes, and grant
+nothing to tables kept behind security definer functions, such as
+`site_submission_owners` and `search_cache`.
 
 **History.** Until 2026-09-21, commits from before the site went
 members-only still carried the CSVs and built JSON. The history was
