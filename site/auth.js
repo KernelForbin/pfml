@@ -395,6 +395,11 @@
       return client.rpc("describe_submission", { p_round: roundId, p_platform: platform, p_track: track,
         p_song: fp.song, p_names: fp.names, p_text: fp.text }).then(must);
     },
+    // The player ids of everyone with a track in the round, in id order:
+    // who, never which track (the user's call, 2026-10-23).
+    roundSubmitters: function (roundId) {
+      return client.rpc("site_round_submitters", { p_round: roundId }).then(must);
+    },
     mySubmissionDescribed: function (roundId) {
       return client.rpc("my_submission_described", { p_round: roundId }).then(must);
     },

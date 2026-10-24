@@ -823,11 +823,13 @@ platform and track, with no user and no time. Who sent which is in
 `site_submission_owners`, which has row level security on and no policies,
 so nothing signed in can read it. Every write goes through four security
 definer functions (`submit_track`, `my_submission`, `withdraw_submission`,
-`site_submission_count`), and the only ones that touch owners match on
-`auth.uid()`, so a member only ever learns their own. Nobody reads
-submissions before the round closes, the admin included; after, members
-read them all. The one thing an open round does tell members is what kind
-of repeat a pick would be (Repeats in this round, below). The secret key in `.env` bypasses all of this, so a
+`site_submission_count`). Those that touch owners match on `auth.uid()`,
+so a member only ever learns which track is their own. The one exception
+is `site_round_submitters`, which says *who* has a track in, never which
+(Who's in, below). Nobody reads submissions before the round closes, the
+admin included; after, members read them all. An open round also tells
+members what kind of repeat a pick would be (Repeats in this round,
+below). The secret key in `.env` bypasses all of this, so a
 deliberate lookup in Supabase could still join the two tables: agreed as
 anonymous enough (2026-10-18).
 
@@ -856,6 +858,35 @@ same blocks as `schema.sql`. Nothing here was run against Postgres before
 it shipped (there's none on this machine); `tests/test_submissions.py`
 pins the rules as text, and the page was checked in a browser against a
 stand-in that follows them.
+
+### Who's in
+
+The Submit page shows "**7/20** submitted", and a Who's in section lists
+who has submitted and who's pending, as avatar chips linking to profiles.
+The Home banner shows the same count. Asked for 2026-10-23, along with the
+user's calls:
+- **Names are shown, knowing the trade-off.** A member could watch someone
+  appear as submitted, then use the repeat warning to test artists and
+  guess roughly what they sent. `site_round_submitters()` returns player ids
+  only, in id order, so it doesn't even reveal the order people sent them.
+- **The 20 are the players taking part:** `activePlayers` in `index.json`,
+  everyone with a track in the current season's latest finished round
+  (`build.active_players`). That was exactly the 20 the user named
+  (Round 6's players; Clavenna Vision sat it out). Anyone who submits from
+  outside the list still shows, as "(and 1 more)". A new export updates the
+  list; `index.json` needs a publish for a change to reach the site.
+- **Players who haven't joined the site are marked "not joined yet"**,
+  since they can't submit there. On 2026-10-23 that was Asa, Dustin James,
+  Jacob Diskin and Scott Menke.
+- **Everyone submits on the site from now on**, as well as in Music League,
+  so pending really means pending. Round 7's prompt only asked YouTube
+  picks to come here; the user is telling the league.
+
+The list has its own section below the picker; inside the round card,
+twenty names pushed the form off a phone screen. The page falls back to the
+plain track count when `index.json` has no `activePlayers` or the database
+doesn't have the function yet. Migration:
+`supabase/migrations/2026-10-23_round_submitters.sql`.
 
 ### Repeats in this round
 

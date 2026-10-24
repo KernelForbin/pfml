@@ -174,7 +174,7 @@
 
   function render() {
     var r = state.round;
-    ["subRound", "subMine", "subForm", "subList"].forEach(function (id) { $(id).hidden = true; });
+    ["subRound", "subMine", "subForm", "subWhoBox", "subList"].forEach(function (id) { $(id).hidden = true; });
     renderAdmin();
     if (!r) {
       $("subLine").textContent = "No round is open for submissions on the site yet.";
@@ -192,13 +192,66 @@
       (r.prompt ? '<p class="sub-prompt">' + esc(r.prompt) + "</p>" : "") +
       '<p class="sub-count" id="subCount"></p></div>';
     box.hidden = false;
-    api().submissionCount(r.id).then(function (n) {
-      if (typeof n === "number") $("subCount").textContent = n + (n === 1 ? " track" : " tracks") + (open ? " in so far." : " in all.");
-    }).catch(function (err) { console.error(err); });
+    renderWho(r, open);
 
     if (state.mine) renderMine(open);
     if (open && (!state.mine || state.changing)) renderForm();
     if (!open) renderList();
+  }
+
+  /* ---- who's in: x/20 submitted, and who hasn't ---- */
+
+  // The players taking part this season: everyone with a track in its
+  // latest finished round (build.py, index.json). Null for a season the
+  // index doesn't have yet.
+  function activePlayers(seasonKey) {
+    var s = state.index && state.index.seasons.filter(function (x) { return x.key === seasonKey; })[0];
+    return s && s.activePlayers && s.activePlayers.length ? s.activePlayers : null;
+  }
+
+  // Who has a track in, by player, never which track (site_round_submitters;
+  // the user's call, 2026-10-23). A player who hasn't joined the site can't
+  // submit there, so they're marked as such. Without the player list, or
+  // before the database has the function, it falls back to a track count.
+  function renderWho(r, open) {
+    var players = activePlayers(r.season_key);
+    if (!players || typeof api().roundSubmitters !== "function") { trackCount(r, open); return; }
+    Promise.all([api().roundSubmitters(r.id), api().people()]).then(function (res) {
+      if (state.round !== r) return;
+      var sent = {}, linked = {}, names = {}, eligible = {};
+      (res[0] || []).forEach(function (id) { sent[id] = true; });
+      Object.keys(res[1] || {}).forEach(function (u) { linked[res[1][u].competitorId] = true; names[res[1][u].competitorId] = res[1][u].name; });
+      players.forEach(function (p) { eligible[p.id] = true; });
+      var done = players.filter(function (p) { return sent[p.id]; });
+      var pending = players.filter(function (p) { return !sent[p.id]; });
+      // someone who sat out the last round can still send one
+      var extra = (res[0] || []).filter(function (id) { return !eligible[id]; })
+        .map(function (id) { return { id: id, name: names[id] || "Member" }; });
+      $("subCount").innerHTML = "<b>" + done.length + "/" + players.length + "</b> submitted" +
+        (extra.length ? " (and " + extra.length + " more)" : "") + (open ? "" : ", final") +
+        ' &middot; <a href="#subWhoBox">See who</a>';
+      // its own section, below the picker, so twenty names don't push the
+      // form off a phone screen
+      $("subWho").innerHTML =
+        whoGroup("sent", "Submitted", done.concat(extra), linked, "Nobody yet.") +
+        whoGroup("pending", open ? "Pending" : "Didn’t submit", pending, linked, open ? "Everyone’s in!" : "");
+      $("subWhoBox").hidden = false;
+    }).catch(function (err) { console.error(err); trackCount(r, open); });
+  }
+
+  function whoGroup(kind, title, list, linked, none) {
+    if (!list.length && !none) return "";
+    return '<div class="sub-who-group sub-who-' + kind + '"><h3>' + esc(title) + " <span>" + list.length + "</span></h3>" +
+      (list.length ? "<ul>" + list.map(function (p) {
+        return '<li><a href="profile?p=' + encodeURIComponent(p.id) + '">' + PFML.avatar(p.id, p.name) + "<span>" + esc(p.name) + "</span>" +
+          (linked[p.id] ? "" : '<small class="sub-not-joined">not joined yet</small>') + "</a></li>";
+      }).join("") + "</ul>" : '<p class="sub-who-none">' + esc(none) + "</p>") + "</div>";
+  }
+
+  function trackCount(r, open) {
+    api().submissionCount(r.id).then(function (n) {
+      if (typeof n === "number") $("subCount").textContent = n + (n === 1 ? " track" : " tracks") + (open ? " in so far." : " in all.");
+    }).catch(function (err) { console.error(err); });
   }
 
   function renderMine(open) {

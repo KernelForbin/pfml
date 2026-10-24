@@ -337,8 +337,26 @@
       var open = (rounds || []).filter(function (r) { return !r.closed_at && Date.now() < Date.parse(r.closes_at); })[0];
       if (!open) return;
       box.innerHTML = '<a class="sub-banner-link" href="submit"><span class="sub-banner-kicker">Open for submissions</span>' +
-        "<b>" + esc(open.name) + "</b><span class=\"sub-banner-go\">Submit your track \u2192</span></a>";
+        "<b>" + esc(open.name) + '</b><span class="sub-banner-count" id="submitBannerCount"></span>' +
+        "<span class=\"sub-banner-go\">Submit your track \u2192</span></a>";
       box.hidden = false;
+      bannerCount(open);
+    }).catch(function (err) { console.error(err); });
+  }
+
+  // "7/20 submitted": players with a track in, out of the players taking
+  // part this season (index.json activePlayers, built from the latest
+  // finished round). Who, never which track; the Submit page shows names.
+  function bannerCount(round) {
+    if (typeof PFML.api.roundSubmitters !== "function") return;
+    Promise.all([PFML.loadJSON("index.json"), PFML.api.roundSubmitters(round.id)]).then(function (res) {
+      var season = res[0].seasons.filter(function (s) { return s.key === round.season_key; })[0];
+      var players = season && season.activePlayers;
+      if (!players || !players.length) return;
+      var sent = {};
+      (res[1] || []).forEach(function (id) { sent[id] = true; });
+      var done = players.filter(function (p) { return sent[p.id]; }).length;
+      $("submitBannerCount").textContent = done + "/" + players.length + " submitted";
     }).catch(function (err) { console.error(err); });
   }
 

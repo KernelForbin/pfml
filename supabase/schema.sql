@@ -536,6 +536,21 @@ grant execute on function public.my_submission_described(uuid) to authenticated;
 revoke all on function public.round_repeats(uuid, text, text, text, text[], text) from public, anon;
 grant execute on function public.round_repeats(uuid, text, text, text, text[], text) to authenticated;
 
+-- Who has submitted to a round: player ids only, never which track.
+-- supabase/migrations/2026-10-23_round_submitters.sql adds the same to
+-- the live project. README, Submissions on the site, Who's in.
+create or replace function public.site_round_submitters(p_round uuid)
+returns setof text language sql stable security definer set search_path = public as $$
+  select m.competitor_id
+    from public.site_submission_owners o
+    join public.members m on m.user_id = o.user_id
+   where o.round_id = p_round and public.is_member()
+   order by m.competitor_id;
+$$;
+
+revoke all on function public.site_round_submitters(uuid) from public, anon;
+grant execute on function public.site_round_submitters(uuid) to authenticated;
+
 -- Search answers kept by the search-tracks Edge Function (YouTube's, for a
 -- week). Service, text and day only, never who searched; no policies.
 -- supabase/migrations/2026-10-19_search_cache.sql adds it to the live project.

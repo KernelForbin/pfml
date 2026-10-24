@@ -1598,6 +1598,19 @@ def build_catalog(season_datas):
     return {"rounds": rounds, "tracks": tracks}
 
 
+def active_players(data):
+    """The players taking part now: everyone with a track in the season's
+    latest round, by name. The Submit page and the Home banner count site
+    submissions out of these (the user's "20 eligible players", 2026-10-23,
+    which is exactly Round 6's submitters); someone who sat that round out
+    counts again once they play another."""
+    if not data["rounds"]:
+        return []
+    players = {s["submitterId"]: {"id": s["submitterId"], "name": s["submitterName"]}
+               for s in data["rounds"][-1]["songs"] if s["submitterId"]}
+    return sorted(players.values(), key=lambda p: p["name"].lower())
+
+
 def main():
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     folders = season_folders()
@@ -1641,6 +1654,7 @@ def main():
             "leaderPoints": leader["points"] if leader else None,
             "startedAt": data["startedAt"],
             "liveRound": data["liveRound"],
+            "activePlayers": active_players(data),
         })
 
         if template:

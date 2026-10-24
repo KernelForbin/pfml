@@ -184,6 +184,24 @@ class Main(unittest.TestCase):
             index = json.loads((root / "site" / "data" / "index.json").read_text(encoding="utf-8"))
         self.assertEqual(index["seasons"][0]["liveRound"], {"number": 2, "name": "Round Two"})
 
+    def test_the_players_taking_part_are_the_latest_rounds_submitters(self):
+        # The Submit page's "x/20 submitted" counts out of these. Round One
+        # had four players, Round Two only Ann and Ben.
+        with sandbox() as root, quiet():
+            make_season(root / "data" / "season1", [TIE_ROUND, SECOND_ROUND])
+            build.main()
+            index = json.loads((root / "site" / "data" / "index.json").read_text(encoding="utf-8"))
+        self.assertEqual(index["seasons"][0]["activePlayers"], [{"id": "p1", "name": "Ann"}, {"id": "p2", "name": "Ben"}])
+
+    def test_the_players_taking_part_are_in_alphabetical_order_whatever_the_case(self):
+        # "josh storm" is lowercase in the real export; a plain sort put him last
+        round_ = dict(SECOND_ROUND, subs=[("e", "p2"), ("f", "p1")])
+        with sandbox() as root, quiet():
+            make_season(root / "data" / "season1", [round_], players={"p1": "ann", "p2": "Ben", "p3": "Cat", "p4": "Dan"})
+            build.main()
+            index = json.loads((root / "site" / "data" / "index.json").read_text(encoding="utf-8"))
+        self.assertEqual([p["name"] for p in index["seasons"][0]["activePlayers"]], ["ann", "Ben"])
+
 
 class CareerScore(unittest.TestCase):
     """Score = 20 x points per round played + 3/2/1 per round finish +

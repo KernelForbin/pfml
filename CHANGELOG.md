@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-10-23 (follow-up): who's in, x/20
+
+- **"7/20 submitted"** on the Home banner and the Submit page, and a Who's
+  in section listing who has submitted and who's pending, with avatars
+  linking to profiles. Never which track is whose. Players who haven't
+  joined the site are marked "not joined yet".
+- **The 20 are the players taking part:** everyone with a track in the
+  season's latest finished round, now `activePlayers` in `index.json`. That
+  was exactly Round 6's 20. Needs a publish to reach the site.
+- **The user's calls:** show names, knowing a member could pair them with
+  the repeat warning to guess roughly what someone sent; and everyone now
+  submits on the site as well as in Music League. The new database function
+  returns player ids only, in id order, not the order they were sent.
+  Needs `supabase/migrations/2026-10-23_round_submitters.sql`.
+- **Verified:** the suite passes, with 11 new tests, all break-checked (12
+  breaks). In a browser, against a stand-in with the real 20 names: the
+  count, both groups, the not-joined marks, an extra submitter, the closed
+  wording, the Home banner, and the picker still on the first phone screen;
+  375px and 1280px with no sideways scroll.
+
 ## 2026-10-23: the Submit page spots repeats within the open round
 
 - **Before you send a pick, the Submit page says if it repeats something

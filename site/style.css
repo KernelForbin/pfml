@@ -1432,6 +1432,8 @@ body.auth-checking::before {
 .sub-banner-link b { font: 800 1.15rem/1.25 "Archivo", sans-serif; }
 .sub-banner-kicker { width: 100%; font: 700 0.74rem/1 "Archivo", sans-serif; text-transform: uppercase; letter-spacing: 0.08em; color: var(--acid); }
 .sub-banner-go { margin-left: auto; font-weight: 600; }
+.sub-banner-count { font: 700 0.92rem/1.25 "Archivo", sans-serif; color: var(--acid); }
+.sub-banner-count:empty { display: none; }
 @media (hover: hover) { .sub-banner-link:hover { color: var(--paper); transform: translateY(-1px); } }
 
 .sub-round-card { padding: 20px 22px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow-sm); }
@@ -1439,6 +1441,21 @@ body.auth-checking::before {
 .sub-season { margin: 0; font: 700 0.76rem/1 "Archivo", sans-serif; text-transform: uppercase; letter-spacing: 0.08em; color: var(--deep); }
 .sub-prompt { margin: 0; white-space: pre-wrap; max-width: 65ch; }
 .sub-count { margin: 10px 0 0; color: var(--muted); font-size: 0.9rem; }
+.sub-count b { color: var(--ink); font: 800 1.05rem/1 "Archivo", sans-serif; }
+
+/* who's in (submit.js): avatars for who has submitted and who hasn't */
+.sub-who { display: grid; gap: 12px; margin-top: 12px; }
+.sub-who:empty { display: none; }
+.sub-who h3 { margin: 0 0 6px; font: 700 0.74rem/1 "Archivo", sans-serif; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.sub-who h3 span { color: var(--ink); }
+.sub-who ul { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+.sub-who a { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 3px 10px 3px 3px; border-radius: 999px; background: var(--wash); color: var(--ink); text-decoration: none; font-size: 0.86rem; }
+.sub-who a > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sub-who .av { width: 26px; height: 26px; font-size: 0.6rem; flex: none; }
+.sub-who-pending a { background: transparent; border: 1px dashed rgba(22, 17, 26, 0.22); padding: 2px 9px 2px 2px; }
+.sub-not-joined { color: var(--muted); font-size: 0.74rem; white-space: nowrap; }
+.sub-who-none { margin: 0; color: var(--muted); font-size: 0.86rem; }
+@media (hover: hover) { .sub-who a:hover { color: var(--magenta); } }
 
 .sub-tag {
   flex: none; display: inline-flex; align-items: center; justify-content: center; min-width: 64px; height: 64px; padding: 0 10px;

@@ -186,5 +186,76 @@ class PageCode(unittest.TestCase):
                 self.assertRegex(css, r"\." + cls + r"\[hidden\]\s*\{\s*display:\s*none")
 
 
+class WhoIsIn(unittest.TestCase):
+    """x/20 submitted, and who has and hasn't (the user's call, 2026-10-23):
+    who has a track in, never which track."""
+
+    def setUp(self):
+        self.sql = schema()
+        self.fn = function(self.sql, "site_round_submitters")
+        self.js = read(SITE / "submit.js")
+
+    def test_schema_has_what_the_migration_adds(self):
+        migration = read(ROOT / "supabase" / "migrations" / "2026-10-23_round_submitters.sql")
+        body = migration[migration.index("create or replace function public.site_round_submitters"):]
+        self.assertIn(body, self.sql)
+
+    def test_it_answers_player_ids_only_in_id_order_for_members(self):
+        self.assertIn("returns setof text", self.fn)
+        self.assertIn("select m.competitor_id\n", self.fn)
+        self.assertNotRegex(self.fn, r"\b(track|platform|tag|title|artist|position|fp_\w+|site_submissions)\b")
+        # id order, so not even the order people sent them
+        self.assertIn("order by m.competitor_id;", self.fn)
+        self.assertIn("and public.is_member()", self.fn)
+        self.assertIn("security definer set search_path = public", self.fn)
+        self.assertIn("revoke all on function public.site_round_submitters(uuid) from public, anon;", self.sql)
+        self.assertIn("grant execute on function public.site_round_submitters(uuid) to authenticated;", self.sql)
+
+    def body(self, js, signature):
+        return js.split(signature, 1)[1].split("\n  }\n", 1)[0]
+
+    def test_the_submit_page_counts_out_of_the_players_taking_part(self):
+        who = self.body(self.js, "function renderWho(r, open) {")
+        self.assertIn("var players = activePlayers(r.season_key);", who)
+        self.assertIn('$("subCount").innerHTML = "<b>" + done.length + "/" + players.length + "</b> submitted"', who)
+        self.assertIn("var pending = players.filter(function (p) { return !sent[p.id]; });", who)
+        self.assertIn("return s && s.activePlayers && s.activePlayers.length ? s.activePlayers : null;",
+                      self.body(self.js, "function activePlayers(seasonKey) {"))
+
+    def test_players_who_havent_joined_the_site_are_marked(self):
+        who = self.body(self.js, "function renderWho(r, open) {")
+        self.assertIn("linked[res[1][u].competitorId] = true;", who)
+        group = self.body(self.js, "function whoGroup(kind, title, list, linked, none) {")
+        self.assertIn('(linked[p.id] ? "" : \'<small class="sub-not-joined">not joined yet</small>\')', group)
+        self.assertIn("PFML.avatar(p.id, p.name)", group)
+
+    def test_the_list_has_its_own_section_below_the_picker(self):
+        # twenty names in the round card pushed the form off a phone screen
+        html = read(SITE / "submit.html")
+        self.assertLess(html.index('id="subForm"'), html.index('id="subWhoBox"'))
+        self.assertIn('<div class="sub-who" id="subWho"></div>', html.split('id="subWhoBox"', 1)[1].split("</section>", 1)[0])
+        self.assertIn('"subWhoBox"', self.body(self.js, "function render() {"))
+        who = self.body(self.js, "function renderWho(r, open) {")
+        self.assertIn('$("subWhoBox").hidden = false;', who)
+        self.assertIn('<a href="#subWhoBox">See who</a>', who)
+
+    def test_without_the_list_or_the_function_it_still_counts_tracks(self):
+        who = self.body(self.js, "function renderWho(r, open) {")
+        self.assertIn('if (!players || typeof api().roundSubmitters !== "function") { trackCount(r, open); return; }', who)
+        self.assertIn(".catch(function (err) { console.error(err); trackCount(r, open); });", who)
+
+    def test_the_home_banner_shows_the_count(self):
+        app = read(SITE / "app.js")
+        self.assertIn("bannerCount(open);", self.body(app, "function renderSubmitBanner() {"))
+        count = self.body(app, "function bannerCount(round) {")
+        self.assertIn("var players = season && season.activePlayers;", count)
+        self.assertIn('$("submitBannerCount").textContent = done + "/" + players.length + " submitted";', count)
+
+    def test_empty_boxes_take_no_room(self):
+        css = re.sub(r"/\*.*?\*/", "", read(SITE / "style.css"), flags=re.S)
+        self.assertRegex(css, r"\.sub-who:empty\s*\{\s*display:\s*none")
+        self.assertRegex(css, r"\.sub-banner-count:empty\s*\{\s*display:\s*none")
+
+
 if __name__ == "__main__":
     unittest.main()
