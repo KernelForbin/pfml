@@ -513,16 +513,24 @@ verdict colours and the red and green round-check boxes have dark versions.
 
 `site/manifest.webmanifest` lets a phone put PFML on its home screen and
 open it full screen, like an app (`display: standalone`), with the
-favicon's purple P as its icon. Every members-only page links it, plus an
+site's icon. Every members-only page links it, plus an
 `apple-touch-icon`. features and privacy stay standalone and don't. The
 file isn't named `.json`, so the deploy's guard against league data doesn't
 catch it.
 
-The icons are PNGs drawn by `scripts/make_icons.py` (stdlib only), because
-iOS takes no SVG icon. There's a 180 pixel one for iOS, and 192 and 512
-pixel ones for Android, plus a 512 "maskable" one that the launcher crops
-to its own shape. Change the script and rerun it; a test checks the
-committed icon is what it draws.
+**The icon** is a dark record on the purple tile: three of its grooves
+catch lavender light, and the label is purple with a white P. It was chosen
+on 2026-10-24 from three rounds of options ("g3"), replacing a plain white P.
+`scripts/make_icons.py` is its one source. It holds the shapes, writes the
+browser-tab icon (an inline SVG in each page's `<link rel="icon">`), and
+draws the PNGs from the same shapes, stdlib only, because iOS takes no SVG
+icon. There's a 180 pixel PNG for iOS, 192 and 512 pixel ones for Android,
+and a 512 "maskable" one that the launcher crops to its own shape. Change
+the script, run it, then run `scripts/build.py` so the season pages pick up
+the tab icon from the template. Tests check that every page carries exactly
+the script's SVG and that the committed PNG is what it draws. A phone that
+added PFML to its home screen before a change keeps the old icon until it's
+removed and added again.
 
 **Unverified on an iPhone:** a home-screen web app on iOS keeps its own
 storage, separate from Safari, so members sign in once inside it. Google

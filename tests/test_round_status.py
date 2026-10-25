@@ -67,16 +67,31 @@ class AddToHomeScreen(unittest.TestCase):
         size, radius = mod.ICONS["icon-180.png"]
         self.assertEqual(mod.draw(size, radius), (SITE / "icon-180.png").read_bytes())
 
-    def test_the_icon_is_the_favicons_shape(self):
+    def make_icons(self):
         spec = importlib.util.spec_from_file_location("make_icons", ROOT / "scripts" / "make_icons.py")
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
-        self.assertIn("M30 74V26h22a14 14 0 010 28H44v20z", read("index.html"))
-        self.assertIn("rx='22'", read("index.html"))
-        self.assertEqual(mod.ICONS["icon-192.png"][1], 22)
-        # inside the stem and the bowl; outside, and in the notch under the bowl
-        self.assertTrue(mod.in_p(35, 70) and mod.in_p(60, 40))
-        self.assertFalse(mod.in_p(50, 65) or mod.in_p(70, 30) or mod.in_p(25, 50))
+        return mod
+
+    def test_every_page_shows_the_same_icon_the_pngs_are_drawn_from(self):
+        # one source (scripts/make_icons.py) for the tab icon and the PNGs
+        href = self.make_icons().favicon_href()
+        for path in sorted(SITE.glob("*.html")):
+            with self.subTest(path.name):
+                self.assertEqual(re.findall(r'<link rel="icon" href="([^"]*)">', path.read_text(encoding="utf-8")), [href])
+
+    def test_the_drawing_is_the_record_on_purple(self):
+        # the design chosen 2026-10-24 ("g3"), point by point
+        m = self.make_icons()
+        self.assertEqual(m.colour_at(8, 50, 22), m.PURPLE)        # the tile, outside the record
+        self.assertEqual(m.colour_at(30, 70, 22), m.INK)          # the record
+        self.assertEqual(m.colour_at(50, 18, 22), m.LAVENDER)     # the top of the outer lit groove
+        self.assertEqual(m.colour_at(50, 50, 22), m.WHITE)        # the P, on the label
+        self.assertEqual(m.colour_at(54, 55, 22), m.PURPLE)       # the label, under the P's bowl
+        self.assertIsNone(m.colour_at(1, 1, 22))                  # a rounded corner
+        self.assertEqual(m.colour_at(1, 1, 0), m.PURPLE)          # full-bleed for iOS and maskable
+        self.assertEqual((m.PURPLE, m.INK), ("#9E00C4", "#16111A"))
+        self.assertIn("<circle cx='50' cy='50' r='36' fill='#16111A'/>", m.svg())
 
     def test_the_deploy_guard_doesnt_mistake_it_for_league_data(self):
         # the workflow refuses *.json in site/; the manifest isn't named that

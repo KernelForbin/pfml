@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-10-24 (follow-up 8): a new icon
+
+- **The icon is now a dark record on the purple tile**, with three grooves
+  catching lavender light and a purple label carrying a white P. The user
+  chose it from three rounds of options ("g3"). It replaces the plain white
+  P, in the browser tab of every page and on phone home screens.
+- **One source:** `scripts/make_icons.py` holds the shapes, writes the tab
+  icon into every page, and draws the PNGs from the same shapes. The
+  grooves are true circles around the record's centre, so the tab icon and
+  the PNGs agree exactly (the sketch's third groove was slightly off).
+- **Verified:** the suite passes, with 2 new tests (every page carries
+  exactly the script's icon; the drawing checked point by point) and the
+  PNG test kept, break-checked (4 breaks). In a browser, the tab icon
+  (SVG) and the home-screen PNG were compared side by side at 160px and
+  32px, and they match.
+- A phone that already added PFML to its home screen keeps the old icon
+  until it's removed and added again.
+
 ## 2026-10-24 (follow-up 7): choosing the Google account
 
 - **The bug:** sign in with the wrong Google account and the site says it
