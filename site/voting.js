@@ -37,14 +37,6 @@
   // votes here looks like any closed round: tracks, no ballot.
   function on(r) { return !!(PFML.siteVoting && r && r.votes_on_site); }
 
-  // The Submit page's order: playlist order once built, by tag before.
-  function ordered(rows) {
-    return rows.slice().sort(function (a, b) {
-      if (a.position && b.position) return a.position - b.position;
-      return a.tag < b.tag ? -1 : 1;
-    });
-  }
-
   // Title and artist once the playlists are built; before, the service and
   // the tag, which the track list above shows too
   function trackLabel(s) {
@@ -87,7 +79,8 @@
     }
     Promise.all(loads).then(function (res) {
       if (state.round !== r) return;
-      state.rows = ordered(res[0] || []);
+      // the round's one shuffle, as the track list above starts in
+      state.rows = PFML.roundOrder(r.id, res[0] || []);
       var names = namesOf(res[1]);
       if (phase === "voting") renderBallot(r, res[2] || [], res[3] || [], res[4] || [], names);
       else renderResults(r, res[2] || [], res[3] || [], names);
@@ -139,14 +132,14 @@
     refreshBallot();
   }
 
-  function ballotRow(s) {
+  function ballotRow(s, i) {
     var own = s.tag === state.mineTag;
     var pts = state.points[s.id] || 0;
     var comment = state.comments[s.id] || "";
     var title = s.title || ((NAMES[s.platform] || "") + " track");
     return '<li class="vt-row' + (own ? " is-own" : "") + '" data-id="' + esc(s.id) + '">' +
       '<div class="vt-main">' +
-        (s.position ? '<span class="sub-pos">' + s.position + "</span>" : "") + trackLabel(s) +
+        '<span class="sub-pos">' + (i + 1) + "</span>" + trackLabel(s) +
         (own ? '<span class="vt-own">Your track</span>'
              : '<span class="vt-step">' +
                  '<button type="button" class="vt-step-btn" data-act="minus" aria-label="One point less for ' + esc(title) + '">−</button>' +

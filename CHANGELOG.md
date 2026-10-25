@@ -1,6 +1,6 @@
 # Changelog
 
-## 2026-10-25 (follow-up): voting on the site, built and switched off
+## 2026-10-25 (follow-up 3): voting on the site, built and switched off
 
 - **Voting on pfml.fun, for a later round, not Round 7.** The user wants the
   whole league on pfml.fun eventually, without the Music League app; this

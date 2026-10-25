@@ -195,6 +195,13 @@ class ThePage(unittest.TestCase):
         srcs = re.findall(r'<script src="([^"]+)"', html)
         self.assertLess(srcs.index("voting.js"), srcs.index("submit.js"))
 
+    def test_the_ballot_lists_tracks_in_the_rounds_one_shuffle(self):
+        # the same order the track list above starts in (PFML.roundOrder)
+        voting = read(SITE / "voting.js")
+        self.assertIn("state.rows = PFML.roundOrder(r.id, res[0] || []);", voting)
+        self.assertNotIn("a.tag < b.tag", voting)
+        self.assertIn("'<span class=\"sub-pos\">' + (i + 1) + \"</span>\"", js_body(voting, "function ballotRow(s, i) {"))
+
     def test_submit_js_works_without_it(self):
         fallback = js_body(read(SITE / "submit.js"), "function voting() {")
         self.assertIn("return window.PFMLVoting || { on: function () { return false; }", fallback)
