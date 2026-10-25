@@ -109,22 +109,41 @@
     }).map(function (x) { return x.s; });
   }
 
-  // Voting on the site (README, Voting on the site): built 2026-10-25 and
-  // off until the user says to switch it on. Off, the admin can't open a
-  // round that votes here, and no page shows a ballot, results or a voting
-  // banner, even for such a round. Switching it on is one line, but the
-  // checklist in the README comes with it (privacy page, features page).
-  var SITE_VOTING = false;
+  // Voting on the site (README, Voting on the site): built 2026-10-25, off
+  // until the user switched it on with seasons set up on the site (the
+  // user's call, 2026-10-25: every such season votes here). Only a round in
+  // one of those seasons votes here; Season 3 and every round before stays
+  // in Music League, and the database holds that (site_rounds_times_guard).
+  var SITE_VOTING = true;
 
   // Where a site round is, the same as site_round_phase() in the database:
-  // "submitting", then "voting" and "finished" for a round that votes here,
-  // or "closed" for one that votes in Music League.
+  // "upcoming" before it opens (a season set up on the site schedules its
+  // rounds ahead), "submitting", then "voting" and "finished" for a round
+  // that votes here, or "closed" for one that votes in Music League.
   function roundPhase(r) {
     var now = Date.now();
+    if (r.opens_at && now < Date.parse(r.opens_at)) return "upcoming";
     if (!r.closed_at && now < Date.parse(r.closes_at)) return "submitting";
     if (!r.votes_on_site) return "closed";
     if (!r.voting_closed_at && now < Date.parse(r.voting_closes_at)) return "voting";
     return "finished";
+  }
+
+  // Who's playing a season: who was picked when it was set up on the site
+  // (site_season_players), else everyone with a track in its latest
+  // finished round (index.json). Null when neither says.
+  function seasonPlayers(seasonKey) {
+    var api_ = PFML.api;
+    var roster = typeof api_.seasonRoster === "function"
+      ? api_.seasonRoster(seasonKey).catch(function (err) { console.error(err); return []; })
+      : Promise.resolve([]);
+    return roster.then(function (list) {
+      if (list && list.length) return list;
+      return PFML.loadJSON("index.json").then(function (index) {
+        var s = index.seasons.filter(function (x) { return x.key === seasonKey; })[0];
+        return s && s.activePlayers && s.activePlayers.length ? s.activePlayers : null;
+      });
+    });
   }
 
   // Where a track lives, to link it: where it was submitted (a round voted
@@ -174,6 +193,7 @@
   PFML.closes = closes;
   PFML.siteVoting = SITE_VOTING;
   PFML.roundPhase = roundPhase;
+  PFML.seasonPlayers = seasonPlayers;
 
   // A tray with a notch: an inbox, drawn rather than an emoji character,
   // so it's the same flat icon on every device (see ADD_REACTION_ICON).

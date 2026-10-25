@@ -1466,10 +1466,10 @@ video, a Spotify track as its 30-second preview, a SoundCloud track):
 
 Asked for 2026-10-25: the admin can make any member a **commissioner**, and
 commissioners run the league's rounds alongside the admin, who always counts
-as one. It's Stage 1 of the commissioner work; the stages after it (creating
-seasons with their own settings, scheduled rounds, timing modes, more songs
-a round and downvotes, then allowed services, submitter notes, a repeat rule
-and announcements) are in CLAUDE.md, Commissioners.
+as one. It's Stage 1 of the commissioner work; Stage 2 is Seasons on the site,
+below, and the stages after it (more songs a round and downvotes, then
+allowed services, submitter notes, a repeat rule and announcements) are in
+CLAUDE.md, Commissioners.
 
 **The Commissioner page** (`/commissioner`, `commissioner.html` and
 `commissioner.js`), linked as Commissioner in the initials menu for the
@@ -1531,16 +1531,151 @@ block at the end of `schema.sql`):
   - the member's refusal.
   No sideways scroll at 375, and text measured 5.6:1 or more.
 
-## Voting on the site (built, switched off)
+## Seasons on the site
+
+Commissioners, stage 2 (asked 2026-10-25). A commissioner sets up a whole
+season on the Commissioner page, and it runs on pfml.fun from start to
+finish: its rounds open on their own, members submit and vote here, and
+the results reach the stats. The user's calls: every such season votes on
+pfml.fun; playlists stay manual (`round_playlists.py`, with the user's
+go-ahead each time); more songs a round and downvotes come in stage 3.
+
+**Setting one up** (`seasons.js`), in Music League's steps:
+
+| Step | Settings | Defaults |
+| --- | --- | --- |
+| Details | name, description | "Season N", the next number, never below 4 |
+| Songs + Votes | points to give (5–30), most on one song (no limit, 1–10), a penalty for not voting | 19, 5, yes (scores 0): Season 3's, measured from the exports |
+| Timing | Steady, Accelerated or Speedy; days to submit and to vote (1–7 each) | Steady, 2, 5 |
+| Rounds | each round's theme and description, in order; the date and time of the first playlist | — |
+| Players | who's playing, ticked from every player the league has had | the current season's players |
+
+- **Fixed rules:** 1 song a round and no downvotes (stage 3), every point
+  spent, and nobody votes for their own song.
+- **Step checks:** each step is checked before Next, and all of them before
+  Create, which asks to confirm.
+- **The Rounds step** shows the schedule the database will lay out.
+- **Enter in a round's name** adds the round.
+- **Two of Music League's settings aren't here.** Max players is a cap on
+  who can join, and here a commissioner picks the players. A separate
+  deadline time is the first playlist's time, kept round to round.
+
+**The schedule.** Round 1's submissions close at the first playlist and
+open that many days before (or now, if that's sooner). Each later round
+opens when the one before closes voting, takes its days to submit, then
+its days to vote. Days count on Eastern time (`site_add_days`), so a
+deadline stays at 8 PM across a daylight-saving change.
+
+**Timing**, Music League's three modes:
+
+- **Steady:** every deadline holds.
+- **Accelerated:** submissions close as soon as every player who has
+  joined the site has a track in, and voting as soon as everyone with a
+  track has voted. The next round still opens at its scheduled time.
+- **Speedy:** the same, and the rest of the season moves up by the time
+  saved, so the next round opens the moment voting closes.
+- **How it's done:** `submit_track` (for a new track) and `cast_ballot`
+  check, after saving, through `site_round_finish_early`. Closing early
+  uses the database's clock.
+- **A gap:** a player who hasn't joined the site can't submit, so
+  Accelerated and Speedy don't wait for them.
+
+**Running it** (each season's section on the Commissioner page):
+
+- **Rounds:** rename any round. Add one at the end. Move or remove one
+  that hasn't opened (↑ ↓ ✕); after a change the rounds that haven't
+  opened are laid out again.
+- **Settings:** name, description, rules and timing.
+  - Rules reach every round whose submissions haven't closed.
+  - Days to submit and to vote move the rounds that haven't opened.
+- **Players:** tick and save; at least 2.
+- **The open round:** it's also in the round form above, for moving its
+  deadline or closing it early, like any round.
+
+**What members see:**
+
+- **Before a round opens:** the Submit page says when the next one opens.
+- **Coming up:** lists the rounds ahead, with their descriptions.
+- **Who's in:** "x/N submitted" counts the season's players
+  (`PFML.seasonPlayers`), here and on the Home banner.
+- **Reminders:** a round is announced when it opens (`opens_at`), and only
+  to its players.
+- **Voting and results:** Voting on the site, below.
+
+**Season 3 is safe.** A season set up here is Season 4 or later (a check
+on the table and in `create_site_season`). The deadline guard refuses,
+for anyone signed in:
+
+- adding a round to such a season by hand;
+- moving a round into or out of one;
+- opening a round by hand that votes here.
+
+The round form's season picker leaves such seasons out and no longer
+offers a new season.
+
+**Database** (`supabase/migrations/2026-10-25_seasons.sql`, the same block
+at the end of `schema.sql`):
+
+- **Tables:** `site_seasons` (the rules) and `site_season_players`.
+  Members read them, with select granted explicitly; only the functions
+  write.
+- **A new column:** `site_rounds.opens_at`. Rounds made before it opened
+  when they were made.
+- **Phases:** `site_round_phase` gains `upcoming`.
+- **Commissioners call:** `create_site_season`, `update_site_season`,
+  `add_site_season_round`, `move_site_season_round`,
+  `remove_site_season_round` and `set_site_season_players`.
+- **Nobody calls these from outside:** `site_season_reschedule`,
+  `site_season_shift`, `site_round_finish_early` and `site_add_days`.
+- **Replaced:** `submit_track`, `cast_ballot`, `reminders_claim`,
+  `site_rounds_export` (it dates a round by when it opened and names the
+  seasons) and the deadline guard. In `schema.sql` the older definitions
+  stay above, as the earlier migrations ran them; the last one stands.
+  The tests' `function()` helper reads the last.
+
+**The stats.** `publish.py` saves a season's name in its
+`site_rounds.json`, and the build calls the season by it
+(`build.season_label`). A season appears in the season list once its
+first round has finished and been published. Until then the Submit page
+calls it by its number.
+
+**Checked:**
+
+- **Tests:** `tests/test_seasons.py`, plus updates to the voting,
+  submissions, reminders and stats tests. Each assertion was break-checked
+  in a scratch clone (57 breaks, all caught).
+- **Live:** `tests/test_live_seasons.py` (read-only).
+- **The rehearsal:** `supabase/checks/2026-10-25_seasons_rehearsal.sql`
+  plays a whole Accelerated season, a Speedy one and a Steady one as the
+  admin and three members. It should say "24 checks held".
+- **In a browser,** at 375 and 1280, light and dark, against a stand-in
+  following the same rules: every step of setting up, with real clicks and
+  typing; Create; the season's section (move, remove, add, a settings save
+  that fails and one that works, players); the Submit page as a member,
+  with Coming up and "2/5 submitted" from the season's players. No sideways
+  scroll at 375; text 5.3:1 or more.
+- **Found and fixed in the browser:**
+  - Enter in a setup field reloaded the page and lost the setup.
+  - The setup opened under the sticky top bar.
+  - A long option was cut off at 375.
+  - An empty schedule showed as a bar.
+  - The chosen timing mode was hard to see in dark mode.
+  - A season's section closed after a move.
+
+## Voting on the site
 
 The league means to run everything on pfml.fun eventually, with no
-Music League app. Voting is the next piece. It was built on 2026-10-25
-and is **off**: members see nothing of it. The user's calls that day:
+Music League app. Voting is the next piece. It was built on 2026-10-25,
+switched off, and switched **on** the same day with seasons set up on the
+site (Seasons on the site, below): the user's call was that every such
+season votes here. The user's calls when it was built:
 
 - **It must never touch Round 7.** A round votes here only if it was
   *opened* that way (`site_rounds.votes_on_site`, default false). The
   `site_rounds_voting_fixed` trigger refuses to change it afterwards, either
   way, so Round 7 and every round before it vote in Music League for good.
+  Since seasons, only a season set up on the site opens rounds that vote
+  here: the deadline guard refuses a round opened by hand that asks to.
 - **Who submitted what is revealed when voting closes**, like Music League.
   Until then a round that votes here is as anonymous as any other, the
   admin included.
@@ -1556,13 +1691,11 @@ and is **off**: members see nothing of it. The user's calls that day:
   voting in Seasons 2 and 3 keep their points. The admin can change any of
   these when opening a round, and they freeze when submissions close.
 
-**The switch.** `var SITE_VOTING = false;` in `account.js` (`PFML.siteVoting`).
-Off, the Commissioner page's round form has no voting fields. The Submit page shows no
-ballot or results, and Home no voting banner, even for a round that votes
-here. Such a round then looks like any closed one. Only the admin could
-make one while it's off, outside the page (a commissioner, since 2026-10-25,
-could too: the database lets commissioners write rounds). A test fails if the switch
-flips. That's on purpose: switching it on changes what the site promises.
+**The switch.** `var SITE_VOTING = true;` in `account.js` (`PFML.siteVoting`),
+on since seasons set up on the site (2026-10-25). Off, no page showed a
+ballot, results or a voting banner, even for a round that votes here. The
+test that pinned it off now pins it on, and checks the pages that say what
+it changed (the checklist below, done in the same change).
 
 **How a round runs, once it's on.** The admin ticks "Vote on pfml.fun"
 when opening a round and sets when voting closes (after submissions) and
@@ -1624,8 +1757,9 @@ block in `schema.sql`):
   admin's fields and panel, and the Home banner. Then with the switch off,
   where all of it was gone.
 
-**Switching it on** needs the migration run (and the rehearsal passed),
-then, in one change:
+**Switching it on** needed the migration run (and the rehearsal passed),
+then, in one change (all done 2026-10-25, with seasons; the league still
+has to be told):
 
 - `SITE_VOTING = true` and the test that pins it.
 - The privacy page and the Submit page's footer: "stored without your
@@ -1638,10 +1772,10 @@ then, in one change:
 - The features page, with a What's new line.
 - Telling the league.
 
-**Not built yet:** no reminders to vote; the page is still titled "Submit
-a track" during voting; and the site has no submitter note, so no Daily
-Double request (Season 3 asks for it in the note) can be made in a round
-voted here. Results reach the stats (Site rounds in the stats, below).
+**Not built yet:** the page is still titled "Submit a track" during
+voting; and the site has no submitter note, so no Daily Double request
+(Season 3 asks for it in the note) can be made in a round voted here.
+(Reminders to vote were built since: README, Reminders.) Results reach the stats (Site rounds in the stats, below).
 
 ## Site rounds in the stats
 

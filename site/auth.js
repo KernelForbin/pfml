@@ -383,9 +383,11 @@
     // ---- submitting on the site (README, Submissions on the site) ----
     // Rounds opened on the site, newest first.
     siteRounds: function () {
-      return client.from("site_rounds").select("id, season_key, name, prompt, closes_at, closed_at, created_at, spotify_playlist, youtube_playlist, " +
+      // newest opening first; a season set up on the site lays its rounds
+      // out ahead, so there can be many not opened yet
+      return client.from("site_rounds").select("id, season_key, name, prompt, opens_at, closes_at, closed_at, created_at, spotify_playlist, youtube_playlist, " +
           "votes_on_site, voting_closes_at, voting_closed_at, point_budget, max_per_track, nonvoters_keep_points")
-        .order("created_at", { ascending: false }).limit(20).then(must);
+        .order("opens_at", { ascending: false }).limit(100).then(must);
     },
     // The caller's own track for a round, or null. Nothing else on the
     // site can tell whose track is whose.
@@ -498,6 +500,43 @@
     },
     updateSiteRound: function (roundId, fields) {
       return client.from("site_rounds").update(fields).eq("id", roundId).select("id").then(must);
+    },
+    // Seasons set up on the site (README, Seasons on the site), with who's
+    // playing each.
+    siteSeasons: function () {
+      return client.from("site_seasons").select("key, name, description, point_budget, max_per_track, nonvoters_keep_points, " +
+          "timing, submit_days, vote_days, created_at, site_season_players(competitor_id)")
+        .order("key").then(must);
+    },
+    // Who's playing a season set up on the site, by name; [] for any other.
+    seasonRoster: function (seasonKey) {
+      return client.from("site_season_players").select("competitor_id, players(name)").eq("season_key", seasonKey).then(must)
+        .then(function (rows) {
+          return (rows || []).map(function (r) { return { id: r.competitor_id, name: r.players ? r.players.name : "Player" }; })
+            .sort(function (a, b) { return a.name.localeCompare(b.name); });
+        });
+    },
+    // Every player the league has had, joined the site or not.
+    allPlayers: function () {
+      return client.from("players").select("competitor_id, name").then(must);
+    },
+    createSiteSeason: function (season) {
+      return client.rpc("create_site_season", { p: season }).then(must);
+    },
+    updateSiteSeason: function (key, fields) {
+      return client.rpc("update_site_season", { p_key: key, p: fields }).then(must);
+    },
+    addSiteSeasonRound: function (key, name, prompt) {
+      return client.rpc("add_site_season_round", { p_key: key, p_name: name, p_prompt: prompt }).then(must);
+    },
+    moveSiteSeasonRound: function (roundId, earlier) {
+      return client.rpc("move_site_season_round", { p_round: roundId, p_earlier: earlier }).then(must);
+    },
+    removeSiteSeasonRound: function (roundId) {
+      return client.rpc("remove_site_season_round", { p_round: roundId }).then(must);
+    },
+    setSiteSeasonPlayers: function (key, ids) {
+      return client.rpc("set_site_season_players", { p_key: key, p_players: ids }).then(must);
     },
     // Each member's role, for the admin's Commissioners list.
     memberRoles: function () {

@@ -26,8 +26,10 @@ def schema():
 
 def block(sql, start):
     """From `start` to the end of that statement (a function runs to its
-    closing $$;)."""
-    i = sql.index(start)
+    closing $$;). The last one, when there are several: schema.sql runs top
+    to bottom, so a function a later migration redefines (it says so at its
+    section's head) stands as last written."""
+    i = sql.rindex(start)
     end = "$$;" if start.startswith("create or replace function") else ";\n"
     return sql[i:sql.index(end, i) + len(end)]
 
@@ -218,11 +220,16 @@ class WhoIsIn(unittest.TestCase):
 
     def test_the_submit_page_counts_out_of_the_players_taking_part(self):
         who = self.body(self.js, "function renderWho(r, open) {")
-        self.assertIn("var players = activePlayers(r.season_key);", who)
+        self.assertIn("api().roundSubmitters(r.id), api().people(), PFML.seasonPlayers(r.season_key)", who)
+        self.assertIn("var players = res[2];", who)
         self.assertIn('$("subCount").innerHTML = "<b>" + done.length + "/" + players.length + "</b> submitted"', who)
         self.assertIn("var pending = players.filter(function (p) { return !sent[p.id]; });", who)
-        self.assertIn("return s && s.activePlayers && s.activePlayers.length ? s.activePlayers : null;",
-                      self.body(self.js, "function activePlayers(seasonKey) {"))
+        # who's playing: the season's own list when it was set up on the
+        # site, else everyone in its latest finished round (index.json)
+        players = self.body(read(SITE / "account.js"), "function seasonPlayers(seasonKey) {")
+        self.assertIn("if (list && list.length) return list;", players)
+        self.assertIn("return s && s.activePlayers && s.activePlayers.length ? s.activePlayers : null;", players)
+        self.assertLess(players.index("api_.seasonRoster(seasonKey)"), players.index('PFML.loadJSON("index.json")'))
 
     def test_players_who_havent_joined_the_site_are_marked(self):
         who = self.body(self.js, "function renderWho(r, open) {")
@@ -243,14 +250,15 @@ class WhoIsIn(unittest.TestCase):
 
     def test_without_the_list_or_the_function_it_still_counts_tracks(self):
         who = self.body(self.js, "function renderWho(r, open) {")
-        self.assertIn('if (!players || typeof api().roundSubmitters !== "function") { trackCount(r, open); return; }', who)
+        self.assertIn('if (typeof api().roundSubmitters !== "function") { trackCount(r, open); return; }', who)
+        self.assertIn("if (!players) { trackCount(r, open); return; }", who)
         self.assertIn(".catch(function (err) { console.error(err); trackCount(r, open); });", who)
 
     def test_the_home_banner_shows_the_count(self):
         app = read(SITE / "app.js")
         self.assertIn("bannerCount(open);", self.body(app, "function renderSubmitBanner() {"))
         count = self.body(app, "function bannerCount(round) {")
-        self.assertIn("var players = season && season.activePlayers;", count)
+        self.assertIn("Promise.all([PFML.seasonPlayers(round.season_key), PFML.api.roundSubmitters(round.id)])", count)
         self.assertIn('$("submitBannerCount").textContent = done + "/" + players.length + " submitted";', count)
 
     def test_empty_boxes_take_no_room(self):

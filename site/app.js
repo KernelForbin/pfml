@@ -339,7 +339,7 @@
     var box = $("submitBanner");
     if (!box) return;
     PFML.api.siteRounds().then(function (rounds) {
-      var open = (rounds || []).filter(function (r) { return !r.closed_at && Date.now() < Date.parse(r.closes_at); })[0];
+      var open = (rounds || []).filter(function (r) { return PFML.roundPhase(r) === "submitting"; })[0];
       if (!open) { votingBanner(rounds || []); return; }
       var closes = PFML.closes(open.closes_at);
       box.innerHTML = '<a class="sub-banner-link" href="submit"><span class="sub-banner-kicker">Open for submissions</span>' +
@@ -391,9 +391,8 @@
   // finished round). Who, never which track; the Submit page shows names.
   function bannerCount(round) {
     if (typeof PFML.api.roundSubmitters !== "function") return;
-    Promise.all([PFML.loadJSON("index.json"), PFML.api.roundSubmitters(round.id)]).then(function (res) {
-      var season = res[0].seasons.filter(function (s) { return s.key === round.season_key; })[0];
-      var players = season && season.activePlayers;
+    Promise.all([PFML.seasonPlayers(round.season_key), PFML.api.roundSubmitters(round.id)]).then(function (res) {
+      var players = res[0];
       if (!players || !players.length) return;
       var sent = {};
       (res[1] || []).forEach(function (id) { sent[id] = true; });

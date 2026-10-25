@@ -150,6 +150,20 @@ class InTheBuild(unittest.TestCase):
         titles = sorted(s["title"] for s in self.build(rounds=(untitled,))["rounds"][1]["songs"])
         self.assertEqual(titles, ["SoundCloud track C4", "Spotify track A2", "YouTube track B3", "YouTube track D5"])
 
+    def test_a_season_set_up_on_the_site_keeps_its_name(self):
+        with sandbox() as root, quiet():
+            folder = root / "data" / "season4"
+            write_site(folder)
+            self.assertEqual(build.season_label(folder, 4), "Season 4")
+            path = folder / build.SITE_ROUNDS_FILE
+            saved = json.loads(path.read_text(encoding="utf-8"))
+            path.write_text(json.dumps(dict(saved, season_name=" The Summer Season ")), encoding="utf-8")
+            self.assertEqual(build.season_label(folder, 4), "The Summer Season")
+            path.write_text(json.dumps(dict(saved, season_name="  ")), encoding="utf-8")
+            self.assertEqual(build.season_label(folder, 4), "Season 4")
+        # and the build names the season with it
+        self.assertIn("        label = season_label(folder, num)\n", read(ROOT / "scripts" / "build.py").split("def main():", 1)[1])
+
     def test_no_file_changes_nothing(self):
         with sandbox() as root, quiet():
             folder = make_season(root / "data" / "season1", [TIE_ROUND])
@@ -175,6 +189,13 @@ class Publishing(unittest.TestCase):
         self.assertEqual(list(saved), ["season1"])
         self.assertEqual(saved["season1"]["rounds"], [SITE_ROUND])
         self.assertEqual(saved["season1"]["players"], PLAYERS)
+
+    def test_a_season_set_up_on_the_site_carries_its_name(self):
+        saved, _ = self.fetch(dict(self.EXPORT, seasons={"season1": "The Summer Season", "season9": "Unplayed"}))
+        self.assertEqual(saved["season1"]["season_name"], "The Summer Season")
+        self.assertNotIn("season9", saved)
+        saved, _ = self.fetch(self.EXPORT)
+        self.assertNotIn("season_name", saved["season1"])
 
     def test_a_season_key_the_build_cant_use_stops_it(self):
         bad = {"rounds": [dict(SITE_ROUND, season_key="../x")], "players": {}}

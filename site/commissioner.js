@@ -29,15 +29,18 @@
   function isAdmin() { return role() === "admin"; }
   function isCommissioner() { return role() === "admin" || role() === "commissioner"; }
 
-  var state = { rounds: [], index: null, timer: 0 };
+  var state = { rounds: [], seasons: [], index: null, timer: 0 };
 
-  function isOpen(r) { return !r.closed_at && Date.now() < Date.parse(r.closes_at); }
+  function isOpen(r) { return PFML.roundPhase(r) === "submitting"; }
+  // a season set up on the site runs its rounds from its own section
+  // (seasons.js), not from the round form or the earlier rounds
+  function inSiteSeason(r) { return state.seasons.some(function (s) { return s.key === r.season_key; }); }
 
   // voting.js (voting on the site, off until the user switches it on); a
   // stand-in that's always off if it didn't load
   function voting() {
     return window.PFMLVoting || { on: function () { return false; }, adminFields: function () { return ""; },
-                                  wireAdmin: function () {}, readAdmin: function () { return { fields: {} }; }, adminPanel: function () { return null; } };
+                                  readAdmin: function () { return { fields: {} }; }, adminPanel: function () { return null; } };
   }
 
   function seasonLabel(key) {
@@ -58,12 +61,18 @@
 
   function load() {
     clearTimeout(state.timer);
-    return api().siteRounds().then(function (rounds) {
+    return Promise.all([api().siteRounds(), api().siteSeasons()]).then(function (res) {
+      var rounds = res[0];
+      state.seasons = res[1] || [];
       state.rounds = rounds || [];
-      // redraw when the open round's deadline passes, so its form goes
+      // redraw when the open round's deadline passes, so its form goes, or
+      // when the next scheduled round opens
       var open = state.rounds.filter(isOpen)[0];
-      if (open) {
-        var ms = Date.parse(open.closes_at) - Date.now() + 1500;
+      var next = state.rounds.filter(function (r) { return PFML.roundPhase(r) === "upcoming"; })
+        .sort(function (a, b) { return Date.parse(a.opens_at) - Date.parse(b.opens_at); })[0];
+      var until = open ? open.closes_at : next ? next.opens_at : null;
+      if (until) {
+        var ms = Date.parse(until) - Date.now() + 1500;
         if (ms < 2147483647) state.timer = setTimeout(load, ms);
       }
       render();
@@ -80,19 +89,21 @@
       : "No round is open for submissions.";
     renderRoundForm(open);
     renderRounds(open);
+    if (window.PFMLSeasons) {
+      window.PFMLSeasons.render({ rounds: state.rounds, seasons: state.seasons, index: state.index, reload: load });
+    }
     if (isAdmin()) { renderPeople(); renderLeagueStatus(); }
   }
 
   /* ---- the open round, or opening one ---- */
 
   function renderRoundForm(r) {
-    var seasons = state.index ? state.index.seasons.slice().reverse() : [];
-    var current = state.index ? state.index.currentSeason : "";
-    var options = seasons.map(function (s) {
-      return '<option value="' + esc(s.key) + '"' + (s.key === current ? " selected" : "") + ">" + esc(s.label) + "</option>";
+    // a round opened here is for a season played in Music League; a new
+    // season is set up in Seasons, below, and its rounds come with it
+    var seasons = state.index ? state.index.seasons.slice().reverse().filter(function (s) { return !inSiteSeason({ season_key: s.key }); }) : [];
+    var options = seasons.map(function (s, i) {
+      return '<option value="' + esc(s.key) + '"' + (i === 0 ? " selected" : "") + ">" + esc(s.label) + "</option>";
     }).join("");
-    var nextNum = seasons.length ? Math.max.apply(null, seasons.map(function (s) { return +String(s.key).replace(/\D/g, "") || 0; })) + 1 : 1;
-    options += '<option value="season' + nextNum + '">Season ' + nextNum + " (new)</option>";
 
     var box = $("cmRound");
     box.innerHTML =
@@ -111,7 +122,6 @@
           (r ? '<button type="button" class="sub-btn sub-btn-quiet" id="subAdmClose">Close submissions now</button>' : "") + "</div>" +
       "</form>";
     box.hidden = false;
-    voting().wireAdmin();
     $("subAdminForm").addEventListener("submit", function (ev) { ev.preventDefault(); saveRound(r); });
     if (r) $("subAdmClose").addEventListener("click", function () { closeRound(r); });
     // a round voting here: its deadline, and closing voting early
@@ -146,14 +156,16 @@
   /* ---- earlier rounds: name and description ---- */
 
   function phaseText(r) {
-    var phase = voting().on(r) ? PFML.roundPhase(r) : "closed";
+    var phase = PFML.roundPhase(r);
+    if (phase === "upcoming") return "Opens " + PFML.closes(r.opens_at).at;
+    if (!voting().on(r)) phase = "closed";
     if (phase === "voting") return "Voting until " + PFML.closes(r.voting_closes_at).at;
     if (phase === "finished") return "Voting closed";
     return "Submissions closed " + PFML.closes(r.closed_at || r.closes_at).at;
   }
 
   function renderRounds(open) {
-    var rounds = state.rounds.filter(function (r) { return r !== open; });
+    var rounds = state.rounds.filter(function (r) { return r !== open && !inSiteSeason(r); });
     $("cmRounds").hidden = !rounds.length;
     $("cmRoundList").innerHTML = rounds.map(function (r) {
       return '<details class="cm-round" data-round="' + esc(r.id) + '">' +

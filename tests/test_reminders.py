@@ -69,8 +69,10 @@ class TheDatabase(unittest.TestCase):
         self.assertIn("on conflict do nothing", self.claim)
 
     def test_who_gets_what(self):
-        # a round opened before reminders existed isn't announced late
-        self.assertIn("where r.phase = 'submitting' and r.created_at > now() - interval '6 hours'", self.claim)
+        # a round opened before reminders existed isn't announced late; a
+        # round scheduled ahead is announced when it opens, not when it was
+        # made (seasons on the site, 2026-10-25)
+        self.assertIn("where r.phase = 'submitting' and r.opens_at > now() - interval '6 hours'", self.claim)
         self.assertIn("r.playlists_built_at > now() - interval '12 hours'", self.claim)
         # voting: only players with a track who haven't voted (the user's call, 2026-10-25)
         self.assertIn("join public.site_submission_owners o on o.round_id = r.id", self.claim)
@@ -260,7 +262,9 @@ class InboxNotifications(unittest.TestCase):
         mig = read(ROOT / "supabase" / "migrations" / "2026-10-25_notification_choices.sql")
         for name in ("reminders_claim", "inbox_claim", "my_notification_choices", "set_notification_choice"):
             with self.subTest(name):
-                self.assertEqual(function(mig, name), function(self.sql, name))
+                # in the schema as written (reminders_claim was redefined
+                # again later, by the seasons migration)
+                self.assertIn(function(mig, name), self.sql)
         for line in [l for l in mig.splitlines() if l.startswith(("alter table", "revoke", "grant", "create table"))]:
             self.assertIn(line, self.sql)
 

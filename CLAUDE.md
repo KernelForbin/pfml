@@ -187,16 +187,15 @@ It's standalone on purpose: public, no sign-in, no `style.css`, no
 tokens, light and dark, are copied from `style.css`, so a palette change
 there updates them too (a test compares both).
 
-## Voting on the site: built, switched off
+## Voting on the site: on, for seasons set up on the site
 
-Built 2026-10-25 so the league can eventually leave the Music League app;
-off until the user says (`SITE_VOTING` in `account.js`, pinned by a test).
-Never let it reach Round 7 or any round already open: a round votes here
-only if it was opened that way, and the database refuses to change that
-later. Switching it on changes what the site promises (who submitted what
-is shown once voting closes), so the README's checklist goes with it:
-privacy page, Submit page footer, the other footers, features page. README,
-Voting on the site.
+Built 2026-10-25 so the league can eventually leave the Music League app,
+and switched on the same day with seasons set up on the site
+(`SITE_VOTING` in `account.js`, pinned by a test with the pages that say
+so). Only a round in such a season votes here. Never let it reach Round 7,
+Season 3 or any round already open: the database refuses a round opened by
+hand that asks to, and refuses to change it later. README, Voting on the
+site.
 
 A finished site-voted round reaches the stats through `publish.py`, which
 fetches it from `site_rounds_export()` (secret key only; it returns a round
@@ -243,9 +242,10 @@ Rules for the work:
 Asked for 2026-10-25 (README, Commissioners). The admin makes members
 commissioners from the Commissioner page; never write a player's name into
 the repo to do it (the user's first pick was named in chat, and that's
-where it stays). Stage 1, the role and the page, is built. The user's
-calls for the rest, in order, each its own change with its own migration
-and rehearsal:
+where it stays). Stage 1, the role and the page, is live; stage 2, seasons
+on the site, is built (README, Seasons on the site). The user's calls for
+the rest, in order, each its own change with its own migration and
+rehearsal:
 
 - **Stage 2, seasons:**
   - the season setup in steps (Details, Songs + Votes, Timing, Rounds,

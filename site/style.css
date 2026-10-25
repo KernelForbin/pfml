@@ -1531,6 +1531,59 @@ body.auth-checking::before {
 .cm-person { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 10px 14px;
   border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--ink); font: inherit; text-align: left; }
 button.cm-person { cursor: pointer; }
+/* seasons set up on the site (seasons.js): running one, and setting one up */
+.cm-season { margin-bottom: 10px; max-width: 720px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); }
+.cm-season > summary { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; cursor: pointer; }
+.cm-season > summary small { color: var(--muted); font-size: 0.82rem; }
+.cm-season-body { padding: 0 14px 14px; }
+.cm-season-body h3, .cm-wizard h3 { margin: 18px 0 8px; font-size: 1rem; }
+.cm-season-rounds, .cm-new-rounds, .cm-sched ol { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.cm-season-round, .cm-new-rounds > li { padding: 8px 10px; border: 1px solid var(--border-soft); border-radius: 8px; }
+.cm-season-round-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.cm-season-round-head > span:first-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.cm-season-round-head small, .cm-new-rounds p, .cm-sched span { color: var(--muted); font-size: 0.82rem; }
+.cm-new-rounds p { margin: 4px 0 0; overflow-wrap: anywhere; }
+.cm-move { display: flex; flex: none; gap: 4px; }
+.cm-icon { width: 32px; height: 32px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--ink); font: inherit; cursor: pointer; }
+.cm-icon:disabled { opacity: .35; cursor: default; }
+.cm-season-edit > summary { margin-top: 6px; color: var(--magenta-text); font-size: 0.85rem; cursor: pointer; }
+.cm-season-edit form { margin-top: 6px; }
+.cm-fixed { margin: 0 0 4px; font-size: 0.9rem; }
+.cm-seg-box { margin: 6px 0 0; padding: 0; border: 0; }
+.cm-seg { display: inline-flex; border: 1px solid var(--edge); border-radius: 10px; overflow: hidden; }
+.cm-seg-opt { position: relative; }
+.cm-seg-opt input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.cm-seg-opt span { display: block; padding: 8px 14px; font-size: 0.9rem; font-weight: 600; }
+.cm-seg-opt + .cm-seg-opt span { border-left: 1px solid var(--edge); }
+.cm-seg-opt input:checked + span { background: var(--magenta); color: #fff; }
+.cm-seg-opt input:focus-visible + span { outline: 2px solid var(--magenta-text); outline-offset: -2px; }
+.cm-seg-about { margin-top: 10px; padding: 10px 14px; border: 1px solid var(--edge); border-radius: 10px; font-size: 0.88rem; }
+.cm-seg-about ul { margin: 6px 0; padding-left: 18px; }
+.cm-seg-about p { margin: 0; color: var(--muted); }
+.cm-pair { display: flex; flex-wrap: wrap; gap: 12px; }
+.cm-pair > span { display: flex; flex: 1 1 140px; flex-direction: column; gap: 6px; }
+.cm-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
+.cm-check { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; padding: 8px 10px; border: 1px solid var(--border-soft); border-radius: 8px; cursor: pointer; }
+.cm-check input { margin: 0; accent-color: var(--magenta); }
+.cm-check small { flex-basis: 100%; padding-left: 21px; color: var(--muted); font-size: 0.78rem; }
+.cm-wizard { max-width: 720px; padding: 4px 16px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); }
+.cm-steps { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; padding: 0; list-style: none; }
+.cm-steps button { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--card); color: var(--ink); font: inherit; font-size: 0.85rem; cursor: pointer; }
+.cm-steps button[aria-current="step"] { background: var(--magenta); border-color: var(--magenta); color: #fff; }
+.cm-step-n { font-weight: 700; }
+.cm-wizard-form { max-width: none; }
+.cm-wizard-nav { justify-content: space-between; margin-top: 14px; }
+.cm-sched { margin-top: 12px; padding: 10px 14px; border-radius: 10px; background: var(--wash); }
+.cm-sched:empty { display: none; }
+.cm-sched h4 { margin: 0 0 6px; font-size: 0.92rem; }
+.cm-sched li { display: flex; flex-direction: column; gap: 1px; overflow-wrap: anywhere; }
+.cm-sched ul { margin: 0; padding-left: 18px; font-size: 0.9rem; }
+/* the Submit page's coming-up list */
+.sub-next { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; max-width: 640px; }
+.sub-next li { display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); }
+.sub-next span { color: var(--muted); font-size: 0.85rem; }
+.sub-next p { margin: 4px 0 0; font-size: 0.9rem; overflow-wrap: anywhere; }
 .cm-person small { color: var(--muted); font-size: 0.82rem; text-align: right; }
 .sub-admin h3 { margin: 4px 0 4px; font-size: 1.05rem; }
 

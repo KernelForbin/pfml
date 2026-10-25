@@ -447,6 +447,17 @@ def site_uri(platform, track):
     return f"{platform}:track:{track}"
 
 
+def season_label(folder, num):
+    """What a season is called: the name it was given when it was set up on
+    the site (site_rounds.json carries it), or "Season N"."""
+    path = folder / SITE_ROUNDS_FILE
+    if path.exists():
+        name = (json.loads(path.read_text(encoding="utf-8")).get("season_name") or "").strip()
+        if name:
+            return name
+    return f"Season {num}"
+
+
 def site_season_rows(folder):
     """A season's rounds voted on pfml.fun (site_rounds.json, which
     scripts/publish.py writes from the database's site_rounds_export()), as
@@ -1823,7 +1834,7 @@ def main():
     for folder in folders:
         num = int(re.search(r"\d+", folder.name).group())
         key = f"season{num}"
-        label = f"Season {num}"
+        label = season_label(folder, num)
         data, raw = build_season(folder, key, label, translations)
         translated |= raw["translated"]
         season_datas.append(data)

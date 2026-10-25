@@ -1,5 +1,33 @@
 # Changelog
 
+## 2026-10-25 (follow-up 10): seasons on the site (commissioners, stage 2)
+
+- **Set up a season:** a commissioner sets one up in five steps (Details,
+  Songs + Votes, Timing, Rounds, Players), with a schedule preview. Its
+  rounds open on their own: each when the one before closes voting.
+- **Timing:**
+  - Steady holds every deadline.
+  - Accelerated closes a round as soon as everyone's in or has voted.
+  - Speedy also moves the rest of the season up.
+- **Run it:** each season has a section to rename, add, reorder and remove
+  rounds, change its settings, and choose its players.
+- **Voting on the site is on:** every season set up here votes on
+  pfml.fun (the user's call). Season 3 and every round before still vote
+  in Music League; the database holds that. The privacy page, the footers
+  and the features page say so.
+- **Members:**
+  - the Submit page waits for a round to open, with Coming up below;
+  - "x/N submitted" counts the season's players;
+  - a round is announced when it opens, to its players.
+- **Waits on:** the migration `2026-10-25_seasons.sql` and its rehearsal
+  (24 checks). Push only after both.
+- **Verified:**
+  - the suite passes (647), with 57 breaks in a scratch clone, all caught;
+  - in a browser with a stand-in following the same rules, at 375 and
+    1280, light and dark. Six problems were found and fixed there (README,
+    Seasons on the site).
+  - Not yet run: the rehearsal in the real database.
+
 ## 2026-10-25 (follow-up 9): commissioners, stage 1
 
 - **A Commissioner role:** the admin can make any member a commissioner,

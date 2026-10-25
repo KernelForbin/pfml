@@ -282,47 +282,38 @@
     return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + "T" + pad(d.getHours()) + ":" + pad(d.getMinutes());
   }
 
-  // In the admin's round form. A new round can be opened to vote here; an
-  // open one that votes here can change its deadline and rules until
-  // submissions close. One that votes in Music League can never be
-  // switched (the database refuses), so it gets nothing.
+  // In the Commissioner page's round form: an open round that votes here
+  // can change its voting deadline and rules until submissions close. A
+  // round votes here only as part of a season set up on the site (the
+  // user's call, 2026-10-25), so a round opened from this form never does,
+  // and one that votes in Music League can never be switched (the database
+  // refuses both).
   function adminFields(r) {
-    if (!PFML.siteVoting || (r && !r.votes_on_site)) return "";
-    var budget = r ? r.point_budget : 19, max = r ? r.max_per_track : 5, keep = r ? r.nonvoters_keep_points : false;
-    return '<fieldset class="vt-admin">' +
-      (r ? "<legend>Votes on pfml.fun</legend>"
-         : '<label class="vt-check"><input type="checkbox" id="vtAdmOn"> Vote on pfml.fun, not Music League</label>' +
-           '<p class="block-note">Chosen now and fixed: a round can’t switch later.</p>') +
-      '<div class="vt-admin-body" id="vtAdmBody"' + (r ? "" : " hidden") + ">" +
+    if (!PFML.siteVoting || !r || !r.votes_on_site) return "";
+    return '<fieldset class="vt-admin"><legend>Votes on pfml.fun</legend>' +
+      '<div class="vt-admin-body" id="vtAdmBody">' +
         '<label class="sub-label" for="vtAdmCloses">Voting closes (your time)</label>' +
-        '<input class="sub-input" id="vtAdmCloses" type="datetime-local" value="' + (r ? localInput(r.voting_closes_at) : "") + '">' +
+        '<input class="sub-input" id="vtAdmCloses" type="datetime-local" value="' + localInput(r.voting_closes_at) + '">' +
         '<label class="sub-label" for="vtAdmBudget">Points each voter gives</label>' +
-        '<input class="sub-input vt-num" id="vtAdmBudget" type="number" min="1" max="100" value="' + budget + '">' +
+        '<input class="sub-input vt-num" id="vtAdmBudget" type="number" min="1" max="100" value="' + r.point_budget + '">' +
         '<label class="sub-label" for="vtAdmMax">Most points on one track</label>' +
-        '<input class="sub-input vt-num" id="vtAdmMax" type="number" min="1" max="100" value="' + max + '">' +
-        '<label class="vt-check"><input type="checkbox" id="vtAdmKeep"' + (keep ? " checked" : "") + "> Players who don’t vote keep their points</label>" +
+        '<input class="sub-input vt-num" id="vtAdmMax" type="number" min="1" max="100" value="' + r.max_per_track + '">' +
+        '<label class="vt-check"><input type="checkbox" id="vtAdmKeep"' + (r.nonvoters_keep_points ? " checked" : "") + "> Players who don’t vote keep their points</label>" +
       "</div></fieldset>";
-  }
-
-  function wireAdmin() {
-    var box = $("vtAdmOn");
-    if (box) box.addEventListener("change", function () { $("vtAdmBody").hidden = !box.checked; });
   }
 
   // The voting fields to save with the round, or a message saying what's
   // wrong. closesAt: when submissions close, as the form has it.
   function readAdmin(r, closesAt) {
-    if (!$("vtAdmBody") || (!r && !$("vtAdmOn").checked)) return { fields: {} };
+    if (!$("vtAdmBody") || !r) return { fields: {} };
     var votingCloses = $("vtAdmCloses").value ? new Date($("vtAdmCloses").value) : null;
     var budget = +$("vtAdmBudget").value, max = +$("vtAdmMax").value;
     if (!votingCloses || isNaN(votingCloses)) return { error: "Pick when voting closes." };
     if (votingCloses <= closesAt) return { error: "Voting has to close after submissions do." };
     if (!(budget >= 1 && budget <= 100 && budget % 1 === 0)) return { error: "Points each voter gives: a whole number from 1 to 100." };
     if (!(max >= 1 && max <= budget && max % 1 === 0)) return { error: "Most points on one track: a whole number from 1 up to the points each voter gives." };
-    var fields = { voting_closes_at: votingCloses.toISOString(), point_budget: budget, max_per_track: max,
-                   nonvoters_keep_points: $("vtAdmKeep").checked };
-    if (!r) fields.votes_on_site = true;
-    return { fields: fields };
+    return { fields: { voting_closes_at: votingCloses.toISOString(), point_budget: budget, max_per_track: max,
+                       nonvoters_keep_points: $("vtAdmKeep").checked } };
   }
 
   // For a round in voting: move the deadline, or close voting now.
@@ -347,6 +338,5 @@
     return box;
   }
 
-  window.PFMLVoting = { on: on, render: render, adminFields: adminFields, wireAdmin: wireAdmin,
-                        readAdmin: readAdmin, adminPanel: adminPanel };
+  window.PFMLVoting = { on: on, render: render, adminFields: adminFields, readAdmin: readAdmin, adminPanel: adminPanel };
 })();

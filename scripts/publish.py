@@ -80,6 +80,8 @@ def fetch_site_rounds():
     round keeps any file it has, with a warning, rather than losing it."""
     data = supa.request("POST", "/rest/v1/rpc/site_rounds_export", body={}) or {}
     players = data.get("players") or {}
+    # the names of seasons set up on the site (README, Seasons on the site)
+    season_names = data.get("seasons") or {}
     by_season = {}
     for r in data.get("rounds") or []:
         if not re.fullmatch(r"season\d+", r.get("season_key") or ""):
@@ -90,6 +92,8 @@ def fetch_site_rounds():
         folder.mkdir(exist_ok=True)
         ids = {s.get("submitter") for r in rounds for s in r["submissions"]} | {v["voter"] for r in rounds for v in r["votes"]}
         out = {"rounds": rounds, "players": {pid: players[pid] for pid in sorted(ids) if pid in players}}
+        if season_names.get(key):
+            out["season_name"] = season_names[key]
         (folder / build.SITE_ROUNDS_FILE).write_text(json.dumps(out, ensure_ascii=False, indent=1, sort_keys=True),
                                                      encoding="utf-8")
         print(f"Site rounds: {key}: {len(rounds)} finished round(s) voted on pfml.fun.")

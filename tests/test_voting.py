@@ -150,36 +150,51 @@ class AnonymousUntilVotingCloses(unittest.TestCase):
 
 
 class TheSwitch(unittest.TestCase):
-    """Off until the user says. Switching it on is one line in account.js,
-    and changes what the site promises, so this test is meant to fail then:
-    first update the privacy page and Submit page footer (who sent what is
-    shown once voting closes), the features page, and the README checklist
-    (README, Voting on the site)."""
+    """On since seasons set up on the site (the user's call, 2026-10-25:
+    every such season votes on pfml.fun). It changed what the site promises,
+    so the pages that say so came with it (README, Voting on the site), and
+    a round votes here only through such a season."""
 
-    def test_voting_stays_off_until_the_user_switches_it_on(self):
+    def test_voting_is_on_and_the_pages_say_what_it_changes(self):
         account = read(SITE / "account.js")
-        self.assertEqual(re.findall(r"var SITE_VOTING = (\w+);", account), ["false"])
+        self.assertEqual(re.findall(r"var SITE_VOTING = (\w+);", account), ["true"])
         self.assertIn("PFML.siteVoting = SITE_VOTING;", account)
+        privacy = read(SITE / "privacy.html")
+        self.assertIn("Once that round's voting closes, every member sees the results: who submitted each track", privacy)
+        self.assertIn("from the site itself once each round's voting has closed", privacy)
+        self.assertIn("the results name everyone once voting closes", read(SITE / "submit.html"))
+        for page in ("index.html", "career.html", "profile.html", "season.template.html", "round.html"):
+            with self.subTest(page):
+                self.assertIn("and from pfml.fun for a season played here", read(SITE / page))
+                self.assertNotIn("Built from Music League's CSV export.", read(SITE / page))
+        self.assertIn("<h3>Vote on the site</h3>", read(SITE / "features.html"))
+        self.assertNotIn("Voting still happens in Music League, as usual.", read(SITE / "features.html"))
 
     def test_everything_voting_shows_waits_for_the_switch(self):
         voting = read(SITE / "voting.js")
         self.assertIn("function on(r) { return !!(PFML.siteVoting && r && r.votes_on_site); }", voting)
         self.assertIn('var phase = on(r) ? PFML.roundPhase(r) : "";', js_body(voting, "function render(r, mine) {"))
-        self.assertIn("if (!PFML.siteVoting || (r && !r.votes_on_site)) return \"\";", js_body(voting, "function adminFields(r) {"))
+        self.assertIn("if (!PFML.siteVoting || !r || !r.votes_on_site) return \"\";", js_body(voting, "function adminFields(r) {"))
         self.assertIn("if (!on(r) || PFML.roundPhase(r) !== \"voting\") return null;", js_body(voting, "function adminPanel(r, done, fail) {"))
         banner = js_body(read(SITE / "app.js"), "function votingBanner(rounds) {")
         self.assertTrue(banner.lstrip().startswith("if (!PFML.siteVoting) return;"))
 
-    def test_only_a_new_round_asks_for_site_voting(self):
-        read_admin = js_body(read(SITE / "voting.js"), "function readAdmin(r, closesAt) {")
-        self.assertIn("if (!r) fields.votes_on_site = true;", read_admin)
-        self.assertEqual(read_admin.count("votes_on_site"), 1)
-        self.assertNotIn("votes_on_site", read(SITE / "submit.js"))
+    def test_no_form_asks_for_site_voting(self):
+        # a round votes here only as part of a season set up on the site;
+        # the database refuses a round opened by hand that asks to
+        voting = read(SITE / "voting.js")
+        self.assertIn('if (!$("vtAdmBody") || !r) return { fields: {} };', js_body(voting, "function readAdmin(r, closesAt) {"))
+        for name in ("voting.js", "submit.js", "commissioner.js", "seasons.js"):
+            with self.subTest(name):
+                self.assertNotRegex(read(SITE / name), r"votes_on_site\s*[:=]\s*true")
+        guard = function(schema(), "site_rounds_times_guard")
+        self.assertIn("if new.votes_on_site then\n      raise exception 'Only a season set up on the site votes on the site.';", guard)
 
     def test_the_page_and_the_database_agree_on_the_phase(self):
         js = js_body(read(SITE / "account.js"), "function roundPhase(r) {")
         sql = function(schema(), "site_round_phase")
-        pairs = [('if (!r.closed_at && now < Date.parse(r.closes_at)) return "submitting";', "when r.closed_at is null and now() < r.closes_at then 'submitting'"),
+        pairs = [('if (r.opens_at && now < Date.parse(r.opens_at)) return "upcoming";', "when now() < r.opens_at then 'upcoming'"),
+                 ('if (!r.closed_at && now < Date.parse(r.closes_at)) return "submitting";', "when r.closed_at is null and now() < r.closes_at then 'submitting'"),
                  ('if (!r.votes_on_site) return "closed";', "when not r.votes_on_site then 'closed'"),
                  ('if (!r.voting_closed_at && now < Date.parse(r.voting_closes_at)) return "voting";', "when r.voting_closed_at is null and now() < r.voting_closes_at then 'voting'"),
                  ('return "finished";', "else 'finished' end")]

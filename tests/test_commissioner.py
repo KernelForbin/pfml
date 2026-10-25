@@ -65,7 +65,7 @@ class TheDatabase(unittest.TestCase):
         self.assertIn("if new.closes_at <= now() then", g.split("if tg_op = 'INSERT' then", 1)[1])
 
     def test_closing_early_takes_the_databases_clock(self):
-        self.assertIn("if new.closed_at is distinct from old.closed_at then\n    new.closed_at := now();", self.guard)
+        self.assertIn("    new.closed_at := now();", self.guard.split("if new.closed_at is distinct from old.closed_at then", 1)[1])
         self.assertIn("    new.voting_closed_at := now();", self.guard)
 
     def test_the_guard_runs_on_every_insert_and_update(self):
@@ -93,7 +93,7 @@ class ThePages(unittest.TestCase):
 
     def test_the_page_loads_what_it_needs_in_order(self):
         srcs = re.findall(r'<script src="([^"]+)"', self.html)
-        self.assertEqual(srcs[1:], ["config.js", "auth.js", "account.js", "voting.js", "commissioner.js", "app.js"])
+        self.assertEqual(srcs[1:], ["config.js", "auth.js", "account.js", "voting.js", "seasons.js", "commissioner.js", "app.js"])
         self.assertIn('<body class="gated" data-page="commissioner">', self.html)
         self.assertIn('page === "commissioner"', js_body(read(SITE / "app.js"), "function boot() {"))
 

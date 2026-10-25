@@ -121,7 +121,7 @@
   var state = { rounds: [], round: null, mine: null, index: null, pasted: null, changing: false, timer: 0,
                 service: "spotify", pickFrom: null, results: null, asked: null };
 
-  function isOpen(r) { return !r.closed_at && Date.now() < Date.parse(r.closes_at); }
+  function isOpen(r) { return PFML.roundPhase(r) === "submitting"; }
 
   // voting.js (voting on the site, off until the user switches it on); a
   // stand-in that's always off if it didn't load
@@ -146,12 +146,18 @@
       return api().siteRounds();
     }).then(function (rounds) {
       state.rounds = rounds || [];
-      state.round = state.rounds.filter(isOpen)[0] || state.rounds[0] || null;
+      // a round scheduled ahead isn't the page's round until it opens
+      var started = state.rounds.filter(function (x) { return PFML.roundPhase(x) !== "upcoming"; });
+      state.upcoming = state.rounds.filter(function (x) { return PFML.roundPhase(x) === "upcoming"; })
+        .sort(function (a, b) { return Date.parse(a.opens_at) - Date.parse(b.opens_at); });
+      state.round = started.filter(isOpen)[0] || started[0] || null;
       var r = state.round;
       // reload when the deadline passes, so the page closes with the round
-      // (or, for a round voting here, with its voting)
+      // (or, for a round voting here, with its voting), or when the next
+      // round opens
       var until = r && isOpen(r) ? r.closes_at
-        : r && voting().on(r) && PFML.roundPhase(r) === "voting" ? r.voting_closes_at : null;
+        : r && voting().on(r) && PFML.roundPhase(r) === "voting" ? r.voting_closes_at
+        : state.upcoming.length ? state.upcoming[0].opens_at : null;
       if (until) {
         var ms = Date.parse(until) - Date.now() + 1500;
         if (ms < 2147483647) state.timer = setTimeout(load, ms);
@@ -173,8 +179,11 @@
     ["subRound", "subMine", "subForm", "subWhoBox", "subList", "subVote"].forEach(function (id) { $(id).hidden = true; });
     // the round form is on the Commissioner page now
     $("subCommish").hidden = !PFML.member || (PFML.member.role !== "admin" && PFML.member.role !== "commissioner");
+    renderNext();
     if (!r) {
-      $("subLine").textContent = "No round is open for submissions on the site yet.";
+      $("subLine").textContent = state.upcoming.length
+        ? "No round is open yet. “" + state.upcoming[0].name + "” opens " + PFML.closes(state.upcoming[0].opens_at).at + "."
+        : "No round is open for submissions on the site yet.";
       return;
     }
     var open = isOpen(r);
@@ -206,25 +215,32 @@
     }
   }
 
-  /* ---- who's in: x/20 submitted, and who hasn't ---- */
+  /* ---- coming up: rounds a season set up on the site has scheduled ---- */
 
-  // The players taking part this season: everyone with a track in its
-  // latest finished round (build.py, index.json). Null for a season the
-  // index doesn't have yet.
-  function activePlayers(seasonKey) {
-    var s = state.index && state.index.seasons.filter(function (x) { return x.key === seasonKey; })[0];
-    return s && s.activePlayers && s.activePlayers.length ? s.activePlayers : null;
+  function renderNext() {
+    var list = state.upcoming || [];
+    $("subNext").hidden = !list.length;
+    $("subNextList").innerHTML = list.map(function (x) {
+      return '<li><b>' + esc(x.name) + "</b><span>Opens " + esc(PFML.closes(x.opens_at).at) + "</span>" +
+        (x.prompt ? "<p>" + esc(x.prompt) + "</p>" : "") + "</li>";
+    }).join("");
   }
+
+  /* ---- who's in: x/20 submitted, and who hasn't ---- */
 
   // Who has a track in, by player, never which track (site_round_submitters;
   // the user's call, 2026-10-23). A player who hasn't joined the site can't
   // submit there, so they're marked as such. Without the player list, or
   // before the database has the function, it falls back to a track count.
+  // The players are PFML.seasonPlayers': who was picked for a season set up
+  // on the site, else everyone with a track in the season's latest finished
+  // round.
   function renderWho(r, open) {
-    var players = activePlayers(r.season_key);
-    if (!players || typeof api().roundSubmitters !== "function") { trackCount(r, open); return; }
-    Promise.all([api().roundSubmitters(r.id), api().people()]).then(function (res) {
+    if (typeof api().roundSubmitters !== "function") { trackCount(r, open); return; }
+    Promise.all([api().roundSubmitters(r.id), api().people(), PFML.seasonPlayers(r.season_key)]).then(function (res) {
       if (state.round !== r) return;
+      var players = res[2];
+      if (!players) { trackCount(r, open); return; }
       var sent = {}, linked = {}, names = {}, eligible = {};
       (res[0] || []).forEach(function (id) { sent[id] = true; });
       Object.keys(res[1] || {}).forEach(function (u) { linked[res[1][u].competitorId] = true; names[res[1][u].competitorId] = res[1][u].name; });
