@@ -598,6 +598,41 @@ site's icon. Every members-only page links it, plus an
 file isn't named `.json`, so the deploy's guard against league data doesn't
 catch it.
 
+### Splash screen
+
+Opening the installed app shows a short splash: design B, chosen
+2026-10-25 from four. The record turns on the dark (`#16111A`), with PFML
+in lavender underneath.
+
+- **When:** only when PFML runs from the home screen, checked by
+  `display-mode: standalone` (Android) or `navigator.standalone` (iPhone),
+  and once per opening (`pfml.splashSeen` in sessionStorage, which an iPhone
+  or Android clears when the app is closed). A browser tab never shows it.
+  It's on Home only, the page the app opens on (`start_url`).
+- **How:** a line in `index.html`'s `<head>` sets `html.app-splash` before
+  anything paints and turns the status bar (`theme-color`) the same dark. The
+  `#splash` block is the first thing in the body; the gate rule lets it show
+  while everything else waits for sign-in, since it holds only the logo.
+- **Lifting it:** `account.js` lifts it once sign-in is done, but not before
+  0.6s from the page's start so it never just flickers, and by 2s whatever
+  happens, since a signed-out visitor's sign-in card is under it. It fades
+  for 0.3s and gives the status bar its purple back.
+  Measured in a browser against a stand-in, with the "installed" check
+  forced in a scratch copy:
+
+  | Sign-in took | Splash faded at |
+  | --- | --- |
+  | 1.2s | when sign-in finished (1.85s into the page) |
+  | instantly | 0.61s, the minimum |
+  | never | 2.0s, the cap |
+  | a second visit | never shown |
+- **Android** draws its own splash from the manifest before the page loads
+  (the icon on `background_color`), so `background_color` is the same dark
+  and the two run together. An Android phone that installed PFML earlier
+  picks up the new colour when Chrome next refreshes the app, which can
+  take a day. iPhone has no splash of its own here.
+- **Reduced motion:** the same screen, without the animation.
+
 **The icon** is a dark record on the purple tile: three of its grooves
 catch lavender light, and the label is purple with a white P. It was chosen
 on 2026-10-24 from three rounds of options ("g3"), replacing a plain white P.

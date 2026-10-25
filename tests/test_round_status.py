@@ -99,6 +99,55 @@ class AddToHomeScreen(unittest.TestCase):
         self.assertIn("-name '*.json'", (ROOT / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8"))
 
 
+class Splash(unittest.TestCase):
+    """The installed app's splash (README, Splash screen): design B, chosen
+    2026-10-25. Only when PFML opens from the home screen, once per opening,
+    lifted once sign-in is done, never for long. Timings were measured in a
+    browser against a stand-in; there's no JS runner here."""
+
+    def setUp(self):
+        self.home = read("index.html")
+        self.head = self.home.split("</head>", 1)[0]
+        self.css = re.sub(r"/\*.*?\*/", "", read("style.css"), flags=re.S)
+        self.account = read("account.js")
+
+    def test_only_in_the_installed_app_and_once_per_opening(self):
+        line = re.search(r"<script>try\{if\(\(matchMedia[^<]*</script>", self.head).group(0)
+        self.assertIn('(matchMedia("(display-mode: standalone)").matches||navigator.standalone===true)', line)
+        self.assertIn('!sessionStorage.getItem("pfml.splashSeen")', line)
+        self.assertIn('document.documentElement.classList.add("app-splash")', line)
+        # after the theme-color it swaps, and before anything paints
+        self.assertLess(self.head.index('<meta name="theme-color"'), self.head.index(line))
+        self.assertLess(self.head.index(line), self.head.index('rel="stylesheet"'))
+        self.assertIn('try { sessionStorage.setItem("pfml.splashSeen", "1"); }', self.account)
+
+    def test_it_lifts_after_sign_in_and_never_late(self):
+        self.assertIn("var SPLASH_MIN_MS = 600, SPLASH_MAX_MS = 2000;", self.account)
+        fn = self.account.split("(function splash() {", 1)[1].split("\n  })();", 1)[0]
+        self.assertIn("PFML.ready.then(function () { setTimeout(lift, Math.max(0, SPLASH_MIN_MS - performance.now())); });", fn)
+        self.assertIn("setTimeout(lift, Math.max(0, SPLASH_MAX_MS - performance.now()));", fn)
+        self.assertIn('meta.content = meta.getAttribute("data-was")', fn, "the status bar gets its purple back")
+
+    def test_hidden_unless_opening_and_shown_through_the_gate(self):
+        self.assertRegex(self.css, r"(?m)^\.splash \{ display: none; \}")
+        self.assertRegex(self.css, r"html\.app-splash \.splash \{[^}]*position: fixed; inset: 0;")
+        # the gate hides everything else until sign-in; the splash holds only the logo
+        self.assertIn("body.gated > *:not(#gate):not(#splash) { display: none !important; }", self.css)
+        body = self.home.split("<body", 1)[1]
+        self.assertIn('<div class="splash" id="splash" aria-hidden="true">', body)
+        self.assertNotIn('id="splash"', "".join(read(n) for n in MEMBER_PAGES if n != "index.html"))
+
+    def test_still_for_anyone_who_turns_motion_off(self):
+        self.assertRegex(self.css, r"@media \(prefers-reduced-motion: reduce\) \{\s*\.splash-record, \.splash-grooves, \.splash-word \{ animation: none; \}")
+
+    def test_the_phones_own_splash_is_the_same_dark(self):
+        # Android draws its own from the manifest first; matching it means no flash
+        manifest = json.loads(read("manifest.webmanifest"))
+        bg = re.search(r"html\.app-splash \.splash \{[^}]*background: (#[0-9A-Fa-f]{6});", self.css).group(1)
+        self.assertEqual(manifest["background_color"], bg)
+        self.assertIn('m.content="#16111A"', self.head)
+
+
 class GetTheApp(unittest.TestCase):
     """The "Get the app" button and the menu's Add to home screen
     (account.js): Android's own install prompt where the browser offers it,

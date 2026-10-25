@@ -7,6 +7,7 @@
 <script>try{if(localStorage.getItem("pfml.theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}</script>
 <meta name="description" content="Standings, round results and voting stats from our Music League seasons.">
 <meta name="theme-color" content="#9E00C4">
+<script>try{if((matchMedia("(display-mode: standalone)").matches||navigator.standalone===true)&&!sessionStorage.getItem("pfml.splashSeen")){document.documentElement.classList.add("app-splash");var m=document.querySelector('meta[name="theme-color"]');m.setAttribute("data-was",m.content);m.content="#16111A"}}catch(e){}</script>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%239E00C4'/><circle cx='50' cy='50' r='36' fill='%2316111A'/><path d='M50 18A32 32 0 0 1 82 50' fill='none' stroke='%23D7A4F0' stroke-width='2.5' stroke-linecap='round'/><path d='M50 76A26 26 0 0 1 24 50' fill='none' stroke='%23D7A4F0' stroke-width='2.5' stroke-linecap='round'/><path d='M67.32 40A20 20 0 0 1 64.14 64.14' fill='none' stroke='%23D7A4F0' stroke-width='2' stroke-linecap='round'/><circle cx='50' cy='50' r='13' fill='%239E00C4'/><path d='M46 57V43H51.5A4.2 4.2 0 0 1 51.5 51.4H49.5V57Z' fill='%23F8F9FA'/></svg>">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -18,6 +19,23 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body class="gated" data-page="home">
+
+<!-- the installed app's splash: only when PFML opens from the home screen
+     (the line in <head>); account.js lifts it. README, Splash screen. -->
+<div class="splash" id="splash" aria-hidden="true">
+  <svg class="splash-record" viewBox="0 0 100 100">
+    <circle cx="50" cy="50" r="44" fill="#9E00C4"/>
+    <circle cx="50" cy="50" r="36" fill="#16111A"/>
+    <g class="splash-grooves">
+      <path d="M50 18A32 32 0 0 1 82 50" fill="none" stroke="#D7A4F0" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M50 76A26 26 0 0 1 24 50" fill="none" stroke="#D7A4F0" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M67.32 40A20 20 0 0 1 64.14 64.14" fill="none" stroke="#D7A4F0" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <circle cx="50" cy="50" r="13" fill="#9E00C4"/>
+    <path d="M46 57V43H51.5A4.2 4.2 0 0 1 51.5 51.4H49.5V57Z" fill="#F8F9FA"/>
+  </svg>
+  <span class="splash-word">PFML</span>
+</div>
 
 <header class="topbar">
   <div class="shell topbar-inner">

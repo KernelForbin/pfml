@@ -1,5 +1,31 @@
 # Changelog
 
+## 2026-10-25 (follow-up 5): a splash screen for the installed app
+
+- **Opening PFML from the home screen shows a short splash**, design B of
+  the four shown: the record turning on the dark, PFML in lavender
+  underneath. It covers the moment sign-in takes, then fades.
+- **When:** only in the installed app (never a browser tab), once per
+  opening.
+- **How long:** it lifts as soon as sign-in is done, but stays at least
+  0.6s so it never flickers, and never past 2s.
+- **Android's own splash** comes from the manifest, so its background
+  colour is now the same dark and the two run together. With reduced
+  motion on, it's the same screen without the animation.
+- The features page mentions it, and the privacy page lists the "already
+  shown" note it keeps until the app closes.
+- **Verified:** the suite passes, with 5 new tests, break-checked (7
+  breaks, all caught). In a browser at phone width, against a stand-in with
+  the "installed" check forced in a scratch copy:
+  - sign-in taking 1.2s: it faded when sign-in finished;
+  - instant sign-in: it held to 0.61s;
+  - sign-in never finishing: it faded at 2.0s;
+  - a second visit: it didn't show;
+  - the status bar went dark and came back purple;
+  - the splash filled the screen, centred.
+
+  Not checked on a real phone.
+
 ## 2026-10-25 (follow-up 4): rounds voted on the site count in the stats
 
 - **A round voted on pfml.fun now counts in the season pages and every

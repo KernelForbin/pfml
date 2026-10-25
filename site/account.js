@@ -139,6 +139,29 @@
   }
   function songService(t) { return (t && t.link && LINK_SERVICES[t.link.platform]) || "Spotify"; }
 
+  // The installed app's splash (README, Splash screen): index.html shows it
+  // when PFML opens from the home screen, once per opening. It lifts once
+  // sign-in is done, but not before SPLASH_MIN_MS from the page's start, so
+  // it never just flickers, and by SPLASH_MAX_MS whatever happens: a
+  // signed-out visitor's sign-in card is waiting under it.
+  var SPLASH_MIN_MS = 600, SPLASH_MAX_MS = 2000;
+  (function splash() {
+    var el = document.getElementById("splash");
+    if (!el || !document.documentElement.classList.contains("app-splash")) return;
+    try { sessionStorage.setItem("pfml.splashSeen", "1"); } catch (e) { /* it shows again next time; no harm */ }
+    var lifted = false;
+    function lift() {
+      if (lifted) return;
+      lifted = true;
+      el.classList.add("is-out");
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta && meta.getAttribute("data-was")) meta.content = meta.getAttribute("data-was");
+      setTimeout(function () { document.documentElement.classList.remove("app-splash"); }, 350);
+    }
+    PFML.ready.then(function () { setTimeout(lift, Math.max(0, SPLASH_MIN_MS - performance.now())); });
+    setTimeout(lift, Math.max(0, SPLASH_MAX_MS - performance.now()));
+  })();
+
   PFML.avatar = avatar;
   PFML.roundOrder = roundOrder;
   PFML.songUrl = songUrl;
