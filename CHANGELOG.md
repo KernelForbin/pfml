@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-10-25 (follow-up 11): more songs a round, and downvotes (commissioners, stage 3)
+
+- **More songs:** a season set up on the site can ask for 1 to 5 songs
+  from each player a round. The Submit page lists your tracks, each with
+  Remove. Who's in, the Home banner and Accelerated count a player in once
+  all theirs are.
+- **Downvotes:** up to 20, with a cap on one song. They're optional, as in
+  Season 1's exports (15 of 316 ballots used them), and upvotes are still
+  spent in full. A non-voter keeps only their downvotes.
+- **Every existing round:** keeps 1 song and no downvotes.
+- **The stats build:** handles more than one song a round. Rounds won,
+  podiums and finishes count once a round per player, and the career and
+  taste count rounds, not tracks. Today's output is byte-for-byte
+  unchanged.
+- **Waits on:** the migration `2026-10-25_more_songs.sql` and its rehearsal
+  (16 checks). Push only after both.
+- **Verified:**
+  - the suite passes (672), with 41 breaks in a scratch clone, all caught;
+  - in a browser with a stand-in, at 375 and 1280, light and dark. Three
+    problems were found and fixed there (README, More songs and
+    downvotes).
+  - Not yet run: the rehearsal in the real database.
+
 ## 2026-10-25 (follow-up 10): seasons on the site (commissioners, stage 2)
 
 - **Set up a season:** a commissioner sets one up in five steps (Details,

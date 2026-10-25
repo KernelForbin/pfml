@@ -1467,8 +1467,8 @@ video, a Spotify track as its 30-second preview, a SoundCloud track):
 Asked for 2026-10-25: the admin can make any member a **commissioner**, and
 commissioners run the league's rounds alongside the admin, who always counts
 as one. It's Stage 1 of the commissioner work; Stage 2 is Seasons on the site,
-below, and the stages after it (more songs a round and downvotes, then
-allowed services, submitter notes, a repeat rule and announcements) are in
+and Stage 3 More songs and downvotes, both below. The stage after them
+(allowed services, submitter notes, a repeat rule and announcements) is in
 CLAUDE.md, Commissioners.
 
 **The Commissioner page** (`/commissioner`, `commissioner.html` and
@@ -1538,20 +1538,21 @@ season on the Commissioner page, and it runs on pfml.fun from start to
 finish: its rounds open on their own, members submit and vote here, and
 the results reach the stats. The user's calls: every such season votes on
 pfml.fun; playlists stay manual (`round_playlists.py`, with the user's
-go-ahead each time); more songs a round and downvotes come in stage 3.
+go-ahead each time); more songs a round and downvotes came in stage 3
+(More songs and downvotes, below).
 
 **Setting one up** (`seasons.js`), in Music League's steps:
 
 | Step | Settings | Defaults |
 | --- | --- | --- |
 | Details | name, description | "Season N", the next number, never below 4 |
-| Songs + Votes | points to give (5–30), most on one song (no limit, 1–10), a penalty for not voting | 19, 5, yes (scores 0): Season 3's, measured from the exports |
+| Songs + Votes | songs a round (1–5), points to give (5–30), most on one song (no limit, 1–10), a penalty for not voting, downvotes (none, 1–10) and most on one song (no limit, 1–5) | 1, 19, 5, yes, none: Season 3's, measured from the exports |
 | Timing | Steady, Accelerated or Speedy; days to submit and to vote (1–7 each) | Steady, 2, 5 |
 | Rounds | each round's theme and description, in order; the date and time of the first playlist | — |
 | Players | who's playing, ticked from every player the league has had | the current season's players |
 
-- **Fixed rules:** 1 song a round and no downvotes (stage 3), every point
-  spent, and nobody votes for their own song.
+- **Fixed rules:** every upvote spent, downvotes optional up to their
+  limit, and nobody votes for their own song.
 - **Step checks:** each step is checked before Next, and all of them before
   Create, which asks to confirm.
 - **The Rounds step** shows the schedule the database will lay out.
@@ -1663,6 +1664,100 @@ calls it by its number.
   - The chosen timing mode was hard to see in dark mode.
   - A season's section closed after a move.
 
+## More songs and downvotes
+
+Commissioners, stage 3 (asked 2026-10-25, the user's call: build both). A
+season set up on the site chooses how many songs each player sends a round
+(1 to 5) and how many downvotes each voter may give (none, or up to 20, with
+a cap on one song). Every round that already exists keeps 1 song and no
+downvotes.
+
+**The rules, measured from the exports before choosing them (2026-10-25):**
+
+- **No season ever had more than one song from a player in a round.**
+- **Season 1 had downvotes:** every ballot spent all 16 upvotes, and only
+  15 of 316 used downvotes, each time all 5.
+- **So:** upvotes are spent in full, downvotes are optional up to the
+  limit, and nothing goes on your own tracks.
+- **A submitter who didn't vote** (when the round says it costs them) keeps
+  only the downvotes their tracks got, as Music League's own penalty does.
+
+**Submitting** (`submit_track`, `withdraw_track`):
+
+- **One song a round:** as before. Sending again swaps it, and the tag stays.
+- **More than one:** each goes in until the round's number is reached,
+  then "You've sent all 2 of your tracks". The Submit page shows "Your
+  tracks", each with its own Remove (by tag), and the picker below reads
+  "Your pick, 2 of 2" until all are in.
+- **The same track twice** is still refused, yours included.
+- **Who's in, the Home banner and Accelerated** all count a player once all
+  their songs are in. Who's in shows "1 of 2" beside someone part way.
+
+**Voting** (`cast_ballot` and a new `ballot_problem` with the downvote
+rules; the old one stays for the record):
+
+- **Your own tracks:** none of them takes points.
+- **Downvotes:** press − below 0 on a track. The bar adds "2 of 3
+  downvotes". Save needs every upvote placed, and downvotes within their
+  limit.
+- **Results:** a downvote shows as −2. A non-voter's track says "only its
+  downvotes count", with what voters gave it.
+- **A commissioner** can set a round's downvotes in the round form while
+  submissions are open.
+
+**When things change:**
+
+- How many songs a round takes can't change once it has opened
+  (`site_rounds_voting_fixed`).
+- Downvotes freeze with the other voting rules when submissions close.
+- A season's change of songs reaches only its rounds that haven't opened.
+
+**The database** (`supabase/migrations/2026-10-25_more_songs.sql`, the same
+block at the end of `schema.sql`):
+
+- **New columns** on `site_seasons` and `site_rounds`: `songs_per_round`,
+  `downvotes` and `max_down_per_track`.
+- **Constraints changed:** the one-track-per-player rule on
+  `site_submission_owners` is dropped, and `site_votes` takes −20 to 100.
+  Those rules were written without names, so the migration finds them by
+  kind (`pg_constraint`), not by a guessed name: a wrong guess would miss
+  silently and leave the old rule in force. They come back named.
+
+**The stats.** The build handles more than one song a round from each
+player:
+
+- **Rounds won and podiums:** once a round per player, by their best track.
+- **The career's rounds:** rounds played, not tracks.
+- **Round finishes:** once a round, by the best track.
+- **The taste matrix's chances:** a round with that submitter's tracks.
+- **A forfeit:** keeps only its downvotes.
+
+Built from today's exports, every output file was byte-for-byte what it was
+before (measured 2026-10-25), since each player sent one song a round.
+
+**Checked:**
+
+- **Tests:** `tests/test_more_songs.py` (the rules, the stats on made-up
+  two-song rounds, the pages) and updates to the voting, seasons,
+  submissions and stats tests. Each assertion was break-checked in a
+  scratch clone (41 breaks, all caught; two got through at first, and the
+  tests were tightened).
+- **Live:** `tests/test_live_voting.py` runs the new ballot rule's cases in
+  the real database.
+- **The rehearsal:** `supabase/checks/2026-10-25_more_songs_rehearsal.sql`
+  plays a two-song season with downvotes as the admin and two members. It
+  should say "16 checks held".
+- **In a browser,** at 375 and 1280, light and dark, against a stand-in:
+  - sending two tracks and removing one;
+  - who's in, with "1 of 2";
+  - the ballot at every limit, saved and reloaded;
+  - the results with a downvote and a non-voter;
+  - the setup's new fields.
+- **Found and fixed in the browser:**
+  - the "you can remove one" note showed after the close;
+  - a negative score showed a hyphen, not a minus;
+  - "Yes, they score 0" wasn't true with downvotes.
+
 ## Voting on the site
 
 The league means to run everything on pfml.fun eventually, with no
@@ -1689,7 +1784,9 @@ season votes here. The user's calls when it was built:
   on any track, your own included, with or without points; 0-point
   comments are common in the exports. **A submitter who doesn't vote
   scores 0.** That's the user's call: Music League let the 10 who skipped
-  voting in Seasons 2 and 3 keep their points. The admin can change any of
+  voting in Seasons 2 and 3 keep their points. Since downvotes (stage 3),
+  they keep only the downvotes they got, as Music League's own penalty
+  does; with none, that's still 0. The admin can change any of
   these when opening a round, and they freeze when submissions close.
 
 **The switch.** `var SITE_VOTING = true;` in `account.js` (`PFML.siteVoting`),

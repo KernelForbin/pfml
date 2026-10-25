@@ -367,8 +367,8 @@
       '<span class="sub-banner-mine" id="submitBannerMine"></span>' +
       '<span class="sub-banner-go" id="submitBannerGo">Listen and vote →</span></a>';
     $("submitBanner").hidden = false;
-    Promise.all([PFML.api.mySubmission(r.id), PFML.api.myBallot(r.id)]).then(function (res) {
-      if (!res[0]) { $("submitBannerGo").textContent = "Listen to the round →"; return; }
+    Promise.all([PFML.api.mySubmissions(r.id), PFML.api.myBallot(r.id)]).then(function (res) {
+      if (!res[0].length) { $("submitBannerGo").textContent = "Listen to the round →"; return; }
       var voted = res[1] && res[1].length;
       $("submitBannerMine").textContent = voted ? "✓ Your ballot is in" : "You haven't voted yet";
       $("submitBannerMine").classList.toggle("is-in", !!voted);
@@ -379,10 +379,15 @@
   // Whether the reader has a track in: their own submission only, the one
   // thing anyone can ask about themselves (my_submission).
   function bannerMine(round) {
-    PFML.api.mySubmission(round.id).then(function (mine) {
-      $("submitBannerMine").textContent = mine ? "\u2713 You're in" : "You haven't submitted yet";
-      $("submitBannerMine").classList.toggle("is-in", !!mine);
-      if (mine) $("submitBannerGo").textContent = "Change your track \u2192";
+    // a round can take more than one song from each player: in once all
+    // of theirs are
+    var n = round.songs_per_round || 1;
+    PFML.api.mySubmissions(round.id).then(function (mine) {
+      var all = mine.length >= n;
+      $("submitBannerMine").textContent = all ? "\u2713 You're in"
+        : mine.length ? mine.length + " of your " + n + " tracks in" : "You haven't submitted yet";
+      $("submitBannerMine").classList.toggle("is-in", all);
+      if (mine.length) $("submitBannerGo").textContent = (all ? (n === 1 ? "Change your track" : "Change your tracks") : "Send your next track") + " \u2192";
     }).catch(function (err) { console.error(err); });
   }
 
@@ -394,9 +399,10 @@
     Promise.all([PFML.seasonPlayers(round.season_key), PFML.api.roundSubmitters(round.id)]).then(function (res) {
       var players = res[0];
       if (!players || !players.length) return;
-      var sent = {};
-      (res[1] || []).forEach(function (id) { sent[id] = true; });
-      var done = players.filter(function (p) { return sent[p.id]; }).length;
+      // a player is in once all of the round's songs from them are
+      var sent = {}, n = round.songs_per_round || 1;
+      (res[1] || []).forEach(function (id) { sent[id] = (sent[id] || 0) + 1; });
+      var done = players.filter(function (p) { return sent[p.id] >= n; }).length;
       $("submitBannerCount").textContent = done + "/" + players.length + " submitted";
     }).catch(function (err) { console.error(err); });
   }

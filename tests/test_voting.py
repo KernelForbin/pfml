@@ -71,8 +71,9 @@ class Round7CanNeverVoteHere(unittest.TestCase):
 
     def test_the_rules_freeze_when_submissions_close(self):
         fn = function(self.sql, "site_rounds_voting_fixed")
-        self.assertIn("(new.point_budget, new.max_per_track, new.nonvoters_keep_points)", fn)
+        self.assertIn("(new.point_budget, new.max_per_track, new.nonvoters_keep_points, new.downvotes, new.max_down_per_track)", fn)
         self.assertIn("and (old.closed_at is not null or now() >= old.closes_at) then", fn)
+        self.assertIn("if new.songs_per_round is distinct from old.songs_per_round and now() >= old.opens_at then", fn)
 
     def test_the_defaults_are_season_3s_and_non_voters_score_0(self):
         self.assertIn("point_budget smallint not null default 19", self.sql)
@@ -97,26 +98,38 @@ class Ballots(unittest.TestCase):
             "if not public.is_member() then",
             "if public.site_round_phase(p_round) <> 'voting' then",
             "if mine is null then\n    raise exception 'Only players with a track in this round can vote.';",
-            "problem := public.ballot_problem(r.point_budget, r.max_per_track, pts,",
+            "problem := public.ballot_problem(r.point_budget, r.max_per_track, r.downvotes, r.max_down_per_track, pts,",
             "delete from public.site_votes where round_id = p_round and user_id = uid;",
             "insert into public.site_votes")]
         self.assertEqual(order, sorted(order))
-        self.assertIn("array(select s = mine from unnest(sids) s)", self.cast)
+        # every one of the voter's tracks (a round can take more than one)
+        self.assertIn("select array_agg(o.submission_id) into mine from public.site_submission_owners o", self.cast)
+        self.assertIn("array(select s = any(mine) from unnest(sids) s)", self.cast)
+        self.assertIn("where t.p <> 0 or t.c <> '';", self.cast)
 
     def test_every_track_on_the_ballot_is_in_the_round_once(self):
         self.assertIn("where x.id = s and x.round_id = p_round", self.cast)
         self.assertIn("(select count(distinct s) from unnest(sids) s) <> cardinality(sids)", self.cast)
 
     def test_the_rules_themselves(self):
+        # the one cast_ballot calls: upvotes spent in full, downvotes
+        # optional up to their limit (Season 1's exports: every ballot spent
+        # all 16 upvotes, 15 of 316 used downvotes)
         fn = function(self.sql, "ballot_problem")
+        self.assertIn("create or replace function public.ballot_problem(p_budget int, p_max int, p_down int, p_down_max int,", fn)
         self.assertIn("immutable", fn)
-        for rule in ("p < 0", "p > p_max", "where own and p > 0", "<> p_budget"):
-            self.assertIn(rule, fn)
+        for rule in ("where p < 0) and coalesce(p_down, 0) = 0", "where p > p_max", "where p < -p_down_max", "where own and p <> 0",
+                     "where p > 0), 0) <> p_budget", "where p < 0), 0) > p_down\n"):
+            with self.subTest(rule):
+                self.assertIn(rule, fn)
 
     def test_a_vote_row_is_points_or_a_comment(self):
         table = block(self.sql, "create table if not exists public.site_votes")
-        self.assertIn("check (points > 0 or char_length(btrim(comment)) > 0)", table)
         self.assertIn("primary key (submission_id, user_id)", table)
+        # since downvotes: any points but 0, or a comment
+        self.assertIn("alter table public.site_votes add constraint site_votes_points_range check (points between -20 and 100);", self.sql)
+        self.assertIn("alter table public.site_votes add constraint site_votes_points_or_comment check (points <> 0 or char_length(btrim(comment)) > 0);", self.sql)
+        self.assertIn("alter table public.site_votes add constraint site_votes_comment_length check (char_length(comment) <= 2000);", self.sql)
 
 
 class AnonymousUntilVotingCloses(unittest.TestCase):
@@ -136,8 +149,10 @@ class AnonymousUntilVotingCloses(unittest.TestCase):
         self.assertNotRegex(voters, r"points|comment|submission_id")
 
     def test_a_non_voter_scores_0_unless_the_round_says_so(self):
+        # only the downvotes they got, as Music League does: 0 with none
         fn = function(self.sql, "site_round_results")
-        self.assertIn("or r.nonvoters_keep_points\n              then coalesce(t.total, 0) else 0 end", fn)
+        self.assertIn("or r.nonvoters_keep_points\n              then coalesce(t.total, 0) else coalesce(t.down, 0) end", fn)
+        self.assertIn("sum(least(v.points, 0))::int as down", fn)
 
     def test_grants(self):
         for name in MEMBER_CALLS:

@@ -573,9 +573,10 @@
         "</div>" +
         '<div class="rp-score"><b>' + pointsLabel(s.points) + "</b><span>" + counted(voters, "voter") + "</span></div>" +
       "</div>" +
-      // a round voted on the site: its submitter didn't vote, so it scored 0
-      (s.forfeit ? '<p class="rp-forfeit">Didn\u2019t vote, so it scored 0' +
-        (s.forfeit.earned ? " (voters gave it " + s.forfeit.earned + ")" : "") + ".</p>" : "") +
+      // a round voted on the site: its submitter didn't vote, so it scored 0,
+      // or only its downvotes in a round that had them
+      (s.forfeit ? '<p class="rp-forfeit">Didn\u2019t vote, so ' + (s.points < 0 ? "only its downvotes counted" : "it scored 0") +
+        (s.forfeit.earned !== s.points ? " (voters gave it " + s.forfeit.earned + ")" : "") + ".</p>" : "") +
       '<div class="rp-submitter">' + avatar(s.submitterId, s.submitterName) +
         "<span>Submitted by <b>" + personLink(s.submitterId, s.submitterName) + "</b></span>" +
         (s.dailyDouble ? '<span class="dd-badge">Daily Double +' + s.dailyDouble.bonus + "</span>" : "") + "</div>" +

@@ -843,10 +843,11 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
                 received.append({"voterId": vid, "voterName": names.get(vid, "Unknown"), "points": pts})
 
             earned = sum(r["points"] for r in received)
-            # a site round's track whose submitter didn't vote scores 0 when
-            # the round says so (README, Voting on the site)
+            # a site round's track whose submitter didn't vote keeps only its
+            # downvotes when the round says so, as Music League does: 0 with
+            # none (README, Voting on the site; More songs and downvotes)
             forfeit = site_extra.get((rid, uri), {}).get("forfeit", False)
-            total = 0 if forfeit else earned
+            total = sum(min(r["points"], 0) for r in received) if forfeit else earned
             artists = split_artists(s["Artist(s)"])
             received.sort(key=lambda r: r["points"], reverse=True)
 
@@ -915,16 +916,21 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
         # placements, ties share the better rank
         rank = 0
         last_points = None
+        won, podium = set(), set()
         for i, s in enumerate(songs):
             if s["points"] != last_points:
                 rank = i + 1
                 last_points = s["points"]
             s["place"] = rank
             pid = s["submitterId"]
+            # once a round per player, by their best track: a round can take
+            # more than one song from each (README, More songs and downvotes)
             if pid in player:
-                if rank == 1:
+                if rank == 1 and pid not in won:
+                    won.add(pid)
                     player[pid]["roundsWon"] += 1
-                if rank <= 3:
+                if rank <= 3 and pid not in podium:
+                    podium.add(pid)
                     player[pid]["podiums"] += 1
 
         # by the build's own key, not the Spotify id: two site tracks with
@@ -957,7 +963,12 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
                     voter[vid]["kingmakerHits"] += 1
 
             # pair-level: every track they could have scored counts, whether
-            # or not they scored it, so a zero is real information
+            # or not they scored it, so a zero is real information. A chance
+            # is a round with that submitter's tracks in it: one track a round
+            # in every Music League season, and a round on the site can take
+            # more than one from each player (README, More songs and
+            # downvotes), so their points are added up within the round.
+            chanced, commented = set(), set()
             for s in round_subs:
                 submitter = s["Submitter ID"]
                 if submitter == vid:
@@ -965,11 +976,14 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
                 pts = points_at.get((rid, s["Spotify URI"], vid), 0)
                 pts = max(pts, 0)
                 pair_points[(vid, submitter)] = pair_points.get((vid, submitter), 0) + pts
-                pair_chances[(vid, submitter)] = pair_chances.get((vid, submitter), 0) + 1
-                # same denominator as the taste matrix: a "chance" is
-                # one of that submitter's tracks this voter could have
-                # voted on. Here we count how often they said something.
-                if (rid, s["Spotify URI"], vid) in comments_by_vote:
+                if submitter not in chanced:
+                    chanced.add(submitter)
+                    pair_chances[(vid, submitter)] = pair_chances.get((vid, submitter), 0) + 1
+                # same denominator as the taste matrix: a "chance" is a
+                # round this voter could have voted on that submitter's
+                # tracks. Here we count how often they said something.
+                if (rid, s["Spotify URI"], vid) in comments_by_vote and submitter not in commented:
+                    commented.add(submitter)
                     pair_comments[(vid, submitter)] = pair_comments.get((vid, submitter), 0) + 1
 
         margin = (songs[0]["points"] - songs[1]["points"]) if len(songs) > 1 else None
@@ -1524,7 +1538,7 @@ def build_career(season_datas, raw_seasons=None):
         for p in d["standings"]:
             t = totals.setdefault(p["id"], {
                 "id": p["id"], "name": p["name"], "totalPoints": 0,
-                "roundsWon": 0, "podiums": 0, "submissions": 0,
+                "roundsWon": 0, "podiums": 0, "submissions": 0, "extraSongs": 0,
                 "seasonsPlayed": 0, "bestSeasonPoints": None, "bestSeasonKey": None,
                 "roundFinishes": {"first": 0, "second": 0, "third": 0}, "seasonPodiums": [],
             })
@@ -1537,12 +1551,22 @@ def build_career(season_datas, raw_seasons=None):
                 t["bestSeasonPoints"] = p["points"]
                 t["bestSeasonKey"] = d["key"]
         # 1st/2nd/3rd in each round, from the tracks' own places (a tie
-        # shares the place, so both tracks count)
+        # shares the place, so both tracks count), and the rounds each
+        # player played. Once a round per player, by their best track: a
+        # round on the site can take more than one song from each.
         for r in d["rounds"]:
+            best, sent = {}, {}
             for s in r["songs"]:
-                slot = {1: "first", 2: "second", 3: "third"}.get(s.get("place"))
-                if slot and s["submitterId"] in totals:
-                    totals[s["submitterId"]]["roundFinishes"][slot] += 1
+                sent[s["submitterId"]] = sent.get(s["submitterId"], 0) + 1
+                if s.get("place") and (s["submitterId"] not in best or s["place"] < best[s["submitterId"]]):
+                    best[s["submitterId"]] = s["place"]
+            for pid, n in sent.items():
+                if pid in totals:
+                    totals[pid]["extraSongs"] += n - 1
+            for pid, place in best.items():
+                slot = {1: "first", 2: "second", 3: "third"}.get(place)
+                if slot and pid in totals:
+                    totals[pid]["roundFinishes"][slot] += 1
 
     # A season's final podium counts once a newer season exists: the export
     # never says a season is over (CLAUDE.md), and the newest one may be a
@@ -1558,9 +1582,11 @@ def build_career(season_datas, raw_seasons=None):
         t["avgPointsPerSeason"] = round(t["totalPoints"] / t["seasonsPlayed"], 1) if t["seasonsPlayed"] else 0
         # Career Score: an average rather than a total, so a missed season
         # (or round) doesn't count against anyone, plus bonuses for finishing
-        # on top. "Rounds" is tracks submitted: one per round played. Points
-        # include any Daily Double bonus, as the season totals do.
-        t["rounds"] = t["submissions"]
+        # on top. "Rounds" is rounds played: tracks submitted, less any
+        # second or third track in the same round (every Music League season
+        # took one a round). Points include any Daily Double bonus, as the
+        # season totals do.
+        t["rounds"] = t["submissions"] - t.pop("extraSongs")
         f = t["roundFinishes"]
         t["avgSeason"] = round(PER_ROUND_SCALE * t["totalPoints"] / t["rounds"], 1) if t["rounds"] else 0
         t["roundBonus"] = ROUND_BONUS[1] * f["first"] + ROUND_BONUS[2] * f["second"] + ROUND_BONUS[3] * f["third"]

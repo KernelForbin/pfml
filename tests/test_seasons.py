@@ -68,7 +68,8 @@ class TheRules(unittest.TestCase):
         create = function(self.sql, "create_site_season")
         self.assertIn("      closes := first_close;\n      opens := greatest(now(), public.site_add_days(closes, -s.submit_days));", create)
         self.assertIn("      opens := public.site_add_days(closes, s.vote_days);\n      closes := public.site_add_days(opens, s.submit_days);", create)
-        self.assertIn("public.site_add_days(closes, s.vote_days), s.point_budget, s.max_per_track, s.nonvoters_keep_points);", create)
+        self.assertIn("public.site_add_days(closes, s.vote_days), s.point_budget, s.max_per_track, s.nonvoters_keep_points,\n"
+                      "            s.songs_per_round, s.downvotes, s.max_down_per_track);", create)
         self.assertIn("values (k, btrim(coalesce(item->>'name', '')), btrim(coalesce(item->>'prompt', '')), opens, closes, true,", create)
         again = function(self.sql, "site_season_reschedule")
         # from the latest round that has opened: its scheduled end, not an
@@ -116,7 +117,8 @@ class Timing(unittest.TestCase):
         self.assertIn("if not found or s.timing = 'steady' then return; end if;", self.early)
 
     def test_submissions_close_when_everyone_playing_on_the_site_is_in(self):
-        self.assertIn("where p.season_key = s.key\n                     and not exists (select 1 from public.site_submission_owners o where o.round_id = p_round and o.user_id = m.user_id)) then", self.early)
+        # every one of the round's songs from each of them (stage 3)
+        self.assertIn("where o.round_id = p_round and o.user_id = m.user_id) < r.songs_per_round) then", self.early)
         self.assertIn("update public.site_rounds set closed_at = now() where id = p_round;", self.early)
 
     def test_voting_closes_when_everyone_with_a_track_has_voted(self):
@@ -232,8 +234,10 @@ class ThePages(unittest.TestCase):
                          set(re.findall(r"p->>'(\w+)'", function(schema(), "update_site_season"))))
 
     def test_no_limit_means_the_whole_budget(self):
-        self.assertIn('max_per_track: f.max_per_track.value === "none" ? budget : Math.min(+f.max_per_track.value, budget),',
-                      js_body(self.seasons, "function readSettings(form) {"))
+        votes = js_body(self.seasons, "function readVotes(f) {")
+        self.assertIn('max_per_track: f.max_per_track.value === "none" ? budget : Math.min(+f.max_per_track.value, budget),', votes)
+        self.assertIn('max_down_per_track: !down ? 0 : f.max_down_per_track.value === "none" ? down : Math.min(+f.max_down_per_track.value, down),', votes)
+        self.assertIn('var picked = max >= down ? "none" : max;', js_body(self.seasons, "function downMaxOptions(down, max) {"))
         self.assertIn('var picked = max >= budget ? "none" : max;', js_body(self.seasons, "function maxOptions(budget, max) {"))
 
     def test_a_new_season_is_season_4_or_later(self):

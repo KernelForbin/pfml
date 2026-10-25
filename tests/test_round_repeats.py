@@ -177,7 +177,8 @@ class PageWiring(unittest.TestCase):
     def test_a_track_sent_without_one_gets_it_on_its_owners_next_visit(self):
         self.assertIn("describeIfMissing(state.round, mine);", self.body("function load() {"))
         missing = self.body("function describeIfMissing(r, mine) {")
-        self.assertIn("if (done === false) describe(r, mine, fingerprintOf(mine));", missing)
+        # each of the reader's tracks (a round can take more than one)
+        self.assertIn("if (done === false) mine.forEach(function (m) { describe(r, m, fingerprintOf(m)); });", missing)
         self.assertIn("!isOpen(r)", missing)
 
     def test_the_check_runs_for_every_pick_but_only_in_an_open_round(self):

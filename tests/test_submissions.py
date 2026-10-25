@@ -223,7 +223,11 @@ class WhoIsIn(unittest.TestCase):
         self.assertIn("api().roundSubmitters(r.id), api().people(), PFML.seasonPlayers(r.season_key)", who)
         self.assertIn("var players = res[2];", who)
         self.assertIn('$("subCount").innerHTML = "<b>" + done.length + "/" + players.length + "</b> submitted"', who)
-        self.assertIn("var pending = players.filter(function (p) { return !sent[p.id]; });", who)
+        # in once all of the round's songs from them are; until then pending,
+        # with how many so far
+        self.assertIn("(res[0] || []).forEach(function (id) { sent[id] = (sent[id] || 0) + 1; });", who)
+        self.assertIn("var done = players.filter(function (p) { return sent[p.id] >= n; });", who)
+        self.assertIn("var pending = players.filter(function (p) { return !(sent[p.id] >= n); })", who)
         # who's playing: the season's own list when it was set up on the
         # site, else everyone in its latest finished round (index.json)
         players = self.body(read(SITE / "account.js"), "function seasonPlayers(seasonKey) {")

@@ -60,6 +60,25 @@
       options(range(1, Math.min(10, budget - 1)), picked, function (n) { return n + (n === 1 ? " point" : " points"); });
   }
 
+  // Downvotes on one song: "No per-song limit" stores all of them; with no
+  // downvotes at all, there's nothing to choose.
+  function downMaxOptions(down, max) {
+    if (!down) return '<option value="0">No downvotes</option>';
+    var picked = max >= down ? "none" : max;
+    return '<option value="none"' + (picked === "none" ? " selected" : "") + ">No per-song limit</option>" +
+      options(range(1, Math.min(5, down - 1)), picked, function (n) { return n + (n === 1 ? " downvote" : " downvotes"); });
+  }
+
+  // The Songs + Votes settings a form holds now.
+  function readVotes(f) {
+    var budget = +f.point_budget.value, down = +f.downvotes.value;
+    return { songs_per_round: +f.songs_per_round.value, point_budget: budget,
+             max_per_track: f.max_per_track.value === "none" ? budget : Math.min(+f.max_per_track.value, budget),
+             downvotes: down,
+             max_down_per_track: !down ? 0 : f.max_down_per_track.value === "none" ? down : Math.min(+f.max_down_per_track.value, down),
+             nonvoters_keep_points: f.nonvoters_keep_points.value === "true" };
+  }
+
   function seasonRounds(key) {
     return ctx.rounds.filter(function (r) { return r.season_key === key; })
       .sort(function (a, b) { return Date.parse(a.opens_at) - Date.parse(b.opens_at); });
@@ -158,7 +177,7 @@
         "</form>" +
         "<h3>Settings</h3>" +
         '<form class="sub-admin-form" data-act="settings">' + settingsFields(s, "cmSet-" + s.key) +
-          '<p class="block-note">Rules reach every round whose submissions haven’t closed. Days to submit and vote move the rounds that haven’t opened.</p>' +
+          '<p class="block-note">Rules reach every round whose submissions haven’t closed. Songs a round, and days to submit and vote, reach the rounds that haven’t opened.</p>' +
           '<div class="sub-actions"><button type="submit" class="sub-btn">Save settings</button></div>' +
         "</form>" +
         "<h3>Players</h3>" +
@@ -202,16 +221,25 @@
   }
 
   function votesFields(s, id) {
-    return '<p class="cm-fixed"><b>1 song</b> from each player a round, and <b>no downvotes</b>. More songs a round and downvotes come in the next update.</p>' +
+    return '<label class="sub-label" for="' + id + '-songs">Songs each player sends a round</label>' +
+      '<select class="sub-input" id="' + id + '-songs" name="songs_per_round">' +
+        options(range(1, 5), s.songs_per_round || 1, function (n) { return n + (n === 1 ? " song" : " songs"); }) + "</select>" +
       '<label class="sub-label" for="' + id + '-budget">Points each voter gives</label>' +
       '<select class="sub-input" id="' + id + '-budget" name="point_budget">' + options(range(5, 30), s.point_budget) + "</select>" +
       '<label class="sub-label" for="' + id + '-max">Most points on one song</label>' +
       '<select class="sub-input" id="' + id + '-max" name="max_per_track">' + maxOptions(s.point_budget, s.max_per_track) + "</select>" +
       '<label class="sub-label" for="' + id + '-keep">A penalty for not voting?</label>' +
       '<select class="sub-input" id="' + id + '-keep" name="nonvoters_keep_points">' +
-        '<option value="false"' + (s.nonvoters_keep_points ? "" : " selected") + ">Yes, they score 0 that round</option>" +
+        '<option value="false"' + (s.nonvoters_keep_points ? "" : " selected") + ">Yes, their upvotes don’t count</option>" +
         '<option value="true"' + (s.nonvoters_keep_points ? " selected" : "") + ">No, they keep their points</option></select>" +
-      '<p class="block-note">Every point has to be spent, and nobody votes for their own song.</p>';
+      '<label class="sub-label" for="' + id + '-down">Downvotes each voter may give</label>' +
+      '<select class="sub-input" id="' + id + '-down" name="downvotes">' +
+        '<option value="0"' + (s.downvotes ? "" : " selected") + ">No downvotes</option>" +
+        options(range(1, 10), s.downvotes, function (n) { return n + (n === 1 ? " downvote" : " downvotes"); }) + "</select>" +
+      '<label class="sub-label" for="' + id + '-downmax">Most downvotes on one song</label>' +
+      '<select class="sub-input" id="' + id + '-downmax" name="max_down_per_track">' + downMaxOptions(s.downvotes, s.max_down_per_track) + "</select>" +
+      '<p class="block-note">Every point has to be spent; downvotes are optional, up to the limit. Nobody votes for their own song. ' +
+        "A player who doesn’t vote, when that costs them, keeps only their downvotes.</p>";
   }
 
   function timingFields(s, id) {
@@ -231,10 +259,10 @@
 
   // The settings a form holds now.
   function readSettings(form) {
-    var f = form.elements, budget = +f.point_budget.value;
-    return { name: f.name.value.trim(), description: f.description.value.trim(), point_budget: budget,
-             max_per_track: f.max_per_track.value === "none" ? budget : Math.min(+f.max_per_track.value, budget),
-             nonvoters_keep_points: f.nonvoters_keep_points.value === "true",
+    var f = form.elements, v = readVotes(f);
+    return { name: f.name.value.trim(), description: f.description.value.trim(), songs_per_round: v.songs_per_round,
+             point_budget: v.point_budget, max_per_track: v.max_per_track, downvotes: v.downvotes,
+             max_down_per_track: v.max_down_per_track, nonvoters_keep_points: v.nonvoters_keep_points,
              timing: (form.querySelector('input[name="timing"]:checked') || {}).value || "steady",
              submit_days: +f.submit_days.value, vote_days: +f.vote_days.value };
   }
@@ -265,6 +293,7 @@
     var key = nextKey();
     wizard = { step: 0, d: { key: key, name: "Season " + key.replace(/\D/g, ""), description: "", point_budget: 19, max_per_track: 5,
                              nonvoters_keep_points: false, timing: "steady", submit_days: 2, vote_days: 5,
+                             songs_per_round: 1, downvotes: 0, max_down_per_track: 0,
                              first_date: "", first_time: "20:00", rounds: [],
                              players: (current && current.activePlayers || []).map(function (p) { return p.id; }) } };
     loadPeople().then(function () { render(ctx); showWizard(); },
@@ -348,8 +377,11 @@
     var first = firstClose(d);
     return '<div class="cm-sched"><h4>Ready to create</h4><ul>' +
       "<li>" + esc(d.name) + ", " + d.rounds.length + (d.rounds.length === 1 ? " round" : " rounds") + "</li>" +
+      "<li>" + d.songs_per_round + (d.songs_per_round === 1 ? " song" : " songs") + " from each player a round</li>" +
       "<li>" + d.point_budget + " points to give, " + (d.max_per_track >= d.point_budget ? "no limit on one song" : "at most " + d.max_per_track + " on one song") +
-        ", " + (d.nonvoters_keep_points ? "no penalty for not voting" : "a player who doesn’t vote scores 0") + "</li>" +
+        ", " + (d.downvotes ? d.downvotes + (d.downvotes === 1 ? " downvote" : " downvotes") +
+          (d.max_down_per_track >= d.downvotes ? "" : ", at most " + d.max_down_per_track + " on one song") : "no downvotes") +
+        ", " + (d.nonvoters_keep_points ? "no penalty for not voting" : "a player who doesn’t vote keeps only their downvotes") + "</li>" +
       "<li>" + esc(TIMING[d.timing].name) + ": " + days(d.submit_days) + " to submit, " + days(d.vote_days) + " to vote</li>" +
       "<li>" + (first ? "First playlist " + esc(when(first.toISOString())) : "No first playlist yet") + "</li>" +
       "<li>Voting on pfml.fun, results shown when voting closes</li></ul></div>";
@@ -367,9 +399,8 @@
       if (!d.name) return "Give the season a name.";
     } else if (wizard.step === 1 || wizard.step === 2) {
       if (f.point_budget) {
-        d.point_budget = +f.point_budget.value;
-        d.max_per_track = f.max_per_track.value === "none" ? d.point_budget : Math.min(+f.max_per_track.value, d.point_budget);
-        d.nonvoters_keep_points = f.nonvoters_keep_points.value === "true";
+        var v = readVotes(f);
+        Object.keys(v).forEach(function (k) { d[k] = v[k]; });
       }
       if (f.submit_days) {
         d.timing = (form.querySelector('input[name="timing"]:checked') || {}).value || "steady";
@@ -414,6 +445,7 @@
     }
     var p = { key: d.key, name: d.name, description: d.description, point_budget: d.point_budget, max_per_track: d.max_per_track,
               nonvoters_keep_points: d.nonvoters_keep_points, timing: d.timing, submit_days: d.submit_days, vote_days: d.vote_days,
+              songs_per_round: d.songs_per_round, downvotes: d.downvotes, max_down_per_track: d.max_down_per_track,
               first_playlist_at: first.toISOString(), rounds: d.rounds, players: d.players };
     if (!window.confirm("Create " + d.name + " with " + d.rounds.length + (d.rounds.length === 1 ? " round" : " rounds") +
                         "? Its first round opens " + (schedule(first, 1, d.submit_days, d.vote_days)[0].opens.getTime() <= Date.now() + 60000 ? "straight away" : "on schedule") + ".")) return;
@@ -502,6 +534,10 @@
     if (t && t.name === "point_budget") {
       var budget = +t.value, max = form.elements.max_per_track;
       max.innerHTML = maxOptions(budget, max.value === "none" ? budget : Math.min(+max.value, budget));
+    }
+    if (t && t.name === "downvotes") {
+      var down = +t.value, dmax = form.elements.max_down_per_track;
+      dmax.innerHTML = downMaxOptions(down, dmax.value === "none" || dmax.value === "0" ? down : Math.min(+dmax.value, down));
     }
     if (form.id !== "cmWizardForm") return;
     if (wizard.step === 3 && t && (t.name === "first_date" || t.name === "first_time")) {

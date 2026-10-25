@@ -278,7 +278,7 @@ class OnThePages(unittest.TestCase):
 
     def test_the_round_page_says_why_a_track_scored_0(self):
         rounds = read(SITE / "rounds.js")
-        self.assertIn("(s.forfeit ? '<p class=\"rp-forfeit\">Didn\\u2019t vote, so it scored 0'", rounds)
+        self.assertIn("(s.forfeit ? '<p class=\"rp-forfeit\">Didn\\u2019t vote, so ' + (s.points < 0 ? \"only its downvotes counted\" : \"it scored 0\")", rounds)
 
 
 if __name__ == "__main__":

@@ -215,9 +215,11 @@ class HomeBanner(unittest.TestCase):
     def test_it_says_whether_you_have_a_track_in(self):
         self.assertIn("bannerMine(open);", js_body(self.app, "function renderSubmitBanner() {"))
         mine = js_body(self.app, "function bannerMine(round) {")
-        self.assertIn("PFML.api.mySubmission(round.id)", mine)
-        self.assertIn('mine ? "\\u2713 You\'re in" : "You haven\'t submitted yet"', mine)
-        self.assertIn('if (mine) $("submitBannerGo").textContent = "Change your track \\u2192";', mine)
+        self.assertIn("PFML.api.mySubmissions(round.id)", mine)
+        # in once all of the round's tracks from them are
+        self.assertIn("var all = mine.length >= n;", mine)
+        self.assertIn('all ? "\\u2713 You\'re in"', mine)
+        self.assertIn(': mine.length ? mine.length + " of your " + n + " tracks in" : "You haven\'t submitted yet";', mine)
 
     def test_one_deadline_wording_for_the_banner_and_the_submit_page(self):
         account = read("account.js")

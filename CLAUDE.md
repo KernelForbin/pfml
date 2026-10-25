@@ -242,10 +242,10 @@ Rules for the work:
 Asked for 2026-10-25 (README, Commissioners). The admin makes members
 commissioners from the Commissioner page; never write a player's name into
 the repo to do it (the user's first pick was named in chat, and that's
-where it stays). Stage 1, the role and the page, is live; stage 2, seasons
-on the site, is built (README, Seasons on the site). The user's calls for
-the rest, in order, each its own change with its own migration and
-rehearsal:
+where it stays). Stages 1 (the role and the page) and 2 (seasons on the
+site) are live; stage 3, more songs and downvotes, is built (README, More
+songs and downvotes). The user's calls for the rest, in order, each its own
+change with its own migration and rehearsal:
 
 - **Stage 2, seasons:**
   - the season setup in steps (Details, Songs + Votes, Timing, Rounds,

@@ -386,14 +386,16 @@
       // newest opening first; a season set up on the site lays its rounds
       // out ahead, so there can be many not opened yet
       return client.from("site_rounds").select("id, season_key, name, prompt, opens_at, closes_at, closed_at, created_at, spotify_playlist, youtube_playlist, " +
-          "votes_on_site, voting_closes_at, voting_closed_at, point_budget, max_per_track, nonvoters_keep_points")
+          "votes_on_site, voting_closes_at, voting_closed_at, point_budget, max_per_track, nonvoters_keep_points, " +
+          "songs_per_round, downvotes, max_down_per_track")
         .order("opens_at", { ascending: false }).limit(100).then(must);
     },
-    // The caller's own track for a round, or null. Nothing else on the
-    // site can tell whose track is whose.
-    mySubmission: function (roundId) {
+    // The caller's own tracks for a round ([] for none; a round can take
+    // more than one from each player). Nothing else on the site can tell
+    // whose track is whose.
+    mySubmissions: function (roundId) {
       return client.rpc("my_submission", { p_round: roundId }).then(must)
-        .then(function (rows) { return rows && rows.length ? rows[0] : null; });
+        .then(function (rows) { return rows || []; });
     },
     // Resolves to the submission's tag (the same one again on a change).
     submitTrack: function (roundId, platform, track) {
@@ -401,6 +403,10 @@
     },
     withdrawSubmission: function (roundId) {
       return client.rpc("withdraw_submission", { p_round: roundId }).then(must);
+    },
+    // One of the caller's tracks, by its tag (a round with more than one).
+    withdrawTrack: function (roundId, tag) {
+      return client.rpc("withdraw_track", { p_round: roundId, p_tag: tag }).then(must);
     },
     submissionCount: function (roundId) {
       return client.rpc("site_submission_count", { p_round: roundId }).then(must);
@@ -505,7 +511,7 @@
     // playing each.
     siteSeasons: function () {
       return client.from("site_seasons").select("key, name, description, point_budget, max_per_track, nonvoters_keep_points, " +
-          "timing, submit_days, vote_days, created_at, site_season_players(competitor_id)")
+          "timing, submit_days, vote_days, songs_per_round, downvotes, max_down_per_track, created_at, site_season_players(competitor_id)")
         .order("key").then(must);
     },
     // Who's playing a season set up on the site, by name; [] for any other.

@@ -122,6 +122,9 @@
                 service: "spotify", pickFrom: null, results: null, asked: null };
 
   function isOpen(r) { return PFML.roundPhase(r) === "submitting"; }
+  // how many tracks a round takes from each player (a season set up on the
+  // site can ask for more than one)
+  function songsOf(r) { return (r && r.songs_per_round) || 1; }
 
   // voting.js (voting on the site, off until the user switches it on); a
   // stand-in that's always off if it didn't load
@@ -162,9 +165,9 @@
         var ms = Date.parse(until) - Date.now() + 1500;
         if (ms < 2147483647) state.timer = setTimeout(load, ms);
       }
-      return r ? api().mySubmission(r.id) : null;
+      return r ? api().mySubmissions(r.id) : [];
     }).then(function (mine) {
-      state.mine = mine;
+      state.mine = mine || [];
       state.changing = false;
       render();
       describeIfMissing(state.round, mine);
@@ -207,8 +210,8 @@
     box.hidden = false;
     renderWho(r, open);
 
-    if (state.mine) renderMine(open);
-    if (open && (!state.mine || state.changing)) renderForm();
+    if (state.mine.length) renderMine(open);
+    if (open && (state.mine.length < songsOf(r) || state.changing)) renderForm();
     if (!open) {
       renderList();
       voting().render(r, state.mine);
@@ -241,14 +244,18 @@
       if (state.round !== r) return;
       var players = res[2];
       if (!players) { trackCount(r, open); return; }
-      var sent = {}, linked = {}, names = {}, eligible = {};
-      (res[0] || []).forEach(function (id) { sent[id] = true; });
+      // one id per track: a player is in once all of the round's songs
+      // from them are, and pending with how many so far until then
+      var sent = {}, linked = {}, names = {}, eligible = {}, n = songsOf(r);
+      (res[0] || []).forEach(function (id) { sent[id] = (sent[id] || 0) + 1; });
       Object.keys(res[1] || {}).forEach(function (u) { linked[res[1][u].competitorId] = true; names[res[1][u].competitorId] = res[1][u].name; });
       players.forEach(function (p) { eligible[p.id] = true; });
-      var done = players.filter(function (p) { return sent[p.id]; });
-      var pending = players.filter(function (p) { return !sent[p.id]; });
+      var done = players.filter(function (p) { return sent[p.id] >= n; });
+      var pending = players.filter(function (p) { return !(sent[p.id] >= n); }).map(function (p) {
+        return sent[p.id] ? { id: p.id, name: p.name, note: sent[p.id] + " of " + n } : p;
+      });
       // someone who sat out the last round can still send one
-      var extra = (res[0] || []).filter(function (id) { return !eligible[id]; })
+      var extra = Object.keys(sent).filter(function (id) { return !eligible[id]; })
         .map(function (id) { return { id: id, name: names[id] || "Member" }; });
       $("subCount").innerHTML = "<b>" + done.length + "/" + players.length + "</b> submitted" +
         (extra.length ? " (and " + extra.length + " more)" : "") + (open ? "" : ", final") +
@@ -267,7 +274,8 @@
     return '<div class="sub-who-group sub-who-' + kind + '"><h3>' + esc(title) + " <span>" + list.length + "</span></h3>" +
       (list.length ? "<ul>" + list.map(function (p) {
         return '<li><a href="profile?p=' + encodeURIComponent(p.id) + '">' + PFML.avatar(p.id, p.name) + "<span>" + esc(p.name) + "</span>" +
-          (linked[p.id] ? "" : '<small class="sub-not-joined">not joined yet</small>') + "</a></li>";
+          (linked[p.id] ? "" : '<small class="sub-not-joined">not joined yet</small>') +
+          (p.note ? '<small class="sub-not-joined">' + esc(p.note) + "</small>" : "") + "</a></li>";
       }).join("") + "</ul>" : '<p class="sub-who-none">' + esc(none) + "</p>") + "</div>";
   }
 
@@ -277,18 +285,30 @@
     }).catch(function (err) { console.error(err); });
   }
 
+  // One track: Change and Withdraw, as ever. More than one a round: each
+  // with its own Remove, and the picker below until all are in.
   function renderMine(open) {
-    var m = state.mine;
-    $("subMineEmbed").innerHTML = embedHtml(m) +
-      '<p class="sub-link"><a href="' + esc(trackUrl(m)) + '" target="_blank" rel="noopener">Open on ' + NAMES[m.platform] + "</a></p>";
-    $("subMineActions").hidden = !open || state.changing;
+    var n = songsOf(state.round), list = state.mine;
+    $("subMineTitle").textContent = n === 1 ? "Your track" : "Your tracks";
+    // what can still change only while it can
+    $("subMineNote").textContent = !open ? (n === 1 ? "Your track in this round." : "Your " + list.length + " tracks in this round.")
+      : n === 1 ? "It’s in. You can change or withdraw it until submissions close."
+      : list.length + " of " + n + " in. You can remove one and send another until submissions close.";
+    $("subMineEmbed").innerHTML = list.map(function (m) {
+      return '<div class="sub-mine-item">' + embedHtml(m) +
+        '<p class="sub-link"><a href="' + esc(trackUrl(m)) + '" target="_blank" rel="noopener">Open on ' + NAMES[m.platform] + "</a>" +
+        (n > 1 && open ? '<button type="button" class="sub-btn sub-btn-quiet sub-remove" data-tag="' + esc(m.tag) + '">Remove</button>' : "") +
+        "</p></div>";
+    }).join("");
+    $("subMineActions").hidden = n > 1 || !open || state.changing;
     $("subMine").hidden = false;
   }
 
   function renderForm() {
-    $("subFormTitle").textContent = state.mine ? "Change your track" : "Your pick";
-    $("subCancel").hidden = !state.mine;
-    $("subSend").textContent = state.mine ? "Use this track instead" : "Submit";
+    var n = songsOf(state.round), have = state.mine.length, swapping = n === 1 && have > 0;
+    $("subFormTitle").textContent = swapping ? "Change your track" : n > 1 ? "Your pick, " + (have + 1) + " of " + n : "Your pick";
+    $("subCancel").hidden = !swapping;
+    $("subSend").textContent = swapping ? "Use this track instead" : "Submit";
     $("subForm").hidden = false;
     $("subSend").disabled = !state.pasted;
   }
@@ -501,9 +521,10 @@
   // A track sent before the round check existed, or from a page that was out
   // of date, has no fingerprint yet: its owner's next visit adds one.
   function describeIfMissing(r, mine) {
-    if (!r || !mine || !isOpen(r) || typeof api().mySubmissionDescribed !== "function") return;
+    if (!r || !mine.length || !isOpen(r) || typeof api().mySubmissionDescribed !== "function") return;
+    // false while any of the reader's tracks has no description
     api().mySubmissionDescribed(r.id).then(function (done) {
-      if (done === false) describe(r, mine, fingerprintOf(mine));
+      if (done === false) mine.forEach(function (m) { describe(r, m, fingerprintOf(m)); });
     }).catch(function (err) { console.error(err); });
   }
 
@@ -650,7 +671,9 @@
     var fp = state.fp && state.fp.key === key ? state.fp.promise : fingerprintOf(p);
     api().submitTrack(r.id, p.platform, p.track).then(function (tag) {
       describe(r, p, fp);
-      state.mine = { tag: tag, platform: p.platform, track: p.track };
+      var entry = { tag: tag, platform: p.platform, track: p.track };
+      // one song a round swaps it (the tag stays); more add to the list
+      state.mine = songsOf(r) === 1 ? [entry] : state.mine.concat([entry]);
       state.changing = false;
       resetPicker();
       render();
@@ -664,9 +687,22 @@
   function withdraw() {
     if (!window.confirm("Withdraw your track? You can submit again while the round is open.")) return;
     api().withdrawSubmission(state.round.id).then(function () {
-      state.mine = null;
+      state.mine = [];
       render();
     }).catch(function (err) { window.alert(errText(err)); });
+  }
+
+  // One of several tracks, by its tag.
+  function removeTrack(ev) {
+    var b = ev.target.closest(".sub-remove");
+    if (!b) return;
+    var tag = b.getAttribute("data-tag");
+    if (!window.confirm("Remove this track? You can send another while the round is open.")) return;
+    b.disabled = true;
+    api().withdrawTrack(state.round.id, tag).then(function () {
+      state.mine = state.mine.filter(function (m) { return m.tag !== tag; });
+      render();
+    }).catch(function (err) { b.disabled = false; window.alert(errText(err)); });
   }
 
   /* ---- a closed round: every track, nobody's name ---- */
@@ -816,6 +852,7 @@
       render();
     });
     $("subWithdraw").addEventListener("click", withdraw);
+    $("subMineEmbed").addEventListener("click", removeTrack);
     // season names for the round card; the page works without them
     PFML.loadJSON("index.json").then(function (index) { state.index = index; })
       .catch(function (err) { console.error(err); })

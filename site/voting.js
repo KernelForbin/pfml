@@ -58,22 +58,23 @@
       "<span>" + esc(names[id] || "Member") + "</span></a>";
   }
 
-  var state = { round: null, rows: [], mineTag: null, points: {}, comments: {}, dirty: false };
+  var state = { round: null, rows: [], mineTags: [], points: {}, comments: {}, dirty: false };
 
   /* ---- the Submit page's voting section ---- */
 
-  // r: the round; mine: the reader's own submission ({tag, ...}) or null.
+  // r: the round; mine: the reader's own tracks ([{tag, ...}], [] for none;
+  // a round can take more than one from each player).
   function render(r, mine) {
     var host = $("subVote");
     var phase = on(r) ? PFML.roundPhase(r) : "";
     if (phase !== "voting" && phase !== "finished") { host.hidden = true; host.innerHTML = ""; return; }
     state.round = r;
-    state.mineTag = mine ? mine.tag : null;
+    state.mineTags = (mine || []).map(function (m) { return m.tag; });
     host.innerHTML = '<p class="block-note">Loading the voting…</p>';
     host.hidden = false;
     var loads = [api().roundSubmissions(r.id), api().people()];
     if (phase === "voting") {
-      loads.push(state.mineTag ? api().myBallot(r.id) : Promise.resolve([]), api().roundVoters(r.id), api().roundSubmitters(r.id));
+      loads.push(state.mineTags.length ? api().myBallot(r.id) : Promise.resolve([]), api().roundVoters(r.id), api().roundSubmitters(r.id));
     } else {
       loads.push(api().roundResults(r.id), api().roundVotes(r.id));
     }
@@ -94,6 +95,8 @@
   function votedLine(voters, submitters, names) {
     var done = {};
     voters.forEach(function (id) { done[id] = true; });
+    // one id per track: each submitter once
+    submitters = submitters.filter(function (id, i) { return submitters.indexOf(id) === i; });
     var waiting = submitters.filter(function (id) { return !done[id]; });
     return '<p class="vt-count"><b>' + voters.length + "/" + submitters.length + "</b> voted" +
       (waiting.length ? '<span class="vt-waiting">Still to vote: ' +
@@ -103,7 +106,7 @@
   function renderBallot(r, saved, voters, submitters, names) {
     var host = $("subVote");
     var closes = PFML.closes(r.voting_closes_at);
-    if (!state.mineTag) {
+    if (!state.mineTags.length) {
       host.innerHTML = "<h2>Voting</h2>" +
         '<p class="block-note">Only players with a track in this round vote. Voting closes ' + esc(closes.at) +
         " (" + esc(closes.left) + "); the results show here after.</p>" + votedLine(voters, submitters, names);
@@ -118,9 +121,12 @@
     });
     host.innerHTML = "<h2>Your ballot</h2>" +
       '<p class="block-note">Give ' + r.point_budget + " points across the other tracks, at most " + r.max_per_track +
-      " on one. Add a comment on any track, yours too. You can change your ballot until voting closes, " +
+      " on one." + (r.downvotes ? " You can also give up to " + r.downvotes + (r.downvotes === 1 ? " downvote" : " downvotes") +
+        ", at most " + r.max_down_per_track + " on one: they’re optional, and press − below 0 to give them." : "") +
+      " Add a comment on any track, yours too. You can change your ballot until voting closes, " +
       esc(closes.at) + " (" + esc(closes.left) + ").</p>" +
-      (r.nonvoters_keep_points ? "" : '<p class="block-note vt-rule">Players who don’t vote score 0 for this round.</p>') +
+      (r.nonvoters_keep_points ? "" : '<p class="block-note vt-rule">Players who don’t vote score ' +
+        (r.downvotes ? "only the downvotes they got" : "0") + " for this round.</p>") +
       votedLine(voters, submitters, names) +
       '<ol class="vt-list">' + state.rows.map(ballotRow).join("") + "</ol>" +
       '<div class="vt-bar"><span class="vt-left" id="vtLeft" aria-live="polite"></span>' +
@@ -133,7 +139,7 @@
   }
 
   function ballotRow(s, i) {
-    var own = s.tag === state.mineTag;
+    var own = state.mineTags.indexOf(s.tag) !== -1;
     var pts = state.points[s.id] || 0;
     var comment = state.comments[s.id] || "";
     var title = s.title || ((NAMES[s.platform] || "") + " track");
@@ -153,27 +159,34 @@
     "</li>";
   }
 
+  // Upvotes given, and downvotes given (as a positive number).
   function spent() {
-    return Object.keys(state.points).reduce(function (sum, id) { return sum + (state.points[id] || 0); }, 0);
+    return Object.keys(state.points).reduce(function (sum, id) { return sum + Math.max(state.points[id] || 0, 0); }, 0);
+  }
+  function downs() {
+    return Object.keys(state.points).reduce(function (sum, id) { return sum - Math.min(state.points[id] || 0, 0); }, 0);
   }
 
   // The running total, the +/- buttons each allow, and Save only once every
-  // point is placed (the same rule cast_ballot holds).
+  // upvote is placed, with downvotes optional up to their limit (the same
+  // rules cast_ballot holds).
   function refreshBallot() {
-    var r = state.round, left = r.point_budget - spent();
-    $("vtLeft").innerHTML = left > 0 ? "<b>" + left + "</b> of " + r.point_budget + " points left"
-      : left === 0 ? "All " + r.point_budget + " points given" : "<b>" + (-left) + "</b> too many";
+    var r = state.round, left = r.point_budget - spent(), down = downs(), downLeft = (r.downvotes || 0) - down;
+    $("vtLeft").innerHTML = (left > 0 ? "<b>" + left + "</b> of " + r.point_budget + " points left"
+      : left === 0 ? "All " + r.point_budget + " points given" : "<b>" + (-left) + "</b> too many") +
+      (r.downvotes ? '<span class="vt-down-left">' + down + " of " + r.downvotes + " downvotes</span>" : "");
     $("vtLeft").classList.toggle("is-done", left === 0);
     $("subVote").querySelectorAll(".vt-row").forEach(function (li) {
       var id = li.getAttribute("data-id"), pts = state.points[id] || 0;
       var out = li.querySelector(".vt-pts");
       if (!out) return;
-      out.textContent = pts;
+      out.textContent = pts < 0 ? "−" + (-pts) : pts;
       li.classList.toggle("has-points", pts > 0);
-      li.querySelector('[data-act="minus"]').disabled = pts <= 0;
-      li.querySelector('[data-act="plus"]').disabled = pts >= r.max_per_track || left <= 0;
+      li.classList.toggle("has-down", pts < 0);
+      li.querySelector('[data-act="minus"]').disabled = pts <= 0 && (pts <= -(r.max_down_per_track || 0) || downLeft <= 0);
+      li.querySelector('[data-act="plus"]').disabled = pts >= r.max_per_track || (pts >= 0 && left <= 0);
     });
-    $("vtSave").disabled = left !== 0;
+    $("vtSave").disabled = left !== 0 || downLeft < 0;
   }
 
   function onBallotClick(ev) {
@@ -188,8 +201,9 @@
       if (!box.hidden) box.focus();
       return;
     }
-    var pts = state.points[id] || 0;
-    state.points[id] = Math.max(0, Math.min(state.round.max_per_track, pts + (act === "plus" ? 1 : -1)));
+    var pts = state.points[id] || 0, r = state.round;
+    // below 0 only in a round with downvotes
+    state.points[id] = Math.max(-(r.max_down_per_track || 0), Math.min(r.max_per_track, pts + (act === "plus" ? 1 : -1)));
     changed();
     refreshBallot();
   }
@@ -215,9 +229,9 @@
   function save() {
     var r = state.round;
     var ballot = state.rows.map(function (s) {
-      return { submission: s.id, points: s.tag === state.mineTag ? 0 : (state.points[s.id] || 0),
+      return { submission: s.id, points: state.mineTags.indexOf(s.tag) !== -1 ? 0 : (state.points[s.id] || 0),
                comment: (state.comments[s.id] || "").trim() };
-    }).filter(function (v) { return v.points > 0 || v.comment; });
+    }).filter(function (v) { return v.points !== 0 || v.comment; });
     $("vtSave").disabled = true;
     api().castBallot(r.id, ballot).then(function () {
       state.dirty = false;
@@ -260,16 +274,17 @@
   function resultRow(r, item, rank, votes, names) {
     var res = item.res;
     var note = !res.voted && !r.nonvoters_keep_points
-      ? '<p class="vt-note">Didn’t vote, so it scores 0' + (res.earned ? " (voters gave it " + res.earned + ")" : "") + ".</p>" : "";
+      ? '<p class="vt-note">Didn’t vote, so ' + (r.downvotes ? "only its downvotes count" : "it scores 0") +
+        (res.earned !== res.points ? " (voters gave it " + res.earned + ")" : "") + ".</p>" : "";
     return '<li class="vt-res' + (rank === 1 ? " is-first" : "") + '"><details>' +
       "<summary>" +
         '<span class="vt-rank">' + rank + "</span>" +
         '<span class="vt-res-track">' + trackLabel(item.s) + who(res.competitor_id, names) + "</span>" +
-        '<span class="vt-score"><b>' + res.points + "</b> " + (res.points === 1 ? "pt" : "pts") + "</span>" +
+        '<span class="vt-score"><b>' + (res.points < 0 ? "−" + (-res.points) : res.points) + "</b> " + (res.points === 1 ? "pt" : "pts") + "</span>" +
       "</summary>" + note +
       (votes.length ? '<ul class="vt-votes">' + votes.map(function (v) {
         return '<li><span class="vt-vote-who">' + who(v.voter_id, names) +
-          (v.points ? '<span class="vt-vote-pts">+' + v.points + "</span>" : "") + "</span>" +
+          (v.points ? '<span class="vt-vote-pts' + (v.points < 0 ? " is-down" : "") + '">' + (v.points > 0 ? "+" + v.points : "−" + (-v.points)) + "</span>" : "") + "</span>" +
           (v.comment ? '<p class="vt-vote-comment">' + esc(v.comment) + "</p>" : "") + "</li>";
       }).join("") + "</ul>" : '<p class="vt-note">No votes.</p>') +
     "</details></li>";
@@ -298,6 +313,10 @@
         '<input class="sub-input vt-num" id="vtAdmBudget" type="number" min="1" max="100" value="' + r.point_budget + '">' +
         '<label class="sub-label" for="vtAdmMax">Most points on one track</label>' +
         '<input class="sub-input vt-num" id="vtAdmMax" type="number" min="1" max="100" value="' + r.max_per_track + '">' +
+        '<label class="sub-label" for="vtAdmDown">Downvotes each voter may give (0 for none)</label>' +
+        '<input class="sub-input vt-num" id="vtAdmDown" type="number" min="0" max="20" value="' + (r.downvotes || 0) + '">' +
+        '<label class="sub-label" for="vtAdmDownMax">Most downvotes on one track</label>' +
+        '<input class="sub-input vt-num" id="vtAdmDownMax" type="number" min="0" max="20" value="' + (r.max_down_per_track || 0) + '">' +
         '<label class="vt-check"><input type="checkbox" id="vtAdmKeep"' + (r.nonvoters_keep_points ? " checked" : "") + "> Players who don’t vote keep their points</label>" +
       "</div></fieldset>";
   }
@@ -308,12 +327,17 @@
     if (!$("vtAdmBody") || !r) return { fields: {} };
     var votingCloses = $("vtAdmCloses").value ? new Date($("vtAdmCloses").value) : null;
     var budget = +$("vtAdmBudget").value, max = +$("vtAdmMax").value;
+    var down = +$("vtAdmDown").value, downMax = +$("vtAdmDownMax").value;
     if (!votingCloses || isNaN(votingCloses)) return { error: "Pick when voting closes." };
     if (votingCloses <= closesAt) return { error: "Voting has to close after submissions do." };
     if (!(budget >= 1 && budget <= 100 && budget % 1 === 0)) return { error: "Points each voter gives: a whole number from 1 to 100." };
     if (!(max >= 1 && max <= budget && max % 1 === 0)) return { error: "Most points on one track: a whole number from 1 up to the points each voter gives." };
+    if (!(down >= 0 && down <= 20 && down % 1 === 0)) return { error: "Downvotes: a whole number from 0 to 20." };
+    // no downvotes means none on a track either; otherwise 1 up to all of them
+    if (!down) downMax = 0;
+    else if (!(downMax >= 1 && downMax <= down && downMax % 1 === 0)) return { error: "Most downvotes on one track: a whole number from 1 up to the downvotes." };
     return { fields: { voting_closes_at: votingCloses.toISOString(), point_budget: budget, max_per_track: max,
-                       nonvoters_keep_points: $("vtAdmKeep").checked } };
+                       nonvoters_keep_points: $("vtAdmKeep").checked, downvotes: down, max_down_per_track: downMax } };
   }
 
   // For a round in voting: move the deadline, or close voting now.

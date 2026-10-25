@@ -1426,6 +1426,9 @@ body.auth-checking::before {
 .sub-who .av { width: 26px; height: 26px; font-size: 0.6rem; flex: none; }
 .sub-who-pending a { background: transparent; border: 1px dashed var(--edge); padding: 2px 9px 2px 2px; }
 .sub-not-joined { color: var(--muted); font-size: 0.74rem; white-space: nowrap; }
+/* each of a player's tracks, when a round takes more than one */
+.sub-mine-item + .sub-mine-item { margin-top: 14px; }
+.sub-remove { margin-left: 12px; padding: 6px 12px; font-size: 0.85rem; }
 .sub-who-none { margin: 0; color: var(--muted); font-size: 0.86rem; }
 @media (hover: hover) { .sub-who a:hover { color: var(--magenta-text); } }
 
@@ -1615,6 +1618,9 @@ button.cm-person { cursor: pointer; }
 .vt-step-btn:disabled { opacity: 0.35; cursor: default; }
 .vt-pts { min-width: 1.6em; text-align: center; font: 800 1.2rem/1 "Archivo", sans-serif; }
 .vt-row.has-points .vt-pts { color: var(--magenta-text); }
+/* a downvote (seasons that allow them) */
+.vt-row.has-down { border-color: var(--neg); box-shadow: 0 0 0 1px var(--neg); }
+.vt-row.has-down .vt-pts { color: var(--neg); }
 .vt-comment-btn { margin-top: 6px; padding: 0; border: 0; background: none; color: var(--magenta-text); font: 600 0.86rem/1.4 "Inter", sans-serif; cursor: pointer; }
 .vt-comment { margin-top: 6px; resize: vertical; }
 .vt-comment[hidden] { display: none; }
@@ -1627,6 +1633,7 @@ button.cm-person { cursor: pointer; }
 .vt-left { font-size: 0.95rem; }
 .vt-left b { font: 800 1.15rem/1 "Archivo", sans-serif; color: var(--magenta-text); }
 .vt-left.is-done { color: var(--deep); font-weight: 600; }
+.vt-down-left { display: block; color: var(--muted); font-size: 0.85rem; font-weight: 400; }
 .vt-res details { background: var(--card); border: 1px solid var(--border); border-radius: var(--r-sm); }
 .vt-res.is-first details { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
 .vt-res summary { display: flex; align-items: center; gap: 12px; padding: 10px 12px; cursor: pointer; list-style: none; }
@@ -1642,6 +1649,7 @@ button.cm-person { cursor: pointer; }
 .vt-votes { list-style: none; margin: 0; padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border-soft); }
 .vt-vote-who { display: flex; align-items: center; gap: 8px; }
 .vt-vote-pts { font: 800 0.9rem/1 "Archivo", sans-serif; color: var(--magenta-text); }
+.vt-vote-pts.is-down { color: var(--neg); }
 .vt-vote-comment { margin: 4px 0 0 28px; font-size: 0.92rem; white-space: pre-wrap; overflow-wrap: anywhere; }
 .vt-admin { margin: 10px 0 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .vt-admin legend { font: 600 0.84rem/1.2 "Archivo", sans-serif; padding: 0 4px; }
