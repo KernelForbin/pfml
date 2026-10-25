@@ -15,13 +15,14 @@
   early uses the database's clock.
 - **The pages:** "Nobody, the admin and commissioners included, can see who
   submitted which track" on the Submit and features pages.
-- **Waits on:** the migration `2026-10-25_commissioner.sql` and its
-  rehearsal. Push only after both.
+- **Set up the same day:** the user ran the migration, then the rehearsal
+  ("Rehearsal passed: 15 checks held"). The live checks pass: both new
+  functions refuse a stranger, and `set_commissioner` refuses even the
+  secret key.
 - **Verified:**
   - the suite passes; 31 breaks in a scratch clone, all caught;
   - in a browser with a stand-in following the same rules, at 375 and 1280,
     light and dark, as the admin, a commissioner and a member.
-  - Not yet run: the rehearsal in the real database.
 
 ## 2026-10-25 (follow-up 8): the notifications bell, with replies and reactions
 

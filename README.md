@@ -1519,8 +1519,8 @@ block at the end of `schema.sql`):
   `tests/test_live_commissioner.py` checks the live project (read-only).
 - **The rehearsal:** `supabase/checks/2026-10-25_commissioner_rehearsal.sql`
   plays the admin and a member as the `authenticated` role, so the policies
-  and the guard apply as they do to the page. It should say "15 checks
-  held".
+  and the guard apply as they do to the page. It said "15 checks held" on
+  2026-10-25, the day the migration ran.
 - **In a browser:** checked at 375 and 1280, light and dark, against a
   stand-in following the same rules, as the admin, a commissioner and a
   member:
