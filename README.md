@@ -449,6 +449,41 @@ taste matrix (and Biggest fan, Coldest shoulder) stays empty until four
 rounds, and Silent treatment and Most talked at until five; someone who
 missed a round is a round later.
 
+## Dark mode
+
+The site follows the device's own light/dark setting (`@media
+(prefers-color-scheme: dark)` at the end of `style.css`; no toggle). Dark mode
+redefines the colour tokens; nothing else in the stylesheet changes. A few new
+tokens name what used to be hard-coded:
+- **`--magenta-text`** is purple as text. In light mode it equals `--magenta`;
+  in dark it's a lighter purple, because the brand purple reads at only 2.9:1
+  on the dark page. `--magenta` stays the fill behind white text, which is
+  6.5:1 in both modes.
+- **`--inverse` and `--on-inverse`** are surfaces that stay dark on purpose:
+  the Home banner, table header rows and the Daily Double badge.
+- **`--on-metal`** is the text on gold, silver and bronze place badges, which
+  is dark in both modes.
+- **`--topbar`, `--glass` and `--edge`** replace the see-through light fills
+  and dashed borders.
+
+In light mode every token equals what the rules used before, and a test
+holds that, so light mode looks exactly as it did.
+
+Contrast was measured on 2026-10-24 in a browser, for every visible piece of
+text on Home, a season, All-Time, a round, a profile, Submit (with a pick,
+the round warning and the gauge), the repeat checker, the crossword,
+features and privacy, in both modes. Body text is 15.8:1, muted 7.4, links
+9.4, purple text 5.8. The only items under 4.5:1 are the avatar initials
+(white on each player's own colour, about 3:1). They're the same in light
+mode, and were left as they are. The first pass had found the place badges
+(light text on gold, 1.4 to 2.4) and the Daily Double badge on the
+features page (1.02), which led to `--on-metal`.
+
+The crossword grid keeps its light, printed look in dark mode: its tokens
+are re-declared light inside `.xw-grid`. Video frames are black. The gauge's
+verdict colours and the red and green round-check boxes have dark versions.
+`features.html` carries the same dark tokens, and a test compares them.
+
 ## Add to Home Screen
 
 `site/manifest.webmanifest` lets a phone put PFML on its home screen and

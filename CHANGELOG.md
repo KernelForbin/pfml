@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-10-24 (follow-up 2): dark mode
+
+- **The site goes dark when the device is set to dark.** Only the colour
+  tokens change; light mode is exactly as before (a test holds every new
+  token to its old value).
+- **Purple text gets its own token**, because the brand purple reads at
+  only 2.9:1 on the dark page. The purple fill behind white text stays the
+  brand colour.
+- **Found by measuring, not by eye:** the gold, silver and bronze place
+  badges went to light-on-gold (1.4 to 2.4) and the features page's Daily
+  Double badge to 1.02. Both are now dark text in both modes.
+- The crossword keeps its light, printed grid; video frames are black.
+- **Verified:** the suite passes, with 9 new tests. The contrast test
+  recomputes every important pair from the CSS in both modes, and all
+  were break-checked (11 breaks). In a browser, every visible piece of text
+  on 10 pages, plus the Submit page with a pick, was measured in dark and
+  light. Nothing was under 4.5:1 except the avatar initials, the same in
+  both modes. No sideways scroll at 375px.
+
 ## 2026-10-24 (follow-up): taste twins, From the vault, round recaps
 
 - **Votes most like them** on every profile: the three players whose

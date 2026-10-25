@@ -177,8 +177,20 @@ Round 7 hint crossword).
 
 It's standalone on purpose: public, no sign-in, no `style.css`, no
 `app.js`, no data, nothing loaded but itself and its fonts. Its colour
-tokens are copied from `style.css`, so a palette change there updates them
-too.
+tokens, light and dark, are copied from `style.css`, so a palette change
+there updates them too (a test compares both).
+
+## Dark mode: colours go through tokens
+
+The site follows the device's light/dark setting (README, Dark mode). Any
+new style uses the tokens, never a literal light colour: `--magenta-text`
+for purple text (`--magenta` is the fill behind white text, too dark to
+read as text on a dark page), `--card` rather than `#fff`, `--inverse` and
+`--on-inverse` for a surface meant to stay dark, `--on-metal` for text on
+gold, silver or bronze. `tests/test_dark_mode.py` recomputes the contrast of
+each pair from the CSS and refuses a hard-coded light background. Check a
+visual change with the browser's dark scheme too (`resize_window` takes
+`colorScheme`), measuring contrast rather than eyeballing it.
 
 ## Working agreement
 

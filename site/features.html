@@ -31,8 +31,38 @@
     --neg: #B3261E;
     --shadow-sm: 0 1px 2px rgba(22, 17, 26, .05);
     --shadow-md: 0 18px 40px -22px rgba(22, 17, 26, .35), 0 2px 6px -2px rgba(22, 17, 26, .08);
+    --magenta-text: #9E00C4;   /* purple as text; --magenta stays the fill behind white text */
+    --inverse: #16111A;         /* a surface that stays dark in both modes (Home banner, table heads) */
+    --on-inverse: #F8F9FA;
+    --topbar: rgba(248, 249, 250, 0.86);
+    --glass: rgba(248, 249, 250, 0.55);
+    --edge: rgba(22, 17, 26, 0.22);
+    --on-metal: #16111A;      /* text on gold, silver and bronze, dark in both modes */
     --r: 16px;
     --r-sm: 11px;
+  }
+  /* Dark mode: the same tokens as style.css's dark block. */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --paper: #131016;
+      --ink: #EEE9F2;
+      --muted: #A89EB2;
+      --border: rgba(255, 255, 255, 0.12);
+      --border-soft: rgba(255, 255, 255, 0.07);
+      --deep: #D7A4F0;
+      --wash: #2A1A33;
+      --card: #1D1921;
+      --neg: #FF8A80;
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+      --shadow-md: 0 18px 40px -22px rgba(0, 0, 0, .8), 0 2px 6px -2px rgba(0, 0, 0, .5);
+      --magenta-text: #C565EA;
+      --inverse: #2A2232;
+      --on-inverse: #F8F9FA;
+      --topbar: rgba(19, 16, 22, 0.86);
+      --glass: rgba(19, 16, 22, 0.55);
+      --edge: rgba(255, 255, 255, 0.25);
+    }
   }
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
@@ -43,14 +73,14 @@
   }
   h1, h2, h3 { font-family: "Archivo", "Inter", system-ui, sans-serif; }
   a { color: var(--deep); text-underline-offset: 2px; text-decoration-thickness: 1.5px; }
-  a:hover { color: var(--magenta); }
+  a:hover { color: var(--magenta-text); }
   :focus-visible { outline: 3px solid var(--magenta); outline-offset: 2px; border-radius: 4px; }
   .shell { max-width: 900px; margin: 0 auto; padding-left: 16px; padding-right: 16px; }
   @media (min-width: 621px) { .shell { padding-left: 20px; padding-right: 20px; } }
 
   .topbar {
     position: sticky; top: 0; z-index: 20;
-    background: rgba(248, 249, 250, 0.86);
+    background: var(--topbar);
     backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--border);
   }
@@ -59,7 +89,7 @@
     font-family: "Archivo", sans-serif; font-weight: 800; font-size: 1.3rem;
     letter-spacing: -0.02em; color: var(--ink); text-decoration: none;
   }
-  .wordmark:hover { color: var(--magenta); }
+  .wordmark:hover { color: var(--magenta-text); }
   .back {
     font-family: "Archivo", sans-serif; font-weight: 600; font-size: 0.86rem; line-height: 1;
     padding: 7px 15px; border: 1px solid var(--border); border-radius: 999px;
@@ -81,7 +111,7 @@
   }
   .summary li { margin: 0 0 7px; line-height: 1.5; }
   .summary li:last-child { margin-bottom: 0; }
-  .summary li::marker { color: var(--magenta); }
+  .summary li::marker { color: var(--magenta-text); }
   .summary b { font-family: "Archivo", sans-serif; }
   .hero .modes-lead { margin: 22px 0 0; font-size: 0.92rem; }
   .modes-lead + .modes { margin-top: 10px; }
@@ -116,13 +146,13 @@
   .card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
   .icon {
     flex: 0 0 auto; width: 38px; height: 38px; border-radius: 50%;
-    display: grid; place-items: center; background: var(--wash); color: var(--magenta);
+    display: grid; place-items: center; background: var(--wash); color: var(--magenta-text);
   }
   .icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .card h3 { margin: 0; font-size: 1.08rem; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
   .card ul { margin: 0; padding-left: 18px; }
   .card li { margin: 5px 0 0; font-size: 0.93rem; }
-  .card li::marker { color: var(--magenta); }
+  .card li::marker { color: var(--magenta-text); }
 
   /* key: real badges, drawn the way the site draws them */
   .key { padding-top: 40px; }
@@ -142,23 +172,23 @@
     display: inline-block; font-family: "Archivo", sans-serif; font-weight: 700; font-size: 0.66rem;
     text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 9px; border-radius: 999px; white-space: nowrap;
   }
-  .place.is-1 { background: var(--gold); color: var(--ink); }
-  .place.is-2 { background: var(--silver); color: var(--ink); }
-  .place.is-3 { background: var(--bronze); color: var(--ink); }
+  .place.is-1 { background: var(--gold); color: var(--on-metal); }
+  .place.is-2 { background: var(--silver); color: var(--on-metal); }
+  .place.is-3 { background: var(--bronze); color: var(--on-metal); }
   .places { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
   .dd {
     display: inline-block; font-family: "Archivo", sans-serif; font-weight: 700; font-size: 0.64rem;
     text-transform: uppercase; letter-spacing: 0.05em; line-height: 1;
-    padding: 3px 7px; border-radius: 999px; background: var(--ink); color: var(--acid); white-space: nowrap;
+    padding: 3px 7px; border-radius: 999px; background: var(--inverse); color: var(--acid); white-space: nowrap;
   }
   .pts { font-family: "Archivo", sans-serif; font-weight: 700; font-size: 1.2rem; }
   .pts.is-neg { color: var(--neg); }
   .pts.is-zero { color: var(--muted); font-size: 1rem; }
   .noart {
     display: grid; place-items: center; width: 34px; height: 34px; border-radius: 8px;
-    background: var(--wash); color: var(--magenta); font-size: 1rem;
+    background: var(--wash); color: var(--magenta-text); font-size: 1rem;
   }
-  .ramp { width: 90px; height: 10px; border-radius: 5px; border: 1px solid var(--border); background: linear-gradient(90deg, #fff, var(--magenta)); }
+  .ramp { width: 90px; height: 10px; border-radius: 5px; border: 1px solid var(--border); background: linear-gradient(90deg, var(--card), var(--magenta)); }
   @media (max-width: 380px) { .key-row { grid-template-columns: 92px 1fr; gap: 10px; } }
 
   .foot {
@@ -491,6 +521,7 @@
           <li>A dot marks the season that's in progress.</li>
           <li>Tap PFML at the top left to get back Home from anywhere.</li>
           <li>Put PFML on your phone's home screen and it opens like an app, full screen with its own icon. On iPhone: Share, then Add to Home Screen. On Android: the menu, then Add to Home screen or Install app. You sign in once inside it.</li>
+          <li>Dark mode: when your phone or computer is set to dark, the whole site goes dark to match.</li>
         </ul>
       </article>
 
