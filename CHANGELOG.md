@@ -1,5 +1,32 @@
 # Changelog
 
+## 2026-10-25 (follow-up 7): notifications switched on
+
+- **Notifications are on:** Notifications in the menu under your initials
+  turns them on for that phone or browser, for new rounds and new
+  playlists. On iPhone it works in the installed app.
+- **The setup was done in order**, each step measured (README, Reminders):
+  - the migration, then its rehearsal ("12 checks held");
+  - `pg_cron` and `pg_net` turned on;
+  - `send-reminders` deployed with JWT verification off and its two
+    secrets, which were made with OpenSSL, passed by clipboard, and never
+    shown or stored;
+  - the timer, as `pg_cron` job 1.
+- **A fix found on the way:** the deployed function answered 500 to a
+  forged unsubscribe link before its secret was set. It now refuses with
+  401, with a test.
+- **The pages:**
+  - the privacy page has a Notifications section (what's kept, who carries
+    the message, how to turn it off), and says where the background script
+    lives;
+  - the features page has the item and a What's new line, and Home's
+    What's new says New.
+- **Verified:** the suite passes, including the guard that the privacy and
+  features pages cover notifications once the key is set. Live, read-only:
+  every new function refuses a stranger, the function refuses anyone
+  without the secret, and a call as the timer answered
+  `{"claimed":0,"sent":0}`. Not yet seen: a notification on a real phone.
+
 ## 2026-10-25 (follow-up 6): reminders, built and waiting on setup
 
 - **App notifications,** asked for 2026-10-25:

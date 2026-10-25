@@ -206,10 +206,11 @@ site round needs. Never read `site_submission_owners` or `site_votes`
 directly from a script: the export function is the one door, and it holds
 the "only after voting closes" rule. README, Site rounds in the stats.
 
-## Reminders: built, waiting on setup
+## Reminders
 
-App notifications are built (README, Reminders) and wait on the user's
-setup. Email is built but on hold. The user's calls (2026-10-25):
+App notifications are built and set up (README, Reminders): the function
+is deployed with its secrets, and the five-minute timer runs as `pg_cron`
+job 1. Email is built but on hold. The user's calls (2026-10-25):
 
 - **Now:** new round, playlist ready.
 - **With voting:** halfway, 5h, 2h, 1h, only to players who haven't voted.

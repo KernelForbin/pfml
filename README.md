@@ -1622,9 +1622,9 @@ repeat checker links a SoundCloud pick to SoundCloud.
 
 ## Reminders
 
-Reminders reach members on their phones (built 2026-10-25; waiting on the
-user's setup, so nothing shows yet). Email is built too but dormant: the
-user put it on hold, and it needs a Resend account and DNS records for
+Reminders reach members on their phones (built and set up 2026-10-25; the
+setup steps below were all done that day). Email is built too but dormant:
+the user put it on hold, and it needs a Resend account and DNS records for
 pfml.fun first. The user's calls that day:
 
 | Reminder | Who | When |
@@ -1716,6 +1716,28 @@ the function exist. The daily security check calls every function in
    puts that copy on the clipboard.
 6. Set `vapidPublicKey` in `config.js`, and update the privacy and features
    pages. Push, then turn notifications on and send a test from a phone.
+
+**Done on 2026-10-25, measured at each step:**
+
+1. **The rehearsal** said "12 checks held".
+2. **Read-only checks:** a stranger was refused by all seven new functions,
+   and a claim with no channel claimed nothing.
+3. **The keys:** both secrets were made with OpenSSL and went to the
+   clipboard one at a time, never shown. The scratch copy was deleted once
+   they were in Supabase.
+4. **The first deploy** answered 500 to a forged unsubscribe link while
+   `REMINDERS_SECRET` wasn't set yet, because signing with an empty key
+   throws. Fixed to refuse (401), with a test.
+5. **After redeploying:** strangers got 401 on every path, and a call with
+   the secret answered `{"claimed":0,"sent":0}`. So both secrets were read,
+   and the claim reached the database with nobody subscribed yet.
+6. **The timer** is `pg_cron` job 1, `pfml-reminders`.
+
+If a secret is ever lost, make new ones. Replace both function secrets,
+then the Vault secret:
+`select vault.update_secret((select id from vault.secrets where name = 'reminders_secret'), '<new>');`.
+A new push key also means a new `vapidPublicKey`, and every device has to
+turn notifications on again.
 
 **Checked:**
 

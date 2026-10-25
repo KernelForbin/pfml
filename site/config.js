@@ -8,5 +8,5 @@ window.PFML_CONFIG = {
   supabasePublishableKey: "sb_publishable_Jg1B92IarRL2cVdCqJUuMA_UsU5QqUV",
   // The public half of the push signing key (README, Reminders); its private
   // half is an Edge Function secret only. Empty: notifications stay hidden.
-  vapidPublicKey: ""
+  vapidPublicKey: "BE4ym8TgmStjfgYnm8uBIuUrgFf6hQCyYLrqzFm52gcc8qAOs8iTFuUhD9WpUmjWaZHIvgLhbBA2kp8xmcAGNRk"
 };
