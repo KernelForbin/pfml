@@ -200,6 +200,22 @@
   .ramp { width: 90px; height: 10px; border-radius: 5px; border: 1px solid var(--border); background: linear-gradient(90deg, var(--card), var(--magenta)); }
   @media (max-width: 380px) { .key-row { grid-template-columns: 92px 1fr; gap: 10px; } }
 
+  /* how it's built: numbers filled in at deploy */
+  .built { padding-top: 40px; }
+  .built h2 { margin: 0 0 4px; font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; }
+  .built .note { margin: 0 0 16px; color: var(--muted); font-size: 0.9rem; }
+  .stats { margin: 0; display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+  @media (min-width: 621px) { .stats { grid-template-columns: repeat(4, 1fr); } }
+  .stats div {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--r-sm);
+    box-shadow: var(--shadow-sm); padding: 12px 14px; display: flex; flex-direction: column; gap: 4px;
+  }
+  .stats dt { color: var(--muted); font-size: 0.8rem; line-height: 1.3; }
+  .stats dd {
+    margin: 0; margin-top: auto; color: var(--ink); font: 700 1.45rem/1.1 "Archivo", sans-serif;
+    letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
+  }
+
   .foot {
     margin-top: 46px; padding-top: 24px; padding-bottom: 60px;
     border-top: 1px solid var(--border); color: var(--muted); font-size: 0.84rem;
@@ -604,6 +620,23 @@
       <div class="key-row"><dt><span class="pts is-zero">0</span></dt><dd>A comment that came without any points.</dd></div>
       <div class="key-row"><dt><span class="noart" aria-hidden="true">&#9835;</span></dt><dd>No album art was found for this track.</dd></div>
       <div class="key-row"><dt><span class="ramp" aria-hidden="true"></span></dt><dd>In the taste grid, darker means more points a round.</dd></div>
+    </dl>
+  </section>
+
+  <!-- The numbers go in at every deploy, in the deploy's checkout only
+       (scripts/stamp_build_stats.py), so this file keeps its dashes. -->
+  <section class="built" aria-labelledby="builtTitle">
+    <h2 id="builtTitle">How it's built</h2>
+    <p class="note">Built with Claude Opus 5.5, in Claude Code. <span data-stat="when">Counted at every deploy.</span></p>
+    <dl class="stats">
+      <div><dt>Commits</dt><dd data-stat="commits">&mdash;</dd></div>
+      <div><dt>Lines of code</dt><dd data-stat="code">&mdash;</dd></div>
+      <div><dt>Tests run on every deploy</dt><dd data-stat="tests">&mdash;</dd></div>
+      <div><dt>Deploys</dt><dd data-stat="deploys">&mdash;</dd></div>
+      <div><dt>Daily security checks run</dt><dd data-stat="checks">&mdash;</dd></div>
+      <div><dt>Lines in the README</dt><dd data-stat="readme">&mdash;</dd></div>
+      <div><dt>Lines in CLAUDE.md</dt><dd data-stat="claude">&mdash;</dd></div>
+      <div><dt>Lines in the changelog</dt><dd data-stat="changelog">&mdash;</dd></div>
     </dl>
   </section>
 

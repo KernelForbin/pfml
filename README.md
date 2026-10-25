@@ -46,6 +46,8 @@ scripts/security_check.py     the daily security check (security-check.yml);
                               advisories already judged
 scripts/stamp_check_time.py   at deploy, puts the last clean check's time on
                               the privacy page
+scripts/stamp_build_stats.py  at deploy, puts the build stats at the bottom
+                              of the features page
 supabase/schema.sql      tables, access rules and buckets; run once
 supabase/migrations/     one-off changes to the live project, run by hand in
                          the SQL Editor (schema.sql already includes them)
@@ -71,7 +73,9 @@ site/                    everything GitHub Pages serves
                          Home's What's new button links here and says New
                          until this browser has opened the page since the
                          newest line (FEATURES_UPDATED in app.js; the page
-                         stores pfml.featuresSeen in localStorage)
+                         stores pfml.featuresSeen in localStorage). Ends
+                         with "How it's built", numbers counted at every
+                         deploy (Build stats, below)
   privacy.html           public Privacy and Security page
   rounds.js              the round cards on season pages and the round page,
                          with member votes, reactions and replies
@@ -332,6 +336,37 @@ privacy page (`scripts/stamp_check_time.py`), so no commit is needed. The
 page shows it in the reader's own time. A failed run deploys nothing, so
 the page keeps its last clean time, and GitHub emails the failure to the
 account that last changed the schedule.
+
+### Build stats
+
+The features page ends with "How it's built" (asked 2026-10-25): built with
+Claude Opus 5.5 in Claude Code, and eight numbers. Every deploy counts them
+and writes them into its own copy of the page
+(`scripts/stamp_build_stats.py`, after the tests), so they're never stale
+and the repo's page keeps dashes:
+
+- **Commits:** `git rev-list --count HEAD`, which is why the build job
+  checks out the whole history (`fetch-depth: 0`).
+- **Deploys:** successful runs of `deploy.yml` from the Actions API, plus
+  the one under way.
+- **Daily security checks run:** finished runs of `security-check.yml`,
+  passed or failed.
+- **Lines of code:** tracked `.py .js .ts .html .css .sql .yml` files,
+  tests and workflows included, less the generated `site/emoji-data.js` and
+  `site/seasonN.html`, and less the docs, which have their own numbers.
+- **Tests run on every deploy:** the suite less the tests marked to skip,
+  which at deploy are the live ones (they need `PFML_LIVE=1`). On
+  2026-10-25 that was 679 of 705, the same number the suite's own "Ran,
+  skipped" gives.
+- **Lines in README.md, CLAUDE.md and CHANGELOG.md.**
+
+Left out, the user's call: prompts and Claude's steps (only the current
+session's transcript is still on disk; the older ones are gone), and SQL
+queries run (nothing records them). A failed count fails the deploy, like
+a failed lookup of the security check's time: the script refuses a count
+that isn't a plain number, and a page missing any placeholder, rather than
+ship a blank or a wrong figure. If the Actions API is down, rerun the
+deploy once it's back.
 
 When it fails: read the run's summary. For a new Supabase advisory, judge
 whether it touches PFML and add a line to `scripts/security_reviewed.txt`

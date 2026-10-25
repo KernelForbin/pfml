@@ -48,6 +48,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0   # the whole history, for the features page's commit count
 
       # The suite is stdlib-only; this pins the version it runs on rather
       # than whatever python3 the runner image ships that month.
@@ -95,6 +96,19 @@ jobs:
         run: |
           at="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow security-check.yml --status success --limit 1 --json updatedAt --jq '.[0].updatedAt // empty')"
           python scripts/stamp_check_time.py site "$at"
+
+      # The features page ends with numbers about how the site is built
+      # (commits, lines, tests, deploys, security checks). Counted here, so
+      # they're never stale, and in this checkout only, like the stamps
+      # above. This deploy isn't a success yet, so the script adds it.
+      - name: Stamp the build stats
+        timeout-minutes: 2
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          deploys="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/deploy.yml/runs?status=success&per_page=1" --jq .total_count)"
+          checks="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/security-check.yml/runs?status=completed&per_page=1" --jq .total_count)"
+          python scripts/stamp_build_stats.py site "$(git rev-list --count HEAD)" "$deploys" "$checks"
 
       # No configure-pages step: it only reports the site's base URL for
       # static site generators, which plain HTML doesn't need, and it would

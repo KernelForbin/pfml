@@ -182,6 +182,14 @@ reader's clock. Don't prune them by hand, and leave out fixes and small
 tweaks. Move `FEATURES_UPDATED` in `app.js` to the newest line's date too:
 that's what puts New on Home's What's new button (a test checks they match).
 
+**How it's built**, the box at its bottom, is the one exception to the
+scope rule (the user's call, 2026-10-25): built with Claude Opus 5.5, and
+build stats that every deploy counts and writes into its own copy
+(`scripts/stamp_build_stats.py`; README, Build stats). Never type the
+numbers into the page: the repo's copy keeps its dashes, and the script
+refuses a page missing one. Prompts and SQL queries stay off (not
+countable; the user said no to "prompts since today").
+
 It's standalone on purpose: public, no sign-in, no `style.css`, no
 `app.js`, no data, nothing loaded but itself and its fonts. Its colour
 tokens, light and dark, are copied from `style.css`, so a palette change

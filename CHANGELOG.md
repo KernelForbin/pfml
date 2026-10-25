@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-10-25 (follow-up 14): how it's built, on the features page
+
+- **At the bottom of the features page:** built with Claude Opus 5.5, in
+  Claude Code, and the commits, lines of code, tests run on every deploy,
+  deploys, daily security checks run, and the lines in the README,
+  CLAUDE.md and the changelog.
+- **Counted at every deploy** (`stamp_build_stats.py`), in the deploy's
+  copy only, so they're never stale and need no commit. The build job now
+  checks out the whole history, for the commit count.
+- **Left out** (the user's call): prompts and Claude's steps, since only
+  today's session is still on disk, and SQL queries, which nothing records.
+- **Verified:**
+  - the suite passes (705), with 18 breaks in a scratch clone, all caught
+    (three got through at first, and the tests were tightened);
+  - a copy stamped with today's numbers, in a browser at 375 and 1280,
+    light and dark: nothing scrolls sideways, and the labels and numbers
+    read at 5.9:1 or better.
+
 ## 2026-10-25 (follow-up 13): groups on the trend chart
 
 - **Group toggles** above the Performance over time chart's player chips:
