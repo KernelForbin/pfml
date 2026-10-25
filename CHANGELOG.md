@@ -15,14 +15,18 @@
 - **A bug found in the browser:** opening the bell redrew its icon before
   the click-outside handler ran, which then closed the panel at once. It
   now checks the click's path from when it began. Regression test.
-- **Waits on:** the migration `2026-10-25_notification_choices.sql` and its
-  rehearsal, and redeploying `send-reminders`.
+- **Set up the same day:** the user ran the migration, then the rehearsal
+  ("Rehearsal passed: 12 checks held"), and redeployed `send-reminders`
+  with JWT verification still off. Live, read-only: the three new functions
+  answered a stranger 401. Then pushed (d9c757d); the live files matched
+  the commit, and the bell showed on the user's iPhone in the installed
+  app.
 - **Verified:** the suite passes, each new assertion break-checked in a
   scratch clone (34 breaks, all caught). In a browser at 375 and 1280,
   light and dark, with the push objects and the api faked: the top bar fits
   at 375, switches save and go back on failure, the device switch swaps the
-  icon, `?inbox=1` opens the inbox. Not yet run: the rehearsal in the real
-  database, and a real reply notification on a phone.
+  icon, `?inbox=1` opens the inbox. Not yet seen: a real reply or reaction
+  notification on a phone.
 
 ## 2026-10-25 (follow-up 7): notifications switched on
 

@@ -1822,6 +1822,12 @@ turn notifications on again.
    reaction notices.
 4. Push the pages.
 
+**Done on 2026-10-25:** all four, in that order. The rehearsal said "12
+checks held"; after the migration the three new functions answered a
+stranger 401 (`tests/test_live_reminders.py`); the pages went out as
+d9c757d and matched the commit live; the bell showed on the user's iPhone,
+in the installed app. Not yet seen: a real reply or reaction notification.
+
 **The bell, checked:** `tests/test_reminders.py` (TheBell,
 InboxNotifications), each assertion break-checked in a scratch clone. In a
 browser at 375 and 1280 wide, light and dark, with the push objects and
