@@ -551,6 +551,28 @@ $$;
 revoke all on function public.site_round_submitters(uuid) from public, anon;
 grant execute on function public.site_round_submitters(uuid) to authenticated;
 
+-- The admin's view of unused invite links: who has one and when it was
+-- made, never the link. supabase/migrations/2026-10-24_admin_invite_status.sql
+-- adds the same to the live project. README, Admin status.
+create or replace function public.admin_invite_status()
+returns table (competitor_id text, made_at timestamptz)
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not public.is_admin() then
+    raise exception 'Only the admin can see invite status.';
+  end if;
+  return query
+    select i.competitor_id, max(i.created_at)
+      from public.invites i
+     where i.claimed_by is null
+     group by i.competitor_id
+     order by i.competitor_id;
+end;
+$$;
+
+revoke all on function public.admin_invite_status() from public, anon;
+grant execute on function public.admin_invite_status() to authenticated;
+
 -- Search answers kept by the search-tracks Edge Function (YouTube's, for a
 -- week). Service, text and day only, never who searched; no policies.
 -- supabase/migrations/2026-10-19_search_cache.sql adds it to the live project.

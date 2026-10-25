@@ -336,11 +336,25 @@
     PFML.api.siteRounds().then(function (rounds) {
       var open = (rounds || []).filter(function (r) { return !r.closed_at && Date.now() < Date.parse(r.closes_at); })[0];
       if (!open) return;
+      var closes = PFML.closes(open.closes_at);
       box.innerHTML = '<a class="sub-banner-link" href="submit"><span class="sub-banner-kicker">Open for submissions</span>' +
         "<b>" + esc(open.name) + '</b><span class="sub-banner-count" id="submitBannerCount"></span>' +
-        "<span class=\"sub-banner-go\">Submit your track \u2192</span></a>";
+        '<span class="sub-banner-when">Closes ' + esc(closes.at) + " \u00b7 " + esc(closes.left) + "</span>" +
+        '<span class="sub-banner-mine" id="submitBannerMine"></span>' +
+        '<span class="sub-banner-go" id="submitBannerGo">Submit your track \u2192</span></a>';
       box.hidden = false;
       bannerCount(open);
+      bannerMine(open);
+    }).catch(function (err) { console.error(err); });
+  }
+
+  // Whether the reader has a track in: their own submission only, the one
+  // thing anyone can ask about themselves (my_submission).
+  function bannerMine(round) {
+    PFML.api.mySubmission(round.id).then(function (mine) {
+      $("submitBannerMine").textContent = mine ? "\u2713 You're in" : "You haven't submitted yet";
+      $("submitBannerMine").classList.toggle("is-in", !!mine);
+      if (mine) $("submitBannerGo").textContent = "Change your track \u2192";
     }).catch(function (err) { console.error(err); });
   }
 

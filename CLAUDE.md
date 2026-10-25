@@ -216,6 +216,8 @@ verified" has to be both.
     and run `scripts/build.py`
   - `site/emoji-data.js`, which is generated: change
     `scripts/update_emoji_data.py` and run it
+  - `site/icon-*.png` (the Add to Home Screen icons), which are drawn by
+    `scripts/make_icons.py`: change the script and run it
   - `supabase/schema.sql`, which is applied to the live database by hand.
     A change to a table the live project already has needs a migration in
     `supabase/migrations/` as well, which the user runs in the SQL Editor:

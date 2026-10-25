@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-10-24: Add to Home Screen, a fuller Home banner, admin status
+
+- **Add to Home Screen:** a web app manifest and PNG icons (the favicon's
+  purple P, drawn by `scripts/make_icons.py`), so PFML opens full screen
+  from a phone's home screen. Sign-in inside it on an iPhone still needs a
+  real test (README, Add to Home Screen).
+- **The Home banner says when the round closes** ("Closes Sun, Oct 25,
+  7:00 PM · in 23 hours") **and whether you're in** ("✓ You're in" and
+  "Change your track", or "You haven't submitted yet"). It uses one
+  deadline wording, now shared with the Submit page.
+- **Admin status on the Submit page:** when the data was last published,
+  the latest finished round, and who hasn't joined the site, with whether
+  an invite link is waiting for them (never the link itself). Needs
+  `supabase/migrations/2026-10-24_admin_invite_status.sql`.
+- **Verified:** the suite passes, with 16 new tests, all break-checked (16
+  breaks). In a browser against a stand-in: the banner both ways, the
+  manifest and every icon loading at its size, the admin panel for the
+  admin only; 375px with no sideways scroll.
+
 ## 2026-10-23 (follow-up): who's in, x/20
 
 - **"7/20 submitted"** on the Home banner and the Submit page, and a Who's

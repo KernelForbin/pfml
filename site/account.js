@@ -72,10 +72,24 @@
     return '<small class="tr"><b class="tr-label">Translated from ' + esc(tr.from) + "</b>" + esc(tr.text) + "</small>";
   }
 
+  // A deadline, both ways: "Sun, Oct 25, 7:00 PM" in the reader's own time
+  // zone, and "in 2 days". The Submit page and the Home banner say it alike.
+  function closes(iso) {
+    var at = new Date(iso).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+    var mins = Math.round((Date.parse(iso) - Date.now()) / 60000);
+    var left;
+    if (mins < 1) left = "any moment now";
+    else if (mins < 60) left = "in " + mins + " min";
+    else if (Math.round(mins / 60) < 36) left = "in " + Math.round(mins / 60) + (Math.round(mins / 60) === 1 ? " hour" : " hours");
+    else left = "in " + Math.round(mins / 60 / 24) + " days";
+    return { at: at, left: left };
+  }
+
   PFML.avatar = avatar;
   PFML.reactionGlyph = reactionGlyph;
   PFML.when = when;
   PFML.translationHtml = translationHtml;
+  PFML.closes = closes;
 
   // A tray with a notch: an inbox, drawn rather than an emoji character,
   // so it's the same flat icon on every device (see ADD_REACTION_ICON).

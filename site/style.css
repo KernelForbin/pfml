@@ -1434,6 +1434,10 @@ body.auth-checking::before {
 .sub-banner-go { margin-left: auto; font-weight: 600; }
 .sub-banner-count { font: 700 0.92rem/1.25 "Archivo", sans-serif; color: var(--acid); }
 .sub-banner-count:empty { display: none; }
+.sub-banner-when { width: 100%; font-size: 0.9rem; opacity: 0.85; }
+.sub-banner-mine { font-weight: 700; font-size: 0.92rem; }
+.sub-banner-mine:empty { display: none; }
+.sub-banner-mine.is-in { color: var(--acid); }
 @media (hover: hover) { .sub-banner-link:hover { color: var(--paper); transform: translateY(-1px); } }
 
 .sub-round-card { padding: 20px 22px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow-sm); }
@@ -1442,6 +1446,15 @@ body.auth-checking::before {
 .sub-prompt { margin: 0; white-space: pre-wrap; max-width: 65ch; }
 .sub-count { margin: 10px 0 0; color: var(--muted); font-size: 0.9rem; }
 .sub-count b { color: var(--ink); font: 800 1.05rem/1 "Archivo", sans-serif; }
+
+/* the admin's league panel (submit.js) */
+.sub-admin-status:empty { display: none; }
+.sub-admin-status { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--border); }
+.sub-admin-status h3 { margin: 0 0 8px; font-size: 1rem; }
+.sub-admin-status > ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 0.9rem; }
+.sub-admin-status ul ul { margin: 4px 0 0; padding-left: 18px; }
+.sub-admin-status small { color: var(--muted); }
+.sub-admin-status code { font-size: 0.82rem; overflow-wrap: anywhere; }
 
 /* who's in (submit.js): avatars for who has submitted and who hasn't */
 .sub-who { display: grid; gap: 12px; margin-top: 12px; }

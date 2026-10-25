@@ -435,6 +435,27 @@ taste matrix (and Biggest fan, Coldest shoulder) stays empty until four
 rounds, and Silent treatment and Most talked at until five; someone who
 missed a round is a round later.
 
+## Add to Home Screen
+
+`site/manifest.webmanifest` lets a phone put PFML on its home screen and
+open it full screen, like an app (`display: standalone`), with the
+favicon's purple P as its icon. Every members-only page links it, plus an
+`apple-touch-icon`. features and privacy stay standalone and don't. The
+file isn't named `.json`, so the deploy's guard against league data doesn't
+catch it.
+
+The icons are PNGs drawn by `scripts/make_icons.py` (stdlib only), because
+iOS takes no SVG icon. There's a 180 pixel one for iOS, and 192 and 512
+pixel ones for Android, plus a 512 "maskable" one that the launcher crops
+to its own shape. Change the script and rerun it; a test checks the
+committed icon is what it draws.
+
+**Unverified on an iPhone:** a home-screen web app on iOS keeps its own
+storage, separate from Safari, so members sign in once inside it. Google
+sign-in in that mode has been unreliable on some iOS versions. If it fails,
+change `display` to `browser`: the icon then opens normal Safari, already
+signed in, without the full-screen look.
+
 ## Previewing locally
 
 ```bash
@@ -858,6 +879,28 @@ same blocks as `schema.sql`. Nothing here was run against Postgres before
 it shipped (there's none on this machine); `tests/test_submissions.py`
 pins the rules as text, and the page was checked in a browser against a
 stand-in that follows them.
+
+### The Home banner
+
+While a round is open, the Home banner shows its name, "x/20 submitted"
+(Who's in, below), when it closes ("Closes Sun, Oct 25, 7:00 PM · in 2
+days", in the reader's own time zone), and whether the reader has a track
+in: "✓ You're in", with the button reading "Change your track", or "You
+haven't submitted yet". That last part asks only about the reader's own
+submission (`my_submission`). The deadline wording is `PFML.closes` in
+`account.js`, shared with the Submit page.
+
+### Admin status
+
+Below the round form, the admin sees a League status panel. It shows when
+the data was last published (the upload time of `index.json` in the bucket,
+which members can list) and the latest finished round in it. It also lists
+the players taking part who haven't joined the site, each with "link made
+Oct 23, not used yet" or "no link yet". The invites table has no policies, so that comes from
+`admin_invite_status()`, admin only, which returns who has an unused link
+and when it was made, never the link itself; `scripts/invites.py --player
+"Name"` prints it. Migration:
+`supabase/migrations/2026-10-24_admin_invite_status.sql`.
 
 ### Who's in
 

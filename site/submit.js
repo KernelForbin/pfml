@@ -128,19 +128,6 @@
     return s ? s.label : "Season " + String(key).replace(/^season/, "");
   }
 
-  function when(iso) {
-    return new Date(iso).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-  }
-  function fromNow(iso) {
-    var mins = Math.round((Date.parse(iso) - Date.now()) / 60000);
-    if (mins < 1) return "any moment now";
-    if (mins < 60) return "in " + mins + " min";
-    var hrs = Math.round(mins / 60);
-    if (hrs < 36) return "in " + hrs + (hrs === 1 ? " hour" : " hours");
-    var days = Math.round(hrs / 24);
-    return "in " + days + " days";
-  }
-
   function load() {
     clearTimeout(state.timer);
     // Inside the chain, so any failure lands in the catch below and says
@@ -182,7 +169,7 @@
     }
     var open = isOpen(r);
     $("subLine").textContent = open
-      ? "Submissions close " + when(r.closes_at) + " (" + fromNow(r.closes_at) + ")."
+      ? "Submissions close " + PFML.closes(r.closes_at).at + " (" + PFML.closes(r.closes_at).left + ")."
       : "Submissions for this round are closed.";
 
     var box = $("subRound");
@@ -755,10 +742,47 @@
         '<p class="sub-msg" id="subAdmMsg" role="status" hidden></p>' +
         '<div class="sub-actions"><button type="submit" class="sub-btn">' + (r ? "Save changes" : "Open the round") + "</button>" +
           (r ? '<button type="button" class="sub-btn sub-btn-quiet" id="subAdmClose">Close submissions now</button>' : "") + "</div>" +
-      "</form>";
+      "</form>" +
+      '<div class="sub-admin-status" id="subAdmStatus"></div>';
     $("subAdmin").hidden = false;
+    renderLeagueStatus();
     $("subAdminForm").addEventListener("submit", function (ev) { ev.preventDefault(); saveRound(r); });
     if (r) $("subAdmClose").addEventListener("click", function () { closeRound(r); });
+  }
+
+  // The admin's league panel: when the data was last published and the
+  // latest finished round in it, and the players taking part who haven't
+  // joined the site, with whether an invite link is waiting for them (never
+  // the link itself: scripts/invites.py prints that). Each part shows on
+  // its own; one that can't load is left out.
+  function renderLeagueStatus() {
+    var api_ = api();
+    if (typeof api_.adminInviteStatus !== "function") return;
+    var season = state.index && state.index.seasons.filter(function (s) { return s.key === state.index.currentSeason; })[0];
+    var players = season && season.activePlayers || [];
+    function soft(p) { return p.catch(function (err) { console.error(err); return null; }); }
+    Promise.all([soft(api_.dataPublishedAt()), soft(api_.people()), soft(api_.adminInviteStatus())]).then(function (res) {
+      var parts = [];
+      if (res[0]) {
+        parts.push("<li><b>Data published</b> " + esc(new Date(res[0]).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })) +
+          (season && season.liveRound ? " · latest finished round: " + esc(season.label) + ", Round " + season.liveRound.number + ", " + esc(season.liveRound.name) : "") + "</li>");
+      }
+      if (res[1] && res[2] && players.length) {
+        var linked = {}, waiting = {};
+        Object.keys(res[1]).forEach(function (u) { linked[res[1][u].competitorId] = true; });
+        res[2].forEach(function (row) { waiting[row.competitor_id] = row.made_at; });
+        var out = players.filter(function (p) { return !linked[p.id]; });
+        parts.push("<li><b>Not joined the site</b> " + (out.length ? out.length + "<ul>" + out.map(function (p) {
+          var made = waiting[p.id];
+          return "<li>" + esc(p.name) + " <small>" + (made
+            ? "link made " + esc(new Date(made).toLocaleDateString(undefined, { month: "short", day: "numeric" })) + ", not used yet"
+            : "no link yet") + "</small></li>";
+        }).join("") + "</ul>" : "everyone taking part has joined") + "</li>");
+      }
+      if (!parts.length) return;
+      $("subAdmStatus").innerHTML = "<h3>League status</h3><ul>" + parts.join("") + "</ul>" +
+        '<p class="block-note">Make or reprint someone’s link: <code>python scripts/invites.py --player "Name"</code></p>';
+    });
   }
 
   function adminMsg(text) { var m = $("subAdmMsg"); m.textContent = text; m.className = "sub-msg is-error"; m.hidden = !text; }

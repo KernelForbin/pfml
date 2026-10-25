@@ -395,6 +395,18 @@
       return client.rpc("describe_submission", { p_round: roundId, p_platform: platform, p_track: track,
         p_song: fp.song, p_names: fp.names, p_text: fp.text }).then(must);
     },
+    // The admin's league panel: players with an unused invite link and when
+    // it was made (never the link), and when the data was last published
+    // (the time index.json was uploaded to the members-only bucket).
+    adminInviteStatus: function () {
+      return client.rpc("admin_invite_status").then(must);
+    },
+    dataPublishedAt: function () {
+      return client.storage.from("league-data").list("", { limit: 100 }).then(must).then(function (files) {
+        var index = (files || []).filter(function (f) { return f.name === "index.json"; })[0];
+        return index ? index.updated_at || index.created_at || null : null;
+      });
+    },
     // The player ids of everyone with a track in the round, in id order:
     // who, never which track (the user's call, 2026-10-23).
     roundSubmitters: function (roundId) {
