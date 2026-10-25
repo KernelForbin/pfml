@@ -374,8 +374,33 @@
     }).catch(function (err) { console.error(err); });
   }
 
+  // From the vault (vault.json, build.build_vault): one past round winner at
+  // random each visit, with its note and the comment from whoever backed it
+  // most. The section stays hidden if the file isn't there.
+  function renderVault() {
+    PFML.loadJSON("vault.json").then(function (v) {
+      var list = (v && v.winners) || [];
+      if (!list.length) return;
+      var w = list[Math.floor(Math.random() * list.length)];
+      var c = w.comment;
+      $("vaultCard").innerHTML = '<article class="vault-card">' +
+        (w.art ? '<img class="vault-art" src="' + esc(w.art) + '" alt="" width="96" height="96" loading="lazy">' : "") +
+        '<div class="vault-text">' +
+          '<p class="vault-where"><a href="round?s=' + encodeURIComponent(w.seasonKey) + "&r=" + encodeURIComponent(w.roundId) + '">' +
+            esc(w.seasonLabel) + ", Round " + w.roundNumber + ": " + esc(w.roundName) + "</a></p>" +
+          "<h3>" + esc(w.title) + "</h3>" +
+          '<p class="vault-by">' + esc(w.artistText) + ' &middot; won with ' + w.points + ' pts, sent by <a href="' + profileUrl(w.submitterId) + '">' + esc(w.submitterName) + "</a></p>" +
+          (w.note ? '<p class="vault-note">“' + esc(w.note) + "” <small>" + esc(w.submitterName) + "</small></p>" : "") +
+          (c ? '<p class="vault-comment">“' + esc(c.comment) + "” <small>" + esc(c.voterName) + "</small>" + PFML.translationHtml(c.translation) + "</p>" : "") +
+          (w.spotifyId ? '<a class="pill" href="https://open.spotify.com/track/' + encodeURIComponent(w.spotifyId) + '" target="_blank" rel="noopener">Play on Spotify &nearr;</a>' : "") +
+        "</div></article>";
+      $("block-vault").hidden = false;
+    }).catch(function (err) { console.error(err); });
+  }
+
   function initHome() {
     renderSubmitBanner();
+    renderVault();
     PFML.loadJSON("index.json").then(function (index) {
       renderNav(index, null);
       var grid = el("div", "season-grid");
@@ -2174,11 +2199,13 @@
     host.appendChild(list);
   }
 
-  function peopleList(title, people, note) {
+  // value: what goes on the right of each name (points, by default)
+  function peopleList(title, people, note, value) {
+    value = value || function (x) { return x.points + " <small>pts</small>"; };
     var col = el("div", "pf-people");
     col.innerHTML = "<h3>" + esc(title) + "</h3>" + (people.length ? "<ol>" + people.map(function (x) {
       return '<li><a href="' + profileUrl(x.id) + '">' + PFML.avatar(x.id, x.name) + "<span>" + esc(x.name) + "</span></a>" +
-        "<b>" + x.points + " <small>pts</small></b></li>";
+        "<b>" + value(x) + "</b></li>";
     }).join("") + "</ol>" : '<p class="pf-none">' + esc(note) + "</p>");
     return col;
   }
@@ -2189,6 +2216,11 @@
     var wrap = el("div", "pf-fans");
     wrap.appendChild(peopleList("Biggest fans", (prof && prof.fans) || [], "Nobody has voted for " + name + " yet."));
     wrap.appendChild(peopleList("Their favourites", (prof && prof.favorites) || [], name + " hasn’t voted yet."));
+    // build.taste_twins: who backs the same songs more than usual, ranked;
+    // the correlation itself is modest, so no percentage
+    wrap.appendChild(peopleList("Votes most like them", (prof && prof.tasteTwins) || [],
+      "Not enough rounds voted alongside anyone yet.",
+      function (x) { return "<small>over " + x.rounds + " rounds</small>"; }));
     host.appendChild(wrap);
   }
 

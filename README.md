@@ -245,6 +245,20 @@ own footer links back to the site and to the features page.
 
 ## Results by round, and the comments on them
 
+**Recap** (top of each round page, `recapLines` in `rounds.js`). It's worked
+out from the round's own data, with nothing extra built:
+- **Winner:** the winning track, who sent it, its points and the margin to
+  second, or the tie.
+- **Most talked about:** the track with the most comments, when at least two.
+- **Broadest support:** the track with points from the most voters, "16 of
+  18".
+- **Biggest bet:** the largest single vote.
+
+A tie goes to the higher-placed track. **Copy recap** puts a plain-text
+version, with the round's link, on the clipboard for the group chat, and
+falls back to a prompt to copy from where the clipboard isn't allowed. A
+round without results shows none.
+
 On every season page, directly under Standings, **Results by round**,
 collapsed by default. Standings folds the same way (see Season page
 features). It's the most-used section, so even collapsed it's a
@@ -500,6 +514,16 @@ A season with zero rounds in its CSVs (a freshly created `data/seasonN/`
 with only `competitors.csv`) shows "not started yet" instead, no LIVE badge,
 and no round line.
 
+## From the vault
+
+A Home section between the season cards and the playlists. It shows one
+past round winner at random on each visit: its round (linked), track,
+artist and points, who sent it (linked to their profile), their note, and the
+comment from whoever gave it the most points (the longest, on a tie), with
+its English if it was translated. It also has a Play on Spotify link. The
+data is `vault.json` (`build_vault`), every round's winner, with a tie for
+first listing each, about 40 KB. Without the file the section stays hidden.
+
 ## Playlists on the home page
 
 `site/data/playlists.json` is the one file in `site/data/` that `build.py`
@@ -683,7 +707,10 @@ row and the season tabs take the row below.
 so a person, a reaction and a time look the same everywhere: `PFML.avatar`
 (the initials circle, its colour fixed per player id), `PFML.reactionGlyph`
 (the 6 stored names to their emoji; see Reactions) and `PFML.when` ("3h ago", "2d
-ago", then a date after a week). They used to be copied into `rounds.js`,
+ago", then a date after a week). Since then it has also taken
+`PFML.translationHtml` (the English under a comment in another language)
+and `PFML.closes` (a deadline as "Sun, Oct 25, 7:00 PM" and "in 2 days",
+for the Home banner and the Submit page). They used to be copied into `rounds.js`,
 where the time had drifted to a date after one day. Every members-only page
 loads `auth.js`, then `account.js`, then its page scripts, and a test
 checks that order, since the page scripts use these without checking.
@@ -717,6 +744,20 @@ stats come from `career.json`; each season's finish, the five best tracks (newes
 on equal points), the three biggest fans (most points given to this
 player) and favourites (most points this player gave), all summed over
 every season, come from `profiles.json` (`build_profiles` in `build.py`).
+A third list, **Votes most like them** (`tasteTwins`, `taste_twins` in
+`build.py`), names the three players whose voting is closest. In each round
+both voted in, take each one's points over the songs neither of them sent,
+less their own average for that round, which shows the songs they backed
+more than usual. The match is the correlation of those, pooled over every
+shared round, discounted for few rounds (× rounds / (rounds + 10)), with at
+least 5 rounds and only a positive match counting. Measured on the real
+league 2026-10-24: the plain cosine of points made one player who spreads
+small points widely everyone's twin, and centring each round removed that.
+It also paired the two players who share a surname, over 46 rounds, so the
+measure tracks something real. The correlations are modest (the best is
+about 0.3), so the page shows the order and the rounds shared, not a
+percentage. `.pf-people` has `min-width: 0`, or a long name in the third
+list pushed the page 46px wider than a phone.
 The count of reactions their comments have had is live from Supabase,
 leaving out any they left on their own. A dropdown switches player. Names link to profiles almost everywhere they
 appear, styled exactly like the text they replace (`.plink`):

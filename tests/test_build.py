@@ -707,7 +707,7 @@ class EverythingWrittenIsRead(unittest.TestCase):
             files = {f.name: json.loads(f.read_text(encoding="utf-8"))
                      for f in (root / "site" / "data").glob("*.json")}
         self.assertEqual(sorted(files), ["career.json", "catalog.json", "index.json", "lookup.json", "profiles.json",
-                                         "season1.json", "season2.json"])
+                                         "season1.json", "season2.json", "vault.json"])
         js = "".join((ROOT / "site" / f).read_text(encoding="utf-8")
                      for f in ("app.js", "rounds.js", "account.js", "auth.js", "repeats.js"))
         id_like = re.compile(r"p\d|[ab]r\d+|season\d+|spotify:track:\w+")   # keys that are data, not names

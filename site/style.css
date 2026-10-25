@@ -1087,6 +1087,28 @@ body.auth-checking::before {
 .rp-winner { margin: 12px 0 0; color: var(--muted); }
 .rp-winner b { color: var(--ink); }
 .rp-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 18px; }
+
+/* From the vault (app.js, Home) */
+.vault-card { display: flex; gap: 16px; align-items: flex-start; padding: 16px 18px; max-width: 680px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow-sm); }
+.vault-art { flex: none; width: 96px; height: 96px; border-radius: var(--r-sm); object-fit: cover; }
+.vault-text { min-width: 0; }
+.vault-text p { margin: 4px 0 0; overflow-wrap: anywhere; }
+.vault-where { font: 700 0.74rem/1.3 "Archivo", sans-serif; text-transform: uppercase; letter-spacing: 0.06em; }
+.vault-text h3 { margin: 4px 0 0; font-size: 1.2rem; }
+.vault-by { color: var(--muted); font-size: 0.9rem; }
+.vault-note, .vault-comment { font-size: 0.92rem; }
+.vault-note small, .vault-comment small { color: var(--muted); white-space: nowrap; }
+.vault-text .pill { margin-top: 10px; }
+@media (max-width: 480px) { .vault-art { width: 64px; height: 64px; } .vault-card { gap: 12px; padding: 14px; } }
+
+/* the round recap (rounds.js) */
+.rp-recap { margin-top: 18px; padding: 14px 18px; max-width: 680px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow-sm); }
+.rp-recap-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.rp-recap h2 { margin: 0; font-size: 1rem; }
+.rp-recap dl { margin: 10px 0 0; display: flex; flex-direction: column; gap: 8px; }
+.rp-recap dt { font: 700 0.72rem/1.2 "Archivo", sans-serif; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.rp-recap dd { margin: 2px 0 0; overflow-wrap: anywhere; }
+.rp-recap-copy { flex: none; cursor: pointer; }
 .rp-chip {
   font-size: 0.82rem; font-weight: 500; color: var(--deep); background: var(--wash);
   border-radius: 999px; padding: 6px 12px;
@@ -1232,10 +1254,11 @@ body.auth-checking::before {
 .pf-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .pf-of { color: var(--muted); font-size: 0.8em; }
 .pf-seasons .vname a { color: var(--ink); font-weight: 600; }
-.pf-fans { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.pf-fans { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
 .pf-people {
   background: var(--card); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow-sm);
   padding: 14px 16px;
+  min-width: 0;   /* a grid column won't shrink below a long name otherwise; the name truncates instead */
 }
 .pf-people h3 { margin: 0 0 8px; font-size: 1rem; }
 .pf-people ol { list-style: none; margin: 0; padding: 0; }

@@ -33,6 +33,7 @@ below measure where a voter puts their points instead.
 """
 import csv
 import json
+import math
 import re
 import statistics
 from pathlib import Path
@@ -1503,6 +1504,63 @@ def build_career(season_datas, raw_seasons=None):
 
 PROFILE_TOP_TRACKS = 5
 PROFILE_TOP_PEOPLE = 3
+# A taste twin needs this many rounds both players voted in. Fewer rounds
+# also count for less (TASTE_TWIN_SHRINK), so a newcomer's six lucky rounds
+# don't outrank years of agreeing.
+TASTE_TWIN_MIN_ROUNDS = 5
+TASTE_TWIN_SHRINK = 10
+
+
+def taste_twins(season_datas):
+    """Who votes most like whom, for the profile page: player id -> up to
+    PROFILE_TOP_PEOPLE others, closest first, as {id, rounds}.
+
+    In each round both voted in, take each one's points over the songs
+    neither of them sent (nobody can vote for their own), less their own
+    average for that round: which songs they backed more than usual. The
+    match is the correlation of those, pooled over every shared round, then
+    scaled by rounds / (rounds + TASTE_TWIN_SHRINK). Only a positive match
+    counts.
+
+    Measured on the real league 2026-10-24: the plain cosine of points made
+    one player who spreads small points widely everyone's twin, because
+    spreading looks like agreeing; centring each round removed that. It also
+    paired the two players who share a surname, over 46 rounds. The
+    correlations are modest (the best is about 0.3), so the page shows the
+    order and the rounds, not a percentage."""
+    pairs = {}
+    for d in season_datas:
+        for r in d["rounds"]:
+            given = {}
+            for n, s in enumerate(r["songs"]):
+                for voter, pts in s["votes"]:
+                    given.setdefault(voter, {})[n] = pts
+            voters = sorted(given)
+            for i, a in enumerate(voters):
+                for b in voters[i + 1:]:
+                    shared = [n for n, s in enumerate(r["songs"]) if s["submitterId"] not in (a, b)]
+                    if not shared:
+                        continue
+                    xa = [given[a].get(n, 0) for n in shared]
+                    xb = [given[b].get(n, 0) for n in shared]
+                    ma, mb = sum(xa) / len(xa), sum(xb) / len(xb)
+                    acc = pairs.setdefault((a, b), [0, 0, 0, 0])   # sum of products, squares a, squares b, rounds
+                    for va, vb in zip(xa, xb):
+                        acc[0] += (va - ma) * (vb - mb)
+                        acc[1] += (va - ma) ** 2
+                        acc[2] += (vb - mb) ** 2
+                    acc[3] += 1
+    twins = {}
+    for (a, b), (dot, na, nb, rounds) in pairs.items():
+        if rounds < TASTE_TWIN_MIN_ROUNDS or not na or not nb:
+            continue
+        score = dot / math.sqrt(na * nb) * rounds / (rounds + TASTE_TWIN_SHRINK)
+        if score <= 0:
+            continue
+        twins.setdefault(a, []).append((score, rounds, b))
+        twins.setdefault(b, []).append((score, rounds, a))
+    return {pid: [{"id": b, "rounds": rounds} for _, rounds, b in sorted(lst, key=lambda t: (-t[0], -t[1], t[2]))[:PROFILE_TOP_PEOPLE]]
+            for pid, lst in twins.items()}
 
 
 def build_profiles(season_datas):
@@ -1550,6 +1608,7 @@ def build_profiles(season_datas):
         return [{"id": pid, "name": profiles[pid]["name"] if pid in profiles else "Unknown", "points": pts}
                 for pid, pts in ranked[:PROFILE_TOP_PEOPLE]]
 
+    twins = taste_twins(season_datas)
     out = {}
     for pid, p in profiles.items():
         # newest season first within equal points, so a recent hit isn't
@@ -1561,9 +1620,34 @@ def build_profiles(season_datas):
             "bestTracks": tracks[:PROFILE_TOP_TRACKS],
             "fans": top_people(p["_fans"]),
             "favorites": top_people(p["_favorites"]),
+            "tasteTwins": [{"id": t["id"], "name": profiles[t["id"]]["name"], "rounds": t["rounds"]}
+                           for t in twins.get(pid, []) if t["id"] in profiles],
             "pointsGiven": p["pointsGiven"],
         }
     return {"players": dict(sorted(out.items()))}
+
+
+def build_vault(season_datas):
+    """Every round's winning track, for the Home page's From the vault tile
+    (one at random on each visit): what it was, who sent it, their note,
+    and the comment from whoever backed it most (the longest, on a tie).
+    A tie for first lists each winner."""
+    winners = []
+    for d in season_datas:
+        for n, r in enumerate(d["rounds"], 1):
+            for s in r["songs"]:
+                if s.get("place") != 1:
+                    continue
+                comments = sorted(s["comments"], key=lambda c: (-c["points"], -len(c["comment"])))
+                best = comments[0] if comments else None
+                winners.append({
+                    "seasonKey": d["key"], "seasonLabel": d["label"], "roundId": r["id"], "roundNumber": n,
+                    "roundName": r["name"], "title": s["title"], "artistText": s["artistText"],
+                    "submitterId": s["submitterId"], "submitterName": s["submitterName"],
+                    "spotifyId": s["spotifyId"], "art": s.get("art"), "points": s["points"], "note": s["note"],
+                    "comment": {k: best[k] for k in ("voterName", "comment", "translation") if k in best} if best else None,
+                })
+    return {"winners": winners}
 
 
 def build_lookup(season_datas):
@@ -1693,8 +1777,11 @@ def main():
     catalog = build_catalog(season_datas)
     with open(OUT_DIR / "catalog.json", "w", encoding="utf-8") as f:
         json.dump(catalog, f, ensure_ascii=False, separators=(",", ":"))
+    vault = build_vault(season_datas)
+    with open(OUT_DIR / "vault.json", "w", encoding="utf-8") as f:
+        json.dump(vault, f, ensure_ascii=False, separators=(",", ":"))
     print(f"profiles.json: {len(profiles['players'])} players; lookup.json: {len(lookup['rounds'])} rounds; "
-          f"catalog.json: {len(catalog['tracks'])} tracks")
+          f"catalog.json: {len(catalog['tracks'])} tracks; vault.json: {len(vault['winners'])} winners")
 
 
 if __name__ == "__main__":

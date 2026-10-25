@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-10-24 (follow-up): taste twins, From the vault, round recaps
+
+- **Votes most like them** on every profile: the three players whose
+  voting is closest. It compares which songs each backs more than their own
+  average, round by round, and lists them with the rounds shared, not a
+  percentage. The first try (plain cosine) made one wide-spreading voter
+  everyone's twin; measured on the real league and replaced. The new
+  measure independently paired the two players who share a surname.
+- **From the vault** on Home: a past round winner at random each visit,
+  with the note and the comment from whoever backed it most.
+- **A recap on every round page**: the winner and margin, the most talked
+  about, the broadest support and the biggest single vote, with Copy
+  recap for the group chat.
+- **Found in the browser:** the third profile list pushed a phone page 46px
+  wide (a long name next to "over 46 rounds"); fixed, with a test.
+- Needs a publish: `profiles.json` gets the twins, and `vault.json` is new.
+- **Verified:** the suite passes, with 13 new tests (taste twins and the
+  vault run on made-up seasons), all break-checked (15 breaks). In a
+  browser on the real data: Round 6's recap matched the export (Gunslinger
+  by 1 over Ma Baker), the vault card, profiles at 375px and 1280px.
+
 ## 2026-10-24: Add to Home Screen, a fuller Home banner, admin status
 
 - **Add to Home Screen:** a web app manifest and PNG icons (the favicon's
