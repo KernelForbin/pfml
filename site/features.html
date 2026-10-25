@@ -112,6 +112,15 @@
   .summary li { margin: 0 0 7px; line-height: 1.5; }
   .summary li:last-child { margin-bottom: 0; }
   .summary li::marker { color: var(--magenta-text); }
+
+  /* What's new (the script keeps it to the last 30 days) */
+  .whats-new { margin: 18px 0 0; padding: 14px 18px 16px; max-width: 720px; background: var(--wash); border: 1px solid rgba(158, 0, 196, 0.25); border-radius: var(--r); }
+  .whats-new[hidden], .whats-new li[hidden] { display: none; }
+  .whats-new h2 { margin: 0 0 10px; font: 700 0.76rem/1 "Archivo", sans-serif; text-transform: uppercase; letter-spacing: 0.08em; color: var(--magenta-text); }
+  .whats-new ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .whats-new li { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 10px; align-items: baseline; font-size: 0.93rem; line-height: 1.45; }
+  .whats-new time { font: 700 0.76rem/1.5 "Archivo", sans-serif; color: var(--muted); white-space: nowrap; }
+  .whats-new b { color: var(--ink); }
   .summary b { font-family: "Archivo", sans-serif; }
   .hero .modes-lead { margin: 22px 0 0; font-size: 0.92rem; }
   .modes-lead + .modes { margin-top: 10px; }
@@ -239,6 +248,26 @@
   <section class="hero">
     <h1>What this site can do</h1>
     <p>Everything from our Music League, all in one place. Here's what you can see and do.</p>
+    <!-- What's new: each item carries the date it shipped (a CHANGELOG
+         heading); the script at the end hides any older than 30 days, and
+         the whole box once none are left. Newest first. -->
+    <aside class="whats-new" id="whatsNew" aria-labelledby="whats-new-title">
+      <h2 id="whats-new-title">New in the last 30 days</h2>
+      <ul>
+        <li data-shipped="2026-10-24"><time datetime="2026-10-24">Oct 24</time><span><b>Dark mode.</b> The whole site goes dark when your phone or computer is set to dark.</span></li>
+        <li data-shipped="2026-10-24"><time datetime="2026-10-24">Oct 24</time><span><b>On your home screen.</b> Add PFML to your phone's home screen and it opens like an app.</span></li>
+        <li data-shipped="2026-10-24"><time datetime="2026-10-24">Oct 24</time><span><b>Round recaps.</b> Every round page opens with the winner, the most talked-about track, the broadest support and the biggest single vote. Copy recap puts it on your clipboard for the group chat.</span></li>
+        <li data-shipped="2026-10-24"><time datetime="2026-10-24">Oct 24</time><span><b>Votes most like them.</b> Profiles show the players who tend to back the same songs.</span></li>
+        <li data-shipped="2026-10-24"><time datetime="2026-10-24">Oct 24</time><span><b>From the vault.</b> A past round winner on Home, picked at random each visit.</span></li>
+        <li data-shipped="2026-10-23"><time datetime="2026-10-23">Oct 23</time><span><b>Who's in.</b> How many players have submitted (like 7/20) and who's still pending. The Home banner shows the count, the deadline and whether you're in.</span></li>
+        <li data-shipped="2026-10-23"><time datetime="2026-10-23">Oct 23</time><span><b>Repeat warnings.</b> Before you submit, the page says if your pick repeats something already in the round, never whose.</span></li>
+        <li data-shipped="2026-10-19"><time datetime="2026-10-19">Oct 19</time><span><b>Repeat checker.</b> Has an artist, song or album been submitted before? The Estimated League Sentiment gauge says how much the league will care.</span></li>
+        <li data-shipped="2026-10-19"><time datetime="2026-10-19">Oct 19</time><span><b>Search, playlists and the round player.</b> Search Spotify or YouTube on the Submit page. A closed round becomes a shuffled Spotify and YouTube playlist, or plays right in the page.</span></li>
+        <li data-shipped="2026-10-18"><time datetime="2026-10-18">Oct 18</time><span><b>Submit your track on the site.</b> Spotify, YouTube or SoundCloud, and nobody can see who sent which, the admin included.</span></li>
+        <li data-shipped="2026-10-12"><time datetime="2026-10-12">Oct 12</time><span><b>Tastemaker.</b> A new All-Time award: whose biggest vote of a round most often went to the winner.</span></li>
+        <li data-shipped="2026-10-11"><time datetime="2026-10-11">Oct 11</time><span><b>Translations.</b> Comments and notes in another language show their English underneath.</span></li>
+      </ul>
+    </aside>
     <ul class="summary" aria-label="The site at a glance">
       <li><b>Season pages:</b> standings, round-by-round results, a trend chart, top tracks, who likes whose taste, voting styles and comment stats. Tap any player to focus on them.</li>
       <li><b>Round pages:</b> every track, vote and comment from a round, full size. Vote comments up or down, react with emoji, and reply.</li>
@@ -566,6 +595,21 @@
     history.replaceState(history.state, "",
       location.pathname.replace(/\.html$/i, "").replace(/\/index$/i, "/") + location.search + location.hash);
   }
+
+  /* What's new: only what shipped in the last 30 days, by the reader's own
+     clock, so the box keeps itself true; gone once nothing is that recent.
+     Without JavaScript every item shows. */
+  (function () {
+    var box = document.getElementById("whatsNew");
+    var cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    var left = 0;
+    box.querySelectorAll("li[data-shipped]").forEach(function (li) {
+      var shipped = Date.parse(li.getAttribute("data-shipped") + "T12:00:00Z");
+      li.hidden = !(shipped >= cutoff);
+      if (!li.hidden) left += 1;
+    });
+    box.hidden = left === 0;
+  })();
 
   /* The mode switch. Without JavaScript every section shows, one after
      another; with it, one shows at a time and the URL says which

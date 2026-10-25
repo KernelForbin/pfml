@@ -1081,6 +1081,46 @@ class PodiumColours(unittest.TestCase):
         self.assertNotIn("--acid", rule)
 
 
+class FeaturesPageWhatsNew(unittest.TestCase):
+    """The "New in the last 30 days" box at the top of the features page:
+    each item dated by the CHANGELOG entry it shipped in, and an inline
+    script that hides what's older than 30 days. The hiding was checked in a
+    browser with the clock moved forward."""
+
+    def setUp(self):
+        self.page = read("features.html")
+        self.box = re.search(r'<aside class="whats-new" id="whatsNew"[^>]*>(.*?)</aside>', self.page, re.S).group(1)
+        self.items = re.findall(r'<li data-shipped="([\d-]+)"><time datetime="([\d-]+)">([^<]+)</time><span>(.*?)</span></li>', self.box)
+
+    def test_it_sits_at_the_top_above_the_summary(self):
+        self.assertLess(self.page.index("<h1>What this site can do</h1>"), self.page.index('id="whatsNew"'))
+        self.assertLess(self.page.index('id="whatsNew"'), self.page.index('<ul class="summary"'))
+
+    def test_every_item_is_dated_by_a_real_changelog_entry_newest_first(self):
+        import datetime
+        headings = set(re.findall(r"^## (\d{4}-\d{2}-\d{2})", (ROOT / "CHANGELOG.md").read_text(encoding="utf-8"), re.M))
+        self.assertGreaterEqual(len(self.items), 5)
+        self.assertEqual(self.box.count("<li"), len(self.items), "every item has the date markup")
+        dates = [d for d, _, _, _ in self.items]
+        self.assertEqual(dates, sorted(dates, reverse=True))
+        for shipped, datetime_attr, label, _ in self.items:
+            with self.subTest(shipped):
+                self.assertIn(shipped, headings)
+                self.assertEqual(shipped, datetime_attr)
+                self.assertEqual(datetime.date.fromisoformat(shipped).strftime("%b %d").replace(" 0", " "), label)
+
+    def test_it_keeps_only_the_last_30_days_and_hides_when_empty(self):
+        script = self.page.split("/* What's new:", 1)[1].split("})();", 1)[0]
+        self.assertIn("var cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;", script)
+        self.assertIn('li.hidden = !(shipped >= cutoff);', script)
+        self.assertIn("box.hidden = left === 0;", script)
+        self.assertRegex(self.page, r"\.whats-new\[hidden\], \.whats-new li\[hidden\] \{ display: none; \}")
+
+    def test_only_what_an_ordinary_member_sees(self):
+        # the page's scope rule: no admin powers, no crossword hint
+        self.assertNotRegex(self.box, r"(?i)admin panel|league status|invite|crossword|round7hint")
+
+
 class FeaturesPageTokens(unittest.TestCase):
     def test_copied_tokens_match_the_site(self):
         # features.html copies style.css's tokens rather than loading it; a

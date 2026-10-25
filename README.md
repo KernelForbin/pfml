@@ -52,7 +52,10 @@ site/                    everything GitHub Pages serves
   round.html             one round, full width: every track, vote and comment
   profile.html           one player's profile (?p=<competitor id>; yours without it)
   features.html          "What this site can do", public and standalone;
-                         kept current with every visible change (CLAUDE.md)
+                         kept current with every visible change (CLAUDE.md).
+                         Opens with "New in the last 30 days": each item dated
+                         by its CHANGELOG entry, and an inline script hides
+                         items older than 30 days, then the box itself
   privacy.html           public privacy page
   rounds.js              the round cards on season pages and the round page,
                          with member votes, reactions and replies

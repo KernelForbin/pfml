@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-10-24 (follow-up 3): "New in the last 30 days" on the features page
+
+- **The features page opens with what's new:** a highlighted box under the
+  title listing the major features from the last 30 days, newest first,
+  each with its date. Twelve today, from translations (Oct 11) to dark mode.
+- **It keeps itself current:** each line carries its CHANGELOG date, and a
+  few lines of inline script hide anything older than 30 days by the
+  reader's clock, then the box once nothing is left. Without JavaScript
+  every line shows. Member-visible features only, as the page's rule says.
+- **Verified:** the suite passes, with 4 new tests: the box's place, every
+  date being a real CHANGELOG heading and the list newest first, the
+  30-day script, and no admin-only items. All were break-checked (7
+  breaks). In a browser with the clock moved: 12 items today, 10 on Nov
+  12, 5 on Nov 23, and the box gone by Dec 20. Contrast is over 4.5:1 in
+  light and dark, with no sideways scroll at 375px or 1280px.
+
 ## 2026-10-24 (follow-up 2): dark mode
 
 - **The site goes dark when the device is set to dark.** Only the colour

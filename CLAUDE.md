@@ -175,6 +175,13 @@ If not, it stays off. One deliberate exception: the Round 7 hint crossword
 (`/round7hint2`) stays off, since listing a hint gives it away (README,
 Round 7 hint crossword).
 
+**New in the last 30 days**, the box at its top: a major new feature that
+members will notice also gets a line there, newest first, with
+`data-shipped` set to its CHANGELOG heading's date (a test checks the date
+is a real heading). Lines drop off on their own after 30 days, by the
+reader's clock. Don't prune them by hand, and leave out fixes and small
+tweaks.
+
 It's standalone on purpose: public, no sign-in, no `style.css`, no
 `app.js`, no data, nothing loaded but itself and its fonts. Its colour
 tokens, light and dark, are copied from `style.css`, so a palette change
