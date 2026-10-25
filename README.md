@@ -228,6 +228,18 @@ whose default is `localhost:3000`. Fix the Site URL and the
 `https://pfml.fun/**` entry and sign in again. Invite links aren't used up
 by a failed return, so the same link works once it's fixed.
 
+**Google always asks which account.** Sign-in passes `prompt=select_account`
+(`signIn` in `auth.js`), so Google shows its account picker every time.
+Without it, Google quietly reused the account the browser last signed in
+with, so someone who picked the wrong account had no way back: signing out of
+the site and in again landed on the same account and the same "not linked"
+card. The not-linked card and the failed-invite card now lead with **Use a
+different Google account**, which signs out of the site and goes straight to
+the picker. A pending invite is kept apart from the session, so it's claimed
+by the account picked next. Measured 2026-10-24: supabase-js 2.116.0 puts
+the parameter on the `/auth/v1/authorize` address, and Supabase's redirect
+carries it to accounts.google.com.
+
 **Links survive sign-in.** Google returns people to the bare page address
 (the one on Supabase's redirect list), so `auth.js` keeps the rest of the
 link (`?s=...&r=...`) in this tab's sessionStorage and puts it back once

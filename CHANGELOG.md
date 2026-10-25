@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-10-24 (follow-up 7): choosing the Google account
+
+- **The bug:** sign in with the wrong Google account and the site says it
+  isn't linked, with no way back. Signing out and in again reused the same
+  Google account without asking, because Google remembers the last one.
+- **Google now asks every time:** sign-in sends `prompt=select_account`, so
+  Google shows its account picker. Measured: supabase-js 2.116.0 puts it on
+  the authorize address, and Supabase passes it to accounts.google.com
+  (without it, nothing reached Google).
+- **The not-linked and failed-invite cards lead with "Use a different
+  Google account"**, which signs out of the site and goes straight to the
+  picker. Sign out is still there.
+- Also corrected on the features page: the account menu's list now includes
+  Dark mode.
+- **Verified:** the suite passes, with 3 new tests, break-checked (3
+  breaks). In a browser, the real `auth.js` ran against a fake Supabase
+  client signed in with an unlinked account: the card offered the new
+  button first, and one tap signed out and started Google sign-in with the
+  picker. Not verified: Google's picker on a phone, since that needs a real
+  sign-in.
+
 ## 2026-10-24 (follow-up 6): no Copy recap button
 
 - **The round recap's Copy recap button is gone** (the user's call), along

@@ -1160,6 +1160,33 @@ class FeaturesPageTokens(unittest.TestCase):
             self.assertIn(name, page, f"features.html is missing {name}")
 
 
+class ChoosingTheGoogleAccount(unittest.TestCase):
+    """Signing in with the wrong Google account used to be a dead end:
+    signing out and in again reused it without asking (2026-10-24). Google
+    now shows its account picker every time (measured: supabase-js 2.116.0
+    puts prompt=select_account on the authorize address, and Supabase passes
+    it to accounts.google.com), and the not-linked and failed-invite cards
+    offer a different account directly."""
+
+    def setUp(self):
+        self.auth = read("auth.js")
+
+    def test_every_sign_in_asks_google_for_the_account_picker(self):
+        sign_in = js_function(self.auth, "function signIn() {")
+        self.assertIn('options: { redirectTo: location.origin + location.pathname, queryParams: { prompt: "select_account" } }', sign_in)
+        self.assertEqual(self.auth.count("signInWithOAuth("), 1, "one way to start a sign-in")
+
+    def test_a_different_account_leaves_this_session_then_picks_again(self):
+        switch = js_function(self.auth, "function useAnotherAccount() {")
+        self.assertIn("client.auth.signOut().then(signIn, signIn);", switch)
+
+    def test_the_dead_end_cards_offer_it_first(self):
+        offer = '{ label: "Use a different Google account", primary: true, onClick: useAnotherAccount }'
+        self.assertIn(offer, js_function(self.auth, "function showNotLinked(user) {"))
+        self.assertIn(offer, self.auth.split("That invite didn't work", 1)[1].split("return;", 1)[0])
+        self.assertEqual(self.auth.count(offer), 2)
+
+
 class QuietSignIn(unittest.TestCase):
     """Members with a saved sign-in see the page and a loading bar, not the
     "Signing you in" card, on every page change. The browser behaviour was

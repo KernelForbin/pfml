@@ -179,11 +179,16 @@
     history.replaceState(null, "", location.pathname + saved.rest);
   }
 
+  // prompt=select_account: Google shows its account picker every time,
+  // rather than quietly reusing the account the browser last signed in
+  // with, so someone who picked the wrong one can pick again (asked for
+  // 2026-10-24). Supabase passes it on to Google (measured that day: the
+  // authorize redirect carries it to accounts.google.com).
   function signIn() {
     stashReturn();
     client.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: location.origin + location.pathname }
+      options: { redirectTo: location.origin + location.pathname, queryParams: { prompt: "select_account" } }
     }).then(function (res) {
       if (res.error) showGate("Sign-in didn't start", "<p>" + esc(res.error.message) + "</p>",
         [{ label: "Try again", primary: true, onClick: signIn }]);
@@ -193,6 +198,14 @@
   PFML.signOut = function () {
     client.auth.signOut().then(function () { location.reload(); });
   };
+
+  // Signed in with the wrong Google account: leave this site's session and
+  // go straight back to Google's account picker. A pending invite stays
+  // (it's kept apart from the session), so it's claimed by the account
+  // picked next.
+  function useAnotherAccount() {
+    client.auth.signOut().then(signIn, signIn);
+  }
 
   function membership(userId) {
     return client.from("members")
@@ -224,8 +237,9 @@
     showGate("Not linked to a player yet",
       "<p>You're signed in as <b>" + esc(user.email || "a Google account") + "</b>, but that account isn't linked to anyone in the league.</p>" +
       "<p>Open the personal invite link the league organizer sent you, and sign in with this same Google account. " +
-      "If you used a different Google account before, sign out and use that one.</p>",
-      [{ label: "Sign out", onClick: PFML.signOut }]);
+      "If you meant to use a different Google account, pick it here.</p>",
+      [{ label: "Use a different Google account", primary: true, onClick: useAnotherAccount },
+       { label: "Sign out", onClick: PFML.signOut }]);
   }
 
   // The header's account menu and inbox are account.js, which waits on
@@ -257,7 +271,8 @@
             showGate("That invite didn't work",
               "<p>" + esc(claim.error.message) + "</p>" +
               "<p>Ask the league organizer for a fresh link.</p>",
-              [{ label: "Sign out", onClick: PFML.signOut }]);
+              [{ label: "Use a different Google account", primary: true, onClick: useAnotherAccount },
+               { label: "Sign out", onClick: PFML.signOut }]);
             return;
           }
           return membership(user.id).then(function (m) { if (m) letIn(m); else showNotLinked(user); });
