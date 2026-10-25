@@ -37,6 +37,16 @@ class SameInBothPlaces(unittest.TestCase):
         for call in ("submit_track", "cast_ballot", "my_ballot", "site_round_voters", "site_round_results", "site_round_votes"):
             self.assertIn(f"public.{call}(", script)
 
+    def test_the_rehearsals_ballots_are_jsonb(self):
+        # cast_ballot takes jsonb, and Postgres won't turn json into it on a
+        # call: the first run stopped at "function public.cast_ballot(uuid,
+        # json) does not exist" (2026-10-25)
+        script = read(REHEARSAL)
+        self.assertNotRegex(script, r"cast_ballot\(rid, json_build")
+        self.assertEqual(len(re.findall(r"perform public\.cast_ballot\(rid, jsonb_build_array\(", script)), 3)
+        for call in re.findall(r"select public\.cast_ballot\(%L, %L(::\w+)?\)", script):
+            self.assertEqual(call, "::jsonb")
+
 
 class Round7CanNeverVoteHere(unittest.TestCase):
     """A round has site voting only if it was opened with it; nothing can add

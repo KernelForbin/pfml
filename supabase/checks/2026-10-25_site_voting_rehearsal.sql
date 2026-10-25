@@ -140,15 +140,17 @@ begin
   -- 8. Good ballots: A gives 3 and 1 and comments on their own track; B
   --    votes, then changes their ballot; C doesn't vote.
   perform pg_temp.as_member(a);
-  perform public.cast_ballot(rid, json_build_array(
-    json_build_object('submission', sb, 'points', 3, 'comment', 'great'),
-    json_build_object('submission', sc, 'points', 1),
-    json_build_object('submission', sa, 'points', 0, 'comment', 'mine, sorry')));
+  -- jsonb, the ballot's type: Postgres won't turn json into it on a call
+  -- (the first run of this script stopped here, 2026-10-25)
+  perform public.cast_ballot(rid, jsonb_build_array(
+    jsonb_build_object('submission', sb, 'points', 3, 'comment', 'great'),
+    jsonb_build_object('submission', sc, 'points', 1),
+    jsonb_build_object('submission', sa, 'points', 0, 'comment', 'mine, sorry')));
   if (select count(*) from public.my_ballot(rid)) <> 3 then raise exception 'Rehearsal FAILED: A''s ballot isn''t 3 rows'; end if;
   checks := checks + 1;
   perform pg_temp.as_member(b);
-  perform public.cast_ballot(rid, json_build_array(json_build_object('submission', sa, 'points', 2), json_build_object('submission', sc, 'points', 2)));
-  perform public.cast_ballot(rid, json_build_array(json_build_object('submission', sa, 'points', 1), json_build_object('submission', sc, 'points', 3)));
+  perform public.cast_ballot(rid, jsonb_build_array(jsonb_build_object('submission', sa, 'points', 2), jsonb_build_object('submission', sc, 'points', 2)));
+  perform public.cast_ballot(rid, jsonb_build_array(jsonb_build_object('submission', sa, 'points', 1), jsonb_build_object('submission', sc, 'points', 3)));
   if (select count(*) from public.my_ballot(rid)) <> 2 or (select sum(points) from public.my_ballot(rid)) <> 4 then
     raise exception 'Rehearsal FAILED: B''s second ballot didn''t replace the first';
   end if;
