@@ -140,6 +140,11 @@ class TheSender(unittest.TestCase):
     def test_the_unsubscribe_link_is_signed(self):
         unsub = js_body(self.ts, "async function unsubscribe(token: string): Promise<Response> {", "")
         self.assertIn("if (!userId || !sig || !same(sig, await signed(userId))) return page(\"That link isn't right.\", 401);", unsub)
+        # without the secret it refuses rather than failing: signing with an
+        # empty key throws, and the deployed function answered 500 (2026-10-25)
+        no_secret = 'if (!Deno.env.get("REMINDERS_SECRET")) return page("That link isn\'t right.", 401);'
+        self.assertIn(no_secret, unsub)
+        self.assertLess(unsub.index(no_secret), unsub.index("await signed(userId)"))
 
     def test_the_message_follows_rfc_8291(self):
         self.assertIn('enc.encode("WebPush: info\\0"), uaPublic, asPublic', self.wp)

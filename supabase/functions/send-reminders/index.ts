@@ -273,6 +273,9 @@ async function unsubscribe(token: string): Promise<Response> {
   const page = (text: string, status = 200) => new Response(
     `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>PFML</title>` +
     `<p style="font:16px system-ui;padding:24px">${text}</p>`, { status, headers: { "Content-Type": "text/html; charset=utf-8" } });
+  // no secret, no link can be right (and signing with an empty key throws:
+  // a 500 here before 2026-10-25's fix)
+  if (!Deno.env.get("REMINDERS_SECRET")) return page("That link isn't right.", 401);
   if (!userId || !sig || !same(sig, await signed(userId))) return page("That link isn't right.", 401);
   await rpc("email_reminders_off", { p_user: userId });
   return page("Done: no more reminder emails. Turn them back on from the menu under your initials on pfml.fun.");
