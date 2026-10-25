@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-10-25: Privacy and Security, Site features in the menu, the crossword retired
+
+- **The privacy page is now "Privacy and Security"**, in its title and in
+  every footer and the sign-in card. Its security card drops the "1 problem
+  found and fixed" badge and the point about the reaction fix, which isn't
+  what the card is for. "Stored in your browser" no longer mentions the
+  crossword.
+- **"What this site can do" leaves the footers** and becomes **Site
+  features** in the menu under your initials (and on the sign-in card,
+  which has no menu). Home's What's new button still goes there too.
+- **The footer line is accurate again:** the old one said every Spotify
+  link was a plain open.spotify.com link with no account involved, written
+  before the round player and Submit page. It now says results come from
+  Music League's exports, comment votes, reactions, replies and track
+  submissions happen here, and the site is members only.
+- **The Round 7 hint crossword is gone** (`/round7hint2`): its page,
+  `crossword.js`, its styles and dark-mode rule, its tests and docs. A
+  browser that played it keeps its saved progress under `pfml-xw-round7hint2`
+  until the site data is cleared; nothing reads it.
+- **Verified:** the suite passes, with 2 new tests (features is in the
+  menu and in no footer; nothing on the site refers to the crossword),
+  break-checked. Season pages rebuilt from the template, `site/data`
+  byte-identical before and after. Checked at 375px and 1280px, light and
+  dark.
+
 ## 2026-10-24 (follow-up 11): a daily security check, and a correction
 
 - **Correction:** the security card shipped an hour earlier said none of the

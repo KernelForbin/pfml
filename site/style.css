@@ -1328,154 +1328,6 @@ body.auth-checking::before {
   .pf-id .pf-av { width: 56px; height: 56px; font-size: 1.15rem; }
 }
 
-/* ---------- crossword (/round7hint2) ---------- */
-
-/* Plays like a newspaper app: the grid, a clue bar, and on a touch
-   screen its own keyboard docked under them, so the phone's keyboard
-   never covers the grid. Square sizes come from the grid's own width
-   (container units), so the letters scale with it. */
-.xw-page { max-width: 1120px; margin: 0 auto; padding: 0 20px; --xw-sel: #FFD84D; }
-.xw-head {
-  display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between;
-  gap: 12px 20px; padding-top: 30px; padding-bottom: 16px;
-}
-.xw-head h1 { margin: 0; font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
-.xw-head .hero-line { margin-top: 6px; font-size: 0.95rem; }
-.xw-tools { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.xw-time {
-  font-family: "Archivo", sans-serif; font-weight: 700; font-variant-numeric: tabular-nums;
-  min-width: 3.2em; text-align: right; margin-right: 4px;
-}
-.xw-tool {
-  font: 600 0.84rem/1 "Archivo", sans-serif; padding: 8px 13px; border: 1px solid var(--border);
-  border-radius: 999px; background: var(--card); color: var(--ink); cursor: pointer;
-  touch-action: manipulation;
-}
-.xw-tool[aria-pressed="true"], .xw-tool[aria-expanded="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-.xw-drop { position: relative; }
-.xw-menu {
-  position: absolute; top: calc(100% + 6px); right: 0; z-index: 15; display: flex; flex-direction: column;
-  min-width: 120px; padding: 5px; background: var(--card); border: 1px solid var(--border);
-  border-radius: var(--r-sm); box-shadow: var(--shadow-md);
-}
-.xw-menu[hidden] { display: none; }
-.xw-menu button {
-  font: 500 0.9rem/1.2 "Inter", sans-serif; text-align: left; padding: 9px 11px; border: 0;
-  border-radius: 7px; background: none; color: var(--ink); cursor: pointer;
-}
-@media (hover: hover) {
-  .xw-tool:hover { box-shadow: var(--shadow-md); }
-  .xw-menu button:hover { background: var(--wash); }
-}
-
-.xw-note {
-  margin: 0 0 14px; padding: 11px 14px; border-radius: var(--r-sm);
-  background: var(--card); border: 1px solid var(--border); font-weight: 500;
-}
-.xw-note.is-good { background: var(--wash); border-color: rgba(158, 0, 196, 0.25); color: var(--deep); }
-
-.xw-body { display: grid; grid-template-columns: minmax(0, 540px) minmax(0, 1fr); gap: 28px; align-items: start; }
-.xw-play { display: flex; flex-direction: column; gap: 10px; }
-.xw-dock { order: -1; }                 /* clue bar above the grid on a computer */
-
-.xw-board { position: relative; }
-.xw-grid {
-  container-type: inline-size;
-  display: grid; grid-template-columns: repeat(15, minmax(0, 1fr)); gap: 1px;
-  width: 100%; aspect-ratio: 1; background: var(--ink); border: 2px solid var(--ink);
-  user-select: none; -webkit-user-select: none; touch-action: manipulation;
-}
-.xw-cell { position: relative; background: var(--card); cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.xw-cell.xw-block { background: var(--ink); cursor: default; }
-.xw-cell.is-word { background: var(--wash); }
-.xw-cell.is-sel { background: var(--xw-sel); }
-.xw-num {
-  position: absolute; top: 0.5cqw; left: 0.7cqw; font: 500 1.75cqw/1 "Inter", sans-serif; color: var(--ink);
-}
-.xw-letter {
-  font: 600 4.1cqw/1 "Archivo", sans-serif; padding-top: 1cqw; text-transform: uppercase; color: var(--ink);
-}
-.xw-cell.is-wrong .xw-letter { color: var(--neg); }
-.xw-cell.is-wrong::before {
-  content: ""; position: absolute; inset: 0; pointer-events: none;
-  background: linear-gradient(to top right, transparent calc(50% - 0.8px), var(--neg) calc(50% - 0.8px), var(--neg) calc(50% + 0.8px), transparent calc(50% + 0.8px));
-}
-.xw-cell.is-revealed .xw-letter { color: var(--deep); }
-.xw-cell.is-revealed::after {
-  content: ""; position: absolute; top: 0; right: 0; pointer-events: none;
-  border-style: solid; border-width: 0 1.6cqw 1.6cqw 0; border-color: transparent var(--magenta) transparent transparent;
-}
-.xw-grid.is-done .xw-cell { cursor: default; }
-.xw-board.is-paused .xw-grid { filter: blur(7px); }
-.xw-paused {
-  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 10px; background: var(--glass);
-}
-.xw-paused[hidden] { display: none; }
-.xw-paused p { margin: 0; font: 800 1.5rem/1 "Archivo", sans-serif; }
-
-.xw-bar {
-  display: flex; align-items: stretch; min-height: 54px; background: var(--wash);
-  border-radius: var(--r-sm); overflow: hidden;
-}
-.xw-bar-clue { flex: 1; margin: 0; padding: 9px 4px; display: flex; align-items: center; gap: 10px; cursor: pointer; line-height: 1.3; }
-.xw-bar-num { font: 800 0.95rem/1 "Archivo", sans-serif; color: var(--deep); white-space: nowrap; }
-.xw-arrow {
-  flex: none; width: 40px; border: 0; background: none; color: var(--deep); cursor: pointer;
-  font: 600 1.7rem/1 "Archivo", sans-serif; touch-action: manipulation;
-}
-.xw-kb { display: none; }
-
-.xw-lists { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.xw-list h2 {
-  margin: 0 0 6px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
-  font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted);
-}
-.xw-list ol { list-style: none; margin: 0; padding: 0; max-height: 560px; overflow-y: auto; overscroll-behavior: contain; }
-.xw-clue {
-  display: flex; gap: 8px; padding: 5px 8px; border-left: 4px solid transparent; border-radius: 0 6px 6px 0;
-  font-size: 0.92rem; line-height: 1.35; cursor: pointer;
-}
-.xw-clue-num { flex: none; min-width: 1.6em; font: 700 0.92rem/1.35 "Archivo", sans-serif; }
-.xw-clue.is-done { color: var(--muted); }
-.xw-clue.is-cross { border-left-color: rgba(158, 0, 196, 0.3); }
-.xw-clue.is-active { background: var(--wash); border-left-color: var(--magenta); color: var(--ink); }
-@media (hover: hover) { .xw-clue:hover { background: var(--wash); } }
-
-@media (max-width: 900px) {
-  .xw-body { grid-template-columns: minmax(0, 1fr); }
-  .xw-play { max-width: 600px; width: 100%; margin: 0 auto; }
-  .xw-list ol { max-height: none; }
-}
-@media (max-width: 620px) {
-  .xw-page { padding: 0 10px; }
-  /* tight, so the grid and the keyboard dock fit one phone screen */
-  .xw-head { padding-top: 14px; padding-bottom: 10px; gap: 8px; }
-  .xw-head h1 { font-size: 1.4rem; }
-  .xw-head .hero-line { margin-top: 3px; font-size: 0.84rem; line-height: 1.4; }
-  .xw-tool { padding: 7px 12px; }
-  .xw-lists { grid-template-columns: 1fr; }
-}
-
-/* Touch screens: the clue bar and keyboard sit under the grid and stay
-   on screen while the page scrolls. */
-@media (pointer: coarse) {
-  .xw-dock {
-    order: 0; position: sticky; bottom: 0; z-index: 10;
-    padding: 6px 0 calc(6px + env(safe-area-inset-bottom)); background: var(--paper);
-    border-top: 1px solid var(--border);
-  }
-  .xw-kb { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
-  .xw-kb-row { display: flex; gap: 4px; justify-content: center; }
-  .xw-key {
-    flex: 1 1 0; max-width: 44px; height: 44px; padding: 0; border: 1px solid var(--border); border-radius: 7px;
-    background: var(--card); color: var(--ink); font: 600 1.05rem/1 "Archivo", sans-serif;
-    box-shadow: var(--shadow-sm); touch-action: manipulation; display: flex; align-items: center; justify-content: center;
-  }
-  .xw-key:active { background: var(--wash); }
-  .xw-key-wide { flex: 1.5 1 0; max-width: 66px; font-size: 0.82rem; }
-}
-
 /* ---------- submitting on the site (/submit) ---------- */
 
 /* Home's What's new button (app.js renderFeaturesButton) */
@@ -1727,9 +1579,7 @@ body.auth-checking::before {
    <head> puts it back before the page paints. Light is the default,
    whatever the device is set to (the user's call, 2026-10-24). Contrast
    was measured for each pair: body text 15.8, muted 7.4, links 9.4,
-   purple text 5.8 on the page; white on the purple fill 6.5. The
-   crossword grid keeps its light, printed look: its tokens are
-   re-declared light inside it. */
+   purple text 5.8 on the page; white on the purple fill 6.5. */
 :root[data-theme="dark"] {
   color-scheme: dark;
   --paper: #131016;
@@ -1750,7 +1600,6 @@ body.auth-checking::before {
   --glass: rgba(19, 16, 22, 0.55);
   --edge: rgba(255, 255, 255, 0.25);
 }
-[data-theme="dark"] .xw-grid, [data-theme="dark"] .xw-paused { --ink: #16111A; --wash: #F4E4FA; --deep: #7A0099; --neg: #B3261E; --card: #FFFFFF; color: #16111A; }
 [data-theme="dark"] .sg-green .sg-label, [data-theme="dark"] .sg-lime .sg-label { color: #66BB6A; }
 [data-theme="dark"] .sg-yellow .sg-label, [data-theme="dark"] .sg-amber .sg-label { color: #E0B04A; }
 [data-theme="dark"] .sg-orange .sg-label { color: #FB8C5A; }

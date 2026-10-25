@@ -135,13 +135,6 @@ class NoFixedLightColours(unittest.TestCase):
         self.assertRegex(no_comments(read("style.css")),
                          r"\.stand-rank\.is-1, \.stand-rank\.is-2, \.stand-rank\.is-3 \{[^}]*color: var\(--on-metal\)")
 
-    def test_the_crossword_keeps_its_light_print_look(self):
-        rule = re.search(r'\[data-theme="dark"\] \.xw-grid, \[data-theme="dark"\] \.xw-paused \{([^}]*)\}',
-                         no_comments(read("style.css"))).group(1)
-        light = light_tokens(read("style.css"))
-        for name in ("--ink", "--wash", "--card"):
-            self.assertEqual(tokens(rule)[name], light[name], name)
-
 
 class TheSwitch(unittest.TestCase):
     def test_every_page_restores_the_choice_before_it_paints(self):

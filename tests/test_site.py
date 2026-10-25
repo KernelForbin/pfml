@@ -17,7 +17,7 @@ SITE = ROOT / "site"
 # all agree. A new version needs a new hash: tests/test_live_cdn.py.
 SUPABASE_JS_URL = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js"
 SUPABASE_JS_INTEGRITY = "sha384-iLddHTLokph6Omwoyid4XKxHaWa6w41BnoEj0q5oOrzmYPpHIKt1wyjReA7s//pP"
-MEMBER_PAGES = ["index.html", "career.html", "round.html", "season.template.html", "profile.html", "round7hint2.html", "submit.html", "repeats.html"]
+MEMBER_PAGES = ["index.html", "career.html", "round.html", "season.template.html", "profile.html", "submit.html", "repeats.html"]
 FONT_HOSTS = {"fonts.googleapis.com", "fonts.gstatic.com"}
 
 
@@ -179,10 +179,16 @@ class LocalPreviewServer(unittest.TestCase):
 
 
 class Linking(unittest.TestCase):
-    def test_every_member_page_links_to_the_features_page(self):
-        for name in MEMBER_PAGES:
-            hrefs = [a.get("href") for a in Page(read(name)).find("a")]
-            self.assertIn("features", hrefs, name)
+    def test_the_features_page_is_in_the_menu_not_the_footers(self):
+        # moved from every footer to the initials menu (2026-10-25); the
+        # sign-in card keeps its link, since a signed-out visitor has no menu
+        build = js_function(read("account.js"), "function build(member)")
+        self.assertIn('<a class="acct-item" href="features">Site features</a>', build)
+        for name in MEMBER_PAGES + ["privacy.html"]:
+            footer = read(name).split("<footer", 1)[1].split("</footer>", 1)[0]
+            self.assertNotIn('href="features"', footer, name)
+        gate = js_function(read("auth.js"), "function showGate(title, bodyHtml, actions)")
+        self.assertIn('<a href="features">', gate)
 
     def test_privacy_is_linked_from_every_page_and_the_sign_in_card(self):
         # A signed-out visitor sees only the sign-in card (every other
@@ -190,9 +196,18 @@ class Linking(unittest.TestCase):
         for name in MEMBER_PAGES + ["features.html"]:
             hrefs = [a.get("href") for a in Page(read(name)).find("a")]
             self.assertIn("privacy", hrefs, name)
-        self.assertIn("features", [a.get("href") for a in Page(read("privacy.html")).find("a")])
+        self.assertIn("./", [a.get("href") for a in Page(read("privacy.html")).find("a")])
         gate = js_function(read("auth.js"), "function showGate(title, bodyHtml, actions)")
-        self.assertIn('<a href="privacy">Privacy</a>', gate)
+        self.assertIn('<a href="privacy">Privacy and Security</a>', gate)
+
+    def test_the_round_7_crossword_is_gone(self):
+        # retired 2026-10-25: its page, script and styles, and nothing points at it
+        for name in ("round7hint2.html", "crossword.js"):
+            self.assertFalse((SITE / name).exists(), name)
+        for path in sorted(SITE.glob("*.*")):
+            if path.suffix in (".html", ".js", ".css"):
+                with self.subTest(path.name):
+                    self.assertNotRegex(path.read_text(encoding="utf-8"), r"(?i)round7hint|crossword|\.xw-")
 
     def test_clean_links_point_at_real_pages(self):
         # GitHub Pages serves /features from features.html; keep the target real.
@@ -1141,8 +1156,8 @@ class FeaturesPageWhatsNew(unittest.TestCase):
         self.assertRegex(css, r"\.feat-new\[hidden\]\s*\{\s*display:\s*none")
 
     def test_only_what_an_ordinary_member_sees(self):
-        # the page's scope rule: no admin powers, no crossword hint
-        self.assertNotRegex(self.box, r"(?i)admin panel|league status|invite|crossword|round7hint")
+        # the page's scope rule: no admin powers
+        self.assertNotRegex(self.box, r"(?i)admin panel|league status|invite")
 
 
 class FeaturesPageTokens(unittest.TestCase):

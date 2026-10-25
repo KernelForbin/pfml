@@ -76,7 +76,7 @@
       '<div class="gate-actions"></div>' +
       // The only thing a signed-out visitor can see, so the privacy
       // policy is linked here as well as in the page footers.
-      '<p class="gate-links"><a href="privacy">Privacy</a> &middot; <a href="features">What this site can do</a></p></div>';
+      '<p class="gate-links"><a href="privacy">Privacy and Security</a> &middot; <a href="features">Site features</a></p></div>';
     var row = gate.querySelector(".gate-actions");
     (actions || []).forEach(function (a) {
       var b = document.createElement("button");

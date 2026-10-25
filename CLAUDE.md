@@ -161,7 +161,8 @@ See README, Translations.
 ## Keep the features page true
 
 `site/features.html` (pfml.fun/features) is a plain-language tour of what
-members can see and do, linked from the footer of every members-only page.
+members can see and do, linked from Site features in the initials menu, Home's
+What's new button and the sign-in card (not the footers, since 2026-10-25).
 **Any change that adds, removes or visibly alters a feature updates that
 page in the same change.** Every sentence on it has to be true of the code
 as it ships.
@@ -171,9 +172,7 @@ that are current, working and noticeable to an ordinary member, things
 they see on screen or do themselves. No bug fixes, refactors, performance
 work, data pipeline or backend changes, admin-only powers, or anything not
 shipped yet. The test: would a regular member notice if this disappeared?
-If not, it stays off. One deliberate exception: the Round 7 hint crossword
-(`/round7hint2`) stays off, since listing a hint gives it away (README,
-Round 7 hint crossword).
+If not, it stays off.
 
 **New in the last 30 days**, the box at its top: a major new feature that
 members will notice also gets a line there, newest first, with
