@@ -252,7 +252,10 @@
 
   function reactionsFor(id) {
     var rows = (state.social && state.social.reactions[id]) || [];
-    var uid = me(), by = {};
+    // No prototype: a reaction is any text a member stores, and one named
+    // "constructor" or "__proto__" would otherwise find Object's own and
+    // break the whole member layer for that round.
+    var uid = me(), by = Object.create(null);
     rows.forEach(function (r) {
       var e = by[r.reaction] = by[r.reaction] || { count: 0, mine: false, who: [] };
       e.count++;

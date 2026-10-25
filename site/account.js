@@ -32,7 +32,8 @@
   // stored as the emoji character itself, so it is its own glyph.
   var LEGACY_REACT = { fire: "\uD83D\uDD25", laugh: "\uD83D\uDE02", hundred: "\uD83D\uDCAF",
                         eyes: "\uD83D\uDC40", grimace: "\uD83D\uDE2C", heart: "\u2764\uFE0F" };
-  function reactionGlyph(key) { return LEGACY_REACT[key] || key; }
+  // own keys only: "constructor" stored as a reaction is its own text
+  function reactionGlyph(key) { return Object.prototype.hasOwnProperty.call(LEGACY_REACT, key) ? LEGACY_REACT[key] : key; }
 
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {

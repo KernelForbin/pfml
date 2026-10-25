@@ -262,6 +262,17 @@ card itself (`showGate` in `auth.js`), since a signed-out visitor sees
 only that card; the footers are hidden until sign-in. The privacy page's
 own footer links back to the site and to the features page.
 
+Near its top, a **Security check** card gives members a plain-language
+summary of the latest check and its date. The 2026-10-24 check covered:
+security advisories from the previous 30 days for Supabase, GitHub
+Actions, supabase-js and browsers (none applied); a read-only probe of the
+live project with only the public key (every table returned 0 rows,
+writes and members-only functions were refused, storage listed nothing,
+and the search function said "members only"); and a review of every place
+the pages put text into HTML (all escaped). That review also found the
+reaction-name problem under Reactions, which was fixed. Update the card's
+date and wording at every recheck, and keep each claim true.
+
 ## Results by round, and the comments on them
 
 **Recap** (top of each round page, `recapLines` in `rounds.js`). It's worked
@@ -372,6 +383,15 @@ column is now length-bounded instead (`supabase/migrations/2026-09-22_widen_comm
 for the live project, already folded into `schema.sql` for a new one).
 Until that migration has been run, any reaction outside the 6 fails to
 save.
+
+Because the column takes any 1-32 characters, a member can store a
+reaction named `constructor` or `__proto__` from the browser console. The
+page counts reactions by name, so those counters are made with
+`Object.create(null)` (`reactionsFor` in `rounds.js`, the profile tally in
+`app.js`), and `reactionGlyph` looks up only its own keys. Before that, such
+a reaction found `Object`'s own property, threw, and blanked votes,
+reactions and replies on the round for everyone. Found in the 2026-10-24
+security check and reproduced in Chrome first.
 
 ## Season page features
 

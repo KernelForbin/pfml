@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-10-24 (follow-up 10): a security check, posted on the Privacy page
+
+- **A Security check card on the Privacy page**, in plain language: what
+  was checked, the date, and what members can do themselves. The page also
+  now lists the choices the site remembers in the browser (dark mode, the
+  newest feature seen, Get the app, the player's source).
+- **What was checked:** the last 30 days of advisories for Supabase, GitHub
+  Actions, supabase-js and browsers (none apply to PFML); a read-only probe
+  of the live project as a stranger with only the public key (0 rows from
+  all 10 tables, writes and members-only functions refused, storage
+  closed, the search function refused); and a review of every place the
+  pages build HTML (everything escaped).
+- **One problem, fixed:** a reaction is any 1-32 characters, and one named
+  `constructor` or `__proto__`, stored from a member's browser console,
+  matched `Object`'s own property, threw, and blanked votes, reactions and
+  replies on that round for everyone (`__proto__` also set
+  `Object.prototype.count`). The counters now have no prototype, and
+  `reactionGlyph` reads only its own keys. Reproduced in Chrome before the
+  fix and checked after it.
+- **Verified:** the suite passes, with 2 new tests (the reaction fix, and
+  the card keeping a "Last checked" date near the top), break-checked (4
+  breaks). The card was checked at 375px and 1280px in light
+  and dark, with no sideways scroll.
+
 ## 2026-10-24 (follow-up 9): Get the app
 
 - **A "Get the app" button in the top bar on phones**, and **Add to home

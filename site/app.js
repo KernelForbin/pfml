@@ -2264,7 +2264,7 @@
   function fillProfileReactions(id) {
     var tile = $("pfReacts");
     Promise.all([PFML.api.reactionsOn(id), PFML.api.people()]).then(function (res) {
-      var counts = {}, total = 0;
+      var counts = Object.create(null), total = 0;   // keyed by member-written text
       res[0].forEach(function (r) {
         var member = res[1][r.user_id];
         if (member && member.competitorId === id) return;

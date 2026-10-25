@@ -20,6 +20,15 @@
   .privacy ul { padding-left: 20px; margin: 8px 0; }
   .privacy li { margin: 4px 0; }
   .privacy .updated { color: var(--muted); font-size: 0.88rem; }
+  /* the security check summary, near the top */
+  .sec-card { margin: 22px 0 6px; padding: 16px 18px; border-radius: var(--r); background: var(--card); border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+  .sec-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+  .sec-card h2 { margin: 0; font-size: 1.15rem; }
+  .sec-status { padding: 3px 10px; border-radius: 999px; background: var(--wash); color: var(--deep); font: 700 0.8rem/1.4 "Archivo", sans-serif; }
+  .sec-when { color: var(--muted); font-size: 0.86rem; width: 100%; }
+  .sec-card ul { margin: 12px 0 0; padding-left: 20px; }
+  .sec-card li { margin: 6px 0; }
+  .sec-card h3 { margin: 14px 0 4px; font-size: 0.98rem; }
 </style>
 </head>
 <body data-page="privacy">
@@ -34,6 +43,27 @@
   <section class="hero">
     <h1>Privacy</h1>
     <p class="hero-line">PFML is a private site for the players in our Music League. It is run by a league member, not a company, and it has no ads.</p>
+  </section>
+
+  <section class="sec-card" aria-labelledby="sec-title">
+    <div class="sec-head">
+      <h2 id="sec-title">Security check</h2>
+      <span class="sec-status">1 problem found and fixed</span>
+      <span class="sec-when">Last checked October 24, 2026</span>
+    </div>
+    <ul>
+      <li><b>New security problems:</b> we went through the security problems announced in the last 30 days for everything PFML is built on: Supabase, GitHub, the sign-in library, and the browsers you use. None of them affect PFML.</li>
+      <li><b>Tested from the outside:</b> we tried to get into the site the way a stranger would, without signing in. Every part of the league's data, every members-only feature and the stored files all said no. Nothing could be read or changed.</li>
+      <li><b>A locked sign-in library:</b> the code that handles signing in is fixed to one exact version and checked against its fingerprint. If anyone tampered with the copy online, your browser would refuse to run it.</li>
+      <li><b>Checked our own code:</b> anything members type, like replies and comments, is shown as plain text, so it can't run as code in someone else's browser.</li>
+      <li><b>One problem, fixed:</b> a signed-in member could save a reaction with a specially chosen name that stopped votes, reactions and replies from loading on that round, for everyone. It couldn't read or change anyone's data. Now any reaction is treated as plain text.</li>
+    </ul>
+    <h3>What you can do</h3>
+    <ul>
+      <li>Keep your phone and browser up to date.</li>
+      <li>Only open invite links that come from the league organizer.</li>
+      <li>Sign out (the menu under your initials) on a shared computer.</li>
+    </ul>
   </section>
 
   <h2>When you sign in with Google</h2>
@@ -58,12 +88,12 @@
   <p>Like most websites, PFML loads some pieces from other services, which see a normal web request from your browser (including your IP address): GitHub Pages hosts the site, Google Fonts serves the fonts, jsDelivr serves the sign-in library, Supabase handles sign-in and data, and Spotify's image servers serve the album art on round pages. On the Submit page and the repeat checker, a search goes through PFML's Supabase to Spotify or YouTube, and the results' artwork comes from their image servers. The site remembers YouTube searches for a week to save its daily allowance, but never who searched. When you paste a link, your browser asks that service for the track's title and channel, to check it against past rounds. A track plays in Spotify's, YouTube's or SoundCloud's own player, which loads from that service when you paste a link or open a track (YouTube's is its privacy-enhanced player). Pressing Play the round loads each service's player code from that service, and the player remembers in your browser whether you chose YouTube or Spotify copies.</p>
 
   <h2>Stored in your browser</h2>
-  <p>Your browser keeps your sign-in session so you stay signed in. While you sign in, it also holds the address of the page you were on, so you land back there, and, if you came from an invite link, that link's code until your account is linked. Signing out clears the session. A crossword on the site keeps your progress and time in your browser, so you can come back to it.</p>
+  <p>Your browser keeps your sign-in session so you stay signed in. While you sign in, it also holds the address of the page you were on, so you land back there, and, if you came from an invite link, that link's code until your account is linked. Signing out clears the session. It also remembers a few choices, on that phone or computer only: dark mode if you turn it on, the newest feature you've seen (so Home can say New), whether you've tapped Get the app, and whether the round player plays YouTube or Spotify copies. A crossword on the site keeps your progress and time in your browser, so you can come back to it.</p>
 
   <h2>Removing your account</h2>
   <p>Ask the league organizer and your account will be deleted, along with the votes, reactions and replies you added. Tracks you submitted stay in their round's list, with nothing left linking them to you. Your Music League results stay in the league's history, since they come from Music League's own export.</p>
 
-  <p class="updated">Last updated October 19, 2026.</p>
+  <p class="updated">Last updated October 24, 2026.</p>
 </main>
 
 <footer class="shell site-footer">

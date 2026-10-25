@@ -1301,6 +1301,17 @@ class MemberTextIsEscaped(unittest.TestCase):
             for at in calls:
                 self.assertTrue(js[:at].endswith("esc("), f"{name}: unescaped reactionGlyph at {at}")
 
+    def test_a_reaction_named_like_an_object_property_is_just_text(self):
+        # found 2026-10-24: a reaction stored as "constructor" or "__proto__"
+        # matched Object's own property, threw, and blanked votes, reactions
+        # and replies on that round for everyone ("__proto__" also set
+        # Object.prototype.count). Reproduced in Chrome before the fix.
+        self.assertIn("by = Object.create(null);", js_function(read("rounds.js"), "function reactionsFor(id)"))
+        tally = read("app.js").split("function fillProfileReactions(id) {", 1)[1].split("\n  }\n", 1)[0]
+        self.assertIn("var counts = Object.create(null), total = 0;", tally)
+        self.assertIn("Object.prototype.hasOwnProperty.call(LEGACY_REACT, key) ? LEGACY_REACT[key] : key",
+                      read("account.js").split("function reactionGlyph(key) {", 1)[1].split("\n", 1)[0])
+
     def test_translations_are_escaped(self):
         # hand-typed into data/translations.json, so treated like any text
         fn = js_function(read("account.js"), "function translationHtml(tr)")
@@ -1317,6 +1328,17 @@ class MemberTextIsEscaped(unittest.TestCase):
         # the phone's player menu and the "not shown yet" names too
         self.assertIn("esc(p.name)", js_function(js, "function renderTastePhone(d, people, host)"))
         self.assertIn("esc(p.name)", js_function(js, "function renderTaste(d)"))
+
+
+class SecurityCheckCard(unittest.TestCase):
+    """The plain-language security summary on the privacy page (README,
+    Members only). A recheck moves its date and rewrites what it found."""
+
+    def test_it_is_dated_and_near_the_top(self):
+        page = read("privacy.html")
+        card = page.split('<section class="sec-card"', 1)[1].split("</section>", 1)[0]
+        self.assertRegex(card, r'<span class="sec-when">Last checked [A-Z][a-z]+ \d{1,2}, 20\d\d</span>')
+        self.assertLess(page.index('class="sec-card"'), page.index("<h2>When you sign in with Google</h2>"))
 
 
 class PinnedTrackBar(unittest.TestCase):
