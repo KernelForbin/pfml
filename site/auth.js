@@ -499,6 +499,14 @@
     updateSiteRound: function (roundId, fields) {
       return client.from("site_rounds").update(fields).eq("id", roundId).select("id").then(must);
     },
+    // Each member's role, for the admin's Commissioners list.
+    memberRoles: function () {
+      return client.from("members").select("competitor_id, role").then(must);
+    },
+    // The admin makes a member a commissioner, or a member again.
+    setCommissioner: function (competitorId, on) {
+      return client.rpc("set_commissioner", { p_competitor: competitorId, p_on: on }).then(must);
+    },
     me: function () { return currentUserId(); }
   };
 

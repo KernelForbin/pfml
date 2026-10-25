@@ -17,7 +17,8 @@ SITE = ROOT / "site"
 # all agree. A new version needs a new hash: tests/test_live_cdn.py.
 SUPABASE_JS_URL = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js"
 SUPABASE_JS_INTEGRITY = "sha384-iLddHTLokph6Omwoyid4XKxHaWa6w41BnoEj0q5oOrzmYPpHIKt1wyjReA7s//pP"
-MEMBER_PAGES = ["index.html", "career.html", "round.html", "season.template.html", "profile.html", "submit.html", "repeats.html"]
+MEMBER_PAGES = ["index.html", "career.html", "round.html", "season.template.html", "profile.html", "submit.html", "repeats.html",
+                "commissioner.html"]
 FONT_HOSTS = {"fonts.googleapis.com", "fonts.gstatic.com"}
 
 

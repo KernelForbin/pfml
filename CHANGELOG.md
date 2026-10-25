@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-10-25 (follow-up 9): commissioners, stage 1
+
+- **A Commissioner role:** the admin can make any member a commissioner,
+  from the site, so no player's name goes in this public repo. A commissioner runs rounds like the admin; the admin
+  always counts as one.
+- **The Commissioner page** (`/commissioner`), linked in the initials menu
+  for them only:
+  - the round form, moved here from the Submit page;
+  - renaming and redescribing earlier rounds;
+  - for the admin, the Commissioners switches and League status.
+- **A deadline guard in the database:** nobody signed in, the admin
+  included, can reopen a closed deadline or move one into the past. Closing
+  early uses the database's clock.
+- **The pages:** "Nobody, the admin and commissioners included, can see who
+  submitted which track" on the Submit and features pages.
+- **Waits on:** the migration `2026-10-25_commissioner.sql` and its
+  rehearsal. Push only after both.
+- **Verified:**
+  - the suite passes; 31 breaks in a scratch clone, all caught;
+  - in a browser with a stand-in following the same rules, at 375 and 1280,
+    light and dark, as the admin, a commissioner and a member.
+  - Not yet run: the rehearsal in the real database.
+
 ## 2026-10-25 (follow-up 8): the notifications bell, with replies and reactions
 
 - **A bell in the top bar**, just left of the inbox, replaces Notifications

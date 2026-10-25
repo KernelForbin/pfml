@@ -238,6 +238,33 @@ Rules for the work:
   which is how the bell's closing bug (README, Reminders) showed, and a
   scripted `.click()` runs every listener first.
 
+## Commissioners
+
+Asked for 2026-10-25 (README, Commissioners). The admin makes members
+commissioners from the Commissioner page; never write a player's name into
+the repo to do it (the user's first pick was named in chat, and that's
+where it stays). Stage 1, the role and the page, is built. The user's
+calls for the rest, in order, each its own change with its own migration
+and rehearsal:
+
+- **Stage 2, seasons:**
+  - the season setup in steps (Details, Songs + Votes, Timing, Rounds,
+    Players);
+  - rounds scheduled ahead;
+  - Steady, Accelerated and Speedy timing (early close is automatic);
+  - a Manage season page.
+  - **Every new season votes on pfml.fun**, so creating the first one is
+    when `SITE_VOTING` goes on, with the README's switch-on checklist.
+    Never Round 7 or any Season 3 round.
+- **Stage 3:** more than one song a round, and downvotes, through
+  submitting, ballots, results and the stats.
+- **Stage 4, the extras:** allowed services per round, submitter notes (no
+  Daily Double on the site), a repeat rule per round (off, warn, block),
+  and announcements pushed to everyone.
+- **Playlists stay manual:** `round_playlists.py` with the user's
+  go-ahead each time. The user's account tokens stay in `.env`, never in
+  Supabase.
+
 ## The daily security check
 
 `.github/workflows/security-check.yml` runs `scripts/security_check.py`

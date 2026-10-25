@@ -1078,8 +1078,10 @@ and a YouTube playlist in one shuffled order; stage 3 adds a player on the
 page that plays the round through, across services (both below). The plan and its reasons are in the 2026-10-18
 CHANGELOG entry.
 
-**How a round runs.** The admin opens a round on the Submit page (season,
-name, prompt, closing time) and can edit it or close it early there. A
+**How a round runs.** The admin or a commissioner opens a round on the
+Commissioner page (season, name, prompt, closing time) and can edit it or
+close it early there (Commissioners, below; until 2026-10-25 this form was
+on the Submit page, for the admin alone). A
 banner on the Home page and a Submit a track link in the initials menu
 lead to it. A member pastes a link, checks it in the service's own player,
 and submits. Each submission gets a **tag** (a letter and a digit, like
@@ -1167,7 +1169,8 @@ submission (`my_submission`). The deadline wording is `PFML.closes` in
 
 ### Admin status
 
-Below the round form, the admin sees a League status panel. It shows when
+On the Commissioner page, the admin (not a commissioner) sees a League
+status panel. It shows when
 the data was last published (the upload time of `index.json` in the bucket,
 which members can list) and the latest finished round in it. It also lists
 the players taking part who haven't joined the site, each with "link made
@@ -1459,6 +1462,75 @@ video, a Spotify track as its 30-second preview, a SoundCloud track):
 - **Not measured:** Safari on an iPhone, where a tap per track may be
   needed; the button is there for exactly that.
 
+## Commissioners
+
+Asked for 2026-10-25: the admin can make any member a **commissioner**, and
+commissioners run the league's rounds alongside the admin, who always counts
+as one. It's Stage 1 of the commissioner work; the stages after it (creating
+seasons with their own settings, scheduled rounds, timing modes, more songs
+a round and downvotes, then allowed services, submitter notes, a repeat rule
+and announcements) are in CLAUDE.md, Commissioners.
+
+**The Commissioner page** (`/commissioner`, `commissioner.html` and
+`commissioner.js`), linked as Commissioner in the initials menu for the
+admin and commissioners only. Anyone else who opens it reads "This page is
+for the league's commissioners." It has:
+
+- **The open round, or opening one:** the form the Submit page used to have
+  (season, name, description, closing time, and voting's fields once voting
+  on the site is on), with Close submissions now. The Submit page keeps a
+  link to it for commissioners.
+- **Earlier rounds:** each one's name and description can change at any
+  time; nothing else about it can from there.
+- **Commissioners (the admin only):** every member who has joined, each with
+  a switch. The admin's own row has none. A switch moves at once and goes
+  back if the save fails.
+- **League status (the admin only):** as before (Admin status, above).
+
+**What a commissioner can't do:** choose commissioners, see who has an
+invite link waiting, delete a round, delete other members' replies, or see
+who submitted which track (nobody can). The admin promotes someone from the
+page, so no player's name goes into this public repo.
+
+**Database** (`supabase/migrations/2026-10-25_commissioner.sql`, the same
+block at the end of `schema.sql`):
+
+- **The role:** `members.role` takes `commissioner` too.
+  `is_commissioner()` is true for a commissioner or the admin.
+- **Rounds:** the insert and update policies on `site_rounds` use
+  `is_commissioner()` in place of `is_admin()`; delete stays the admin's.
+- **`set_commissioner(player, on)`:** the admin only; refuses the admin's
+  own row and anyone who hasn't joined.
+- **`site_rounds_times_guard`:** a trigger that holds anyone signed in, the
+  admin included, to the deadlines. It refuses:
+  - reopening submissions or voting once closed;
+  - moving a closed deadline;
+  - moving a deadline into the past;
+  - opening a round already closed;
+  - moving a closed round to another season.
+  Closing early takes the database's clock, not the browser's. The SQL Editor
+  and scripts (not the `authenticated` role) are left alone, so a mistake
+  can still be fixed by hand.
+
+**Checked:**
+
+- **Tests:** `tests/test_commissioner.py`, with each assertion
+  break-checked in a scratch clone (31 breaks, all caught).
+  `tests/test_live_commissioner.py` checks the live project (read-only).
+- **The rehearsal:** `supabase/checks/2026-10-25_commissioner_rehearsal.sql`
+  plays the admin and a member as the `authenticated` role, so the policies
+  and the guard apply as they do to the page. It should say "15 checks
+  held".
+- **In a browser:** checked at 375 and 1280, light and dark, against a
+  stand-in following the same rules, as the admin, a commissioner and a
+  member:
+  - renaming an earlier round;
+  - saving and closing the open round, then opening one;
+  - the switches, including a failed save;
+  - the menu link and the Submit page's link;
+  - the member's refusal.
+  No sideways scroll at 375, and text measured 5.6:1 or more.
+
 ## Voting on the site (built, switched off)
 
 The league means to run everything on pfml.fun eventually, with no
@@ -1485,10 +1557,11 @@ and is **off**: members see nothing of it. The user's calls that day:
   these when opening a round, and they freeze when submissions close.
 
 **The switch.** `var SITE_VOTING = false;` in `account.js` (`PFML.siteVoting`).
-Off, the admin's form has no voting fields. The Submit page shows no
+Off, the Commissioner page's round form has no voting fields. The Submit page shows no
 ballot or results, and Home no voting banner, even for a round that votes
 here. Such a round then looks like any closed one. Only the admin could
-make one while it's off, outside the page. A test fails if the switch
+make one while it's off, outside the page (a commissioner, since 2026-10-25,
+could too: the database lets commissioners write rounds). A test fails if the switch
 flips. That's on purpose: switching it on changes what the site promises.
 
 **How a round runs, once it's on.** The admin ticks "Vote on pfml.fun"

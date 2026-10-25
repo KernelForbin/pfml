@@ -126,8 +126,7 @@
   // voting.js (voting on the site, off until the user switches it on); a
   // stand-in that's always off if it didn't load
   function voting() {
-    return window.PFMLVoting || { on: function () { return false; }, render: function () {}, adminFields: function () { return ""; },
-                                  wireAdmin: function () {}, readAdmin: function () { return { fields: {} }; }, adminPanel: function () { return null; } };
+    return window.PFMLVoting || { on: function () { return false; }, render: function () {} };
   }
 
   function seasonLabel(key) {
@@ -172,7 +171,8 @@
   function render() {
     var r = state.round;
     ["subRound", "subMine", "subForm", "subWhoBox", "subList", "subVote"].forEach(function (id) { $(id).hidden = true; });
-    renderAdmin();
+    // the round form is on the Commissioner page now
+    $("subCommish").hidden = !PFML.member || (PFML.member.role !== "admin" && PFML.member.role !== "commissioner");
     if (!r) {
       $("subLine").textContent = "No round is open for submissions on the site yet.";
       return;
@@ -186,8 +186,8 @@
       : "Submissions for this round are closed.";
     // a round voting here names its submitters once voting closes
     document.querySelector(".sub-anon").textContent = voting().on(r)
-      ? "Nobody, the admin included, can see who submitted which track until voting closes. Then the results show everyone’s tracks and votes."
-      : "Nobody, the admin included, can see who submitted which track.";
+      ? "Nobody, the admin and commissioners included, can see who submitted which track until voting closes. Then the results show everyone’s tracks and votes."
+      : "Nobody, the admin and commissioners included, can see who submitted which track.";
 
     var box = $("subRound");
     box.innerHTML = '<div class="sub-round-card">' +
@@ -773,115 +773,6 @@
     drawTracks(list, !!(state.round.spotify_playlist || state.round.youtube_playlist));
   }
 
-  /* ---- admin: open, edit and close a round ---- */
-
-  function localInput(iso) {
-    var d = new Date(iso), pad = function (n) { return (n < 10 ? "0" : "") + n; };
-    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + "T" + pad(d.getHours()) + ":" + pad(d.getMinutes());
-  }
-
-  function renderAdmin() {
-    var me = PFML.member;
-    if (!me || me.role !== "admin") { $("subAdmin").hidden = true; return; }
-    var r = state.round && isOpen(state.round) ? state.round : null;
-    var seasons = state.index ? state.index.seasons.slice().reverse() : [];
-    var current = state.index ? state.index.currentSeason : "";
-    var options = seasons.map(function (s) {
-      return '<option value="' + esc(s.key) + '"' + (s.key === current ? " selected" : "") + ">" + esc(s.label) + "</option>";
-    }).join("");
-    var nextNum = seasons.length ? Math.max.apply(null, seasons.map(function (s) { return +String(s.key).replace(/\D/g, "") || 0; })) + 1 : 1;
-    options += '<option value="season' + nextNum + '">Season ' + nextNum + " (new)</option>";
-
-    $("subAdminBody").innerHTML =
-      "<h3>" + (r ? "The open round" : "Open a round") + "</h3>" +
-      '<form class="sub-admin-form" id="subAdminForm" novalidate>' +
-        (r ? "" : '<label class="sub-label" for="subAdmSeason">Season</label><select class="sub-input" id="subAdmSeason">' + options + "</select>") +
-        '<label class="sub-label" for="subAdmName">Round name</label>' +
-        '<input class="sub-input" id="subAdmName" maxlength="120" placeholder="Round 7: Live Tracks" value="' + esc(r ? r.name : "") + '">' +
-        '<label class="sub-label" for="subAdmPrompt">Prompt</label>' +
-        '<textarea class="sub-input sub-textarea" id="subAdmPrompt" maxlength="2000" rows="3">' + esc(r ? r.prompt : "") + "</textarea>" +
-        '<label class="sub-label" for="subAdmCloses">Submissions close (your time)</label>' +
-        '<input class="sub-input" id="subAdmCloses" type="datetime-local" value="' + (r ? localInput(r.closes_at) : "") + '">' +
-        voting().adminFields(r) +
-        '<p class="sub-msg" id="subAdmMsg" role="status" hidden></p>' +
-        '<div class="sub-actions"><button type="submit" class="sub-btn">' + (r ? "Save changes" : "Open the round") + "</button>" +
-          (r ? '<button type="button" class="sub-btn sub-btn-quiet" id="subAdmClose">Close submissions now</button>' : "") + "</div>" +
-      "</form>" +
-      '<div class="sub-admin-status" id="subAdmStatus"></div>';
-    $("subAdmin").hidden = false;
-    renderLeagueStatus();
-    voting().wireAdmin();
-    $("subAdminForm").addEventListener("submit", function (ev) { ev.preventDefault(); saveRound(r); });
-    if (r) $("subAdmClose").addEventListener("click", function () { closeRound(r); });
-    // a round voting here: its deadline, and closing voting early
-    var votingRound = state.rounds.filter(function (x) { return voting().on(x) && PFML.roundPhase(x) === "voting"; })[0];
-    var panel = votingRound && voting().adminPanel(votingRound, load, adminMsg);
-    if (panel) $("subAdminBody").insertBefore(panel, $("subAdminBody").firstChild);
-  }
-
-  // The admin's league panel: when the data was last published and the
-  // latest finished round in it, and the players taking part who haven't
-  // joined the site, with whether an invite link is waiting for them (never
-  // the link itself: scripts/invites.py prints that). Each part shows on
-  // its own; one that can't load is left out.
-  function renderLeagueStatus() {
-    var api_ = api();
-    if (typeof api_.adminInviteStatus !== "function") return;
-    var season = state.index && state.index.seasons.filter(function (s) { return s.key === state.index.currentSeason; })[0];
-    var players = season && season.activePlayers || [];
-    function soft(p) { return p.catch(function (err) { console.error(err); return null; }); }
-    Promise.all([soft(api_.dataPublishedAt()), soft(api_.people()), soft(api_.adminInviteStatus())]).then(function (res) {
-      var parts = [];
-      if (res[0]) {
-        parts.push("<li><b>Data published</b> " + esc(new Date(res[0]).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })) +
-          (season && season.liveRound ? " · latest finished round: " + esc(season.label) + ", Round " + season.liveRound.number + ", " + esc(season.liveRound.name) : "") + "</li>");
-      }
-      if (res[1] && res[2] && players.length) {
-        var linked = {}, waiting = {};
-        Object.keys(res[1]).forEach(function (u) { linked[res[1][u].competitorId] = true; });
-        res[2].forEach(function (row) { waiting[row.competitor_id] = row.made_at; });
-        var out = players.filter(function (p) { return !linked[p.id]; });
-        parts.push("<li><b>Not joined the site</b> " + (out.length ? out.length + "<ul>" + out.map(function (p) {
-          var made = waiting[p.id];
-          return "<li>" + esc(p.name) + " <small>" + (made
-            ? "link made " + esc(new Date(made).toLocaleDateString(undefined, { month: "short", day: "numeric" })) + ", not used yet"
-            : "no link yet") + "</small></li>";
-        }).join("") + "</ul>" : "everyone taking part has joined") + "</li>");
-      }
-      if (!parts.length) return;
-      $("subAdmStatus").innerHTML = "<h3>League status</h3><ul>" + parts.join("") + "</ul>" +
-        '<p class="block-note">Make or reprint someone’s link: <code>python scripts/invites.py --player "Name"</code></p>';
-    });
-  }
-
-  function adminMsg(text) { var m = $("subAdmMsg"); m.textContent = text; m.className = "sub-msg is-error"; m.hidden = !text; }
-
-  function saveRound(r) {
-    var name = $("subAdmName").value.trim(), prompt = $("subAdmPrompt").value.trim(), closes = $("subAdmCloses").value;
-    var closesAt = closes ? new Date(closes) : null;
-    if (!name) return adminMsg("Give the round a name.");
-    if (!closesAt || isNaN(closesAt)) return adminMsg("Pick when submissions close.");
-    if (closesAt.getTime() <= Date.now()) return adminMsg("The closing time has to be in the future.");
-    var fields = { name: name, prompt: prompt, closes_at: closesAt.toISOString() };
-    if (!r) fields.season_key = $("subAdmSeason").value;
-    var vote = voting().readAdmin(r, closesAt);
-    if (vote.error) return adminMsg(vote.error);
-    Object.keys(vote.fields).forEach(function (k) { fields[k] = vote.fields[k]; });
-    var done = r ? api().updateSiteRound(r.id, fields) : api().openSiteRound(fields);
-    done.then(function (rows) {
-      if (!rows || !rows.length) throw new Error("Only the admin can do that.");
-      return load();
-    }).catch(function (err) { adminMsg(errText(err)); });
-  }
-
-  function closeRound(r) {
-    if (!window.confirm("Close submissions for “" + r.name + "” now? Members won't be able to submit or change their tracks.")) return;
-    api().updateSiteRound(r.id, { closed_at: new Date().toISOString() }).then(function (rows) {
-      if (!rows || !rows.length) throw new Error("Only the admin can do that.");
-      return load();
-    }).catch(function (err) { adminMsg(errText(err)); });
-  }
-
   /* ---- start ---- */
 
   function boot() {
@@ -909,8 +800,7 @@
       render();
     });
     $("subWithdraw").addEventListener("click", withdraw);
-    // season names for the round card and the admin's picker; the page
-    // works without them
+    // season names for the round card; the page works without them
     PFML.loadJSON("index.json").then(function (index) { state.index = index; })
       .catch(function (err) { console.error(err); })
       .then(load);

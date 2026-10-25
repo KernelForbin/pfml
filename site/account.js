@@ -469,6 +469,7 @@
         '<a class="acct-item" href="repeats">Repeat checker</a>' +
         '<a class="acct-item" href="profile">My profile</a>' +
         '<a class="acct-item" href="features">Site features</a>' +
+        '<a class="acct-item" href="commissioner" id="acctCommish" hidden>Commissioner</a>' +
         '<button type="button" class="acct-item" id="acctInstall" hidden>Add to home screen</button>' +
         '<button type="button" class="acct-item acct-theme" id="acctTheme" role="switch" aria-checked="' + isDark() + '">' +
           'Dark mode<span class="acct-switch" aria-hidden="true"></span></button>' +
@@ -485,6 +486,7 @@
     $("acctMeBtn").addEventListener("click", function () { toggle("menu"); });
     $("acctSignOut").addEventListener("click", function () { PFML.signOut(); });
     $("acctTheme").addEventListener("click", function () { setDark(!isDark()); });
+    $("acctCommish").hidden = member.role !== "admin" && member.role !== "commissioner";
     $("acctGet").addEventListener("click", addToHomeScreen);
     $("acctInstall").addEventListener("click", addToHomeScreen);
     // the bell, once the push key is set up (config.js)

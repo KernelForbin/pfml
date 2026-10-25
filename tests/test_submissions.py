@@ -63,11 +63,13 @@ class Anonymous(unittest.TestCase):
         self.assertIn("public.is_member()", policies[0])
         self.assertIn("r.closed_at is not null or now() >= r.closes_at", policies[0])
 
-    def test_only_the_admin_opens_or_changes_a_round(self):
-        for verb in ("insert", "update", "delete"):
+    def test_only_commissioners_open_or_change_a_round(self):
+        # the last policy for each is the one that stands: commissioners
+        # (the admin among them) since 2026-10-25, deleting the admin's alone
+        for verb, who in (("insert", "public.is_commissioner()"), ("update", "public.is_commissioner()"), ("delete", "public.is_admin()")):
             with self.subTest(verb):
-                policy = re.search(r"create policy[^;]*on public\.site_rounds\s+for " + verb + r"[^;]*;", self.sql).group(0)
-                self.assertIn("public.is_admin()", policy)
+                policy = re.findall(r"create policy[^;]*on public\.site_rounds\s+for " + verb + r"[^;]*;", self.sql)[-1]
+                self.assertIn(who, policy)
                 self.assertNotIn("is_member", policy)
 
     def test_functions_that_touch_owners_only_ever_match_the_caller(self):

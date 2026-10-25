@@ -1521,6 +1521,17 @@ body.auth-checking::before {
 .sub-gap { font-size: 0.78rem; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 3px 8px; white-space: nowrap; }
 .sub-anon { font-size: 0.86rem; }
 .sub-admin { border-top: 1px dashed var(--border); }
+/* the Commissioner page: earlier rounds, and who's a commissioner */
+.cm-rounds, .cm-people { display: flex; flex-direction: column; gap: 8px; max-width: 640px; }
+.cm-round { border: 1px solid var(--border); border-radius: 10px; background: var(--card); }
+.cm-round > summary { display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; cursor: pointer; }
+.cm-round > summary small { color: var(--muted); font-size: 0.82rem; }
+.cm-round-name { font-weight: 600; overflow-wrap: anywhere; }
+.cm-round-form { padding: 0 14px 14px; }
+.cm-person { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 10px 14px;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--ink); font: inherit; text-align: left; }
+button.cm-person { cursor: pointer; }
+.cm-person small { color: var(--muted); font-size: 0.82rem; text-align: right; }
 .sub-admin h3 { margin: 4px 0 4px; font-size: 1.05rem; }
 
 @media (max-width: 620px) {

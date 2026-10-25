@@ -259,11 +259,14 @@ class AdminStatus(unittest.TestCase):
                 self.assertNotRegex(path.read_text(encoding="utf-8"), r'from\("invites"\)')
 
     def test_the_panel_is_drawn_only_for_the_admin(self):
-        submit = read("submit.js")
-        admin = js_body(submit, "function renderAdmin() {")
-        self.assertIn('if (!me || me.role !== "admin") { $("subAdmin").hidden = true; return; }', admin)
-        self.assertIn("renderLeagueStatus();", admin.split('if (!me || me.role !== "admin")', 1)[1])
-        self.assertEqual(submit.count("renderLeagueStatus();"), 1)
+        # on the Commissioner page since 2026-10-25; a commissioner gets the
+        # rounds, never the invite status
+        page = read("commissioner.js")
+        render = js_body(page, "function render() {")
+        self.assertIn("if (isAdmin()) { renderPeople(); renderLeagueStatus(); }", render)
+        self.assertEqual(page.count("renderLeagueStatus();"), 1)
+        self.assertIn('function isAdmin() { return role() === "admin"; }', page)
+        self.assertNotIn("renderLeagueStatus", read("submit.js"))
 
     def test_published_means_when_index_json_was_uploaded(self):
         published = js_body(read("auth.js"), "dataPublishedAt: function () {").split("},\n", 1)[0]
