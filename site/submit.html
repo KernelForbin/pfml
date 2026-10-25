@@ -47,6 +47,7 @@
   <section class="shell block" id="subForm" hidden>
     <h2 id="subFormTitle">Your pick</h2>
     <p class="block-note">Search Spotify or YouTube, or paste a link from Spotify, YouTube or SoundCloud. A SoundCloud track also needs a copy on Spotify or YouTube to make the round's playlists. Played before? Try the <a href="repeats">repeat checker</a>.</p>
+    <p class="block-note sub-only" id="subOnly" hidden></p>
     <form class="sub-form" id="subFormEl" novalidate>
       <div class="sub-services" id="subServices" role="radiogroup" aria-label="Search on">
         <button type="button" class="sub-svc sub-svc-spotify" role="radio" aria-checked="true" data-svc="spotify">
@@ -70,6 +71,11 @@
       <div class="sub-embed" id="subPreview"></div>
       <div class="sub-repeats" id="subRepeats" role="status" aria-live="polite" hidden></div>
       <div id="subGauge"></div>
+      <div id="subNoteBox" hidden>
+        <label class="sub-label" for="subNote">A note with your track (optional)</label>
+        <textarea class="sub-input sub-textarea" id="subNote" maxlength="1000" rows="2"
+                  placeholder="Voters see it with the track. Your name shows with it once voting closes."></textarea>
+      </div>
       <div class="sub-actions">
         <button type="submit" class="sub-btn" id="subSend" disabled>Submit</button>
         <button type="button" class="sub-btn sub-btn-quiet" id="subCancel" hidden>Keep my current track</button>

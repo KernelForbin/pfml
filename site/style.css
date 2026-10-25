@@ -1593,6 +1593,26 @@ button.cm-person { cursor: pointer; }
 .cm-sched h4 { margin: 0 0 6px; font-size: 0.92rem; }
 .cm-sched li { display: flex; flex-direction: column; gap: 1px; overflow-wrap: anywhere; }
 .cm-sched ul { margin: 0; padding-left: 18px; font-size: 0.9rem; }
+/* the extras: services, notes, a blocked repeat, announcements */
+.sub-svc[hidden] { display: none; }
+.cm-checks-box { margin: 6px 0 0; padding: 0; border: 0; }
+.cm-services { display: flex; flex-wrap: wrap; gap: 6px; }
+.sub-mine-note, .sub-track-note, .vt-track-note { margin: 6px 0 0; padding: 8px 12px; border-left: 3px solid var(--magenta); border-radius: 0 8px 8px 0;
+  background: var(--wash); font-size: 0.9rem; overflow-wrap: anywhere; white-space: pre-line; }
+.sub-track-note { margin: 4px 0 6px; }
+.sub-note-edit { margin-top: 6px; }
+.sub-note-edit > summary { color: var(--magenta-text); font-size: 0.85rem; cursor: pointer; }
+.sub-note-edit textarea { margin: 6px 0; }
+.sub-repeats.is-blocked { border-color: var(--neg); }
+.announce { margin-top: 12px; }
+.announce-card { margin-bottom: 10px; padding: 14px 16px; border: 1px solid var(--border); border-left: 4px solid var(--magenta); border-radius: 12px; background: var(--card); }
+.announce-kicker { margin: 0 0 4px; color: var(--magenta-text); font-size: 0.78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.announce-body { margin: 0; overflow-wrap: anywhere; white-space: pre-line; }
+.announce-who { margin: 6px 0 0; color: var(--muted); font-size: 0.85rem; }
+.cm-announce-list { margin: 14px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; max-width: 640px; }
+.cm-announce-list li { padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); }
+.cm-announce-list p { margin: 0 0 4px; overflow-wrap: anywhere; white-space: pre-line; }
+.cm-announce-list small { display: block; margin-bottom: 6px; color: var(--muted); }
 /* the Submit page's coming-up list */
 .sub-next { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; max-width: 640px; }
 .sub-next li { display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); }

@@ -396,7 +396,8 @@
     ["playlist_ready", "A round's playlist is ready"],
     ["replies", "Replies to your comments"],
     ["reactions", "Reactions to your comments"],
-    ["voting", "Voting closes and you haven't voted"]
+    ["voting", "Voting closes and you haven't voted"],
+    ["announcements", "Announcements from the commissioners"]
   ];
 
   var DEVICE_TEXT = {

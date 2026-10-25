@@ -1519,9 +1519,8 @@ video, a Spotify track as its 30-second preview, a SoundCloud track):
 Asked for 2026-10-25: the admin can make any member a **commissioner**, and
 commissioners run the league's rounds alongside the admin, who always counts
 as one. It's Stage 1 of the commissioner work; Stage 2 is Seasons on the site,
-and Stage 3 More songs and downvotes, both below. The stage after them
-(allowed services, submitter notes, a repeat rule and announcements) is in
-CLAUDE.md, Commissioners.
+Stage 3 More songs and downvotes, and Stage 4 Commissioner extras (allowed
+services, submitter notes, a repeat rule and announcements), all below.
 
 **The Commissioner page** (`/commissioner`, `commissioner.html` and
 `commissioner.js`), linked as Commissioner in the initials menu for the
@@ -1809,6 +1808,93 @@ before (measured 2026-10-25), since each player sent one song a round.
   - the "you can remove one" note showed after the close;
   - a negative score showed a hyphen, not a minus;
   - "Yes, they score 0" wasn't true with downvotes.
+
+## Commissioner extras
+
+Commissioners, stage 4 (asked 2026-10-25). The user's picks from the
+suggested extras: allowed services per round, submitter notes, a repeat
+rule per round and announcements. **No Daily Double on the site** (the
+user's call); Season 3's stays as it is (Daily Double (Season 3), below). Every
+season and round that already exists keeps all three services and the
+warning it had, so nothing changes for Round 7.
+
+**Allowed services** (`services`, on `site_seasons` and `site_rounds`):
+any of Spotify, YouTube and SoundCloud, at least one. The season setup and
+the round form have a tick box for each, and a season's change reaches its
+rounds that are still taking tracks. On the Submit page the buttons for
+the others are hidden, a line says "This round takes YouTube tracks only.",
+and a pasted link from another service is refused with the same words.
+`submit_track` refuses it too.
+
+**The repeat rule** (`repeat_rule`): `off`, `warn` (the default: the
+repeat box from Song ideas, as before), `block_song` or `block_artist`.
+The user's call for what a block checks: **this round only**, not the
+league's history. A blocked track turns the repeat box red, says "This
+round doesn't take a song that's already in it. Pick another." and greys
+out Send. The database holds it too:
+
+- **`submit_described`** takes the track with its description (song and
+  artists, the same fingerprint the repeat check uses), locks the round,
+  and compares it with the round's other tracks by `fp_kind`. A song match
+  (`track`, `version`, `song`) blocks under either rule; an `artist` match
+  blocks only under `block_artist`. Your own track counts against you only
+  in a round of more than one song, since a one-song round swaps it.
+- **`submit_track` refuses a blocking round** unless `submit_described`
+  sent it, through a transaction-local setting
+  (`pfml.checked_round`), so no other path skips the check.
+- **The description is the browser's word** for what the track is, the
+  same as for the warning. A member who lies about it gets past the block;
+  the playlists and the stats use the real track. The block is a guard
+  against honest repeats, not a lock.
+
+**Submitter notes** (`site_submissions.note`, up to 1000 characters), only
+in rounds voted on the site. A box under the picker, and Edit your note /
+Add a note on each of Your tracks while submissions are open
+(`set_submission_note`, by tag). Voters see the note with the track on the
+ballot and in the results; the name with it shows only when voting closes,
+like the track's. The export carries it, and the build reads it as the
+submission's Comment, so notes reach the round pages and the translation
+check (CLAUDE.md) like Music League's.
+
+**Announcements** (`site_announcements`): a commissioner writes one on the
+Commissioner page (1 to 1000 characters) and can take it down. Members see
+the last 7 days' on Home, up to 3, under "From the commissioners". Each is
+pushed once to every member with a device who has Announcements on in the
+bell (`reminder_settings.announcements`, on by default):
+`announcements_claim` marks it sent and returns who to tell, and
+`send-reminders` pushes "From <name>". A day-old announcement that was
+never pushed isn't pushed late.
+
+**The database** (`supabase/migrations/2026-10-25_extras.sql`, the same
+block at the end of `schema.sql`): the columns above, the table (members
+read it; writes only through the functions), `submit_described`,
+`set_submission_note`, `post_announcement`, `delete_announcement`,
+`announcements_claim` (service role only), and new versions of
+`submit_track`, `my_submission` (now with the note), the season functions,
+the notification switches and `site_rounds_export`.
+
+**Checked:**
+
+- **Tests:** `tests/test_extras.py`, and updates to the seasons, more
+  songs, repeats and reminders tests. Each assertion was break-checked in
+  a scratch clone (45 breaks, all caught; one got through at first, and
+  the test was tightened).
+- **Live:** `tests/test_live_extras.py` (strangers refused, only a
+  commissioner posts, every live round kept its services and rule).
+- **The rehearsal:** `supabase/checks/2026-10-25_extras_rehearsal.sql`
+  plays three made-up seasons (YouTube only, block song, block artist) as
+  the admin and two members, with notes and an announcement. "16 checks
+  held" when every rule holds.
+- **In a browser,** at 375 and 1280, light and dark, against a stand-in:
+  a YouTube-only round, both blocks, notes on the picker, Your tracks, the
+  ballot and the results, the setup's and round form's new fields, and
+  announcements on the Commissioner page and Home.
+- **Found and fixed in the browser:**
+  - a refused Spotify link's message was replaced a moment later by the
+    checking message;
+  - when the repeat data failed to load, the repeat box vanished, block
+    and all;
+  - the form's own text still offered Spotify in a YouTube-only round.
 
 ## Voting on the site
 

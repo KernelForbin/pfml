@@ -69,7 +69,7 @@ class TheRules(unittest.TestCase):
         self.assertIn("      closes := first_close;\n      opens := greatest(now(), public.site_add_days(closes, -s.submit_days));", create)
         self.assertIn("      opens := public.site_add_days(closes, s.vote_days);\n      closes := public.site_add_days(opens, s.submit_days);", create)
         self.assertIn("public.site_add_days(closes, s.vote_days), s.point_budget, s.max_per_track, s.nonvoters_keep_points,\n"
-                      "            s.songs_per_round, s.downvotes, s.max_down_per_track);", create)
+                      "            s.songs_per_round, s.downvotes, s.max_down_per_track, s.services, s.repeat_rule);", create)
         self.assertIn("values (k, btrim(coalesce(item->>'name', '')), btrim(coalesce(item->>'prompt', '')), opens, closes, true,", create)
         again = function(self.sql, "site_season_reschedule")
         # from the latest round that has opened: its scheduled end, not an
@@ -230,8 +230,9 @@ class ThePages(unittest.TestCase):
         read_keys = set(re.findall(r"p->>?'(\w+)'", fn))
         self.assertEqual(keys, read_keys)
         settings = js_body(self.seasons, "function readSettings(form) {")
-        self.assertEqual(set(re.findall(r"(\w+):", settings.split("return {", 1)[1])) - {"value"},
-                         set(re.findall(r"p->>'(\w+)'", function(schema(), "update_site_season"))))
+        # "error" says what's wrong on the form, and never leaves the page
+        self.assertEqual(set(re.findall(r"(\w+):", settings.split("return {", 1)[1])) - {"value", "error"},
+                         set(re.findall(r"p->>?'(\w+)'", function(schema(), "update_site_season"))))
 
     def test_no_limit_means_the_whole_budget(self):
         votes = js_body(self.seasons, "function readVotes(f) {")

@@ -92,6 +92,7 @@
     if (window.PFMLSeasons) {
       window.PFMLSeasons.render({ rounds: state.rounds, seasons: state.seasons, index: state.index, reload: load });
     }
+    renderAnnouncements();
     if (isAdmin()) { renderPeople(); renderLeagueStatus(); }
   }
 
@@ -116,6 +117,7 @@
         '<textarea class="sub-input sub-textarea" id="subAdmPrompt" maxlength="2000" rows="3">' + esc(r ? r.prompt : "") + "</textarea>" +
         '<label class="sub-label" for="subAdmCloses">Submissions close (your time)</label>' +
         '<input class="sub-input" id="subAdmCloses" type="datetime-local" value="' + (r ? localInput(r.closes_at) : "") + '">' +
+        (window.PFMLSeasons ? window.PFMLSeasons.ruleFields(r || {}, "subAdm") : "") +
         voting().adminFields(r) +
         '<p class="sub-msg" id="subAdmMsg" role="status" hidden></p>' +
         '<div class="sub-actions"><button type="submit" class="sub-btn">' + (r ? "Save changes" : "Open the round") + "</button>" +
@@ -140,6 +142,12 @@
     if (closesAt.getTime() <= Date.now()) return adminMsg("The closing time has to be in the future.");
     var fields = { name: name, prompt: prompt, closes_at: closesAt.toISOString() };
     if (!r) fields.season_key = $("subAdmSeason").value;
+    if (window.PFMLSeasons) {
+      var rules = window.PFMLSeasons.readRules($("subAdminForm"));
+      if (rules.error) return adminMsg(rules.error);
+      fields.services = rules.services;
+      fields.repeat_rule = rules.repeat_rule;
+    }
     var vote = voting().readAdmin(r, closesAt);
     if (vote.error) return adminMsg(vote.error);
     Object.keys(vote.fields).forEach(function (k) { fields[k] = vote.fields[k]; });
@@ -196,6 +204,52 @@
       form.closest(".cm-round").querySelector(".cm-round-name").textContent = name;
       say("Saved.", true);
     }).catch(function (err) { say(errText(err)); });
+  }
+
+  /* ---- announcements: a message to everyone ---- */
+
+  // Posted to Home for a week and pushed to everyone with notifications on
+  // (send-reminders, announcements_claim). Any commissioner can take one down.
+  function renderAnnouncements() {
+    var box = $("cmAnnounce");
+    Promise.all([api().announcements(), api().people()]).then(function (res) {
+      var people = res[1] || {};
+      box.innerHTML = "<h2>Announcements</h2>" +
+        '<p class="block-note">A message to the whole league: it shows on Home for a week, and everyone with notifications on gets it on their phone.</p>' +
+        '<form class="sub-admin-form" id="cmAnnounceForm" novalidate>' +
+          '<label class="sub-label" for="cmAnnounceText">Your message</label>' +
+          '<textarea class="sub-input sub-textarea" id="cmAnnounceText" maxlength="1000" rows="3"></textarea>' +
+          '<p class="sub-msg" id="cmAnnounceMsg" role="status" hidden></p>' +
+          '<div class="sub-actions"><button type="submit" class="sub-btn">Post and notify everyone</button></div>' +
+        "</form>" +
+        ((res[0] || []).length ? '<ul class="cm-announce-list">' + res[0].map(function (a) {
+          return '<li><p>' + esc(a.body) + "</p><small>" + esc(people[a.created_by] ? people[a.created_by].name : "A commissioner") + " \u00b7 " +
+            esc(new Date(a.created_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })) +
+            '</small><button type="button" class="sub-btn sub-btn-quiet" data-announce="' + esc(a.id) + '">Take down</button></li>';
+        }).join("") + "</ul>" : "");
+      box.hidden = false;
+    }).catch(function (err) { console.error(err); });
+  }
+
+  function announceMsg(text, good) {
+    var m = $("cmAnnounceMsg");
+    m.textContent = text;
+    m.className = "sub-msg" + (good ? " is-good" : " is-error");
+    m.hidden = !text;
+  }
+
+  function onAnnounce(ev) {
+    if (ev.type === "submit") {
+      ev.preventDefault();
+      var text = $("cmAnnounceText").value.trim();
+      if (!text) { announceMsg("Write a message first."); return; }
+      if (!window.confirm("Post this to the whole league and notify everyone?")) return;
+      api().postAnnouncement(text).then(renderAnnouncements).catch(function (err) { announceMsg(errText(err)); });
+      return;
+    }
+    var b = ev.target.closest("[data-announce]");
+    if (!b || !window.confirm("Take this announcement down? It leaves Home; any notification already sent stays sent.")) return;
+    api().deleteAnnouncement(b.getAttribute("data-announce")).then(renderAnnouncements).catch(function (err) { announceMsg(errText(err)); });
   }
 
   /* ---- the admin: who's a commissioner ---- */
@@ -282,6 +336,8 @@
     }
     $("cmRoundList").addEventListener("submit", onRoundSave);
     $("cmPeopleList").addEventListener("click", onPersonClick);
+    $("cmAnnounce").addEventListener("submit", onAnnounce);
+    $("cmAnnounce").addEventListener("click", onAnnounce);
     // season names for the round list and the season picker; the page
     // works without them
     PFML.loadJSON("index.json").then(function (index) { state.index = index; })

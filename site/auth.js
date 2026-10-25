@@ -387,7 +387,7 @@
       // out ahead, so there can be many not opened yet
       return client.from("site_rounds").select("id, season_key, name, prompt, opens_at, closes_at, closed_at, created_at, spotify_playlist, youtube_playlist, " +
           "votes_on_site, voting_closes_at, voting_closed_at, point_budget, max_per_track, nonvoters_keep_points, " +
-          "songs_per_round, downvotes, max_down_per_track")
+          "songs_per_round, downvotes, max_down_per_track, services, repeat_rule")
         .order("opens_at", { ascending: false }).limit(100).then(must);
     },
     // The caller's own tracks for a round ([] for none; a round can take
@@ -403,6 +403,27 @@
     },
     withdrawSubmission: function (roundId) {
       return client.rpc("withdraw_submission", { p_round: roundId }).then(must);
+    },
+    // A track with its description, in a round that blocks repeats: the
+    // database checks it against the round as it goes in.
+    submitDescribed: function (roundId, platform, track, fp) {
+      return client.rpc("submit_described", { p_round: roundId, p_platform: platform, p_track: track,
+        p_song: fp.song, p_names: fp.names, p_text: fp.text }).then(must);
+    },
+    // The note on one of the caller's tracks, by its tag.
+    setSubmissionNote: function (roundId, tag, note) {
+      return client.rpc("set_submission_note", { p_round: roundId, p_tag: tag, p_note: note }).then(must);
+    },
+    // The commissioners' announcements, newest first.
+    announcements: function () {
+      return client.from("site_announcements").select("id, body, created_by, created_at")
+        .order("created_at", { ascending: false }).limit(20).then(must);
+    },
+    postAnnouncement: function (body) {
+      return client.rpc("post_announcement", { p_body: body }).then(must);
+    },
+    deleteAnnouncement: function (id) {
+      return client.rpc("delete_announcement", { p_id: id }).then(must);
     },
     // One of the caller's tracks, by its tag (a round with more than one).
     withdrawTrack: function (roundId, tag) {
@@ -445,7 +466,7 @@
     },
     // Readable only once the round has closed (row level security).
     roundSubmissions: function (roundId) {
-      return client.from("site_submissions").select("id, tag, platform, track, position, title, artist, spotify_match, youtube_match").eq("round_id", roundId).then(must);
+      return client.from("site_submissions").select("id, tag, platform, track, position, title, artist, spotify_match, youtube_match, note").eq("round_id", roundId).then(must);
     },
     // Voting on the site (README, Voting on the site). The caller's ballot:
     // [{submission, points, comment}], replacing any earlier one, while
@@ -511,7 +532,8 @@
     // playing each.
     siteSeasons: function () {
       return client.from("site_seasons").select("key, name, description, point_budget, max_per_track, nonvoters_keep_points, " +
-          "timing, submit_days, vote_days, songs_per_round, downvotes, max_down_per_track, created_at, site_season_players(competitor_id)")
+          "timing, submit_days, vote_days, songs_per_round, downvotes, max_down_per_track, services, repeat_rule, created_at, " +
+          "site_season_players(competitor_id)")
         .order("key").then(must);
     },
     // Who's playing a season set up on the site, by name; [] for any other.

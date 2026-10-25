@@ -1,6 +1,28 @@
 # Changelog
 
-## 2026-10-25 (follow-up 14): how it's built, on the features page
+## 2026-10-25 (follow-up 14): notes, announcements, services and the repeat rule (commissioners, stage 4)
+
+- **Allowed services:** a season or round can take any of Spotify, YouTube
+  and SoundCloud. The Submit page shows only those, and the database
+  refuses the rest.
+- **The repeat rule:** off, warn (as before), or block a song or an artist
+  already in the round (this round only, the user's call). A blocked
+  track can't be sent, from the page or around it.
+- **Submitter notes:** in rounds voted on the site, a note with each
+  track, shown on the ballot and in the results, editable while
+  submissions are open. They reach the stats like Music League's.
+- **Announcements:** a commissioner posts one from the Commissioner page;
+  it shows on Home for 7 days and is pushed once to everyone with
+  Announcements on in the bell.
+- **No Daily Double on the site** (the user's call).
+- **Every existing round:** keeps all three services and the warning.
+- **Waits on:** the migration `2026-10-25_extras.sql`, its rehearsal (16
+  checks) and redeploying `send-reminders`.
+- **Verified:**
+  - the suite passes (695), with 45 breaks in a scratch clone, all caught;
+  - in a browser with a stand-in, at 375 and 1280, light and dark. Three
+    problems were found and fixed there (README, Commissioner extras).
+## 2026-10-25 (follow-up 13): how it's built, on the features page
 
 - **At the bottom of the features page:** built with Claude Opus 5.5, in
   Claude Code, and the commits, lines of code, tests run on every deploy,
@@ -18,7 +40,7 @@
     light and dark: nothing scrolls sideways, and the labels and numbers
     read at 5.9:1 or better.
 
-## 2026-10-25 (follow-up 13): groups on the trend chart
+## 2026-10-25 (follow-up 12): groups on the trend chart
 
 - **Group toggles** above the Performance over time chart's player chips:
   You, Front of the pack, Back of the pack, Biggest rises, Biggest falls,

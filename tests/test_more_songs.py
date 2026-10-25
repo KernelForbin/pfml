@@ -71,7 +71,7 @@ class TheDatabase(unittest.TestCase):
     def test_seasons_pass_it_all_on(self):
         for name in ("create_site_season", "add_site_season_round"):
             with self.subTest(name):
-                self.assertIn("songs_per_round, downvotes, max_down_per_track)", function(self.sql, name))
+                self.assertIn("songs_per_round, downvotes, max_down_per_track, services, repeat_rule)", function(self.sql, name))
 
     def test_the_rehearsal_keeps_nothing_and_plays_the_real_role(self):
         script = read(REHEARSAL)

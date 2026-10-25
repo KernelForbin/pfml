@@ -69,6 +69,32 @@
       options(range(1, Math.min(5, down - 1)), picked, function (n) { return n + (n === 1 ? " downvote" : " downvotes"); });
   }
 
+  // Which services a round takes and what it does about a repeat already in
+  // it, for a season, a round in it, or a round opened on its own
+  // (commissioner.js uses these too: PFMLSeasons.ruleFields, readRules).
+  var SERVICES = [["spotify", "Spotify"], ["youtube", "YouTube"], ["soundcloud", "SoundCloud"]];
+  var RULES = [["off", "Off: no repeat check"], ["warn", "Warn about a repeat"], ["block_song", "Block the same song"],
+               ["block_artist", "Block the same song or artist"]];
+  function ruleFields(s, id) {
+    var services = s.services || ["spotify", "youtube", "soundcloud"];
+    return '<fieldset class="cm-checks-box"><legend class="sub-label">Services allowed</legend><div class="cm-services">' +
+      SERVICES.map(function (x) {
+        return '<label class="cm-check"><input type="checkbox" name="services" value="' + x[0] + '"' +
+          (services.indexOf(x[0]) !== -1 ? " checked" : "") + "><span>" + x[1] + "</span></label>";
+      }).join("") + "</div></fieldset>" +
+      '<label class="sub-label" for="' + id + '-repeat">Repeats within a round</label>' +
+      '<select class="sub-input" id="' + id + '-repeat" name="repeat_rule">' +
+        RULES.map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === (s.repeat_rule || "warn") ? " selected" : "") + ">" + x[1] + "</option>"; }).join("") +
+      "</select>";
+  }
+  // { services, repeat_rule }, or { error } when no service is ticked
+  function readRules(form) {
+    var services = Array.prototype.filter.call(form.querySelectorAll('input[name="services"]'), function (b) { return b.checked; })
+      .map(function (b) { return b.value; });
+    if (!services.length) return { error: "Tick at least one service." };
+    return { services: services, repeat_rule: form.elements.repeat_rule.value };
+  }
+
   // The Songs + Votes settings a form holds now.
   function readVotes(f) {
     var budget = +f.point_budget.value, down = +f.downvotes.value;
@@ -203,10 +229,11 @@
           '<button type="button" class="cm-icon" data-act="down" aria-label="Move ' + esc(r.name) + ' later"' + (canDown ? "" : " disabled") + ">↓</button>" +
           '<button type="button" class="cm-icon" data-act="remove" aria-label="Remove ' + esc(r.name) + '">✕</button></span>' : "") +
       "</div>" +
-      '<details class="cm-season-edit"><summary>Edit name and description</summary>' +
+      '<details class="cm-season-edit"><summary>Edit this round</summary>' +
         '<form class="sub-admin-form" data-act="rename">' +
           '<input class="sub-input" name="name" maxlength="120" value="' + esc(r.name) + '" aria-label="Round name">' +
           '<textarea class="sub-input sub-textarea" name="prompt" maxlength="2000" rows="2" aria-label="Description">' + esc(r.prompt) + "</textarea>" +
+          (upcoming || phase === "submitting" ? ruleFields(r, "cmR-" + r.id) : "") +
           '<div class="sub-actions"><button type="submit" class="sub-btn sub-btn-quiet">Save</button></div>' +
         "</form></details></li>";
   }
@@ -239,7 +266,8 @@
       '<label class="sub-label" for="' + id + '-downmax">Most downvotes on one song</label>' +
       '<select class="sub-input" id="' + id + '-downmax" name="max_down_per_track">' + downMaxOptions(s.downvotes, s.max_down_per_track) + "</select>" +
       '<p class="block-note">Every point has to be spent; downvotes are optional, up to the limit. Nobody votes for their own song. ' +
-        "A player who doesn’t vote, when that costs them, keeps only their downvotes.</p>";
+        "A player who doesn’t vote, when that costs them, keeps only their downvotes.</p>" +
+      ruleFields(s, id);
   }
 
   function timingFields(s, id) {
@@ -259,8 +287,9 @@
 
   // The settings a form holds now.
   function readSettings(form) {
-    var f = form.elements, v = readVotes(f);
-    return { name: f.name.value.trim(), description: f.description.value.trim(), songs_per_round: v.songs_per_round,
+    var f = form.elements, v = readVotes(f), rules = readRules(form);
+    return { error: rules.error, services: rules.services, repeat_rule: rules.repeat_rule,
+             name: f.name.value.trim(), description: f.description.value.trim(), songs_per_round: v.songs_per_round,
              point_budget: v.point_budget, max_per_track: v.max_per_track, downvotes: v.downvotes,
              max_down_per_track: v.max_down_per_track, nonvoters_keep_points: v.nonvoters_keep_points,
              timing: (form.querySelector('input[name="timing"]:checked') || {}).value || "steady",
@@ -294,6 +323,7 @@
     wizard = { step: 0, d: { key: key, name: "Season " + key.replace(/\D/g, ""), description: "", point_budget: 19, max_per_track: 5,
                              nonvoters_keep_points: false, timing: "steady", submit_days: 2, vote_days: 5,
                              songs_per_round: 1, downvotes: 0, max_down_per_track: 0,
+                             services: ["spotify", "youtube", "soundcloud"], repeat_rule: "warn",
                              first_date: "", first_time: "20:00", rounds: [],
                              players: (current && current.activePlayers || []).map(function (p) { return p.id; }) } };
     loadPeople().then(function () { render(ctx); showWizard(); },
@@ -382,6 +412,8 @@
         ", " + (d.downvotes ? d.downvotes + (d.downvotes === 1 ? " downvote" : " downvotes") +
           (d.max_down_per_track >= d.downvotes ? "" : ", at most " + d.max_down_per_track + " on one song") : "no downvotes") +
         ", " + (d.nonvoters_keep_points ? "no penalty for not voting" : "a player who doesn’t vote keeps only their downvotes") + "</li>" +
+      "<li>" + d.services.map(function (x) { return SERVICES.filter(function (y) { return y[0] === x; })[0][1]; }).join(", ") +
+        "; repeats within a round: " + RULES.filter(function (x) { return x[0] === d.repeat_rule; })[0][1].toLowerCase() + "</li>" +
       "<li>" + esc(TIMING[d.timing].name) + ": " + days(d.submit_days) + " to submit, " + days(d.vote_days) + " to vote</li>" +
       "<li>" + (first ? "First playlist " + esc(when(first.toISOString())) : "No first playlist yet") + "</li>" +
       "<li>Voting on pfml.fun, results shown when voting closes</li></ul></div>";
@@ -399,8 +431,11 @@
       if (!d.name) return "Give the season a name.";
     } else if (wizard.step === 1 || wizard.step === 2) {
       if (f.point_budget) {
-        var v = readVotes(f);
+        var v = readVotes(f), rules = readRules(form);
         Object.keys(v).forEach(function (k) { d[k] = v[k]; });
+        if (rules.error) return rules.error;
+        d.services = rules.services;
+        d.repeat_rule = rules.repeat_rule;
       }
       if (f.submit_days) {
         d.timing = (form.querySelector('input[name="timing"]:checked') || {}).value || "steady";
@@ -446,6 +481,7 @@
     var p = { key: d.key, name: d.name, description: d.description, point_budget: d.point_budget, max_per_track: d.max_per_track,
               nonvoters_keep_points: d.nonvoters_keep_points, timing: d.timing, submit_days: d.submit_days, vote_days: d.vote_days,
               songs_per_round: d.songs_per_round, downvotes: d.downvotes, max_down_per_track: d.max_down_per_track,
+              services: d.services, repeat_rule: d.repeat_rule,
               first_playlist_at: first.toISOString(), rounds: d.rounds, players: d.players };
     if (!window.confirm("Create " + d.name + " with " + d.rounds.length + (d.rounds.length === 1 ? " round" : " rounds") +
                         "? Its first round opens " + (schedule(first, 1, d.submit_days, d.vote_days)[0].opens.getTime() <= Date.now() + 60000 ? "straight away" : "on schedule") + ".")) return;
@@ -567,6 +603,8 @@
     if (act === "settings") {
       var s = readSettings(form);
       if (!s.name) { panelMsg(form, "Give the season a name."); return; }
+      if (s.error) { panelMsg(form, s.error); return; }
+      delete s.error;
       done = api().updateSiteSeason(key, s);
     } else if (act === "add-round") {
       var name = form.elements.name.value.trim();
@@ -576,7 +614,15 @@
       var id = form.closest("[data-round]").getAttribute("data-round");
       var n = form.elements.name.value.trim();
       if (!n) { panelMsg(form, "Give the round a name."); return; }
-      done = api().updateSiteRound(id, { name: n, prompt: form.elements.prompt.value.trim() }).then(function (rows) {
+      var fields = { name: n, prompt: form.elements.prompt.value.trim() };
+      // a round still taking tracks can change its services and repeat rule
+      if (form.elements.repeat_rule) {
+        var rules = readRules(form);
+        if (rules.error) { panelMsg(form, rules.error); return; }
+        fields.services = rules.services;
+        fields.repeat_rule = rules.repeat_rule;
+      }
+      done = api().updateSiteRound(id, fields).then(function (rows) {
         if (!rows || !rows.length) throw new Error("Only the admin or a commissioner can do that.");
       });
     } else if (act === "players") {
@@ -604,5 +650,5 @@
     box.addEventListener("toggle", onToggle, true);
   });
 
-  window.PFMLSeasons = { render: render, schedule: schedule };
+  window.PFMLSeasons = { render: render, schedule: schedule, ruleFields: ruleFields, readRules: readRules };
 })();

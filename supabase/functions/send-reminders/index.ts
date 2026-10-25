@@ -221,6 +221,15 @@ export function inboxMessage(n: Inbox): { title: string; body: string; url: stri
   return { ...at, title: "New on your comments", body: `${parts.join(" and ")}. The latest from ${n.last_actor}.` };
 }
 
+// A commissioner's announcement (announcements_claim), to every member who
+// has a device and wants them: who posted it, and the message.
+type Announcement = { announcement_id: string; body: string; author: string; user_id: string; subscriptions: Sub[] };
+
+export function announcementMessage(a: Announcement): { title: string; body: string; url: string; tag: string } {
+  return { title: `From ${a.author}`, body: a.body.length > 180 ? a.body.slice(0, 179) + "\u2026" : a.body,
+           url: SITE, tag: `announce:${a.announcement_id}` };
+}
+
 async function pushTo(subs: Sub[], msg: unknown, jwk: JsonWebKey): Promise<number> {
   let sent = 0;
   for (const s of subs) {
@@ -282,7 +291,14 @@ async function runDue(): Promise<Response> {
     if (!res.ok) console.error(`inbox claim failed: ${res.status}`);
     else for (const n of (await res.json()) as Inbox[]) inbox += await pushTo(n.subscriptions ?? [], inboxMessage(n), jwk);
   }
-  return Response.json({ claimed: claims.length, sent, inbox });
+  // announcements from the commissioners: push only
+  let announced = 0;
+  if (jwk) {
+    const res = await rpc("announcements_claim", {});
+    if (!res.ok) console.error(`announcements claim failed: ${res.status}`);
+    else for (const a of (await res.json()) as Announcement[]) announced += await pushTo(a.subscriptions ?? [], announcementMessage(a), jwk);
+  }
+  return Response.json({ claimed: claims.length, sent, inbox, announced });
 }
 
 async function test(authorization: string): Promise<Response> {

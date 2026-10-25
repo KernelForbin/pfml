@@ -184,7 +184,8 @@ class PageWiring(unittest.TestCase):
     def test_the_check_runs_for_every_pick_but_only_in_an_open_round(self):
         self.assertIn("checkRound(p, key);", self.body("function gaugeFor(p, about) {"))
         check = self.body("function checkRound(p, key) {")
-        self.assertIn("if (!r || !isOpen(r) || typeof api().roundRepeats !== \"function\") return;", check)
+        # a round can turn the check off (its repeat rule)
+        self.assertIn("if (!r || !isOpen(r) || ruleOf(r) === \"off\" || typeof api().roundRepeats !== \"function\") return;", check)
         self.assertIn("if (gaugeKey !== key || !found) return;\n      showRepeats(found);", check)
 
     def test_the_gauge_counts_what_the_round_check_found(self):

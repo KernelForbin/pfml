@@ -562,7 +562,7 @@ def site_season_rows(folder):
                 title = f"{SITE_NAMES.get(s['platform'], 'A')} track {s.get('tag') or ''}".strip()
                 print(f"  ! {folder.name}: {r['name']}: a track has no title yet (run scripts/round_playlists.py)")
             subs.append({"Spotify URI": uri, "Title": title, "Album": "", "Artist(s)": s.get("artist") or "",
-                         "Submitter ID": submitter, "Created": r["created_at"], "Comment": "",
+                         "Submitter ID": submitter, "Created": r["created_at"], "Comment": s.get("note") or "",
                          "Round ID": r["id"], "Visible To Voters": "Yes"})
             extra = {"spotifyId": s["track"] if s["platform"] == "spotify" else s.get("spotify_match")}
             if s["platform"] != "spotify":

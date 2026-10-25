@@ -332,6 +332,28 @@
     host.appendChild(grid);
   }
 
+  // The commissioners' announcements from the last week, newest first, up
+  // to three (README, Commissioner extras). Without the table yet, nothing.
+  var ANNOUNCE_DAYS = 7;
+  function renderAnnouncements() {
+    var box = $("announceBox");
+    if (!box || typeof PFML.api.announcements !== "function") return;
+    Promise.all([PFML.api.announcements(), PFML.api.people()]).then(function (res) {
+      var since = Date.now() - ANNOUNCE_DAYS * 864e5;
+      var list = (res[0] || []).filter(function (a) { return Date.parse(a.created_at) > since; }).slice(0, 3);
+      if (!list.length) return;
+      var people = res[1] || {};
+      box.innerHTML = list.map(function (a) {
+        var who = people[a.created_by] ? people[a.created_by].name : "A commissioner";
+        return '<article class="announce-card"><p class="announce-kicker">From the commissioners</p>' +
+          '<p class="announce-body">' + esc(a.body) + "</p>" +
+          '<p class="announce-who">' + esc(who) + " \u00b7 " +
+            esc(new Date(a.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })) + "</p></article>";
+      }).join("");
+      box.hidden = false;
+    }).catch(function (err) { console.error(err); });
+  }
+
   // A round open for submissions on the site gets a banner on the home
   // page. Without the tables (a database the migration hasn't reached) it
   // just doesn't show.
@@ -449,6 +471,7 @@
   function initHome() {
     renderFeaturesButton();
     renderSubmitBanner();
+    renderAnnouncements();
     renderVault();
     PFML.loadJSON("index.json").then(function (index) {
       renderNav(index, null);

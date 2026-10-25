@@ -125,6 +125,17 @@
   // how many tracks a round takes from each player (a season set up on the
   // site can ask for more than one)
   function songsOf(r) { return (r && r.songs_per_round) || 1; }
+  // the services a round takes (all three unless it says), and what it does
+  // about a repeat already in it: off, warn, block_song or block_artist
+  function servicesOf(r) { return r && r.services && r.services.length ? r.services : ["spotify", "youtube", "soundcloud"]; }
+  function onlyText(r) { return servicesOf(r).map(function (s) { return NAMES[s]; }).join(" and "); }
+  function ruleOf(r) { return (r && r.repeat_rule) || "warn"; }
+  // the kinds of repeat a round's rule refuses
+  function blockedBy(found) {
+    var rule = ruleOf(state.round);
+    var kinds = rule === "block_artist" ? ["track", "version", "song", "artist"] : rule === "block_song" ? ["track", "version", "song"] : [];
+    return found.filter(function (k) { return kinds.indexOf(k) !== -1; });
+  }
 
   // voting.js (voting on the site, off until the user switches it on); a
   // stand-in that's always off if it didn't load
@@ -294,11 +305,17 @@
     $("subMineNote").textContent = !open ? (n === 1 ? "Your track in this round." : "Your " + list.length + " tracks in this round.")
       : n === 1 ? "It’s in. You can change or withdraw it until submissions close."
       : list.length + " of " + n + " in. You can remove one and send another until submissions close.";
+    var notes = !!(state.round && state.round.votes_on_site);
     $("subMineEmbed").innerHTML = list.map(function (m) {
       return '<div class="sub-mine-item">' + embedHtml(m) +
         '<p class="sub-link"><a href="' + esc(trackUrl(m)) + '" target="_blank" rel="noopener">Open on ' + NAMES[m.platform] + "</a>" +
         (n > 1 && open ? '<button type="button" class="sub-btn sub-btn-quiet sub-remove" data-tag="' + esc(m.tag) + '">Remove</button>' : "") +
-        "</p></div>";
+        "</p>" +
+        (m.note ? '<p class="sub-mine-note">' + esc(m.note) + "</p>" : "") +
+        (notes && open ? '<details class="sub-note-edit"><summary>' + (m.note ? "Edit your note" : "Add a note") + "</summary>" +
+          '<textarea class="sub-input sub-textarea" maxlength="1000" rows="2" aria-label="Your note on this track">' + esc(m.note || "") + "</textarea>" +
+          '<button type="button" class="sub-btn sub-btn-quiet sub-note-save" data-tag="' + esc(m.tag) + '">Save note</button></details>' : "") +
+        "</div>";
     }).join("");
     $("subMineActions").hidden = n > 1 || !open || state.changing;
     $("subMine").hidden = false;
@@ -306,6 +323,14 @@
 
   function renderForm() {
     var n = songsOf(state.round), have = state.mine.length, swapping = n === 1 && have > 0;
+    // only the services the round takes
+    var allowed = servicesOf(state.round);
+    $("subServices").querySelectorAll(".sub-svc").forEach(function (b) { b.hidden = allowed.indexOf(b.getAttribute("data-svc")) === -1; });
+    if (allowed.indexOf(state.service) === -1) setService(allowed[0]);
+    $("subOnly").hidden = allowed.length === 3;
+    $("subOnly").innerHTML = "<b>This round takes " + esc(onlyText(state.round)) + " tracks only.</b>";
+    // a note, in a round voted on the site
+    $("subNoteBox").hidden = !(state.round && state.round.votes_on_site);
     $("subFormTitle").textContent = swapping ? "Change your track" : n > 1 ? "Your pick, " + (have + 1) + " of " + n : "Your pick";
     $("subCancel").hidden = !swapping;
     $("subSend").textContent = swapping ? "Use this track instead" : "Submit";
@@ -334,6 +359,11 @@
   // doesn't reload it.
   var shownKey = "";
   function setPick(p, about) {
+    // a service this round doesn't take
+    if (p && state.round && servicesOf(state.round).indexOf(p.platform) === -1) {
+      showMsg("This round takes " + onlyText(state.round) + " tracks only.", "error");
+      p = null;
+    }
     state.pasted = p;
     var key = p ? p.platform + ":" + p.track : "";
     if (key !== shownKey) {
@@ -469,7 +499,8 @@
 
   function checkRound(p, key) {
     var r = state.round;
-    if (!r || !isOpen(r) || typeof api().roundRepeats !== "function") return;
+    // a round can turn the check off
+    if (!r || !isOpen(r) || ruleOf(r) === "off" || typeof api().roundRepeats !== "function") return;
     showRepeats("checking");
     state.fp.promise.then(function (fp) {
       if (gaugeKey !== key) return null;
@@ -478,7 +509,9 @@
       if (gaugeKey !== key || !found) return;
       showRepeats(found);
       gauge.found = found;
-      return PFMLSentiment.load().then(function () { if (gaugeKey === key) drawGauge(); });
+      // the gauge failing to load mustn't hide what the round check found
+      // (a blocked repeat would leave Send off with no reason given)
+      return PFMLSentiment.load().then(function () { if (gaugeKey === key) drawGauge(); }, function (err) { console.error(err); });
     }).catch(function (err) {
       console.error(err);
       if (gaugeKey === key) showRepeats(null);
@@ -496,11 +529,17 @@
       box.className = "sub-repeats is-clear";
       box.innerHTML = "<p>Nothing like it among the tracks sent here so far.</p>";
     } else {
-      box.className = "sub-repeats is-found";
+      // a round that blocks this kind of repeat won't take it
+      var blocked = blockedBy(found);
+      box.className = "sub-repeats is-found" + (blocked.length ? " is-blocked" : "");
       box.innerHTML = '<p class="sub-rep-head">Already in this round</p><ul class="sub-rep-list">' +
         REPEAT_KINDS.filter(function (k) { return found.indexOf(k[0]) !== -1; })
           .map(function (k) { return "<li>" + esc(k[1]) + "</li>"; }).join("") + "</ul>" +
-        '<p class="sub-rep-note">Nobody can see whose, or which. Only tracks sent on this site are checked.</p>';
+        (blocked.length
+          ? '<p class="sub-rep-note"><b>This round doesn’t take ' + (blocked.length === 1 && blocked[0] === "artist" ? "an artist who’s" : "a song that’s") +
+            " already in it.</b> Pick another.</p>"
+          : '<p class="sub-rep-note">Nobody can see whose, or which. Only tracks sent on this site are checked.</p>');
+      if (blocked.length) $("subSend").disabled = true;
     }
     box.hidden = false;
   }
@@ -549,7 +588,8 @@
       state.pickFrom = "link";
       setPick(p && !p.error ? p : null);
       if (p && p.error) showMsg(p.error, "error");
-      else if (p) showMsg(CHECK, "");
+      // a link the round takes (setPick says why when it doesn't)
+      else if (p && state.pasted) showMsg(CHECK, "");
     } else if (state.pickFrom === "link") {
       // was a link, now words: that link no longer counts
       state.pickFrom = null;
@@ -560,6 +600,7 @@
 
   function resetPicker() {
     $("subLink").value = "";
+    $("subNote").value = "";
     clearResults();
     state.pickFrom = null;
     setPick(null);
@@ -669,9 +710,17 @@
     showMsg("Sending…", "");
     var key = p.platform + ":" + p.track;
     var fp = state.fp && state.fp.key === key ? state.fp.promise : fingerprintOf(p);
-    api().submitTrack(r.id, p.platform, p.track).then(function (tag) {
-      describe(r, p, fp);
-      var entry = { tag: tag, platform: p.platform, track: p.track };
+    var note = r.votes_on_site ? $("subNote").value.trim() : "";
+    // a round that blocks repeats checks the track as it goes in, so it
+    // goes with its description; any other sends it, then describes it
+    var blocking = ruleOf(r).indexOf("block") === 0 && typeof api().submitDescribed === "function";
+    var sending = blocking
+      ? fp.then(function (f) { return api().submitDescribed(r.id, p.platform, p.track, f || { song: "", names: [], text: "" }); })
+      : api().submitTrack(r.id, p.platform, p.track);
+    sending.then(function (tag) {
+      if (!blocking) describe(r, p, fp);
+      if (note) api().setSubmissionNote(r.id, tag, note).catch(function (err) { console.error(err); });
+      var entry = { tag: tag, platform: p.platform, track: p.track, note: note };
       // one song a round swaps it (the tag stays); more add to the list
       state.mine = songsOf(r) === 1 ? [entry] : state.mine.concat([entry]);
       state.changing = false;
@@ -692,8 +741,20 @@
     }).catch(function (err) { window.alert(errText(err)); });
   }
 
-  // One of several tracks, by its tag.
+  // Saving a note on one of the reader's tracks.
+  function saveNote(b) {
+    var tag = b.getAttribute("data-tag"), text = b.parentNode.querySelector("textarea").value.trim();
+    b.disabled = true;
+    api().setSubmissionNote(state.round.id, tag, text).then(function () {
+      state.mine.forEach(function (m) { if (m.tag === tag) m.note = text; });
+      render();
+    }).catch(function (err) { b.disabled = false; window.alert(errText(err)); });
+  }
+
+  // One of several tracks, by its tag; or a note to save.
   function removeTrack(ev) {
+    var save = ev.target.closest(".sub-note-save");
+    if (save) { saveNote(save); return; }
     var b = ev.target.closest(".sub-remove");
     if (!b) return;
     var tag = b.getAttribute("data-tag");
@@ -787,6 +848,7 @@
           '<span class="sub-pos">' + (i + 1) + "</span>" +
           '<span class="sub-tag sub-tag-sm">' + esc(s.tag) + "</span>" + name + "</button>" +
         gapNote(s) +
+        (s.note ? '<p class="sub-track-note">' + esc(s.note) + "</p>" : "") +
         '<a class="sub-track-open" href="' + esc(trackUrl(s)) + '" target="_blank" rel="noopener">Open on ' + NAMES[s.platform] + "</a></li>";
     }).join("");
     var playing = list.player.playing();

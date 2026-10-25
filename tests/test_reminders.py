@@ -290,9 +290,9 @@ class InboxNotifications(unittest.TestCase):
         self.assertIn("from chosen t", claim)
         self.assertNotIn("from targets t\n     where 'push'", claim)
 
-    def test_only_these_five_switches(self):
+    def test_only_these_six_switches(self):
         fn = function(self.sql, "set_notification_choice")
-        self.assertIn("p_kind not in ('round_open', 'playlist_ready', 'replies', 'reactions', 'voting')", fn)
+        self.assertIn("p_kind not in ('round_open', 'playlist_ready', 'replies', 'reactions', 'voting', 'announcements')", fn)
         self.assertIn("execute format('update public.reminder_settings set %I = $1 where user_id = $2', p_kind) using p_on, auth.uid();", fn)
         self.assertLess(fn.index("p_kind not in"), fn.index("execute format("))
 

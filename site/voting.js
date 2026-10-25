@@ -153,6 +153,7 @@
                  '<button type="button" class="vt-step-btn" data-act="plus" aria-label="One point more for ' + esc(title) + '">+</button>' +
                "</span>") +
       "</div>" +
+      (s.note ? '<p class="vt-track-note">' + esc(s.note) + "</p>" : "") +
       '<button type="button" class="vt-comment-btn" data-act="comment" aria-expanded="' + !!comment + '">' + (comment ? "Comment" : "Add a comment") + "</button>" +
       '<textarea class="sub-input vt-comment" maxlength="2000" rows="2" aria-label="Your comment on ' + esc(title) + '"' +
         (comment ? "" : " hidden") + ">" + esc(comment) + "</textarea>" +
@@ -281,7 +282,7 @@
         '<span class="vt-rank">' + rank + "</span>" +
         '<span class="vt-res-track">' + trackLabel(item.s) + who(res.competitor_id, names) + "</span>" +
         '<span class="vt-score"><b>' + (res.points < 0 ? "−" + (-res.points) : res.points) + "</b> " + (res.points === 1 ? "pt" : "pts") + "</span>" +
-      "</summary>" + note +
+      "</summary>" + (item.s.note ? '<p class="vt-track-note">' + esc(item.s.note) + "</p>" : "") + note +
       (votes.length ? '<ul class="vt-votes">' + votes.map(function (v) {
         return '<li><span class="vt-vote-who">' + who(v.voter_id, names) +
           (v.points ? '<span class="vt-vote-pts' + (v.points < 0 ? " is-down" : "") + '">' + (v.points > 0 ? "+" + v.points : "−" + (-v.points)) + "</span>" : "") + "</span>" +

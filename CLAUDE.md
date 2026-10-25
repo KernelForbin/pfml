@@ -146,6 +146,11 @@ Double review:
    included (label those honestly, e.g. "mock Norwegian"). Names, song
    titles and a stray foreign word in an English comment don't count.
    Theme rounds are where they turn up: Round 4 (Nordic) had 22 at once.
+   A round voted on the site has its notes in
+   `data/<season>/site_rounds.json` instead ("note" on each submission,
+   "comment" on each vote). The build turns them into the same rows, so
+   the keys are the same, with `build.site_uri(platform, track)` as the
+   uri.
 2. Add each to `data/translations.json` (local-only, git-ignored, backed
    up by `publish.py`): comments under `comments`, keyed by
    `build.comment_id(round id, spotify uri, voter id)`; notes under
@@ -250,9 +255,9 @@ Rules for the work:
 Asked for 2026-10-25 (README, Commissioners). The admin makes members
 commissioners from the Commissioner page; never write a player's name into
 the repo to do it (the user's first pick was named in chat, and that's
-where it stays). Stages 1 (the role and the page) and 2 (seasons on the
-site) are live; stage 3, more songs and downvotes, is built (README, More
-songs and downvotes). The user's calls for the rest, in order, each its own
+where it stays). Stages 1 (the role and the page), 2 (seasons on the site)
+and 3 (more songs and downvotes) are live; stage 4, the extras, is built
+(README, Commissioner extras). The user's calls, in order, each its own
 change with its own migration and rehearsal:
 
 - **Stage 2, seasons:**
@@ -268,7 +273,8 @@ change with its own migration and rehearsal:
   submitting, ballots, results and the stats.
 - **Stage 4, the extras:** allowed services per round, submitter notes (no
   Daily Double on the site), a repeat rule per round (off, warn, block),
-  and announcements pushed to everyone.
+  and announcements pushed to everyone. A block checks **this round
+  only**, not the league's history (the user's call).
 - **Playlists stay manual:** `round_playlists.py` with the user's
   go-ahead each time. The user's account tokens stay in `.env`, never in
   Supabase.
