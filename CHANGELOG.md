@@ -14,14 +14,14 @@
   podiums and finishes count once a round per player, and the career and
   taste count rounds, not tracks. Today's output is byte-for-byte
   unchanged.
-- **Waits on:** the migration `2026-10-25_more_songs.sql` and its rehearsal
-  (16 checks). Push only after both.
+- **Set up the same day:** the user ran the migration, then the rehearsal
+  ("Rehearsal passed: 16 checks held"). The live checks pass, the new
+  ballot rule's eight downvote cases among them.
 - **Verified:**
   - the suite passes (672), with 41 breaks in a scratch clone, all caught;
   - in a browser with a stand-in, at 375 and 1280, light and dark. Three
     problems were found and fixed there (README, More songs and
     downvotes).
-  - Not yet run: the rehearsal in the real database.
 
 ## 2026-10-25 (follow-up 10): seasons on the site (commissioners, stage 2)
 

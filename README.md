@@ -1746,7 +1746,7 @@ before (measured 2026-10-25), since each player sent one song a round.
   the real database.
 - **The rehearsal:** `supabase/checks/2026-10-25_more_songs_rehearsal.sql`
   plays a two-song season with downvotes as the admin and two members. It
-  should say "16 checks held".
+  said "16 checks held" on 2026-10-25, the day the migration ran.
 - **In a browser,** at 375 and 1280, light and dark, against a stand-in:
   - sending two tracks and removing one;
   - who's in, with "1 of 2";
