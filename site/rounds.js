@@ -104,11 +104,10 @@
     return "round?s=" + encodeURIComponent(seasonKey) + "&r=" + encodeURIComponent(roundId);
   }
 
-  /* ---- the recap: a finished round in four lines, to paste in the chat ---- */
+  /* ---- the recap: a finished round in four lines ---- */
 
   // The first song with the most of something, by place; null when nobody
-  // has any. Each line is {label, html, text}: the page shows html, the
-  // Copy button pastes text.
+  // has any. Each line is {label, html}.
   function mostOf(songs, count) {
     var best = null;
     songs.slice().sort(function (a, b) { return (a.place || 99) - (b.place || 99); }).forEach(function (s) {
@@ -119,52 +118,40 @@
 
   function recapLines(r, names) {
     var lines = [], top = winners(r);
-    var trackOf = function (s) { return "“" + s.title + "” (" + s.artistText + ")"; };
     if (top.length === 1) {
       var w = top[0];
-      lines.push({ label: "Winner", text: trackOf(w) + ", sent by " + w.submitterName + ": " + w.points + " pts" +
-        (r.margin ? ", won by " + counted(r.margin, "point") : ""),
+      lines.push({ label: "Winner",
         html: "<b>" + esc(w.title) + "</b> (" + esc(w.artistText) + "), sent by " + personLink(w.submitterId, w.submitterName) +
           ": " + w.points + " pts" + (r.margin ? ", won by " + counted(r.margin, "point") : "") });
     } else if (top.length > 1) {
-      lines.push({ label: "Winner", text: "a tie at " + top[0].points + " pts: " + top.map(function (s) { return trackOf(s) + " by " + s.submitterName; }).join(" and "),
+      lines.push({ label: "Winner",
         html: "a tie at " + top[0].points + " pts: " + top.map(function (s) { return "<b>" + esc(s.title) + "</b> by " + personLink(s.submitterId, s.submitterName); }).join(" and ") });
     }
     var talked = mostOf(r.songs, function (s) { return (s.comments || []).length; });
     if (talked && talked.comments.length >= 2) {
-      lines.push({ label: "Most talked about", text: trackOf(talked) + ", " + counted(talked.comments.length, "comment"),
+      lines.push({ label: "Most talked about",
         html: "<b>" + esc(talked.title) + "</b>, " + counted(talked.comments.length, "comment") });
     }
     var voters = {};
     r.songs.forEach(function (s) { (s.votes || []).forEach(function (v) { voters[v[0]] = true; }); });
     var broad = mostOf(r.songs, function (s) { return (s.votes || []).length; });
     if (broad) {
-      var of = broad.votes.length + " of " + Object.keys(voters).length + " voters";
-      lines.push({ label: "Broadest support", text: trackOf(broad) + ", points from " + of,
-        html: "<b>" + esc(broad.title) + "</b>, points from " + of });
+      lines.push({ label: "Broadest support",
+        html: "<b>" + esc(broad.title) + "</b>, points from " + broad.votes.length + " of " + Object.keys(voters).length + " voters" });
     }
     var bet = null;
     r.songs.forEach(function (s) { (s.votes || []).forEach(function (v) { if (!bet || v[1] > bet.points) bet = { voter: v[0], points: v[1], song: s }; }); });
     if (bet) {
-      var who = names[bet.voter] || "Someone";
-      lines.push({ label: "Biggest bet", text: who + " gave " + bet.points + " pts to " + trackOf(bet.song),
-        html: personLink(bet.voter, who) + " gave " + bet.points + " pts to <b>" + esc(bet.song.title) + "</b>" });
+      lines.push({ label: "Biggest bet",
+        html: personLink(bet.voter, names[bet.voter] || "Someone") + " gave " + bet.points + " pts to <b>" + esc(bet.song.title) + "</b>" });
     }
     return lines;
   }
 
   function recapHtml(lines) {
     if (!lines.length) return "";
-    return '<div class="rp-recap"><div class="rp-recap-head"><h2>Recap</h2>' +
-      '<button type="button" class="pill rp-recap-copy" id="rpRecapCopy">Copy recap</button></div><dl>' +
+    return '<div class="rp-recap"><h2>Recap</h2><dl>' +
       lines.map(function (l) { return "<div><dt>" + esc(l.label) + "</dt><dd>" + l.html + "</dd></div>"; }).join("") + "</dl></div>";
-  }
-
-  // Plain text for the group chat: the round, each line, and its link.
-  function recapText(d, r, number, lines) {
-    return d.label + ", Round " + number + ": " + r.name + "\n" +
-      lines.map(function (l) { return l.label + ": " + l.text; }).join("\n") + "\n" +
-      location.origin + "/" + roundUrl(d.key, r.id);
   }
 
   /* =====================================================================
@@ -663,16 +650,6 @@
     var jump = document.getElementById("rpJump");
     if (jump) jump.addEventListener("change", function () {
       if (jump.value && jump.value !== r.id) location.href = roundUrl(d.key, jump.value);
-    });
-    var copy = document.getElementById("rpRecapCopy");
-    if (copy) copy.addEventListener("click", function () {
-      var text = recapText(d, r, i + 1, recap);
-      var done = function () { copy.textContent = "Copied"; setTimeout(function () { copy.textContent = "Copy recap"; }, 2000); };
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(done, function () { window.prompt("Copy the recap:", text); });
-      } else {
-        window.prompt("Copy the recap:", text);
-      }
     });
 
     state.host = document.getElementById("rpTracks");

@@ -261,10 +261,9 @@ out from the round's own data, with nothing extra built:
   18".
 - **Biggest bet:** the largest single vote.
 
-A tie goes to the higher-placed track. **Copy recap** puts a plain-text
-version, with the round's link, on the clipboard for the group chat, and
-falls back to a prompt to copy from where the clipboard isn't allowed. A
-round without results shows none.
+A tie goes to the higher-placed track. A round without results shows none.
+It first shipped with a Copy recap button, which put a plain-text version
+on the clipboard; the user had it removed on 2026-10-24.
 
 On every season page, directly under Standings, **Results by round**,
 collapsed by default. Standings folds the same way (see Season page

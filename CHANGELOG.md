@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-24 (follow-up 6): no Copy recap button
+
+- **The round recap's Copy recap button is gone** (the user's call), along
+  with the plain-text version of each line it copied. The recap itself
+  stays: winner and margin, most talked about, broadest support, biggest
+  bet. The features page no longer mentions copying.
+- **Verified:** the suite passes, with a test that no copy button, clipboard
+  call or text version is left (break-checked: putting the button back
+  fails it). On a real round page in a browser, the recap shows the same
+  four lines with no button, at 375px with no sideways scroll.
+
 ## 2026-10-24 (follow-up 5): dark mode becomes a switch; a purple round banner
 
 - **Dark mode is now a choice, light by default.** It first shipped

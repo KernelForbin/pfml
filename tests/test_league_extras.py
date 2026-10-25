@@ -151,7 +151,7 @@ class Recap(unittest.TestCase):
         for label in ("Winner", "Most talked about", "Broadest support", "Biggest bet"):
             self.assertIn('label: "' + label + '"', lines)
         self.assertIn('(r.margin ? ", won by " + counted(r.margin, "point") : "")', lines)
-        self.assertIn('lines.push({ label: "Winner", text: "a tie at "', lines)
+        self.assertIn('html: "a tie at " + top[0].points + " pts: "', lines)
         self.assertIn("if (talked && talked.comments.length >= 2) {", lines)
 
     def test_only_for_a_round_with_results(self):
@@ -159,12 +159,12 @@ class Recap(unittest.TestCase):
         self.assertIn("var recap = status ? [] : recapLines(r, state.names);", page)
         self.assertIn('(status ? "" : recapHtml(recap))', page)
 
-    def test_copy_gives_plain_text_with_the_link_and_falls_back_to_a_prompt(self):
-        text = body(self.js, "function recapText(d, r, number, lines) {")
-        self.assertIn('location.origin + "/" + roundUrl(d.key, r.id)', text)
-        page = body(self.js, "function renderRoundPage(d, roundId) {")
-        self.assertIn("navigator.clipboard.writeText(text).then(done, function () { window.prompt(\"Copy the recap:\", text); });", page)
-        self.assertIn('window.prompt("Copy the recap:", text);', page.split("} else {", 1)[1])
+    def test_no_copy_button(self):
+        # removed at the user's request (2026-10-24), with its plain-text lines
+        self.assertNotRegex(self.js, r"(?i)copy recap|rpRecapCopy|recapText|clipboard")
+        self.assertNotIn("text:", body(self.js, "function recapLines(r, names) {"))
+        self.assertNotRegex(read("features.html"), r"(?i)copy recap")
+        self.assertNotIn("rp-recap-copy", read("style.css"))
 
     def test_names_and_titles_are_escaped_on_the_page(self):
         lines = body(self.js, "function recapLines(r, names) {")
