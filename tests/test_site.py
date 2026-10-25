@@ -1116,6 +1116,30 @@ class FeaturesPageWhatsNew(unittest.TestCase):
         self.assertIn("box.hidden = left === 0;", script)
         self.assertRegex(self.page, r"\.whats-new\[hidden\], \.whats-new li\[hidden\] \{ display: none; \}")
 
+    def test_the_home_button_knows_the_newest_line(self):
+        # forget to move FEATURES_UPDATED and Home stops saying New
+        newest = max(d for d, _, _, _ in self.items)
+        self.assertIn(f'var FEATURES_UPDATED = "{newest}";', read("app.js"))
+
+    def test_visiting_records_the_newest_line_the_home_button_checks(self):
+        script = self.page.split("/* What's new:", 1)[1].split("})();", 1)[0]
+        self.assertIn('try { if (newest) localStorage.setItem("pfml.featuresSeen", newest); } catch (e)', script)
+        app = read("app.js")
+        self.assertIn('var FEATURES_SEEN_KEY = "pfml.featuresSeen";', app)
+        button = app.split("function renderFeaturesButton() {", 1)[1].split("\n  }\n", 1)[0]
+        self.assertIn("try { seen = localStorage.getItem(FEATURES_SEEN_KEY) || \"\"; } catch (e) { return; }", button)
+        self.assertIn("var unseen = recent && seen < FEATURES_UPDATED;", button)
+        self.assertIn('$("featuresNew").hidden = !unseen;', button)
+        self.assertIn("renderFeaturesButton();", app.split("function initHome() {", 1)[1].split("\n  }\n", 1)[0])
+
+    def test_the_button_is_the_first_thing_on_home(self):
+        home = read("index.html")
+        main = home.split("<main>", 1)[1]
+        self.assertTrue(main.lstrip().startswith('<div class="shell home-top">'))
+        self.assertIn('<a class="feat-btn" id="featuresBtn" href="features">', main)
+        css = re.sub(r"/\*.*?\*/", "", read("style.css"), flags=re.S)
+        self.assertRegex(css, r"\.feat-new\[hidden\]\s*\{\s*display:\s*none")
+
     def test_only_what_an_ordinary_member_sees(self):
         # the page's scope rule: no admin powers, no crossword hint
         self.assertNotRegex(self.box, r"(?i)admin panel|league status|invite|crossword|round7hint")

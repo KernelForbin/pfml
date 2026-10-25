@@ -55,7 +55,11 @@ site/                    everything GitHub Pages serves
                          kept current with every visible change (CLAUDE.md).
                          Opens with "New in the last 30 days": each item dated
                          by its CHANGELOG entry, and an inline script hides
-                         items older than 30 days, then the box itself
+                         items older than 30 days, then the box itself.
+                         Home's What's new button links here and says New
+                         until this browser has opened the page since the
+                         newest line (FEATURES_UPDATED in app.js; the page
+                         stores pfml.featuresSeen in localStorage)
   privacy.html           public privacy page
   rounds.js              the round cards on season pages and the round page,
                          with member votes, reactions and replies

@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-10-24 (follow-up 4): a What's new button on Home
+
+- **"What's new on the site" is the first thing on Home**, linking to the
+  features page. It says **New** when the newest feature there is newer
+  than what this browser last saw on that page, and only within the 30
+  days the page lists.
+- **Remembered per browser:** visiting the features page stores the newest
+  date it showed (`pfml.featuresSeen` in localStorage). That needs no
+  database change, but a new phone or the home-screen app (its own
+  storage) starts at New. Where storage is blocked, the badge stays off
+  rather than nag.
+- **Verified:** the suite passes, with 3 new tests (Home's date matches the
+  newest line, the page records what Home reads, the button comes first),
+  break-checked (6 breaks). In a browser: New on a first visit, gone after
+  opening the features page, back for someone who last looked on Oct 19;
+  light and dark at 375px with no sideways scroll.
+
 ## 2026-10-24 (follow-up 3): "New in the last 30 days" on the features page
 
 - **The features page opens with what's new:** a highlighted box under the

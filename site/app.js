@@ -398,7 +398,23 @@
     }).catch(function (err) { console.error(err); });
   }
 
+  // The newest line in the features page's "New in the last 30 days" box (a test
+  // keeps the two equal). The features page records the newest date it
+  // showed in this browser; Home's button says New until that catches up.
+  var FEATURES_UPDATED = "2026-10-24";
+  var FEATURES_SEEN_KEY = "pfml.featuresSeen";
+
+  function renderFeaturesButton() {
+    var seen = null;
+    try { seen = localStorage.getItem(FEATURES_SEEN_KEY) || ""; } catch (e) { return; }   // can't remember: don't nag
+    var recent = Date.parse(FEATURES_UPDATED + "T12:00:00Z") >= Date.now() - 30 * 24 * 60 * 60 * 1000;
+    var unseen = recent && seen < FEATURES_UPDATED;
+    $("featuresNew").hidden = !unseen;
+    $("featuresBtn").setAttribute("aria-label", "What's new on the site" + (unseen ? ", new features since your last look" : ""));
+  }
+
   function initHome() {
+    renderFeaturesButton();
     renderSubmitBanner();
     renderVault();
     PFML.loadJSON("index.json").then(function (index) {

@@ -180,7 +180,8 @@ members will notice also gets a line there, newest first, with
 `data-shipped` set to its CHANGELOG heading's date (a test checks the date
 is a real heading). Lines drop off on their own after 30 days, by the
 reader's clock. Don't prune them by hand, and leave out fixes and small
-tweaks.
+tweaks. Move `FEATURES_UPDATED` in `app.js` to the newest line's date too:
+that's what puts New on Home's What's new button (a test checks they match).
 
 It's standalone on purpose: public, no sign-in, no `style.css`, no
 `app.js`, no data, nothing loaded but itself and its fonts. Its colour

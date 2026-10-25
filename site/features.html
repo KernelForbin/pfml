@@ -458,6 +458,7 @@
           <li>One card per season on the Home page: rounds, tracks, players and who won.</li>
           <li>The season in progress shows who's leading, its latest finished round, and that the next round is underway.</li>
           <li>If there's a tie, it names everyone who shares the lead.</li>
+          <li>A What's new on the site button at the top of Home opens this page, and says New when something has been added since you last looked here, on that phone or computer.</li>
           <li>From the vault: a past round's winner, picked at random each time you open Home, with the submitter's note and a comment from whoever backed it most.</li>
         </ul>
       </article>
@@ -609,6 +610,13 @@
       if (!li.hidden) left += 1;
     });
     box.hidden = left === 0;
+    // the Home page's What's new button says New until this browser has
+    // seen the newest line here (app.js, FEATURES_SEEN_KEY)
+    var newest = "";
+    box.querySelectorAll("li[data-shipped]").forEach(function (li) {
+      if (li.getAttribute("data-shipped") > newest) newest = li.getAttribute("data-shipped");
+    });
+    try { if (newest) localStorage.setItem("pfml.featuresSeen", newest); } catch (e) { /* private mode: Home just keeps saying New */ }
   })();
 
   /* The mode switch. Without JavaScript every section shows, one after

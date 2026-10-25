@@ -1453,6 +1453,18 @@ body.auth-checking::before {
 
 /* ---------- submitting on the site (/submit) ---------- */
 
+/* Home's What's new button (app.js renderFeaturesButton) */
+.home-top { padding-top: 18px; }
+.home-top + .sub-banner { padding-top: 12px; }
+.feat-btn {
+  display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px;
+  background: var(--card); border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+  color: var(--ink); text-decoration: none; font-weight: 600; font-size: 0.92rem;
+}
+.feat-new { padding: 2px 8px; border-radius: 999px; background: var(--magenta); color: #fff; font: 700 0.7rem/1.4 "Archivo", sans-serif; text-transform: uppercase; letter-spacing: 0.06em; }
+.feat-new[hidden] { display: none; }
+@media (hover: hover) { .feat-btn:hover { color: var(--magenta-text); box-shadow: var(--shadow-md); } }
+
 .sub-banner { padding-top: 22px; }
 .sub-banner-link {
   display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 16px 20px;
