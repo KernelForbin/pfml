@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-10-25 (follow-up 8): the notifications bell, with replies and reactions
+
+- **A bell in the top bar**, just left of the inbox, replaces Notifications
+  in the initials menu, so members see it as soon as a page loads (the
+  user's ask). It shows a slash while this device has them off.
+- **A switch for each kind:** a new round, a playlist ready, replies to
+  your comments, reactions to your comments, and (once voting on the site
+  is on) voting closing before you've voted. The choices are the member's,
+  stored in `reminder_settings`, and the same on every device.
+- **Replies and reactions notify:** `inbox_claim()` finds what the inbox
+  would show since each member's mark, one summary per member a run; a tap
+  opens the inbox.
+- **A bug found in the browser:** opening the bell redrew its icon before
+  the click-outside handler ran, which then closed the panel at once. It
+  now checks the click's path from when it began. Regression test.
+- **Waits on:** the migration `2026-10-25_notification_choices.sql` and its
+  rehearsal, and redeploying `send-reminders`.
+- **Verified:** the suite passes, each new assertion break-checked in a
+  scratch clone (34 breaks, all caught). In a browser at 375 and 1280,
+  light and dark, with the push objects and the api faked: the top bar fits
+  at 375, switches save and go back on failure, the device switch swaps the
+  icon, `?inbox=1` opens the inbox. Not yet run: the rehearsal in the real
+  database, and a real reply notification on a phone.
+
 ## 2026-10-25 (follow-up 7): notifications switched on
 
 - **Notifications are on:** Notifications in the menu under your initials

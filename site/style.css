@@ -780,14 +780,17 @@ body.auth-checking::before {
 .acct-install-note { margin-top: 12px !important; color: var(--muted); font-size: 0.9rem; }
 .acct-install form { margin-top: 16px; text-align: right; }
 /* Notifications (account.js): the same dialog, with a list and two quiet buttons */
-.acct-notify ul { margin: 6px 0 0; padding-left: 20px; }
-.acct-notify-msg { margin-top: 10px !important; color: var(--deep); font-size: 0.92rem; }
-.acct-notify-msg[hidden] { display: none; }
-.acct-notify-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 16px; }
-.acct-notify-actions form { margin: 0; }
-.acct-notify-quiet { padding: 9px 16px; border: 1px solid var(--border); border-radius: 999px; background: var(--card); color: var(--ink); font: 600 0.92rem/1 "Inter", sans-serif; cursor: pointer; }
-.acct-notify-quiet:disabled, .acct-install-done:disabled { opacity: 0.5; cursor: default; }
-.acct-install-done {padding: 9px 18px; border: none; border-radius: 999px; background: var(--magenta); color: #fff; font: 600 0.92rem/1 "Inter", sans-serif; cursor: pointer; }
+/* the bell (account.js): this device's switch, then one per kind */
+.acct-bell { width: min(340px, calc(100vw - 24px)); max-height: min(78vh, 560px); overflow-y: auto; overscroll-behavior: contain; padding: 0 6px 6px; }
+.acct-bell .acct-inbox-head { margin: 0 -6px 4px; }
+.acct-bell-device { font-weight: 600; }
+.acct-bell-sub { margin: 10px 12px 2px; font: 700 0.72rem/1 "Archivo", sans-serif; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.acct-bell-note { margin: 6px 12px; font-size: 0.84rem; color: var(--muted); }
+.acct-bell-link { align-self: flex-start; margin: 4px 12px 6px; padding: 0; border: 0; background: none; color: var(--magenta-text); font: 600 0.9rem/1.4 "Inter", sans-serif; cursor: pointer; }
+.acct-bell-link:disabled, .acct-bell-device:disabled { opacity: 0.5; cursor: default; }
+.acct-bell-msg { margin: 4px 12px 8px; font-size: 0.88rem; color: var(--deep); }
+.acct-bell-msg[hidden] { display: none; }
+.acct-install-done { padding: 9px 18px; border: none; border-radius: 999px; background: var(--magenta); color: #fff; font: 600 0.92rem/1 "Inter", sans-serif; cursor: pointer; }
 .acct-badge {
   position: absolute; top: -4px; right: -5px; min-width: 18px; height: 18px; padding: 0 5px;
   border-radius: 999px; background: var(--magenta); color: #fff; border: 2px solid var(--paper);
@@ -1347,7 +1350,7 @@ body.auth-checking::before {
   .topbar-inner > .seasons { order: 3; width: 100%; }
   /* Pinned to the screen edges rather than hung off the inbox button,
      which sits too far right for a 380px panel to fit from it. */
-  .acct-inbox { position: fixed; top: 60px; left: 12px; right: 12px; width: auto; }
+  .acct-inbox, .acct-bell { position: fixed; top: 60px; left: 12px; right: 12px; width: auto; }
   .pf-fans { grid-template-columns: 1fr; }
   /* Tile grids marked .hl-pair go two per row, smaller: the profile's
      Career and Comments, the All-Time page's highlights and comment awards. */

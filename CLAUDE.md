@@ -215,6 +215,9 @@ job 1. Email is built but on hold. The user's calls (2026-10-25):
 - **Now:** new round, playlist ready.
 - **With voting:** halfway, 5h, 2h, 1h, only to players who haven't voted.
 - **Email:** later, once they set up Resend and the DNS.
+- **The bell** (2026-10-25): notifications live in a bell beside the inbox,
+  not the initials menu, with a switch per kind. Replies and reactions on
+  a member's own comments notify too (`inbox_claim`).
 
 Rules for the work:
 
@@ -230,7 +233,10 @@ Rules for the work:
   pages have to cover notifications in the same change (a test holds it).
 - **The browser pane** can't run service workers or show notifications.
   Check the panel there with the browser's push objects faked in the page,
-  and the real thing on a phone.
+  and the real thing on a phone. Click with real clicks, not `.click()`
+  from a script: a real click lets promises settle between listeners,
+  which is how the bell's closing bug (README, Reminders) showed, and a
+  scripted `.click()` runs every listener first.
 
 ## The daily security check
 

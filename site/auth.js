@@ -478,6 +478,14 @@
     removePushSubscription: function (endpoint) {
       return client.rpc("remove_push_subscription", { p_endpoint: endpoint }).then(must);
     },
+    // Which kinds of notification this member wants: one row, all true
+    // unless they turned some off; and one switch at a time.
+    myNotificationChoices: function () {
+      return client.rpc("my_notification_choices").then(must);
+    },
+    setNotificationChoice: function (kind, on) {
+      return client.rpc("set_notification_choice", { p_kind: kind, p_on: on }).then(must);
+    },
     testPush: function () {
       return client.functions.invoke("send-reminders", { body: { test: true } }).then(function (res) {
         if (res.error) throw res.error;

@@ -200,6 +200,27 @@ export function message(c: Claim): { title: string; body: string; url: string; t
   }
 }
 
+// New replies and reactions on a member's own comments, summed up by
+// inbox_claim. One notification per run, never one per reaction. Escapes,
+// not the characters, so the file stays plain ASCII through any clipboard.
+type Inbox = { user_id: string; replies: number; reactions: number; last_kind: string; last_actor: string;
+               last_text: string; subscriptions: Sub[] };
+const GLYPHS: Record<string, string> = { fire: "\u{1F525}", laugh: "\u{1F602}", hundred: "\u{1F4AF}", eyes: "\u{1F440}",
+                                         grimace: "\u{1F62C}", heart: "\u2764\uFE0F" };
+
+export function inboxMessage(n: Inbox): { title: string; body: string; url: string; tag: string } {
+  const at = { url: `${SITE}?inbox=1`, tag: "inbox" };
+  if (n.replies + n.reactions === 1 && n.last_kind === "reply") {
+    return { ...at, title: `${n.last_actor} replied to your comment`, body: `\u201C${n.last_text}\u201D` };
+  }
+  if (n.replies + n.reactions === 1) {
+    return { ...at, title: `${n.last_actor} reacted ${GLYPHS[n.last_text] ?? n.last_text} to your comment`, body: "Open your inbox to see it." };
+  }
+  const parts = [n.replies ? `${n.replies} ${n.replies === 1 ? "reply" : "replies"}` : "",
+                 n.reactions ? `${n.reactions} ${n.reactions === 1 ? "reaction" : "reactions"}` : ""].filter(Boolean);
+  return { ...at, title: "New on your comments", body: `${parts.join(" and ")}. The latest from ${n.last_actor}.` };
+}
+
 async function pushTo(subs: Sub[], msg: unknown, jwk: JsonWebKey): Promise<number> {
   let sent = 0;
   for (const s of subs) {
@@ -254,7 +275,14 @@ async function runDue(): Promise<Response> {
     if (c.channel === "push" && jwk) sent += await pushTo(c.subscriptions ?? [], msg, jwk);
     else if (c.channel === "email" && c.email && (await sendEmail(c, msg))) sent++;
   }
-  return Response.json({ claimed: claims.length, sent });
+  // replies and reactions on members' comments: push only
+  let inbox = 0;
+  if (jwk) {
+    const res = await rpc("inbox_claim", {});
+    if (!res.ok) console.error(`inbox claim failed: ${res.status}`);
+    else for (const n of (await res.json()) as Inbox[]) inbox += await pushTo(n.subscriptions ?? [], inboxMessage(n), jwk);
+  }
+  return Response.json({ claimed: claims.length, sent, inbox });
 }
 
 async function test(authorization: string): Promise<Response> {

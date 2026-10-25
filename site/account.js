@@ -1,7 +1,9 @@
 /* PFML — the header's account corner, on every members-only page.
 
-   Two buttons at the right of the top bar, once auth.js has let a member in:
+   Buttons at the right of the top bar, once auth.js has let a member in:
 
+   - The bell (once notifications are set up): this device's notifications
+     switch and a switch for each kind (README, Reminders).
    - Inbox (a tray icon, with a count of new items): reactions and replies
      other members have left on your own vote comments, newest first, each
      linking to that comment on its round page. "New" means since you last
@@ -189,7 +191,7 @@
     items: null,          // newest first: { kind, commentId, userId, at, reaction | body }
     seenAt: undefined,    // ISO string, null (never opened), or undefined (couldn't tell)
     fetchedAt: 0,
-    open: null,           // "menu" | "inbox" | null
+    open: null,           // "menu" | "inbox" | "bell" | null
     context: null         // Promise of { people, lookup } for rendering items
   };
 
@@ -352,53 +354,97 @@
     });
   }
 
-  var NOTIFY_TEXT = {
-    "ios-browser": "<p>On iPhone, notifications work in the installed app. Add PFML to your home screen, open it from there, " +
-      "and turn them on here.</p>",
-    unsupported: "<p>This browser can't show notifications. On a phone, use Chrome on Android, or the installed app on iPhone.</p>",
-    blocked: "<p>Notifications are blocked for PFML in this browser's settings. Allow them there, then come back here.</p>",
-    off: "<p>Get a notification on this phone when:</p><ul><li>a new round opens</li><li>a round's playlist is ready</li></ul>" +
-      '<p class="acct-install-note">Just for this phone or browser: turn them on on each one you use.</p>',
-    on: "<p>Notifications are on for this phone.</p>"
-  };
-  var NOTIFY_BUTTONS = {
-    "ios-browser": '<button type="button" class="acct-install-done" data-notify="how">Show me how</button>',
-    off: '<button type="button" class="acct-install-done" data-notify="on">Turn on notifications</button>',
-    on: '<button type="button" class="acct-notify-quiet" data-notify="test">Send me a test</button>' +
-      '<button type="button" class="acct-notify-quiet" data-notify="off">Turn off</button>'
+  /* The bell, beside the inbox (asked for 2026-10-25): where anyone sees it
+     as soon as a page loads. It opens this device's switch and one switch
+     for each kind of notification, which are the member's own and apply to
+     every device they turn on (my_notification_choices). */
+
+  // drawn like the inbox tray; with a slash while this device has them off,
+  // so the top bar shows the state at a glance
+  var BELL_PATHS =
+    '<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.6 1.8H4.4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>' +
+    '<path d="M10 20.4a2.1 2.1 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>';
+  var BELL_ICON = '<svg class="acct-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">' +
+    BELL_PATHS + "</svg>";
+  var BELL_OFF_ICON = '<svg class="acct-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">' +
+    BELL_PATHS + '<path d="M4 4l16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+
+  // In the order the bell lists them. Voting's shows only once voting on the
+  // site is switched on (PFML.siteVoting); until then it would never fire.
+  var CHOICES = [
+    ["round_open", "A new round opens"],
+    ["playlist_ready", "A round's playlist is ready"],
+    ["replies", "Replies to your comments"],
+    ["reactions", "Reactions to your comments"],
+    ["voting", "Voting closes and you haven't voted"]
+  ];
+
+  var DEVICE_TEXT = {
+    "ios-browser": "On iPhone, notifications work in the installed app. Add PFML to your home screen, open it from there, " +
+      "and turn them on here.",
+    unsupported: "This browser can't show notifications. On a phone, use Chrome on Android, or the installed app on iPhone.",
+    blocked: "Notifications are blocked for PFML in this browser's settings. Allow them there, then come back here."
   };
 
-  function showNotifications(note) {
-    close(true);
-    var dialog = $("acctNotify");
-    if (!dialog) {
-      dialog = document.createElement("dialog");
-      dialog.id = "acctNotify";
-      dialog.className = "acct-install acct-notify";
-      dialog.addEventListener("click", onNotifyClick);
-      document.body.appendChild(dialog);
-    }
-    notificationsState().then(function (st) {
-      dialog.innerHTML = "<h2>Notifications</h2>" + NOTIFY_TEXT[st] +
-        '<p class="acct-notify-msg" role="status"' + (note ? "" : " hidden") + ">" + esc(note || "") + "</p>" +
-        '<div class="acct-notify-actions">' + (NOTIFY_BUTTONS[st] || "") +
-        '<form method="dialog"><button class="acct-notify-quiet">' + (st === "off" ? "Not now" : "Done") + "</button></form></div>";
-      if (!dialog.open) { if (dialog.showModal) dialog.showModal(); else dialog.setAttribute("open", ""); }
-    });
+  function setBellIcon(on) {
+    var b = $("acctBellBtn");
+    if (!b || b.getAttribute("data-on") === String(on)) return;
+    b.setAttribute("data-on", String(on));
+    b.innerHTML = on ? BELL_ICON : BELL_OFF_ICON;
+    b.setAttribute("aria-label", on ? "Notifications: on for this device" : "Notifications: off for this device");
   }
 
-  function onNotifyClick(ev) {
-    var b = ev.target.closest("[data-notify]");
+  function renderBell(note) {
+    var here = platform() === "desktop" ? "this browser" : "this phone";
+    Promise.all([notificationsState(), api().myNotificationChoices().catch(function (err) { console.error(err); return null; })])
+      .then(function (res) {
+        var st = res[0], choices = res[1] && res[1][0];
+        setBellIcon(st === "on");
+        var device = DEVICE_TEXT[st]
+          ? '<p class="acct-bell-note">' + DEVICE_TEXT[st] + "</p>" +
+            (st === "ios-browser" ? '<button type="button" class="acct-bell-link" data-bell="how">Show me how</button>' : "")
+          : '<button type="button" class="acct-item acct-theme acct-bell-device" data-bell="device" role="switch" aria-checked="' +
+            (st === "on") + '">Notifications on ' + here + '<span class="acct-switch" aria-hidden="true"></span></button>';
+        var list = choices ? CHOICES.filter(function (c) { return c[0] !== "voting" || PFML.siteVoting; }).map(function (c) {
+          return '<button type="button" class="acct-item acct-theme" data-choice="' + c[0] + '" role="switch" aria-checked="' +
+            !!choices[c[0]] + '">' + esc(c[1]) + '<span class="acct-switch" aria-hidden="true"></span></button>';
+        }).join("") : '<p class="acct-bell-note">Your choices couldn’t load. Try again in a moment.</p>';
+        $("acctBell").innerHTML =
+          '<div class="acct-inbox-head"><b>Notifications</b><span>' + (st === "on" ? "On for " + here : "Off for " + here) + "</span></div>" +
+          device +
+          '<p class="acct-bell-sub">Tell me when</p>' + list +
+          '<p class="acct-bell-note">These go to every phone or browser you turn notifications on.</p>' +
+          (st === "on" ? '<button type="button" class="acct-bell-link" data-bell="test">Send me a test</button>' : "") +
+          '<p class="acct-bell-msg" role="status"' + (note ? "" : " hidden") + ">" + esc(note || "") + "</p>";
+      });
+  }
+
+  function onBellClick(ev) {
+    var b = ev.target.closest("[data-bell], [data-choice]");
     if (!b) return;
-    var what = b.getAttribute("data-notify");
+    var kind = b.getAttribute("data-choice");
+    if (kind) {
+      // the switch moves at once; it goes back if the save fails
+      var on = b.getAttribute("aria-checked") !== "true";
+      b.setAttribute("aria-checked", String(on));
+      api().setNotificationChoice(kind, on).catch(function (err) {
+        console.error(err);
+        b.setAttribute("aria-checked", String(!on));
+        renderBell("That didn’t save: " + ((err && err.message) || err));
+      });
+      return;
+    }
+    var what = b.getAttribute("data-bell");
     b.disabled = true;
-    if (what === "how") { $("acctNotify").close(); showInstallHelp("ios"); return; }
-    var done = what === "on" ? turnOnNotifications().then(function () { return "Turned on."; })
-      : what === "off" ? turnOffNotifications().then(function () { return "Turned off for this phone."; })
+    if (what === "how") { close(true); showInstallHelp("ios"); return; }
+    var done = what === "device"
+      ? (b.getAttribute("aria-checked") === "true"
+        ? turnOffNotifications().then(function () { return "Turned off for this device."; })
+        : turnOnNotifications().then(function () { return "Turned on."; }))
       : api().testPush().then(function (r) { return r && r.sent ? "Sent. It should arrive in a moment." : "Nothing was sent. Try turning them off and on again."; });
-    done.then(showNotifications, function (err) {
+    done.then(renderBell, function (err) {
       console.error(err);
-      showNotifications(err && err.message === "blocked" ? "" : "That didn't work: " + ((err && err.message) || err));
+      renderBell(err && err.message === "blocked" ? "" : "That didn’t work: " + ((err && err.message) || err));
     });
   }
 
@@ -410,6 +456,8 @@
     box.className = "acct";
     box.innerHTML =
       '<button type="button" class="acct-get" id="acctGet" hidden>Get the app</button>' +
+      '<button type="button" class="acct-btn acct-bell-btn" id="acctBellBtn" aria-expanded="false" aria-controls="acctBell" ' +
+        'aria-label="Notifications" hidden>' + BELL_OFF_ICON + "</button>" +
       '<button type="button" class="acct-btn acct-inbox-btn" id="acctInboxBtn" aria-expanded="false" aria-controls="acctInbox" aria-label="Inbox">' +
         INBOX_ICON + '<span class="acct-badge" id="acctBadge" hidden></span></button>' +
       '<button type="button" class="acct-btn acct-me-btn" id="acctMeBtn" aria-expanded="false" aria-controls="acctMenu" ' +
@@ -421,7 +469,6 @@
         '<a class="acct-item" href="repeats">Repeat checker</a>' +
         '<a class="acct-item" href="profile">My profile</a>' +
         '<a class="acct-item" href="features">Site features</a>' +
-        '<button type="button" class="acct-item" id="acctNotifyItem" hidden>Notifications</button>' +
         '<button type="button" class="acct-item" id="acctInstall" hidden>Add to home screen</button>' +
         '<button type="button" class="acct-item acct-theme" id="acctTheme" role="switch" aria-checked="' + isDark() + '">' +
           'Dark mode<span class="acct-switch" aria-hidden="true"></span></button>' +
@@ -430,7 +477,8 @@
       '<div class="acct-pop acct-inbox" id="acctInbox" hidden role="region" aria-label="Inbox">' +
         '<div class="acct-inbox-head"><b>Inbox</b><span>Reactions and replies to your comments</span></div>' +
         '<div class="acct-inbox-list" id="acctInboxList"><p class="acct-empty">Loading…</p></div>' +
-      "</div>";
+      "</div>" +
+      '<div class="acct-pop acct-bell" id="acctBell" hidden role="region" aria-label="Notifications"></div>';
     bar.appendChild(box);
 
     $("acctInboxBtn").addEventListener("click", function () { toggle("inbox"); });
@@ -439,9 +487,11 @@
     $("acctTheme").addEventListener("click", function () { setDark(!isDark()); });
     $("acctGet").addEventListener("click", addToHomeScreen);
     $("acctInstall").addEventListener("click", addToHomeScreen);
-    // only once the push key is set up (config.js)
-    $("acctNotifyItem").hidden = !pushKey();
-    $("acctNotifyItem").addEventListener("click", function () { showNotifications(); });
+    // the bell, once the push key is set up (config.js)
+    $("acctBellBtn").hidden = !pushKey();
+    $("acctBellBtn").addEventListener("click", function () { toggle("bell"); });
+    $("acctBell").addEventListener("click", onBellClick);
+    if (pushKey()) notificationsState().then(function (st) { setBellIcon(st === "on"); });
     showInstallControls();
     document.addEventListener("click", closeFromOutside);
     document.addEventListener("keydown", closeOnEscape);
@@ -449,34 +499,47 @@
       if (document.visibilityState === "visible" && Date.now() - state.fetchedAt > REFRESH_MS) refresh();
     });
     refresh();
+    // a reply or reaction notification opens the inbox (?inbox=1); the
+    // address is tidied so a reload doesn't open it again
+    if (/(^|&)inbox=1(&|$)/.test(location.search.slice(1))) {
+      history.replaceState(history.state, "", location.pathname +
+        location.search.replace(/([?&])inbox=1(&|$)/, function (m, a, b) { return b ? a : ""; }) + location.hash);
+      toggle("inbox");
+    }
   }
 
   /* ---- open / close ---- */
+
+  // which pop-up goes with which button
+  var POPS = { inbox: ["acctInboxBtn", "acctInbox"], menu: ["acctMeBtn", "acctMenu"], bell: ["acctBellBtn", "acctBell"] };
 
   function toggle(which) {
     if (state.open === which) { close(); return; }
     close(true);
     state.open = which;
-    var btn = which === "inbox" ? $("acctInboxBtn") : $("acctMeBtn");
-    var pop = which === "inbox" ? $("acctInbox") : $("acctMenu");
+    var btn = $(POPS[which][0]), pop = $(POPS[which][1]);
     btn.setAttribute("aria-expanded", "true");
     pop.hidden = false;
     if (which === "inbox") openInbox();
+    if (which === "bell") renderBell();
   }
 
   function close(quiet) {
     if (!state.open) return;
-    var btn = state.open === "inbox" ? $("acctInboxBtn") : $("acctMeBtn");
-    var pop = state.open === "inbox" ? $("acctInbox") : $("acctMenu");
+    var btn = $(POPS[state.open][0]), pop = $(POPS[state.open][1]);
     btn.setAttribute("aria-expanded", "false");
     pop.hidden = true;
     state.open = null;
     if (!quiet) btn.focus();
   }
 
+  // The path as it was when the click began: a pop-up can redraw what was
+  // clicked before this runs (the bell redraws its icon), and a detached
+  // target has no .acct above it any more.
   function closeFromOutside(ev) {
-    if (!state.open || !ev.target.closest) return;
-    if (ev.target.closest(".acct")) return;
+    if (!state.open) return;
+    var path = ev.composedPath ? ev.composedPath() : [ev.target];
+    if (path.some(function (el) { return el.classList && el.classList.contains("acct"); })) return;
     close(true);
   }
 

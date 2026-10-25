@@ -1632,9 +1632,53 @@ pfml.fun first. The user's calls that day:
 | New round open | everyone | within 5 minutes of the round opening |
 | Playlist available | everyone | within 5 minutes of the playlists step |
 | Voting at halfway, 5 hours, 2 hours, 1 hour left | only players with a track in the round who haven't voted | dormant until voting is on: only rounds voted on the site get them |
+| Replies and reactions on your comments | the commenter | within 5 minutes, one summary a run (added with the bell, below) |
 
-**On the phone.** Notifications in the initials menu turns them on for that
-phone or browser:
+**The bell** (asked for 2026-10-25): a bell in the top bar, just left of
+the inbox, where anyone sees it as soon as a page loads. It replaced the
+Notifications item in the initials menu. Its icon has a slash while this
+device has notifications off. It opens:
+
+- **This device's switch:** turns notifications on or off for this phone or
+  browser (below). On iPhone in Safari, and where they're blocked or
+  unsupported, it says why instead, with Show me how on iPhone.
+- **Tell me when:** a switch for each kind, the member's own and the same
+  on every device they turn on: a new round opens, a round's playlist is
+  ready, replies to your comments, reactions to your comments, and (once
+  voting on the site is switched on, `PFML.siteVoting`) voting closes and
+  you haven't voted. They're columns of `reminder_settings`, all on unless
+  turned off; `my_notification_choices()` reads them and
+  `set_notification_choice(kind, on)` sets one, refusing any name but those
+  five. A switch moves at once and goes back if the save fails.
+- **Send me a test**, while this device is on.
+
+`reminders_claim` leaves out a kind the member turned off. The panel shares
+the inbox's open and close rules (one pop-up at a time, Escape, a click
+outside). **Gotcha, found in the browser:** opening the bell redraws its
+icon, and with the answers already in hand that happened in a microtask
+before the page's click-outside handler ran. The handler then saw a
+detached target, decided the click was outside, and closed the panel at
+once. It now checks `composedPath()`, the path as it was when the click
+began, and the icon is only redrawn when it changes.
+
+**Replies and reactions** (`inbox_claim()`, sender only): what the inbox
+shows, as a notification. A comment's id ends with the commenter's player
+id, so a reply or reaction on a comment id ending in a member's id is on
+their comment; their own don't count.
+
+- **One per member per run:** "Pat replied to your comment" with the reply,
+  "Pat reacted 🔥 to your comment", or "New on your comments: 2 replies and
+  1 reaction" with who was latest. A tap opens the inbox (`?inbox=1`, then
+  taken out of the address).
+- **Nothing twice, no flood:** `inbox_notified` keeps each member's mark;
+  each run counts what's after it and moves it to the run's start, under a
+  lock so two runs can't both count the same items. A member's first mark
+  is when they first turned on a device, and nothing older than a day
+  counts, so turning on doesn't bring a pile.
+- **Only members with a device**, and each kind only if they want it.
+
+**On the phone.** The bell's device switch turns them on for that phone or
+browser:
 
 - **Turning on:** it asks for permission, registers `sw.js`, subscribes
   with the public push key (`vapidPublicKey` in `config.js`), and saves
@@ -1646,7 +1690,7 @@ phone or browser:
   first. If permission is blocked, it says where to allow it.
 - **`sw.js`** only shows notifications: no caching, no fetch handler. A tap
   opens the page the reminder is about, and only ever on this site.
-- **Hidden until set up:** the menu item stays hidden while
+- **Hidden until set up:** the bell stays hidden while
   `vapidPublicKey` is empty. A test requires the privacy and features
   pages to cover notifications once it isn't.
 
@@ -1684,12 +1728,14 @@ out as it stands and run in a browser against RFC 8291's worked example
 The file has `// @ts-nocheck` because of that untyped block.
 
 **Tables:** `push_subscriptions` (the device's endpoint and keys, per
-member), `reminder_settings` (email on or off; no row means on) and
-`reminders_sent`. They're reached only through the functions, with no
-policies and no grants. Members call `save_push_subscription`,
-`remove_push_subscription`, `my_push_subscriptions` and
-`set_email_reminders`; only the secret key calls `reminders_claim`,
-`forget_push_endpoint` and `email_reminders_off`.
+member), `reminder_settings` (email and each kind on or off; no row means
+all on), `reminders_sent` and `inbox_notified`. They're reached only
+through the functions, with no policies and no grants. Members call
+`save_push_subscription`, `remove_push_subscription`,
+`my_push_subscriptions`, `set_email_reminders`, `my_notification_choices`
+and `set_notification_choice`; only the secret key calls
+`reminders_claim`, `inbox_claim`, `forget_push_endpoint` and
+`email_reminders_off`.
 
 **Email, when it's switched on:**
 
@@ -1764,6 +1810,28 @@ turn notifications on again.
     The installed app kept showing the page it already had (and Pages lets
     phones keep files for 10 minutes). Fully closing the app and reopening
     it brought the new version.
+
+**The bell, setup** (after the steps above):
+
+1. Run `supabase/migrations/2026-10-25_notification_choices.sql`.
+2. Run `supabase/checks/2026-10-25_notification_choices_rehearsal.sql`. It
+   should say "Rehearsal passed: 12 checks held". It plays three members
+   with no device yet, so a real phone never comes into it.
+3. Redeploy `send-reminders` with the new `index.ts` (JWT verification
+   stays off). Until then the timer sends reminders but no reply or
+   reaction notices.
+4. Push the pages.
+
+**The bell, checked:** `tests/test_reminders.py` (TheBell,
+InboxNotifications), each assertion break-checked in a scratch clone. In a
+browser at 375 and 1280 wide, light and dark, with the push objects and
+the api faked: the top bar still fits at 375 with Get the app, the bell,
+the inbox and the initials; the panel opens, a switch saves, a failed save
+goes back with a message, turning the device on swaps the icon and shows
+Send me a test, the voting switch shows only with `PFML.siteVoting`, the
+iPhone message and Show me how work, and `?inbox=1` opens the inbox and
+leaves the address without it. The panel's text measured 5.3:1 contrast
+or more in both themes.
 
 ## Scoring model
 
