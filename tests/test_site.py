@@ -1276,7 +1276,7 @@ class TouchFriendlyStandings(unittest.TestCase):
         # arrow stayed magenta, a tapped sort heading looked like the active
         # sort, and cards stayed lifted after a tap.
         css = strip_media(read("style.css"), "(hover: hover)")
-        sticky = (r"trend-chip|cm-vote|cm-chip:|career-sort-btn|season-tab:hover|focus-chip|"
+        sticky = (r"trend-chip|trend-group|cm-vote|cm-chip:|career-sort-btn|season-tab:hover|focus-chip|"
                   r"\.pill:|\.art:|season-card|rl-card|rp-jump-select")
         for sel, _ in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
             for part in sel.split(","):

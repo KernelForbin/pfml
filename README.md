@@ -513,6 +513,23 @@ security check and reproduced in Chrome first.
   totals can't produce (they only ever go up, so on a graph everyone's
   line looks like a similar upward slope regardless of how they're
   actually doing). **Cumulative points** is last, the plain raw numbers.
+  **Group toggles** sit above the player chips (asked 2026-10-25): You,
+  Front of the pack and Back of the pack (the top and bottom 3 places now),
+  Biggest rises and Biggest falls (places gained or lost since round 1),
+  Most volatile and Steadiest (most and fewest places moved a round, on
+  average, from round 3), and Been #1 (everyone who led after any round).
+  Each names 3, plus anyone tied with the third. More than one on shows
+  everyone in any of them, and a line under the buttons lists who's in
+  each with their figure; turning the last one off shows everyone again,
+  and picking a player by hand, Select all or Clear turns them all off.
+  `build.trend_groups()` works them out from the same places the standing
+  view draws (`standing_after_each_round`, which mirrors the chart's own
+  arithmetic, Daily Double included) into the season file's `trendGroups`,
+  so they're unit-tested (`tests/test_trend_groups.py`) and read the same
+  whichever view is showing. A group with nobody in it, or with the whole
+  field, is left out. You comes from the page (the signed-in member, when
+  they played that season). On the real seasons (2026-10-25) ties at the
+  cut-off made the capped groups 3 to 5 players, and Been #1 had 2 or 3.
   Whichever mode is active, hovering a line names the player and the
   value at that point, a hit point at every round so it's the specific
   round under the cursor, not just a fixed value for the whole line. A

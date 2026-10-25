@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-10-25 (follow-up 13): groups on the trend chart
+
+- **Group toggles** above the Performance over time chart's player chips:
+  You, Front of the pack, Back of the pack, Biggest rises, Biggest falls,
+  Most volatile, Steadiest and Been #1. Each picks whoever meets it (3,
+  plus ties), more than one adds them together, and a line says who's in
+  each and why.
+- **Worked out by the build** (`trend_groups`, into the season file), from
+  the same places the chart draws, so they're unit-tested.
+- **Needs a publish** for the groups to appear: until the season files are
+  rebuilt, the chart shows only You.
+- **Verified:**
+  - the suite passes (692), with 30 breaks in a scratch clone, all caught
+    (three got through at first, and the tests were tightened);
+  - in a browser with a stand-in, at 375 and 1280, light and dark: groups
+    add together, a hand pick or Clear turns them off, the last one off
+    shows everyone, and every figure matched the chart's own point labels.
+
 ## 2026-10-25 (follow-up 11): more songs a round, and downvotes (commissioners, stage 3)
 
 - **More songs:** a season set up on the site can ask for 1 to 5 songs

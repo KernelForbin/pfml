@@ -71,6 +71,10 @@ MIN_COMMENTS_FOR_RATES = 10
 # before someone qualifies in a season. All-Time uses MIN_SCORED_ROUNDS.
 MIN_TASTEMAKER_ROUNDS = 5
 
+# The group toggles on the Performance over time chart (trend_groups): how
+# many players each group names, plus anyone tied with the last of them.
+TREND_GROUP_SIZE = 3
+
 # Career Score (chosen by the league, 2026-09-22; README, Career Score):
 #   PER_ROUND_SCALE x points per round played    ("Avg season")
 # + ROUND_BONUS for each 1st / 2nd / 3rd place in a round
@@ -207,6 +211,73 @@ def pair_order(x):
 
 def pair_label(x):
     return f'{x.get("voterName")} \u2192 {x.get("submitterName")}'
+
+
+def standing_after_each_round(rounds, ids):
+    """Each player's place after every round, exactly as the trend chart
+    draws it (app.js, computeTrendSeries, mode "standing"): points so far
+    with any Daily Double bonus, and a tie shares a place (1, 1, 3)."""
+    total = {i: 0 for i in ids}
+    places = {i: [] for i in ids}
+    for r in rounds:
+        for s in r["songs"]:
+            if s["submitterId"] in total:
+                total[s["submitterId"]] += s["points"] + (s.get("dailyDouble") or {}).get("bonus", 0)
+        order = sorted(ids, key=lambda i: -total[i])
+        place = {}
+        for n, i in enumerate(order):
+            place[i] = place[order[n - 1]] if n and total[order[n - 1]] == total[i] else n + 1
+        for i in ids:
+            places[i].append(place[i])
+    return places
+
+
+def top_with_ties(pairs, n=TREND_GROUP_SIZE):
+    """The n (id, value) pairs with the highest value, plus any tied with
+    the nth, highest first. Equal values keep the order they came in."""
+    ranked = sorted(pairs, key=lambda p: -p[1])
+    if len(ranked) <= n:
+        return ranked
+    return [p for p in ranked if p[1] >= ranked[n - 1][1]]
+
+
+def trend_groups(rounds, standings):
+    """Who's in each group toggle on the Performance over time chart, from
+    the places the chart's standing view shows. A list of {"key",
+    "players": [{"id", "value"}]}, in the order the page shows them:
+
+    - front: in the top TREND_GROUP_SIZE places now (value: place);
+    - back: the bottom TREND_GROUP_SIZE now (value: place);
+    - rises / falls: most places gained / lost since round 1 (value: places);
+    - volatile / steady: most / fewest places moved a round, on average
+      (value: places a round, to one decimal), from round 3;
+    - leaders: everyone who's been #1 after any round (value: rounds at #1).
+
+    Ties at the cut-off are all in. A group with nobody in it, or with the
+    whole field (it singles nobody out), is left out. Nothing before round 2,
+    when the chart itself appears."""
+    ids = [p["id"] for p in standings]
+    if len(rounds) < 2 or not ids:
+        return []
+    places = standing_after_each_round(rounds, ids)
+    now = [(i, places[i][-1]) for i in ids]
+    candidates = [
+        ("front", sorted([p for p in now if p[1] <= TREND_GROUP_SIZE], key=lambda p: p[1])),
+        ("back", top_with_ties(now)),
+        ("rises", top_with_ties([(i, places[i][0] - places[i][-1]) for i in ids
+                                 if places[i][0] > places[i][-1]])),
+        ("falls", top_with_ties([(i, places[i][-1] - places[i][0]) for i in ids
+                                 if places[i][-1] > places[i][0]])),
+    ]
+    if len(rounds) >= 3:
+        moved = [(i, round(sum(abs(b - a) for a, b in zip(places[i], places[i][1:])) / (len(rounds) - 1), 1))
+                 for i in ids]
+        candidates.append(("volatile", top_with_ties([p for p in moved if p[1] > 0])))
+        candidates.append(("steady", [(i, -v) for i, v in top_with_ties([(i, -v) for i, v in moved])]))
+    candidates.append(("leaders", sorted([(i, places[i].count(1)) for i in ids if 1 in places[i]],
+                                         key=lambda p: -p[1])))
+    return [{"key": key, "players": [{"id": i, "value": v} for i, v in members]}
+            for key, members in candidates if 0 < len(members) < len(ids)]
 
 
 def comment_id(round_id, uri, voter_id):
@@ -1296,6 +1367,7 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
         "submitterNotes": submitter_notes,
         "commentSummary": comment_summary,
         "highlights": highlights,
+        "trendGroups": trend_groups(rounds_out, standings),
         "songCount": len(all_songs),
         "pointBudget": point_budget(points_at),
         "dailyDouble": daily_double,

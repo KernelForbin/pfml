@@ -502,6 +502,7 @@
     renderFocus(seasonData);
     renderHighlights(seasonData);
     trendSelected = selected.length ? selected.slice() : seasonData.standings.map(function (p) { return p.id; });
+    trendGroupsOn = [];
     renderTrend(seasonData);
     renderTopTracks(seasonData);
     renderRounds(seasonData);
@@ -973,6 +974,52 @@
 
   var trendSelected = [];
   var trendMode = "standing"; // "standing" (default), "ratio", or "points"
+  var trendGroupsOn = [];     // keys of the group toggles that are on
+
+  // The group toggles above the player chips. build.py works out who's in
+  // each (trend_groups, from the places the standing view draws), so they
+  // stay the same whichever view is showing. [key, label, what it means,
+  // how a player's figure reads]
+  var TREND_GROUPS = [
+    ["you", "You", "Just you", null],
+    ["front", "Front of the pack", "The top 3 places on the leaderboard now, ties included",
+      function (v) { return "#" + v; }],
+    ["back", "Back of the pack", "The bottom 3 places on the leaderboard now, ties included",
+      function (v) { return "#" + v; }],
+    ["rises", "Biggest rises", "Most places climbed since round 1",
+      function (v) { return "up " + v + " " + plural(v, "place"); }],
+    ["falls", "Biggest falls", "Most places dropped since round 1",
+      function (v) { return "down " + v + " " + plural(v, "place"); }],
+    ["volatile", "Most volatile", "Most places moved a round, on average",
+      function (v) { return v + " " + plural(v, "place") + " a round"; }],
+    ["steady", "Steadiest", "Fewest places moved a round, on average",
+      function (v) { return v + " " + plural(v, "place") + " a round"; }],
+    ["leaders", "Been #1", "Everyone who has led the season after a round",
+      function (v) { return v + " " + plural(v, "round") + " at #1"; }]
+  ];
+
+  function trendGroupList(d) {
+    var found = {};
+    (d.trendGroups || []).forEach(function (g) { found[g.key] = g.players; });
+    var me = PFML.member.competitorId;
+    if (d.standings.some(function (p) { return p.id === me; })) found.you = [{ id: me }];
+    return TREND_GROUPS.filter(function (g) { return found[g[0]]; }).map(function (g) {
+      return { key: g[0], label: g[1], help: g[2], figure: g[3], players: found[g[0]] };
+    });
+  }
+
+  function toggleTrendGroup(key, groups) {
+    var i = trendGroupsOn.indexOf(key);
+    if (i === -1) trendGroupsOn.push(key); else trendGroupsOn.splice(i, 1);
+    // Everyone in any group that's on; with none on, back to everyone.
+    var ids = [];
+    groups.forEach(function (g) {
+      if (trendGroupsOn.indexOf(g.key) === -1) return;
+      g.players.forEach(function (p) { if (ids.indexOf(p.id) === -1) ids.push(p.id); });
+    });
+    trendSelected = trendGroupsOn.length ? ids : seasonData.standings.map(function (p) { return p.id; });
+    renderTrend(seasonData);
+  }
 
   function trendColor(i) {
     var hue = (i * 137.508) % 360;
@@ -1040,6 +1087,7 @@
   function toggleTrend(id) {
     var i = trendSelected.indexOf(id);
     if (i === -1) trendSelected.push(id); else trendSelected.splice(i, 1);
+    trendGroupsOn = [];   // a hand-picked set is no longer any group's
     renderTrend(seasonData);
   }
 
@@ -1182,6 +1230,35 @@
         "Each player's place on the leaderboard once that round's points are added in. #1 is the season leader at that point; a tie shares a place. The axis runs #1 at the top, so a rising line is climbing the standings and a falling line is slipping."));
     }
 
+    var groups = trendGroupList(d);
+    if (groups.length) {
+      var groupRow = el("div", "trend-groups");
+      groupRow.setAttribute("role", "group");
+      groupRow.setAttribute("aria-label", "Show a group");
+      groups.forEach(function (g) {
+        var on = trendGroupsOn.indexOf(g.key) !== -1;
+        var b = el("button", "trend-group" + (on ? " is-on" : ""), esc(g.label));
+        b.type = "button";
+        b.title = g.help;
+        b.setAttribute("aria-pressed", String(on));
+        b.addEventListener("click", function () { toggleTrendGroup(g.key, groups); });
+        groupRow.appendChild(b);
+      });
+      legend.appendChild(groupRow);
+      // Who each group that's on holds, and why, since the chips below
+      // only show who's on.
+      var lines = groups.filter(function (g) { return g.figure && trendGroupsOn.indexOf(g.key) !== -1; });
+      if (lines.length) {
+        var why = el("div", "block-note trend-group-why");
+        lines.forEach(function (g) {
+          why.appendChild(el("p", "", "<strong>" + esc(g.label) + ":</strong> " + g.players.map(function (p) {
+            return esc(nameOf(d, p.id)) + " (" + esc(g.figure(p.value)) + ")";
+          }).join(", ")));
+        });
+        legend.appendChild(why);
+      }
+    }
+
     var chipRow = el("div", "trend-chips");
     all.forEach(function (s) {
       var on = trendSelected.indexOf(s.id) !== -1;
@@ -1197,10 +1274,14 @@
     var controls = el("div", "trend-controls");
     var allBtn = el("button", "trend-control", "Select all");
     allBtn.type = "button";
-    allBtn.addEventListener("click", function () { trendSelected = all.map(function (s) { return s.id; }); renderTrend(seasonData); });
+    allBtn.addEventListener("click", function () {
+      trendSelected = all.map(function (s) { return s.id; });
+      trendGroupsOn = [];
+      renderTrend(seasonData);
+    });
     var clearBtn = el("button", "trend-control", "Clear");
     clearBtn.type = "button";
-    clearBtn.addEventListener("click", function () { trendSelected = []; renderTrend(seasonData); });
+    clearBtn.addEventListener("click", function () { trendSelected = []; trendGroupsOn = []; renderTrend(seasonData); });
     controls.appendChild(allBtn);
     controls.appendChild(clearBtn);
     legend.appendChild(controls);
