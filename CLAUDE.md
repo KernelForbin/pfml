@@ -206,6 +206,31 @@ site round needs. Never read `site_submission_owners` or `site_votes`
 directly from a script: the export function is the one door, and it holds
 the "only after voting closes" rule. README, Site rounds in the stats.
 
+## Reminders: built, waiting on setup
+
+App notifications are built (README, Reminders) and wait on the user's
+setup. Email is built but on hold. The user's calls (2026-10-25):
+
+- **Now:** new round, playlist ready.
+- **With voting:** halfway, 5h, 2h, 1h, only to players who haven't voted.
+- **Email:** later, once they set up Resend and the DNS.
+
+Rules for the work:
+
+- **Order:** push the code only after the migration has run and
+  `send-reminders` is deployed. The daily security check probes every
+  function in `schema.sql` and every Edge Function as a stranger, and would
+  fail on missing ones.
+- **The two secrets** (`REMINDERS_SECRET`, `VAPID_PRIVATE_JWK`): generate
+  them with OpenSSL and put them straight on the clipboard for the user to
+  paste into Supabase. Never print them, write them to a file in the repo,
+  or put them in a message. Only the VAPID public key goes in `config.js`.
+- **Going live** is setting `vapidPublicKey`, and the privacy and features
+  pages have to cover notifications in the same change (a test holds it).
+- **The browser pane** can't run service workers or show notifications.
+  Check the panel there with the browser's push objects faked in the page,
+  and the real thing on a phone.
+
 ## The daily security check
 
 `.github/workflows/security-check.yml` runs `scripts/security_check.py`
@@ -259,6 +284,8 @@ verified" has to be both.
   place that SQL actually runs before members use it), and
   `-p test_live_security_check.py` whenever `scripts/security_check.py`
   changes (needs `GH_TOKEN=$(gh auth token)` too, for GitHub's rate limit),
+  and `-p test_live_reminders.py` whenever the reminder functions or
+  `send-reminders` change (read-only),
   and `-p test_live_voting.py` whenever the voting functions change
   (read-only; the full round is `supabase/checks/2026-10-25_site_voting_rehearsal.sql`,
   which only the user can run, in the SQL Editor).

@@ -469,6 +469,21 @@
         return res.data;
       });
     },
+    // Notifications on this device (README, Reminders): where the push
+    // service can reach it, kept with the member's account; and a test,
+    // sent by the send-reminders Edge Function to the caller's own devices.
+    savePushSubscription: function (endpoint, p256dh, auth) {
+      return client.rpc("save_push_subscription", { p_endpoint: endpoint, p_p256dh: p256dh, p_auth: auth }).then(must);
+    },
+    removePushSubscription: function (endpoint) {
+      return client.rpc("remove_push_subscription", { p_endpoint: endpoint }).then(must);
+    },
+    testPush: function () {
+      return client.functions.invoke("send-reminders", { body: { test: true } }).then(function (res) {
+        if (res.error) throw res.error;
+        return res.data;
+      });
+    },
     // Admin only (row level security): open a round, or change one.
     openSiteRound: function (fields) {
       return client.from("site_rounds").insert(fields).select("id").then(must);

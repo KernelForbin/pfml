@@ -304,6 +304,104 @@
 
   PFML.showInstallHelp = showInstallHelp;
 
+  /* ---- notifications (README, Reminders) ----
+     Each phone or browser turns them on for itself: sw.js shows them, and
+     the database keeps where the push service can reach this device
+     (save_push_subscription). Hidden until the push key is set up
+     (vapidPublicKey in config.js). On iPhone they only work in the installed
+     app, so in Safari the panel says how to get it. */
+
+  function pushKey() { return (window.PFML_CONFIG && window.PFML_CONFIG.vapidPublicKey) || ""; }
+  function pushSupported() { return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window; }
+
+  function keyBytes(b64) {
+    var s = atob(b64.replace(/-/g, "+").replace(/_/g, "/"));
+    return Uint8Array.from(s, function (c) { return c.charCodeAt(0); });
+  }
+
+  function currentSubscription() {
+    if (!pushSupported()) return Promise.resolve(null);
+    return navigator.serviceWorker.getRegistration().then(function (reg) { return reg ? reg.pushManager.getSubscription() : null; });
+  }
+
+  // "ios-browser", "unsupported", "blocked", "off" or "on", for this device
+  function notificationsState() {
+    if (platform() === "ios" && !isApp()) return Promise.resolve("ios-browser");
+    if (!pushSupported()) return Promise.resolve("unsupported");
+    if (Notification.permission === "denied") return Promise.resolve("blocked");
+    return currentSubscription().then(function (sub) { return sub ? "on" : "off"; });
+  }
+
+  function turnOnNotifications() {
+    return Notification.requestPermission().then(function (perm) {
+      if (perm !== "granted") throw new Error(perm === "denied" ? "blocked" : "not allowed");
+      return navigator.serviceWorker.register("sw.js");
+    }).then(function () { return navigator.serviceWorker.ready; }).then(function (reg) {
+      return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(pushKey()) });
+    }).then(function (sub) {
+      var j = sub.toJSON();
+      return api().savePushSubscription(j.endpoint, j.keys.p256dh, j.keys.auth);
+    });
+  }
+
+  function turnOffNotifications() {
+    return currentSubscription().then(function (sub) {
+      if (!sub) return null;
+      var endpoint = sub.endpoint;
+      return sub.unsubscribe().then(function () { return api().removePushSubscription(endpoint); });
+    });
+  }
+
+  var NOTIFY_TEXT = {
+    "ios-browser": "<p>On iPhone, notifications work in the installed app. Add PFML to your home screen, open it from there, " +
+      "and turn them on here.</p>",
+    unsupported: "<p>This browser can't show notifications. On a phone, use Chrome on Android, or the installed app on iPhone.</p>",
+    blocked: "<p>Notifications are blocked for PFML in this browser's settings. Allow them there, then come back here.</p>",
+    off: "<p>Get a notification on this phone when:</p><ul><li>a new round opens</li><li>a round's playlist is ready</li></ul>" +
+      '<p class="acct-install-note">Just for this phone or browser: turn them on on each one you use.</p>',
+    on: "<p>Notifications are on for this phone.</p>"
+  };
+  var NOTIFY_BUTTONS = {
+    "ios-browser": '<button type="button" class="acct-install-done" data-notify="how">Show me how</button>',
+    off: '<button type="button" class="acct-install-done" data-notify="on">Turn on notifications</button>',
+    on: '<button type="button" class="acct-notify-quiet" data-notify="test">Send me a test</button>' +
+      '<button type="button" class="acct-notify-quiet" data-notify="off">Turn off</button>'
+  };
+
+  function showNotifications(note) {
+    close(true);
+    var dialog = $("acctNotify");
+    if (!dialog) {
+      dialog = document.createElement("dialog");
+      dialog.id = "acctNotify";
+      dialog.className = "acct-install acct-notify";
+      dialog.addEventListener("click", onNotifyClick);
+      document.body.appendChild(dialog);
+    }
+    notificationsState().then(function (st) {
+      dialog.innerHTML = "<h2>Notifications</h2>" + NOTIFY_TEXT[st] +
+        '<p class="acct-notify-msg" role="status"' + (note ? "" : " hidden") + ">" + esc(note || "") + "</p>" +
+        '<div class="acct-notify-actions">' + (NOTIFY_BUTTONS[st] || "") +
+        '<form method="dialog"><button class="acct-notify-quiet">' + (st === "off" ? "Not now" : "Done") + "</button></form></div>";
+      if (!dialog.open) { if (dialog.showModal) dialog.showModal(); else dialog.setAttribute("open", ""); }
+    });
+  }
+
+  function onNotifyClick(ev) {
+    var b = ev.target.closest("[data-notify]");
+    if (!b) return;
+    var what = b.getAttribute("data-notify");
+    b.disabled = true;
+    if (what === "how") { $("acctNotify").close(); showInstallHelp("ios"); return; }
+    var done = what === "on" ? turnOnNotifications().then(function () { return "Turned on."; })
+      : what === "off" ? turnOffNotifications().then(function () { return "Turned off for this phone."; })
+      : api().testPush().then(function (r) { return r && r.sent ? "Sent. It should arrive in a moment." : "Nothing was sent. Try turning them off and on again."; });
+    done.then(showNotifications, function (err) {
+      console.error(err);
+      showNotifications(err && err.message === "blocked" ? "" : "That didn't work: " + ((err && err.message) || err));
+    });
+  }
+
   function build(member) {
     var bar = document.querySelector(".topbar-inner");
     if (!bar || bar.querySelector(".acct")) return;
@@ -323,6 +421,7 @@
         '<a class="acct-item" href="repeats">Repeat checker</a>' +
         '<a class="acct-item" href="profile">My profile</a>' +
         '<a class="acct-item" href="features">Site features</a>' +
+        '<button type="button" class="acct-item" id="acctNotifyItem" hidden>Notifications</button>' +
         '<button type="button" class="acct-item" id="acctInstall" hidden>Add to home screen</button>' +
         '<button type="button" class="acct-item acct-theme" id="acctTheme" role="switch" aria-checked="' + isDark() + '">' +
           'Dark mode<span class="acct-switch" aria-hidden="true"></span></button>' +
@@ -340,6 +439,9 @@
     $("acctTheme").addEventListener("click", function () { setDark(!isDark()); });
     $("acctGet").addEventListener("click", addToHomeScreen);
     $("acctInstall").addEventListener("click", addToHomeScreen);
+    // only once the push key is set up (config.js)
+    $("acctNotifyItem").hidden = !pushKey();
+    $("acctNotifyItem").addEventListener("click", function () { showNotifications(); });
     showInstallControls();
     document.addEventListener("click", closeFromOutside);
     document.addEventListener("keydown", closeOnEscape);

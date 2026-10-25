@@ -779,7 +779,15 @@ body.auth-checking::before {
 .acct-install p { margin: 0; }
 .acct-install-note { margin-top: 12px !important; color: var(--muted); font-size: 0.9rem; }
 .acct-install form { margin-top: 16px; text-align: right; }
-.acct-install-done { padding: 9px 18px; border: none; border-radius: 999px; background: var(--magenta); color: #fff; font: 600 0.92rem/1 "Inter", sans-serif; cursor: pointer; }
+/* Notifications (account.js): the same dialog, with a list and two quiet buttons */
+.acct-notify ul { margin: 6px 0 0; padding-left: 20px; }
+.acct-notify-msg { margin-top: 10px !important; color: var(--deep); font-size: 0.92rem; }
+.acct-notify-msg[hidden] { display: none; }
+.acct-notify-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.acct-notify-actions form { margin: 0; }
+.acct-notify-quiet { padding: 9px 16px; border: 1px solid var(--border); border-radius: 999px; background: var(--card); color: var(--ink); font: 600 0.92rem/1 "Inter", sans-serif; cursor: pointer; }
+.acct-notify-quiet:disabled, .acct-install-done:disabled { opacity: 0.5; cursor: default; }
+.acct-install-done {padding: 9px 18px; border: none; border-radius: 999px; background: var(--magenta); color: #fff; font: 600 0.92rem/1 "Inter", sans-serif; cursor: pointer; }
 .acct-badge {
   position: absolute; top: -4px; right: -5px; min-width: 18px; height: 18px; padding: 0 5px;
   border-radius: 999px; background: var(--magenta); color: #fff; border: 2px solid var(--paper);

@@ -1,5 +1,36 @@
 # Changelog
 
+## 2026-10-25 (follow-up 6): reminders, built and waiting on setup
+
+- **App notifications,** asked for 2026-10-25:
+  - new round open and playlist available, now;
+  - voting at halfway, 5, 2 and 1 hour left, only to players who haven't
+    voted, dormant until voting is switched on.
+- **Email is built but on hold** (the user's call): it waits for a Resend
+  account and DNS records for pfml.fun. Until then the sender never asks
+  for it.
+- **Nothing shows yet.** The Notifications item stays hidden until the push
+  key is set up, which needs the user's migration, the Edge Function
+  deployed with its secrets, and the five-minute timer. README, Reminders,
+  has the order.
+- **Built:**
+  - **On the phone:** `sw.js`, which only shows notifications, and the
+    Notifications panel: turn on or off per device, send a test, the
+    iPhone and blocked cases.
+  - **Database:** three tables and seven functions, in
+    `supabase/migrations/2026-10-25_reminders.sql`.
+  - **Sender:** `supabase/functions/send-reminders/index.ts`, one file with
+    no libraries, its push encryption done with WebCrypto.
+  - **Setup and checks:** the timer's setup SQL, a rehearsal script that
+    rolls back, and a live test.
+- **Verified:** the suite passes, with 26 new tests, break-checked (19
+  breaks, all caught). The push encryption, run in a browser exactly as it
+  stands in `index.ts`, matched RFC 8291's worked example byte for byte,
+  and a fresh message decrypted back. In a browser, with the browser's push
+  objects faked: the panel's turn-on order, test and turn-off, the iPhone
+  and blocked messages, and nothing shown without the key. `sw.js`'s logic
+  was checked with fakes too. Not run anywhere real yet: the browser pane
+  allows no service workers, so the first real test is a phone after setup.
 ## 2026-10-25 (follow-up 5): a splash screen for the installed app
 
 - **Opening PFML from the home screen shows a short splash**, design B of
