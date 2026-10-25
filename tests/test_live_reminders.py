@@ -50,11 +50,18 @@ class LiveReminders(unittest.TestCase):
     def test_no_channel_claims_nothing(self):
         self.assertEqual(supa.request("POST", "/rest/v1/rpc/reminders_claim", body={"p_channels": []}), [])
 
+    def test_no_member_no_switches(self):
+        # the secret key is nobody: is_member() is false, so no row
+        self.assertEqual(supa.request("POST", "/rest/v1/rpc/my_notification_choices", body={}), [])
+
     def test_a_stranger_is_refused_by_every_new_function(self):
         calls = {"save_push_subscription": {"p_endpoint": None, "p_p256dh": None, "p_auth": None},
                  "remove_push_subscription": {"p_endpoint": None}, "my_push_subscriptions": {},
                  "set_email_reminders": {"p_on": None}, "reminders_claim": {"p_channels": []},
-                 "forget_push_endpoint": {"p_endpoint": None}, "email_reminders_off": {"p_user": None}}
+                 "forget_push_endpoint": {"p_endpoint": None}, "email_reminders_off": {"p_user": None},
+                 # the bell (2026-10-25_notification_choices.sql)
+                 "my_notification_choices": {}, "set_notification_choice": {"p_kind": None, "p_on": None},
+                 "inbox_claim": {}}
         for name, body in calls.items():
             with self.subTest(name):
                 self.assertEqual(stranger("POST", f"/rest/v1/rpc/{name}", body), 401)
