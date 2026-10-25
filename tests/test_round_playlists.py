@@ -9,7 +9,6 @@ import contextlib
 import io
 import json
 import os
-import random
 import re
 import tempfile
 import unittest
@@ -118,16 +117,33 @@ class Judging(unittest.TestCase):
 
 
 class Order(unittest.TestCase):
-    SUBS = [{"id": f"id{n}", "tag": t, "position": None} for n, t in enumerate(["B4", "Q7", "K2", "Z9"])]
+    # made-up round id; the tracks are public video and track ids
+    ROUND = "ad725b31-069d-4d39-af6a-7ddf5bac7797"
+    SUBS = [{"id": f"id{n}", "tag": tag, "platform": p, "track": t, "position": None}
+            for n, (tag, p, t) in enumerate([("B4", "youtube", "Y9a49oFalZE"), ("Q7", "spotify", "4uLU6hMCjMI75M1A2tKUQC"),
+                                             ("K2", "soundcloud", "artist/song"), ("Z9", "youtube", "dQw4w9WgXcQ")])]
 
-    def test_a_new_round_is_shuffled_into_one_to_n(self):
-        pos = rp.shuffled_positions(self.SUBS, random.Random(1))
-        self.assertEqual(sorted(pos.values()), [1, 2, 3, 4])
-        self.assertNotEqual(pos, rp.shuffled_positions(self.SUBS, random.Random(2)), "the seed should matter")
+    def test_the_hash_is_the_one_the_page_uses(self):
+        # the same values were checked against roundOrder in site/account.js
+        # in a browser (2026-10-25); a change here must change both
+        self.assertEqual([rp.shuffle_key(self.ROUND, s) for s in self.SUBS], [476005911, 2737754968, 868409426, 2350724550])
+        js = (ROOT / "site" / "account.js").read_text(encoding="utf-8")
+        self.assertIn('new TextEncoder().encode(roundId + "|" + s.platform + "|" + s.track), h = 0x811c9dc5;', js)
+        self.assertIn("h = Math.imul(h ^ bytes[i], 0x01000193) >>> 0;", js)
+
+    def test_a_new_round_gets_the_one_shuffle(self):
+        self.assertEqual(rp.shuffled_positions(self.ROUND, self.SUBS), {"id0": 1, "id2": 2, "id3": 3, "id1": 4})
+
+    def test_nothing_but_the_round_and_the_tracks_decides_it(self):
+        # not the order they came in, not the tags, not the submission ids
+        shuffled = [dict(s, id="x" + s["id"], tag="A2") for s in reversed(self.SUBS)]
+        order = [s["track"] for s in rp.round_order(self.ROUND, shuffled)]
+        self.assertEqual(order, [s["track"] for s in rp.round_order(self.ROUND, self.SUBS)])
+        self.assertNotEqual(order, [s["track"] for s in rp.round_order("another-round", self.SUBS)])
 
     def test_a_saved_order_is_kept_on_every_later_run(self):
         subs = [dict(s, position=p) for s, p in zip(self.SUBS, [3, 1, 4, 2])]
-        self.assertEqual(rp.shuffled_positions(subs, random.Random(9)), {"id0": 3, "id1": 1, "id2": 4, "id3": 2})
+        self.assertEqual(rp.shuffled_positions(self.ROUND, subs), {"id0": 3, "id1": 1, "id2": 4, "id3": 2})
 
     def test_each_playlist_follows_the_order_and_skips_its_gaps(self):
         rows = [{"tag": "A2", "position": 2, "spotify_match": sid(1), "youtube_match": None},

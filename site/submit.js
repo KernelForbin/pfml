@@ -669,45 +669,88 @@
         '<div class="sub-actions">' + playlistButtons(r) + "</div>"
       : "";
     $("subPlaylists").hidden = !built;
-    $("subListNote").textContent = built
-      ? "In playlist order. Tap a track to play the round from there."
-      : "Sorted by tag until the playlists are built. Tap a track to play the round from there.";
     $("subPlayer").innerHTML = "";
+    $("subOrder").hidden = true;
     $("subTracks").innerHTML = '<li class="sub-empty">Loading\u2026</li>';
     $("subList").hidden = false;
     api().roundSubmissions(r.id).then(function (rows) {
-      rows = (rows || []).slice().sort(function (a, b) {
-        if (a.position && b.position) return a.position - b.position;
-        return a.tag < b.tag ? -1 : 1;
-      });
+      // the round's one shuffle, the same for everyone from the close, and
+      // the order the playlists keep (PFML.roundOrder, account.js)
+      rows = PFML.roundOrder(r.id, rows || []);
       if (!rows.length) { $("subTracks").innerHTML = '<li class="sub-empty">No tracks were submitted.</li>'; return; }
-      $("subTracks").innerHTML = rows.map(function (s, i) {
-        var name = s.title
-          ? '<span class="sub-track-name"><b>' + esc(s.title) + "</b>" + (s.artist ? "<small>" + esc(s.artist) + "</small>" : "") + "</span>"
-          : '<span class="sub-track-where">' + NAMES[s.platform] + "</span>";
-        return '<li class="sub-track">' +
-          '<button type="button" class="sub-track-btn" data-i="' + i + '" aria-current="false">' +
-            (s.position ? '<span class="sub-pos">' + s.position + "</span>" : "") +
-            '<span class="sub-tag sub-tag-sm">' + esc(s.tag) + "</span>" + name + "</button>" +
-          gapNote(s) +
-          '<a class="sub-track-open" href="' + esc(trackUrl(s)) + '" target="_blank" rel="noopener">Open on ' + NAMES[s.platform] + "</a></li>";
-      }).join("");
-      // the round player (player.js) plays them all in this order; the list
+      // the round player (player.js) plays them top to bottom; the list
       // marks the one playing, and a tap starts the round from that track
-      var items = $("subTracks").querySelectorAll(".sub-track");
-      var player = window.PFMLPlayer.mount($("subPlayer"), rows, function (playing) {
-        items.forEach(function (li, i) {
-          li.classList.toggle("is-playing", i === playing);
-          li.querySelector(".sub-track-btn").setAttribute("aria-current", String(i === playing));
-        });
-      });
+      var list = { original: rows, order: rows, player: null };
+      list.player = window.PFMLPlayer.mount($("subPlayer"), rows, function (playing) { markPlaying(playing); });
       $("subTracks").onclick = function (ev) {
         var b = ev.target.closest(".sub-track-btn");
-        if (b) player.playAt(+b.dataset.i);
+        if (b) list.player.playAt(+b.dataset.i);
       };
+      $("subShuffle").onclick = function () { reorder(list, shuffled(list)); };
+      $("subOriginal").onclick = function () { reorder(list, list.original); };
+      $("subOrder").hidden = rows.length < 2;
+      drawTracks(list, built);
     }).catch(function (err) {
       $("subTracks").innerHTML = '<li class="sub-empty">Couldn\u2019t load the tracks: ' + esc(errText(err)) + "</li>";
     });
+  }
+
+  // The list in its current order, numbered top to bottom: the order the
+  // player goes in.
+  function drawTracks(list, built) {
+    var mixed = list.order !== list.original;
+    $("subListNote").textContent = mixed
+      ? "Shuffled for you: the player goes top to bottom. Original order puts it back the way everyone first saw it; " +
+        "the Spotify and YouTube playlists keep that order."
+      : (built ? "The round\u2019s order, the same for everyone and the same as the playlists. "
+               : "The round\u2019s order, shuffled once when submissions closed and the same for everyone. ") +
+        "Tap a track to play the round from there.";
+    $("subOriginal").hidden = !mixed;
+    $("subTracks").innerHTML = list.order.map(function (s, i) {
+      var name = s.title
+        ? '<span class="sub-track-name"><b>' + esc(s.title) + "</b>" + (s.artist ? "<small>" + esc(s.artist) + "</small>" : "") + "</span>"
+        : '<span class="sub-track-where">' + NAMES[s.platform] + "</span>";
+      return '<li class="sub-track">' +
+        '<button type="button" class="sub-track-btn" data-i="' + i + '" aria-current="false">' +
+          '<span class="sub-pos">' + (i + 1) + "</span>" +
+          '<span class="sub-tag sub-tag-sm">' + esc(s.tag) + "</span>" + name + "</button>" +
+        gapNote(s) +
+        '<a class="sub-track-open" href="' + esc(trackUrl(s)) + '" target="_blank" rel="noopener">Open on ' + NAMES[s.platform] + "</a></li>";
+    }).join("");
+    var playing = list.player.playing();
+    markPlaying(playing ? list.order.indexOf(playing) : -1);
+  }
+
+  function markPlaying(playing) {
+    $("subTracks").querySelectorAll(".sub-track").forEach(function (li, i) {
+      li.classList.toggle("is-playing", i === playing);
+      li.querySelector(".sub-track-btn").setAttribute("aria-current", String(i === playing));
+    });
+  }
+
+  // A fresh shuffle for this reader only, never saved. A track that's
+  // playing goes to the top and keeps playing, so everything below it is
+  // still to come.
+  function shuffled(list) {
+    var playing = list.player.playing();
+    var rest = list.order.filter(function (s) { return s !== playing; });
+    for (var tries = 0; tries < 5; tries++) {
+      for (var i = rest.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1)), t = rest[i];
+        rest[i] = rest[j];
+        rest[j] = t;
+      }
+      var next = playing ? [playing].concat(rest) : rest.slice();
+      // a shuffle that lands on the same order would look like a dead button
+      if (next.some(function (s, k) { return s !== list.order[k]; })) return next;
+    }
+    return next;
+  }
+
+  function reorder(list, order) {
+    list.order = order;
+    list.player.setOrder(order);
+    drawTracks(list, !!(state.round.spotify_playlist || state.round.youtube_playlist));
   }
 
   /* ---- admin: open, edit and close a round ---- */

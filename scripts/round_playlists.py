@@ -7,7 +7,8 @@
     python scripts/round_playlists.py --accept Q7 K4  # use the "unsure" matches for these tags
 
 Once a round on the Submit page has closed, this:
-  1. shuffles its tracks once (kept on every later run),
+  1. puts its tracks in the round's one shuffle, the order the Submit page
+     showed everyone at the close (kept on every later run),
   2. looks up what each track is on its own service (Spotify, YouTube, or
      SoundCloud's oEmbed),
   3. finds its copy on the other service, by searching and comparing title,
@@ -38,7 +39,6 @@ import base64
 import difflib
 import json
 import os
-import random
 import re
 import sys
 import time
@@ -465,14 +465,28 @@ def overrides_for(round_id, path=None):
 
 # ---------------------------------------------------------------- the round
 
-def shuffled_positions(subs, rng=None):
-    """{submission id: position}. Positions already saved are kept; only a
-    round with none yet is shuffled, once."""
+def shuffle_key(round_id, s):
+    """A track's place in the round's one shuffle: FNV-1a (32-bit) of
+    "<round id>|<platform>|<track>". The Submit page works out the same
+    (roundOrder in site/account.js), so everyone sees this order from the
+    moment the round closes, and the playlists keep it. Nothing about who
+    sent a track or when goes in (the user's call, 2026-10-25)."""
+    h = 0x811C9DC5
+    for b in f"{round_id}|{s['platform']}|{s['track']}".encode("utf-8"):
+        h = ((h ^ b) * 0x01000193) & 0xFFFFFFFF
+    return h
+
+
+def round_order(round_id, subs):
+    return sorted(subs, key=lambda s: (shuffle_key(round_id, s), s["platform"], s["track"]))
+
+
+def shuffled_positions(round_id, subs):
+    """{submission id: position}. Positions already saved are kept; a round
+    with none yet gets the round's one shuffle, the order its page shows."""
     if subs and all(s.get("position") for s in subs):
         return {s["id"]: s["position"] for s in subs}
-    order = [s["id"] for s in sorted(subs, key=lambda s: s["tag"])]
-    (rng or random.SystemRandom()).shuffle(order)
-    return {sid: n + 1 for n, sid in enumerate(order)}
+    return {s["id"]: n + 1 for n, s in enumerate(round_order(round_id, subs))}
 
 
 def playlist_order(rows, service):
@@ -614,7 +628,7 @@ def build(round_id=None, dry_run=False, accept=(), rematch=False, spotify=None, 
         raise SystemExit(f"\"{r['name']}\" has no tracks.")
     log(f"{r['name']}: {len(subs)} tracks")
     spotify, youtube = spotify or Spotify(), youtube or YouTube()
-    positions = shuffled_positions(subs)
+    positions = shuffled_positions(r["id"], subs)
     for s in subs:
         s["position"] = positions[s["id"]]
     rows, unsure = match_round(subs, spotify, youtube, overrides_for(r["id"]), accept, rematch, log)

@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-10-25 (follow-up 2): one shuffle for every closed round, and Shuffle on the page
+
+- **The order a closed round's tracks appear in is one shuffle, the same
+  for everyone, from the moment submissions close.** It comes from a hash
+  of the round and each track, so nothing about who sent what, or when,
+  can show in it. The playlists keep exactly that order. Before, the page
+  listed tracks by tag until the playlists were built, and the playlist
+  script then shuffled afresh, so the order changed under people.
+- **Shuffle** on the Submit page mixes the list up for that listener alone,
+  never saved, and the round player follows it top to bottom (numbered in
+  play order). A track that's playing moves to the top and keeps playing.
+  **Original order** puts back the round's shuffle.
+- **Verified:** the suite passes, with 9 new tests, break-checked (12
+  breaks, all caught). The page's hash gives the same four values as the
+  playlist script's, checked in a browser. In a browser against a stand-in
+  closed round:
+  - the starting order matches the script's;
+  - Shuffle and Original order work;
+  - shuffling mid-track keeps it playing at the top ("1 of 4", same
+    player), and Next follows the new order;
+  - with the playlists built, the saved order holds;
+  - at 375px and 1280px, light and dark, nothing scrolls sideways.
+
 ## 2026-10-25: Privacy and Security, Site features in the menu, the crossword retired
 
 - **The privacy page is now "Privacy and Security"**, in its title and in

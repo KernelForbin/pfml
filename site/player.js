@@ -266,13 +266,30 @@
       q(".rp-controls").hidden = false;
       q(".rp-start").hidden = true;
       now.hidden = false;
-      now.innerHTML = "<b>" + (i + 1) + " of " + tracks.length + "</b> · " + esc(t.tag) +
-        (t.title ? " · " + esc(t.title) + (t.artist ? " – " + esc(t.artist) : "") : "") +
-        ' <span class="rp-from">on ' + NAMES[src.platform] + "</span>";
+      showNow(i, src);
       if (onTrack) onTrack(i);
       active.load(src.id).catch(function (err) { console.error(err); hooks.failed(); });
       // a browser that won't start it without a tap gets a big button
       stallTimer = setTimeout(function () { tap.hidden = false; }, automatic ? STALL_MS : STALL_MS * 2);
+    }
+
+    function showNow(i, src) {
+      var t = tracks[i];
+      now.innerHTML = "<b>" + (i + 1) + " of " + tracks.length + "</b> · " + esc(t.tag) +
+        (t.title ? " · " + esc(t.title) + (t.artist ? " – " + esc(t.artist) : "") : "") +
+        ' <span class="rp-from">on ' + NAMES[src.platform] + "</span>";
+    }
+
+    // A new play order (the list's Shuffle and Original order buttons). The
+    // track that's playing keeps playing, and Next carries on down the new
+    // order from wherever it now sits.
+    function setOrder(list) {
+      var playing = index >= 0 ? tracks[index] : null;
+      tracks = list;
+      if (!playing) return;
+      index = tracks.indexOf(playing);
+      showNow(index, sourceFor(playing, pref));
+      if (onTrack) onTrack(index);
     }
 
     function stop(message) {
@@ -304,7 +321,8 @@
       if (index >= 0) go(index, false);        // replay this track from the chosen copy
     });
 
-    return { playAt: function (i) { go(i, false); } };
+    return { playAt: function (i) { go(i, false); }, setOrder: setOrder,
+             playing: function () { return index >= 0 ? tracks[index] : null; } };
   }
 
   window.PFMLPlayer = { mount: mount };

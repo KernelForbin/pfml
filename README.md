@@ -1040,9 +1040,31 @@ were first meant to copy it into a Music League note so voters could
 match the two, but that was dropped (2026-10-19), so the page no longer
 mentions it. One track per member per round, and the
 same track can't go in twice. At the deadline (or when the admin closes
-it) the page shows every track, sorted by tag, playable in place; once
-the playlists are built, in playlist order with titles and two Play
-buttons.
+it) the page shows every track, playable in place, in the round's one
+shuffle; once the playlists are built, with titles and two Play buttons,
+in the same order.
+
+**The order** (the user's calls, 2026-10-25). From the moment a round
+closes, everyone sees the same shuffle, and the playlists keep it:
+
+- **How it's made:** each track's place is an FNV-1a hash of
+  `<round id>|<platform>|<track>`, worked out the same way by the page
+  (`PFML.roundOrder` in `account.js`) and the playlist script
+  (`round_order` in `round_playlists.py`).
+- **What it isn't:** nothing about who sent a track, or when, goes in, so
+  the order can't hint at either. Before this, the page listed tracks by
+  tag until the playlists were built, and the script then shuffled afresh,
+  so the order changed under people.
+- **Kept:** the order is saved as `position` when the playlists are built,
+  and it's the same order.
+- **Checked twice:** a test pins the hash's values in Python and the page's
+  code, and the same values were checked in a browser.
+
+**Shuffle** reorders the list for the reader alone, never saved, and the
+player follows it top to bottom, numbered in play order. A track that's
+playing moves to the top and keeps playing, so everything below is still
+to come. **Original order** puts back the round's shuffle. The Spotify and
+YouTube playlists always keep the round's order.
 
 **Anonymous, even to the admin.** `site_submissions` holds the round, tag,
 platform and track, with no user and no time. Who sent which is in
@@ -1263,7 +1285,8 @@ and it never reads who submitted what.
     python scripts/round_playlists.py --accept B4     # take a match it was unsure of
     python scripts/round_playlists.py --round <id>    # rebuild a round (same order, same playlists)
 
-What it does: shuffles the round once (later runs keep the order); looks
+What it does: saves the round's one shuffle, the order its page has shown
+since the close (later runs keep it; The order, above); looks
 each track up on its own service; searches the other service for the same
 recording and compares title, artist and length; fills both playlists in
 order, skipping a track with no copy; and saves the order, titles, matches
@@ -1346,7 +1369,8 @@ holds that.
 ### Stage 3: the round player
 
 A closed round's Submit page has **Play the round**. It plays every track
-in order (playlist order once built, else by tag), each in its own
+in the list's order, top to bottom (the round's shuffle, or the reader's
+own after Shuffle), each in its own
 service's official player, moving on by itself across Spotify, YouTube and
 SoundCloud. There are Previous, Pause and Next buttons, and tapping a
 track in the list plays the round from there. Once the playlists step has

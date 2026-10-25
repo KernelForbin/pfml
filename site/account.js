@@ -87,7 +87,28 @@
     return { at: at, left: left };
   }
 
+  // A closed round's order: one shuffle, the same for everyone, and the same
+  // as the round playlists (round_order in scripts/round_playlists.py). Each
+  // track's place comes from an FNV-1a hash of "<round id>|<platform>|<track>":
+  // nothing about who sent it or when goes in, so the order gives neither
+  // away (the user's call, 2026-10-25). Once the playlists are built, their
+  // saved positions are the order, and they're this same shuffle.
+  function shuffleKey(roundId, s) {
+    var bytes = new TextEncoder().encode(roundId + "|" + s.platform + "|" + s.track), h = 0x811c9dc5;
+    for (var i = 0; i < bytes.length; i++) h = Math.imul(h ^ bytes[i], 0x01000193) >>> 0;
+    return h;
+  }
+  function roundOrder(roundId, rows) {
+    if (rows.length && rows.every(function (s) { return s.position; })) {
+      return rows.slice().sort(function (a, b) { return a.position - b.position; });
+    }
+    return rows.map(function (s) { return { s: s, k: shuffleKey(roundId, s) }; }).sort(function (a, b) {
+      return a.k - b.k || (a.s.platform < b.s.platform ? -1 : a.s.platform > b.s.platform ? 1 : a.s.track < b.s.track ? -1 : 1);
+    }).map(function (x) { return x.s; });
+  }
+
   PFML.avatar = avatar;
+  PFML.roundOrder = roundOrder;
   PFML.reactionGlyph = reactionGlyph;
   PFML.when = when;
   PFML.translationHtml = translationHtml;

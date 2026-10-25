@@ -1438,6 +1438,10 @@ body.auth-checking::before {
   color: var(--ink); font: 600 0.95rem/1.2 "Inter", sans-serif; text-align: left; cursor: pointer;
 }
 .sub-track-open { font-size: 0.88rem; }
+/* Shuffle and Original order, above the list they reorder */
+.sub-order { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 4px; }
+.sub-order[hidden], .sub-order .sub-btn[hidden] { display: none; }
+.sub-order .sub-btn { padding: 9px 16px; }
 .sub-empty { color: var(--muted); }
 .sub-track.is-playing { border-color: var(--magenta); box-shadow: 0 0 0 1px var(--magenta); }
 
