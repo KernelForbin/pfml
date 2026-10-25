@@ -383,7 +383,8 @@
     // ---- submitting on the site (README, Submissions on the site) ----
     // Rounds opened on the site, newest first.
     siteRounds: function () {
-      return client.from("site_rounds").select("id, season_key, name, prompt, closes_at, closed_at, created_at, spotify_playlist, youtube_playlist")
+      return client.from("site_rounds").select("id, season_key, name, prompt, closes_at, closed_at, created_at, spotify_playlist, youtube_playlist, " +
+          "votes_on_site, voting_closes_at, voting_closed_at, point_budget, max_per_track, nonvoters_keep_points")
         .order("created_at", { ascending: false }).limit(20).then(must);
     },
     // The caller's own track for a round, or null. Nothing else on the
@@ -436,7 +437,28 @@
     },
     // Readable only once the round has closed (row level security).
     roundSubmissions: function (roundId) {
-      return client.from("site_submissions").select("tag, platform, track, position, title, artist, spotify_match, youtube_match").eq("round_id", roundId).then(must);
+      return client.from("site_submissions").select("id, tag, platform, track, position, title, artist, spotify_match, youtube_match").eq("round_id", roundId).then(must);
+    },
+    // Voting on the site (README, Voting on the site). The caller's ballot:
+    // [{submission, points, comment}], replacing any earlier one, while
+    // voting is open; the database checks every rule again.
+    castBallot: function (roundId, ballot) {
+      return client.rpc("cast_ballot", { p_round: roundId, p_ballot: ballot }).then(must);
+    },
+    myBallot: function (roundId) {
+      return client.rpc("my_ballot", { p_round: roundId }).then(must);
+    },
+    // Player ids of everyone who has voted: who, never how.
+    roundVoters: function (roundId) {
+      return client.rpc("site_round_voters", { p_round: roundId }).then(must);
+    },
+    // Only once voting has closed: each track's submitter and score, and
+    // every vote and comment with who gave it. Empty before.
+    roundResults: function (roundId) {
+      return client.rpc("site_round_results", { p_round: roundId }).then(must);
+    },
+    roundVotes: function (roundId) {
+      return client.rpc("site_round_votes", { p_round: roundId }).then(must);
     },
     // Track search on the Submit page, through the search-tracks Edge
     // Function (supabase/functions/), which holds the services' keys.

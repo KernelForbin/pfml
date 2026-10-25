@@ -123,6 +123,13 @@
 
   function isOpen(r) { return !r.closed_at && Date.now() < Date.parse(r.closes_at); }
 
+  // voting.js (voting on the site, off until the user switches it on); a
+  // stand-in that's always off if it didn't load
+  function voting() {
+    return window.PFMLVoting || { on: function () { return false; }, render: function () {}, adminFields: function () { return ""; },
+                                  wireAdmin: function () {}, readAdmin: function () { return { fields: {} }; }, adminPanel: function () { return null; } };
+  }
+
   function seasonLabel(key) {
     var s = state.index && state.index.seasons.filter(function (x) { return x.key === key; })[0];
     return s ? s.label : "Season " + String(key).replace(/^season/, "");
@@ -143,8 +150,11 @@
       state.round = state.rounds.filter(isOpen)[0] || state.rounds[0] || null;
       var r = state.round;
       // reload when the deadline passes, so the page closes with the round
-      if (r && isOpen(r)) {
-        var ms = Date.parse(r.closes_at) - Date.now() + 1500;
+      // (or, for a round voting here, with its voting)
+      var until = r && isOpen(r) ? r.closes_at
+        : r && voting().on(r) && PFML.roundPhase(r) === "voting" ? r.voting_closes_at : null;
+      if (until) {
+        var ms = Date.parse(until) - Date.now() + 1500;
         if (ms < 2147483647) state.timer = setTimeout(load, ms);
       }
       return r ? api().mySubmission(r.id) : null;
@@ -161,16 +171,23 @@
 
   function render() {
     var r = state.round;
-    ["subRound", "subMine", "subForm", "subWhoBox", "subList"].forEach(function (id) { $(id).hidden = true; });
+    ["subRound", "subMine", "subForm", "subWhoBox", "subList", "subVote"].forEach(function (id) { $(id).hidden = true; });
     renderAdmin();
     if (!r) {
       $("subLine").textContent = "No round is open for submissions on the site yet.";
       return;
     }
     var open = isOpen(r);
+    var phase = voting().on(r) ? PFML.roundPhase(r) : "";
     $("subLine").textContent = open
       ? "Submissions close " + PFML.closes(r.closes_at).at + " (" + PFML.closes(r.closes_at).left + ")."
+      : phase === "voting" ? "Voting is open. It closes " + PFML.closes(r.voting_closes_at).at + " (" + PFML.closes(r.voting_closes_at).left + ")."
+      : phase === "finished" ? "Voting is over. The results are below."
       : "Submissions for this round are closed.";
+    // a round voting here names its submitters once voting closes
+    document.querySelector(".sub-anon").textContent = voting().on(r)
+      ? "Nobody, the admin included, can see who submitted which track until voting closes. Then the results show everyone’s tracks and votes."
+      : "Nobody, the admin included, can see who submitted which track.";
 
     var box = $("subRound");
     box.innerHTML = '<div class="sub-round-card">' +
@@ -183,7 +200,10 @@
 
     if (state.mine) renderMine(open);
     if (open && (!state.mine || state.changing)) renderForm();
-    if (!open) renderList();
+    if (!open) {
+      renderList();
+      voting().render(r, state.mine);
+    }
   }
 
   /* ---- who's in: x/20 submitted, and who hasn't ---- */
@@ -782,6 +802,7 @@
         '<textarea class="sub-input sub-textarea" id="subAdmPrompt" maxlength="2000" rows="3">' + esc(r ? r.prompt : "") + "</textarea>" +
         '<label class="sub-label" for="subAdmCloses">Submissions close (your time)</label>' +
         '<input class="sub-input" id="subAdmCloses" type="datetime-local" value="' + (r ? localInput(r.closes_at) : "") + '">' +
+        voting().adminFields(r) +
         '<p class="sub-msg" id="subAdmMsg" role="status" hidden></p>' +
         '<div class="sub-actions"><button type="submit" class="sub-btn">' + (r ? "Save changes" : "Open the round") + "</button>" +
           (r ? '<button type="button" class="sub-btn sub-btn-quiet" id="subAdmClose">Close submissions now</button>' : "") + "</div>" +
@@ -789,8 +810,13 @@
       '<div class="sub-admin-status" id="subAdmStatus"></div>';
     $("subAdmin").hidden = false;
     renderLeagueStatus();
+    voting().wireAdmin();
     $("subAdminForm").addEventListener("submit", function (ev) { ev.preventDefault(); saveRound(r); });
     if (r) $("subAdmClose").addEventListener("click", function () { closeRound(r); });
+    // a round voting here: its deadline, and closing voting early
+    var votingRound = state.rounds.filter(function (x) { return voting().on(x) && PFML.roundPhase(x) === "voting"; })[0];
+    var panel = votingRound && voting().adminPanel(votingRound, load, adminMsg);
+    if (panel) $("subAdminBody").insertBefore(panel, $("subAdminBody").firstChild);
   }
 
   // The admin's league panel: when the data was last published and the
@@ -838,6 +864,9 @@
     if (closesAt.getTime() <= Date.now()) return adminMsg("The closing time has to be in the future.");
     var fields = { name: name, prompt: prompt, closes_at: closesAt.toISOString() };
     if (!r) fields.season_key = $("subAdmSeason").value;
+    var vote = voting().readAdmin(r, closesAt);
+    if (vote.error) return adminMsg(vote.error);
+    Object.keys(vote.fields).forEach(function (k) { fields[k] = vote.fields[k]; });
     var done = r ? api().updateSiteRound(r.id, fields) : api().openSiteRound(fields);
     done.then(function (rows) {
       if (!rows || !rows.length) throw new Error("Only the admin can do that.");

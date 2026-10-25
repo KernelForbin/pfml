@@ -102,9 +102,12 @@ def insert_policy_tables(sql):
 
 
 def schema_functions(sql):
-    """(name, [argument names]) for every function schema.sql creates."""
+    """(name, [argument names]) for every function schema.sql creates that
+    can be called; a trigger function can't be, through the API or at all."""
     out = []
-    for name, args in re.findall(r"create or replace function public\.(\w+)\(([^)]*)\)", sql):
+    for name, args, returns in re.findall(r"create or replace function public\.(\w+)\(([^)]*)\)\s*returns\s+(\w+)", sql):
+        if returns == "trigger":
+            continue
         out.append((name, [a.split()[0] for a in args.replace("\n", " ").split(",") if a.strip()]))
     return out
 

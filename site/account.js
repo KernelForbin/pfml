@@ -107,12 +107,32 @@
     }).map(function (x) { return x.s; });
   }
 
+  // Voting on the site (README, Voting on the site): built 2026-10-25 and
+  // off until the user says to switch it on. Off, the admin can't open a
+  // round that votes here, and no page shows a ballot, results or a voting
+  // banner, even for such a round. Switching it on is one line, but the
+  // checklist in the README comes with it (privacy page, features page).
+  var SITE_VOTING = false;
+
+  // Where a site round is, the same as site_round_phase() in the database:
+  // "submitting", then "voting" and "finished" for a round that votes here,
+  // or "closed" for one that votes in Music League.
+  function roundPhase(r) {
+    var now = Date.now();
+    if (!r.closed_at && now < Date.parse(r.closes_at)) return "submitting";
+    if (!r.votes_on_site) return "closed";
+    if (!r.voting_closed_at && now < Date.parse(r.voting_closes_at)) return "voting";
+    return "finished";
+  }
+
   PFML.avatar = avatar;
   PFML.roundOrder = roundOrder;
   PFML.reactionGlyph = reactionGlyph;
   PFML.when = when;
   PFML.translationHtml = translationHtml;
   PFML.closes = closes;
+  PFML.siteVoting = SITE_VOTING;
+  PFML.roundPhase = roundPhase;
 
   // A tray with a notch: an inbox, drawn rather than an emoji character,
   // so it's the same flat icon on every device (see ADD_REACTION_ICON).

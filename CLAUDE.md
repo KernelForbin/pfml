@@ -187,6 +187,16 @@ It's standalone on purpose: public, no sign-in, no `style.css`, no
 tokens, light and dark, are copied from `style.css`, so a palette change
 there updates them too (a test compares both).
 
+## Voting on the site: built, switched off
+
+Built 2026-10-25 so the league can eventually leave the Music League app;
+off until the user says (`SITE_VOTING` in `account.js`, pinned by a test).
+Never let it reach Round 7 or any round already open: a round votes here
+only if it was opened that way, and the database refuses to change that
+later. Switching it on changes what the site promises (who submitted what
+is shown once voting closes), so the README's checklist goes with it:
+privacy page, Submit page footer, features page. README, Voting on the site.
+
 ## The daily security check
 
 `.github/workflows/security-check.yml` runs `scripts/security_check.py`
@@ -239,7 +249,10 @@ verified" has to be both.
   `fp_kind()` or the round-check functions change (read-only; the only
   place that SQL actually runs before members use it), and
   `-p test_live_security_check.py` whenever `scripts/security_check.py`
-  changes (needs `GH_TOKEN=$(gh auth token)` too, for GitHub's rate limit).
+  changes (needs `GH_TOKEN=$(gh auth token)` too, for GitHub's rate limit),
+  and `-p test_live_voting.py` whenever the voting functions change
+  (read-only; the full round is `supabase/checks/2026-10-25_site_voting_rehearsal.sql`,
+  which only the user can run, in the SQL Editor).
   Note: `python -m unittest tests.test_x` does not work here, since
   `tests/` isn't a package on the path; use `discover`.
 - Main branch: `main`. Work on a branch; don't merge or push to `main`

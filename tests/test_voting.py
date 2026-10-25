@@ -1,0 +1,208 @@
+"""Voting on the site (README, Voting on the site): built 2026-10-25 and off
+until the user switches it on. The database rules read as text (there's no
+Postgres here; supabase/checks/2026-10-25_site_voting_rehearsal.sql runs a
+whole round in the real database and undoes it, and
+test_live_voting.py runs the ballot rules there), the switch that keeps it
+dark, the promise that a round already open (Round 7) can never get it, and
+the page wiring. The pages were checked in a browser against a stand-in
+with the switch on."""
+import re
+import unittest
+
+from support import ROOT
+from test_submissions import block, function, read, schema
+
+SITE = ROOT / "site"
+MIGRATION = ROOT / "supabase" / "migrations" / "2026-10-25_site_voting.sql"
+REHEARSAL = ROOT / "supabase" / "checks" / "2026-10-25_site_voting_rehearsal.sql"
+MEMBER_CALLS = ["site_round_phase", "cast_ballot", "my_ballot", "site_round_voters", "site_round_results", "site_round_votes"]
+
+
+def js_body(js, signature):
+    return js.split(signature, 1)[1].split("\n  }\n", 1)[0]
+
+
+class SameInBothPlaces(unittest.TestCase):
+    def test_schema_has_what_the_migration_adds(self):
+        migration = read(MIGRATION)
+        body = migration[migration.index("-- Which rounds vote here"):]
+        self.assertIn(body, schema())
+
+    def test_the_rehearsal_plays_a_round_and_keeps_nothing(self):
+        script = read(REHEARSAL)
+        self.assertIn("2026-10-25_site_voting.sql", script)
+        # an error at the end rolls the whole thing back, whatever happened
+        self.assertTrue(script.rstrip().endswith("raise exception 'Rehearsal passed: % checks held. Nothing was kept.', checks;\nend $$;"))
+        self.assertNotRegex(script, r"(?i)\bcommit\b")
+        for call in ("submit_track", "cast_ballot", "my_ballot", "site_round_voters", "site_round_results", "site_round_votes"):
+            self.assertIn(f"public.{call}(", script)
+
+
+class Round7CanNeverVoteHere(unittest.TestCase):
+    """A round has site voting only if it was opened with it; nothing can add
+    it later, so every round that exists today keeps voting in Music League."""
+
+    def setUp(self):
+        self.sql = schema()
+
+    def test_off_for_every_existing_round(self):
+        self.assertIn("alter table public.site_rounds add column if not exists votes_on_site boolean not null default false;", self.sql)
+
+    def test_the_trigger_refuses_to_switch_it_either_way(self):
+        fn = function(self.sql, "site_rounds_voting_fixed")
+        self.assertIn("if new.votes_on_site is distinct from old.votes_on_site then\n    raise exception", fn)
+        self.assertIn("create trigger site_rounds_voting_fixed before update on public.site_rounds\n  for each row", self.sql)
+
+    def test_a_round_that_votes_here_has_a_voting_deadline_after_submissions(self):
+        shape = block(self.sql, "alter table public.site_rounds add constraint site_rounds_voting_shape")
+        self.assertIn("votes_on_site = (voting_closes_at is not null)", shape)
+        self.assertIn("voting_closes_at > closes_at", shape)
+        self.assertIn("max_per_track <= point_budget", shape)
+
+    def test_the_rules_freeze_when_submissions_close(self):
+        fn = function(self.sql, "site_rounds_voting_fixed")
+        self.assertIn("(new.point_budget, new.max_per_track, new.nonvoters_keep_points)", fn)
+        self.assertIn("and (old.closed_at is not null or now() >= old.closes_at) then", fn)
+
+    def test_the_defaults_are_season_3s_and_non_voters_score_0(self):
+        self.assertIn("point_budget smallint not null default 19", self.sql)
+        self.assertIn("max_per_track smallint not null default 5", self.sql)
+        self.assertIn("nonvoters_keep_points boolean not null default false", self.sql)
+
+
+class Ballots(unittest.TestCase):
+    def setUp(self):
+        self.sql = schema()
+        self.cast = function(self.sql, "cast_ballot")
+
+    def test_votes_are_reached_only_through_the_functions(self):
+        self.assertIn("alter table public.site_votes enable row level security;", self.sql)
+        self.assertIn("revoke all on table public.site_votes from anon, authenticated;", self.sql)
+        self.assertNotRegex(self.sql, r"create policy[^;]*on public\.site_votes")
+        for path in SITE.glob("*.js"):
+            self.assertNotIn('from("site_votes")', path.read_text(encoding="utf-8"), path.name)
+
+    def test_only_a_member_with_a_track_votes_and_only_while_voting_is_open(self):
+        order = [self.cast.index(s) for s in (
+            "if not public.is_member() then",
+            "if public.site_round_phase(p_round) <> 'voting' then",
+            "if mine is null then\n    raise exception 'Only players with a track in this round can vote.';",
+            "problem := public.ballot_problem(r.point_budget, r.max_per_track, pts,",
+            "delete from public.site_votes where round_id = p_round and user_id = uid;",
+            "insert into public.site_votes")]
+        self.assertEqual(order, sorted(order))
+        self.assertIn("array(select s = mine from unnest(sids) s)", self.cast)
+
+    def test_every_track_on_the_ballot_is_in_the_round_once(self):
+        self.assertIn("where x.id = s and x.round_id = p_round", self.cast)
+        self.assertIn("(select count(distinct s) from unnest(sids) s) <> cardinality(sids)", self.cast)
+
+    def test_the_rules_themselves(self):
+        fn = function(self.sql, "ballot_problem")
+        self.assertIn("immutable", fn)
+        for rule in ("p < 0", "p > p_max", "where own and p > 0", "<> p_budget"):
+            self.assertIn(rule, fn)
+
+    def test_a_vote_row_is_points_or_a_comment(self):
+        table = block(self.sql, "create table if not exists public.site_votes")
+        self.assertIn("check (points > 0 or char_length(btrim(comment)) > 0)", table)
+        self.assertIn("primary key (submission_id, user_id)", table)
+
+
+class AnonymousUntilVotingCloses(unittest.TestCase):
+    def setUp(self):
+        self.sql = schema()
+
+    def test_who_sent_what_and_every_vote_only_once_voting_has_closed(self):
+        for name in ("site_round_results", "site_round_votes"):
+            fn = function(self.sql, name)
+            self.assertIn("public.is_member()", fn, name)
+            self.assertIn("public.site_round_phase(p_round) = 'finished'", fn, name)
+
+    def test_during_voting_only_your_own_ballot_and_who_has_voted(self):
+        self.assertIn("v.user_id = auth.uid()", function(self.sql, "my_ballot"))
+        voters = function(self.sql, "site_round_voters")
+        self.assertIn("returns setof text", voters)
+        self.assertNotRegex(voters, r"points|comment|submission_id")
+
+    def test_a_non_voter_scores_0_unless_the_round_says_so(self):
+        fn = function(self.sql, "site_round_results")
+        self.assertIn("or r.nonvoters_keep_points\n              then coalesce(t.total, 0) else 0 end", fn)
+
+    def test_grants(self):
+        for name in MEMBER_CALLS:
+            with self.subTest(name):
+                self.assertRegex(self.sql, rf"revoke all on function public\.{name}\([^)]*\) from public, anon;")
+                self.assertRegex(self.sql, rf"grant execute on function public\.{name}\([^)]*\) to authenticated;")
+        for name in ("ballot_problem", "site_rounds_voting_fixed"):
+            self.assertRegex(self.sql, rf"revoke all on function public\.{name}\([^)]*\) from public, anon, authenticated;")
+            self.assertNotRegex(self.sql, rf"grant execute on function public\.{name}\(")
+
+
+class TheSwitch(unittest.TestCase):
+    """Off until the user says. Switching it on is one line in account.js,
+    and changes what the site promises, so this test is meant to fail then:
+    first update the privacy page and Submit page footer (who sent what is
+    shown once voting closes), the features page, and the README checklist
+    (README, Voting on the site)."""
+
+    def test_voting_stays_off_until_the_user_switches_it_on(self):
+        account = read(SITE / "account.js")
+        self.assertEqual(re.findall(r"var SITE_VOTING = (\w+);", account), ["false"])
+        self.assertIn("PFML.siteVoting = SITE_VOTING;", account)
+
+    def test_everything_voting_shows_waits_for_the_switch(self):
+        voting = read(SITE / "voting.js")
+        self.assertIn("function on(r) { return !!(PFML.siteVoting && r && r.votes_on_site); }", voting)
+        self.assertIn('var phase = on(r) ? PFML.roundPhase(r) : "";', js_body(voting, "function render(r, mine) {"))
+        self.assertIn("if (!PFML.siteVoting || (r && !r.votes_on_site)) return \"\";", js_body(voting, "function adminFields(r) {"))
+        self.assertIn("if (!on(r) || PFML.roundPhase(r) !== \"voting\") return null;", js_body(voting, "function adminPanel(r, done, fail) {"))
+        banner = js_body(read(SITE / "app.js"), "function votingBanner(rounds) {")
+        self.assertTrue(banner.lstrip().startswith("if (!PFML.siteVoting) return;"))
+
+    def test_only_a_new_round_asks_for_site_voting(self):
+        read_admin = js_body(read(SITE / "voting.js"), "function readAdmin(r, closesAt) {")
+        self.assertIn("if (!r) fields.votes_on_site = true;", read_admin)
+        self.assertEqual(read_admin.count("votes_on_site"), 1)
+        self.assertNotIn("votes_on_site", read(SITE / "submit.js"))
+
+    def test_the_page_and_the_database_agree_on_the_phase(self):
+        js = js_body(read(SITE / "account.js"), "function roundPhase(r) {")
+        sql = function(schema(), "site_round_phase")
+        pairs = [('if (!r.closed_at && now < Date.parse(r.closes_at)) return "submitting";', "when r.closed_at is null and now() < r.closes_at then 'submitting'"),
+                 ('if (!r.votes_on_site) return "closed";', "when not r.votes_on_site then 'closed'"),
+                 ('if (!r.voting_closed_at && now < Date.parse(r.voting_closes_at)) return "voting";', "when r.voting_closed_at is null and now() < r.voting_closes_at then 'voting'"),
+                 ('return "finished";', "else 'finished' end")]
+        for page, db in pairs:
+            self.assertIn(page, js)
+            self.assertIn(db, sql)
+
+
+class ThePage(unittest.TestCase):
+    def test_submit_page_loads_voting_before_submit(self):
+        html = read(SITE / "submit.html")
+        self.assertIn('<section class="shell block" id="subVote" hidden></section>', html)
+        srcs = re.findall(r'<script src="([^"]+)"', html)
+        self.assertLess(srcs.index("voting.js"), srcs.index("submit.js"))
+
+    def test_submit_js_works_without_it(self):
+        fallback = js_body(read(SITE / "submit.js"), "function voting() {")
+        self.assertIn("return window.PFMLVoting || { on: function () { return false; }", fallback)
+
+    def test_the_round_list_asks_for_what_voting_needs(self):
+        auth = read(SITE / "auth.js")
+        rounds = auth.split("siteRounds: function () {", 1)[1].split("},", 1)[0]
+        for col in ("votes_on_site", "voting_closes_at", "voting_closed_at", "point_budget", "max_per_track", "nonvoters_keep_points"):
+            self.assertIn(col, rounds)
+        self.assertIn('select("id, tag, platform, track,', auth)
+
+    def test_names_votes_and_comments_are_escaped(self):
+        voting = read(SITE / "voting.js")
+        self.assertIn("esc(v.comment)", voting)
+        self.assertIn('esc(names[id] || "Member")', voting)
+        self.assertIn("esc(s.title)", voting)
+        self.assertIn(">\" + esc(comment) + \"</textarea>", voting)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -94,6 +94,10 @@
     <ol class="sub-tracks" id="subTracks"></ol>
   </section>
 
+  <!-- voting.js: the ballot while voting is open, then the results; only
+       for a round that votes on the site (README, Voting on the site) -->
+  <section class="shell block" id="subVote" hidden></section>
+
   <section class="shell block sub-admin" id="subAdmin" hidden>
     <h2>Admin</h2>
     <p class="block-note">Only you see this. You can't see who submitted what either.</p>
@@ -117,6 +121,7 @@
 <script src="account.js"></script>
 <script src="sentiment.js"></script>
 <script src="player.js"></script>
+<script src="voting.js"></script>
 <script src="submit.js"></script>
 <script src="app.js"></script>
 </body>

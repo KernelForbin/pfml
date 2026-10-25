@@ -338,7 +338,7 @@
     if (!box) return;
     PFML.api.siteRounds().then(function (rounds) {
       var open = (rounds || []).filter(function (r) { return !r.closed_at && Date.now() < Date.parse(r.closes_at); })[0];
-      if (!open) return;
+      if (!open) { votingBanner(rounds || []); return; }
       var closes = PFML.closes(open.closes_at);
       box.innerHTML = '<a class="sub-banner-link" href="submit"><span class="sub-banner-kicker">Open for submissions</span>' +
         "<b>" + esc(open.name) + '</b><span class="sub-banner-count" id="submitBannerCount"></span>' +
@@ -348,6 +348,29 @@
       box.hidden = false;
       bannerCount(open);
       bannerMine(open);
+    }).catch(function (err) { console.error(err); });
+  }
+
+  // A round voting on the site (README, Voting on the site), only while the
+  // switch in account.js is on: when voting closes, and whether the reader's
+  // ballot is in. Only players with a track in the round vote.
+  function votingBanner(rounds) {
+    if (!PFML.siteVoting) return;
+    var r = rounds.filter(function (x) { return PFML.roundPhase(x) === "voting"; })[0];
+    if (!r) return;
+    var closes = PFML.closes(r.voting_closes_at);
+    $("submitBanner").innerHTML = '<a class="sub-banner-link" href="submit"><span class="sub-banner-kicker">Voting is open</span>' +
+      "<b>" + esc(r.name) + "</b>" +
+      '<span class="sub-banner-when">Voting closes ' + esc(closes.at) + " · " + esc(closes.left) + "</span>" +
+      '<span class="sub-banner-mine" id="submitBannerMine"></span>' +
+      '<span class="sub-banner-go" id="submitBannerGo">Listen and vote →</span></a>';
+    $("submitBanner").hidden = false;
+    Promise.all([PFML.api.mySubmission(r.id), PFML.api.myBallot(r.id)]).then(function (res) {
+      if (!res[0]) { $("submitBannerGo").textContent = "Listen to the round →"; return; }
+      var voted = res[1] && res[1].length;
+      $("submitBannerMine").textContent = voted ? "✓ Your ballot is in" : "You haven't voted yet";
+      $("submitBannerMine").classList.toggle("is-in", !!voted);
+      if (voted) $("submitBannerGo").textContent = "Change your ballot →";
     }).catch(function (err) { console.error(err); });
   }
 

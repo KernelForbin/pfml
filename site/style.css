@@ -1492,6 +1492,70 @@ body.auth-checking::before {
   .sub-round-card { padding: 16px; }
 }
 
+/* voting on the site (voting.js; off until the user switches it on): the
+   ballot while voting is open, the results after, the admin's fields */
+.sub-msg.is-good { color: var(--deep); }
+.vt-count { margin: 6px 0 0; color: var(--muted); font-size: 0.9rem; }
+.vt-count b { color: var(--ink); font: 800 1.05rem/1 "Archivo", sans-serif; }
+.vt-waiting { display: block; margin-top: 4px; font-size: 0.84rem; }
+.vt-rule { margin-top: 4px; color: var(--deep); }
+.vt-list, .vt-results { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-width: 640px; }
+.vt-row { padding: 10px 12px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r-sm); }
+.vt-row.has-points { border-color: var(--magenta); box-shadow: 0 0 0 1px var(--magenta); }
+.vt-row.is-own { background: var(--wash); }
+.vt-main { display: flex; align-items: center; gap: 10px; }
+.vt-name { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.vt-name b { font-weight: 600; overflow-wrap: anywhere; }
+.vt-name small { color: var(--muted); font-size: 0.84rem; overflow-wrap: anywhere; }
+.vt-own { flex: none; font: 700 0.74rem/1 "Archivo", sans-serif; text-transform: uppercase; letter-spacing: 0.06em; color: var(--deep); }
+.vt-step { flex: none; display: inline-flex; align-items: center; gap: 4px; }
+.vt-step-btn {
+  width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--border); background: var(--card);
+  color: var(--ink); font: 700 1.2rem/1 "Archivo", sans-serif; cursor: pointer; touch-action: manipulation;
+}
+.vt-step-btn:disabled { opacity: 0.35; cursor: default; }
+.vt-pts { min-width: 1.6em; text-align: center; font: 800 1.2rem/1 "Archivo", sans-serif; }
+.vt-row.has-points .vt-pts { color: var(--magenta-text); }
+.vt-comment-btn { margin-top: 6px; padding: 0; border: 0; background: none; color: var(--magenta-text); font: 600 0.86rem/1.4 "Inter", sans-serif; cursor: pointer; }
+.vt-comment { margin-top: 6px; resize: vertical; }
+.vt-comment[hidden] { display: none; }
+/* stays in view while scrolling a long ballot, so the total is always there */
+.vt-bar {
+  position: sticky; bottom: 10px; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  max-width: 640px; margin-top: 12px; padding: 10px 12px; background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r-sm); box-shadow: var(--shadow-md);
+}
+.vt-left { font-size: 0.95rem; }
+.vt-left b { font: 800 1.15rem/1 "Archivo", sans-serif; color: var(--magenta-text); }
+.vt-left.is-done { color: var(--deep); font-weight: 600; }
+.vt-res details { background: var(--card); border: 1px solid var(--border); border-radius: var(--r-sm); }
+.vt-res.is-first details { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
+.vt-res summary { display: flex; align-items: center; gap: 12px; padding: 10px 12px; cursor: pointer; list-style: none; }
+.vt-res summary::-webkit-details-marker { display: none; }
+.vt-rank { flex: none; min-width: 1.6em; text-align: right; font: 800 1.1rem/1 "Archivo", sans-serif; color: var(--muted); }
+.vt-res-track { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.vt-score { flex: none; font-size: 0.86rem; color: var(--muted); white-space: nowrap; }
+.vt-score b { font: 800 1.2rem/1 "Archivo", sans-serif; color: var(--ink); }
+.vt-who { display: inline-flex; align-items: center; gap: 6px; min-width: 0; color: var(--ink); text-decoration: none; font-size: 0.86rem; }
+.vt-who .av { width: 22px; height: 22px; font-size: 0.55rem; flex: none; }
+.vt-who > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vt-note { margin: 0 12px 10px; font-size: 0.86rem; color: var(--muted); }
+.vt-votes { list-style: none; margin: 0; padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border-soft); }
+.vt-vote-who { display: flex; align-items: center; gap: 8px; }
+.vt-vote-pts { font: 800 0.9rem/1 "Archivo", sans-serif; color: var(--magenta-text); }
+.vt-vote-comment { margin: 4px 0 0 28px; font-size: 0.92rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.vt-admin { margin: 10px 0 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.vt-admin legend { font: 600 0.84rem/1.2 "Archivo", sans-serif; padding: 0 4px; }
+.vt-admin-body { display: flex; flex-direction: column; gap: 6px; }
+.vt-admin-body[hidden] { display: none; }
+.vt-check { display: flex; align-items: center; gap: 8px; font-size: 0.92rem; }
+.vt-num { max-width: 120px; }
+.vt-admin-panel { margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+@media (hover: hover) {
+  .vt-step-btn:not(:disabled):hover { border-color: var(--magenta); }
+  .vt-who:hover { color: var(--magenta-text); }
+}
+
 /* searching on the Submit page */
 .sub-services { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
 .sub-svc {

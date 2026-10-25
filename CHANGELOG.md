@@ -1,5 +1,40 @@
 # Changelog
 
+## 2026-10-25 (follow-up): voting on the site, built and switched off
+
+- **Voting on pfml.fun, for a later round, not Round 7.** The user wants the
+  whole league on pfml.fun eventually, without the Music League app; this
+  builds voting and leaves it off. Members see nothing of it.
+- **Round 7 can never get it.** A round votes here only if it was opened
+  that way, and a database trigger refuses to change that afterwards, so
+  every round that exists today votes in Music League for good.
+- **The user's calls:** who submitted what is revealed when voting closes,
+  as in Music League. Rules are Season 3's as measured from the exports (19
+  points, at most 5 on a track, all spent, no negatives, only submitters
+  vote, none for yourself, comments allowed anywhere), set per round. A
+  submitter who doesn't vote scores 0.
+- **Built:** the ballot on the Submit page; who has voted; the results with
+  every vote and comment; a Home banner; and for the admin, the voting
+  fields when opening a round, then the deadline and an early close. One
+  switch in `account.js` keeps all of it off.
+- **Waiting on the user:** `supabase/migrations/2026-10-25_site_voting.sql`,
+  then `supabase/checks/2026-10-25_site_voting_rehearsal.sql`, which plays
+  a whole round in the real database as three members and rolls itself
+  back. The page code reads the new columns, so it ships only after the
+  migration has run.
+- **Not built yet:** a round voted here doesn't reach the season pages or
+  stats (`build.py` reads Music League's CSVs). That's the next piece.
+- **Verified:** the suite passes, with 25 new tests (the rules as text, the
+  switch, Round 7's guard, the wiring), break-checked (17 breaks, all
+  caught). A live test runs the ballot rules in the real database once the
+  migration is in. In a browser, against a stand-in that follows the same
+  rules, at 375px and 1280px, light and dark:
+  - the ballot: the cap per track, every point spent, a comment on your
+    own track, a saved ballot coming back, someone without a track;
+  - the results: ties, non-voters at 0, a comment with HTML shown as text;
+  - the admin's fields and checks, the panel and closing early;
+  - the Home banner;
+  - and all of it gone with the switch off.
 ## 2026-10-25 (follow-up 2): one shuffle for every closed round, and Shuffle on the page
 
 - **The order a closed round's tracks appear in is one shuffle, the same

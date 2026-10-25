@@ -112,6 +112,13 @@ class WhatTheSiteRuns(unittest.TestCase):
         # a new insert policy needs a row here, one that breaks a check constraint
         self.assertEqual(sorted(sc.INVALID_ROWS), sc.insert_policy_tables(SCHEMA))
 
+    def test_a_trigger_function_isnt_called(self):
+        # it can't be, through the API or at all; calling it would only 404
+        self.assertIn("returns trigger", SCHEMA)
+        names = [n for n, _ in sc.schema_functions(SCHEMA)]
+        self.assertNotIn("site_rounds_voting_fixed", names)
+        self.assertIn("cast_ballot", names)
+
     def test_every_table_function_bucket_and_edge_function_is_tried(self):
         world = World()
         self.assertTrue(run(world)[0])
