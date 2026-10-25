@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-10-24 (follow-up 5): dark mode becomes a switch; a purple round banner
+
+- **Dark mode is now a choice, light by default.** It first shipped
+  following the device's setting, so a phone set to dark got the dark site
+  unasked. Now the Dark mode switch in the account menu turns it on, and
+  the choice is remembered in that browser. A line at the top of every
+  page puts it back before the page paints, so there's no light flash.
+  The features and privacy pages follow it too.
+- **The open-round banner on Home is purple, not black and lime green**
+  (the user's call): the brand purple to a deeper one, white text, the
+  count as a soft pill, and Submit as an outlined button. It's the same in
+  both modes, with white text at least 5.1:1 against both ends of the
+  purple.
+- **Verified:** the suite passes, with 5 new tests and the dark-mode tests
+  reworked, all break-checked (9 breaks). In a browser on a device set to
+  dark: light by default, the switch turning it dark and back, and the
+  choice holding on Home, a round, features and privacy. The banner was
+  checked in light and dark at 375px with no sideways scroll.
+
 ## 2026-10-24 (follow-up 4): a What's new button on Home
 
 - **"What's new on the site" is the first thing on Home**, linking to the

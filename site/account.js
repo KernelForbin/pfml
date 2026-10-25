@@ -116,6 +116,24 @@
 
   /* ---- building the corner ---- */
 
+  /* ---- dark mode: a choice, light by default ---- */
+
+  // <html data-theme="dark"> switches style.css's colour tokens. The line
+  // at the top of every page's <head> reads THEME_KEY back before the page
+  // paints, so a dark page never flashes light first; the features and
+  // privacy pages follow the same choice.
+  var THEME_KEY = "pfml.theme";
+
+  function isDark() { return document.documentElement.getAttribute("data-theme") === "dark"; }
+
+  function setDark(on) {
+    if (on) document.documentElement.setAttribute("data-theme", "dark");
+    else document.documentElement.removeAttribute("data-theme");
+    try { localStorage.setItem(THEME_KEY, on ? "dark" : "light"); } catch (e) { /* private mode: this page only */ }
+    var sw = $("acctTheme");
+    if (sw) sw.setAttribute("aria-checked", String(on));
+  }
+
   function build(member) {
     var bar = document.querySelector(".topbar-inner");
     if (!bar || bar.querySelector(".acct")) return;
@@ -133,6 +151,8 @@
         '<a class="acct-item" href="submit">Submit a track</a>' +
         '<a class="acct-item" href="repeats">Repeat checker</a>' +
         '<a class="acct-item" href="profile">My profile</a>' +
+        '<button type="button" class="acct-item acct-theme" id="acctTheme" role="switch" aria-checked="' + isDark() + '">' +
+          'Dark mode<span class="acct-switch" aria-hidden="true"></span></button>' +
         '<button type="button" class="acct-item" id="acctSignOut">Sign out</button>' +
       "</div>" +
       '<div class="acct-pop acct-inbox" id="acctInbox" hidden role="region" aria-label="Inbox">' +
@@ -144,6 +164,7 @@
     $("acctInboxBtn").addEventListener("click", function () { toggle("inbox"); });
     $("acctMeBtn").addEventListener("click", function () { toggle("menu"); });
     $("acctSignOut").addEventListener("click", function () { PFML.signOut(); });
+    $("acctTheme").addEventListener("click", function () { setDark(!isDark()); });
     document.addEventListener("click", closeFromOutside);
     document.addEventListener("keydown", closeOnEscape);
     document.addEventListener("visibilitychange", function () {

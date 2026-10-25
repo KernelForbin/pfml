@@ -458,9 +458,16 @@ missed a round is a round later.
 
 ## Dark mode
 
-The site follows the device's own light/dark setting (`@media
-(prefers-color-scheme: dark)` at the end of `style.css`; no toggle). Dark mode
-redefines the colour tokens; nothing else in the stylesheet changes. A few new
+Dark mode is a choice, and light is the default whatever the device is set
+to (the user's call, 2026-10-24; it first shipped following the device
+setting). The **Dark mode** switch in the account menu (`setDark` in
+`account.js`) sets `<html data-theme="dark">` and stores `pfml.theme` in
+the browser. A line at the top of every page's `<head>`, before any
+stylesheet, puts it back before the page paints, so a dark page never
+flashes light, and the features and privacy pages follow the same choice.
+It's per browser, like the What's new badge. Dark mode redefines the colour
+tokens under `:root[data-theme="dark"]` at the end of `style.css`; nothing
+else in the stylesheet changes. A few new
 tokens name what used to be hard-coded:
 - **`--magenta-text`** is purple as text. In light mode it equals `--magenta`;
   in dark it's a lighter purple, because the brand purple reads at only 2.9:1

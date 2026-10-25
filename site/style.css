@@ -762,6 +762,13 @@ body.auth-checking::before {
   color: var(--ink); background: none; border: none; border-radius: 8px; padding: 10px 12px;
   text-decoration: none; cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
+/* the Dark mode switch (account.js): a track with a knob, on when dark */
+.acct-theme { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.acct-switch { position: relative; flex: none; width: 36px; height: 20px; border-radius: 999px; background: var(--border); box-shadow: inset 0 0 0 1px var(--border); transition: background .15s; }
+.acct-switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--on-inverse); box-shadow: 0 1px 2px rgba(0, 0, 0, .3); transition: transform .15s; }
+.acct-theme[aria-checked="true"] .acct-switch { background: var(--magenta); }
+.acct-theme[aria-checked="true"] .acct-switch::after { transform: translateX(16px); }
+@media (prefers-reduced-motion: reduce) { .acct-switch, .acct-switch::after { transition: none; } }
 .acct-inbox { width: min(380px, calc(100vw - 24px)); max-height: min(70vh, 520px); }
 .acct-inbox-head { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px 10px; border-bottom: 1px solid var(--border-soft); }
 .acct-inbox-head b { font-family: "Archivo", sans-serif; font-size: 1rem; }
@@ -1466,21 +1473,26 @@ body.auth-checking::before {
 @media (hover: hover) { .feat-btn:hover { color: var(--magenta-text); box-shadow: var(--shadow-md); } }
 
 .sub-banner { padding-top: 22px; }
+/* The open round, in the site's own purple (it was black with lime-green
+   text until 2026-10-24, the user's call). The same in light and dark: the
+   brand purple to a deeper one, with white text, at least 6.4:1 throughout. */
 .sub-banner-link {
-  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 16px 20px;
-  border-radius: var(--r); background: var(--inverse); color: var(--on-inverse); text-decoration: none;
-  box-shadow: var(--shadow-md);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 16px 20px;
+  border-radius: var(--r); background: linear-gradient(135deg, var(--magenta) 0%, #6B008A 100%); color: #fff; text-decoration: none;
+  box-shadow: 0 18px 40px -22px rgba(107, 0, 138, .7), 0 2px 6px -2px rgba(22, 17, 26, .15);
 }
 .sub-banner-link b { font: 800 1.15rem/1.25 "Archivo", sans-serif; }
-.sub-banner-kicker { width: 100%; font: 700 0.74rem/1 "Archivo", sans-serif; text-transform: uppercase; letter-spacing: 0.08em; color: var(--acid); }
-.sub-banner-go { margin-left: auto; font-weight: 600; }
-.sub-banner-count { font: 700 0.92rem/1.25 "Archivo", sans-serif; color: var(--acid); }
+.sub-banner-kicker { width: 100%; font: 700 0.74rem/1 "Archivo", sans-serif; text-transform: uppercase; letter-spacing: 0.08em; color: #F4E4FA; }
+.sub-banner-count { padding: 2px 9px; border-radius: 999px; background: rgba(255, 255, 255, 0.18); font: 700 0.86rem/1.4 "Archivo", sans-serif; }
 .sub-banner-count:empty { display: none; }
-.sub-banner-when { width: 100%; font-size: 0.9rem; opacity: 0.85; }
+.sub-banner-when { width: 100%; font-size: 0.9rem; color: #F4E4FA; }
 .sub-banner-mine { font-weight: 700; font-size: 0.92rem; }
 .sub-banner-mine:empty { display: none; }
-.sub-banner-mine.is-in { color: var(--acid); }
-@media (hover: hover) { .sub-banner-link:hover { color: var(--on-inverse); transform: translateY(-1px); } }
+.sub-banner-go { margin-left: auto; padding: 6px 14px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.6); background: rgba(255, 255, 255, 0.12); font-weight: 600; font-size: 0.92rem; }
+@media (hover: hover) {
+  .sub-banner-link:hover { color: #fff; transform: translateY(-1px); }
+  .sub-banner-link:hover .sub-banner-go { background: rgba(255, 255, 255, 0.24); }
+}
 
 .sub-round-card { padding: 20px 22px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow-sm); }
 .sub-round-card h2 { margin: 2px 0 6px; font-size: 1.45rem; letter-spacing: -0.02em; }
@@ -1691,36 +1703,39 @@ body.auth-checking::before {
 .rc-pick h2 { margin: 0 0 2px; font-size: 1.05rem; }
 .rc-pick .block-note { margin-bottom: 8px; }
 
-/* Dark mode, following the device's own setting (2026-10-24). Contrast
-   was measured for each pair: body text 15.8, muted 7.4, links 9.4, purple
-   text 5.8 on the page; white on the purple fill 6.5. The crossword grid
-   keeps its light, printed look: its tokens are re-declared light inside it. */
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --paper: #131016;
-    --ink: #EEE9F2;
-    --muted: #A89EB2;
-    --border: rgba(255, 255, 255, 0.12);
-    --border-soft: rgba(255, 255, 255, 0.07);
-    --deep: #D7A4F0;
-    --wash: #2A1A33;
-    --card: #1D1921;
-    --neg: #FF8A80;
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
-    --shadow-md: 0 18px 40px -22px rgba(0, 0, 0, .8), 0 2px 6px -2px rgba(0, 0, 0, .5);
-    --magenta-text: #C565EA;
-    --inverse: #2A2232;
-    --on-inverse: #F8F9FA;
-    --topbar: rgba(19, 16, 22, 0.86);
-    --glass: rgba(19, 16, 22, 0.55);
-    --edge: rgba(255, 255, 255, 0.25);
-  }
-  .xw-grid, .xw-paused { --ink: #16111A; --wash: #F4E4FA; --deep: #7A0099; --neg: #B3261E; --card: #FFFFFF; color: #16111A; }
-  .sg-green .sg-label, .sg-lime .sg-label { color: #66BB6A; }
-  .sg-yellow .sg-label, .sg-amber .sg-label { color: #E0B04A; }
-  .sg-orange .sg-label { color: #FB8C5A; }
-  .sg-red .sg-label, .sg-exact .sg-label { color: #EF5350; }
-  .sg-warning, .sub-repeats.is-found { background: #3A1F1F; border-color: #6B2C2C; color: #FFB4AB; }
-  .sub-repeats.is-clear { color: #66BB6A; }
+/* Dark mode, a choice: the Dark mode switch in the account menu
+   (account.js) sets <html data-theme="dark"> and remembers it in this
+   browser (pfml.theme in localStorage); a line at the top of every page's
+   <head> puts it back before the page paints. Light is the default,
+   whatever the device is set to (the user's call, 2026-10-24). Contrast
+   was measured for each pair: body text 15.8, muted 7.4, links 9.4,
+   purple text 5.8 on the page; white on the purple fill 6.5. The
+   crossword grid keeps its light, printed look: its tokens are
+   re-declared light inside it. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #131016;
+  --ink: #EEE9F2;
+  --muted: #A89EB2;
+  --border: rgba(255, 255, 255, 0.12);
+  --border-soft: rgba(255, 255, 255, 0.07);
+  --deep: #D7A4F0;
+  --wash: #2A1A33;
+  --card: #1D1921;
+  --neg: #FF8A80;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+  --shadow-md: 0 18px 40px -22px rgba(0, 0, 0, .8), 0 2px 6px -2px rgba(0, 0, 0, .5);
+  --magenta-text: #C565EA;
+  --inverse: #2A2232;
+  --on-inverse: #F8F9FA;
+  --topbar: rgba(19, 16, 22, 0.86);
+  --glass: rgba(19, 16, 22, 0.55);
+  --edge: rgba(255, 255, 255, 0.25);
 }
+[data-theme="dark"] .xw-grid, [data-theme="dark"] .xw-paused { --ink: #16111A; --wash: #F4E4FA; --deep: #7A0099; --neg: #B3261E; --card: #FFFFFF; color: #16111A; }
+[data-theme="dark"] .sg-green .sg-label, [data-theme="dark"] .sg-lime .sg-label { color: #66BB6A; }
+[data-theme="dark"] .sg-yellow .sg-label, [data-theme="dark"] .sg-amber .sg-label { color: #E0B04A; }
+[data-theme="dark"] .sg-orange .sg-label { color: #FB8C5A; }
+[data-theme="dark"] .sg-red .sg-label, [data-theme="dark"] .sg-exact .sg-label { color: #EF5350; }
+[data-theme="dark"] .sg-warning, [data-theme="dark"] .sub-repeats.is-found { background: #3A1F1F; border-color: #6B2C2C; color: #FFB4AB; }
+[data-theme="dark"] .sub-repeats.is-clear { color: #66BB6A; }

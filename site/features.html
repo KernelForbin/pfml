@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PFML - What this site can do</title>
+<script>try{if(localStorage.getItem("pfml.theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}</script>
 <meta name="description" content="A plain-language tour of what you can see and do on PFML, our Music League site.">
 <meta name="theme-color" content="#9E00C4">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%239E00C4'/><path d='M30 74V26h22a14 14 0 010 28H44v20z' fill='%23F8F9FA'/></svg>">
@@ -41,28 +42,27 @@
     --r: 16px;
     --r-sm: 11px;
   }
-  /* Dark mode: the same tokens as style.css's dark block. */
-  @media (prefers-color-scheme: dark) {
-    :root {
-      color-scheme: dark;
-      --paper: #131016;
-      --ink: #EEE9F2;
-      --muted: #A89EB2;
-      --border: rgba(255, 255, 255, 0.12);
-      --border-soft: rgba(255, 255, 255, 0.07);
-      --deep: #D7A4F0;
-      --wash: #2A1A33;
-      --card: #1D1921;
-      --neg: #FF8A80;
-      --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
-      --shadow-md: 0 18px 40px -22px rgba(0, 0, 0, .8), 0 2px 6px -2px rgba(0, 0, 0, .5);
-      --magenta-text: #C565EA;
-      --inverse: #2A2232;
-      --on-inverse: #F8F9FA;
-      --topbar: rgba(19, 16, 22, 0.86);
-      --glass: rgba(19, 16, 22, 0.55);
-      --edge: rgba(255, 255, 255, 0.25);
-    }
+  /* Dark mode, when chosen on the site (pfml.theme; see style.css):
+     the same tokens as style.css's dark block. */
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --paper: #131016;
+    --ink: #EEE9F2;
+    --muted: #A89EB2;
+    --border: rgba(255, 255, 255, 0.12);
+    --border-soft: rgba(255, 255, 255, 0.07);
+    --deep: #D7A4F0;
+    --wash: #2A1A33;
+    --card: #1D1921;
+    --neg: #FF8A80;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+    --shadow-md: 0 18px 40px -22px rgba(0, 0, 0, .8), 0 2px 6px -2px rgba(0, 0, 0, .5);
+    --magenta-text: #C565EA;
+    --inverse: #2A2232;
+    --on-inverse: #F8F9FA;
+    --topbar: rgba(19, 16, 22, 0.86);
+    --glass: rgba(19, 16, 22, 0.55);
+    --edge: rgba(255, 255, 255, 0.25);
   }
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
@@ -254,7 +254,7 @@
     <aside class="whats-new" id="whatsNew" aria-labelledby="whats-new-title">
       <h2 id="whats-new-title">New in the last 30 days</h2>
       <ul>
-        <li data-shipped="2026-10-24"><time datetime="2026-10-24">Oct 24</time><span><b>Dark mode.</b> The whole site goes dark when your phone or computer is set to dark.</span></li>
+        <li data-shipped="2026-10-24"><time datetime="2026-10-24">Oct 24</time><span><b>Dark mode.</b> Switch the whole site to dark from the menu under your initials.</span></li>
         <li data-shipped="2026-10-24"><time datetime="2026-10-24">Oct 24</time><span><b>On your home screen.</b> Add PFML to your phone's home screen and it opens like an app.</span></li>
         <li data-shipped="2026-10-24"><time datetime="2026-10-24">Oct 24</time><span><b>Round recaps.</b> Every round page opens with the winner, the most talked-about track, the broadest support and the biggest single vote. Copy recap puts it on your clipboard for the group chat.</span></li>
         <li data-shipped="2026-10-24"><time datetime="2026-10-24">Oct 24</time><span><b>Votes most like them.</b> Profiles show the players who tend to back the same songs.</span></li>
@@ -551,7 +551,7 @@
           <li>A dot marks the season that's in progress.</li>
           <li>Tap PFML at the top left to get back Home from anywhere.</li>
           <li>Put PFML on your phone's home screen and it opens like an app, full screen with its own icon. On iPhone: Share, then Add to Home Screen. On Android: the menu, then Add to Home screen or Install app. You sign in once inside it.</li>
-          <li>Dark mode: when your phone or computer is set to dark, the whole site goes dark to match.</li>
+          <li>Dark mode: turn it on or off with the switch in the menu under your initials. The site starts light, and remembers your choice on that phone or computer.</li>
         </ul>
       </article>
 

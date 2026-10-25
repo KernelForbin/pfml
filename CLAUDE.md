@@ -190,8 +190,11 @@ there updates them too (a test compares both).
 
 ## Dark mode: colours go through tokens
 
-The site follows the device's light/dark setting (README, Dark mode). Any
-new style uses the tokens, never a literal light colour: `--magenta-text`
+Dark mode is a choice, light by default whatever the device says: the Dark
+mode switch in the account menu sets `<html data-theme="dark">`, and every
+page's `<head>` restores it before painting (README, Dark mode). A new page
+needs that head line too (a test checks every page). Any new style uses
+the tokens, never a literal light colour: `--magenta-text`
 for purple text (`--magenta` is the fill behind white text, too dark to
 read as text on a dark page), `--card` rather than `#fff`, `--inverse` and
 `--on-inverse` for a surface meant to stay dark, `--on-metal` for text on
