@@ -1337,7 +1337,7 @@ class SecurityCheckCard(unittest.TestCase):
     def test_it_is_dated_and_near_the_top(self):
         page = read("privacy.html")
         card = page.split('<section class="sec-card"', 1)[1].split("</section>", 1)[0]
-        self.assertRegex(card, r'<span class="sec-when">Last checked [A-Z][a-z]+ \d{1,2}, 20\d\d</span>')
+        self.assertRegex(card, r'<span class="sec-when">Full review: [A-Z][a-z]+ \d{1,2}, 20\d\d</span>')
         self.assertLess(page.index('class="sec-card"'), page.index("<h2>When you sign in with Google</h2>"))
 
 

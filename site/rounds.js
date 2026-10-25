@@ -644,7 +644,8 @@
           (status ? '<span class="rp-chip">' + esc(status) + "</span>"
                   : '<span class="rp-chip">' + counted(c.tracks, "track") + '</span><span class="rp-chip">' + counted(c.votes, "vote") +
                     '</span><span class="rp-chip">' + counted(c.comments, "comment") + "</span>") +
-          (r.playlistUrl ? '<a class="pill" href="' + esc(r.playlistUrl) + '" target="_blank" rel="noopener">Round playlist &nearr;</a>' : "") +
+          // https only, like the Home tiles: a swapped data file can't plant a javascript: link
+          (/^https:\/\//i.test(r.playlistUrl || "") ? '<a class="pill" href="' + esc(r.playlistUrl) + '" target="_blank" rel="noopener">Round playlist &nearr;</a>' : "") +
         "</div>" + (status ? "" : recapHtml(recap)) + navHtml(d, i, "top") +
       "</section>" +
       '<section class="shell rp-body"><div id="rpTracks"></div></section>' +

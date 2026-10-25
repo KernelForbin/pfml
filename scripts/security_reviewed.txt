@@ -1,0 +1,11 @@
+# Supabase advisories a person has judged (scripts/security_check.py).
+# The daily check fails on any advisory from Supabase's repos published
+# since its last clean run until its id is listed here. One per line:
+#   <advisory id>  <date judged>  <why it does or doesn't touch PFML>
+# Listing one never silences the version checks: a live service inside an
+# advisory's range fails whatever this file says.
+GHSA-8rrf-w776-x75g  2026-10-24  Storage resumable uploads (critical). Did touch PFML until Supabase patched it; live Storage is 1.80.2 (fixed); every file in both buckets matched the local copies.
+GHSA-67rp-h2mf-ph72  2026-10-24  Storage Iceberg S3 routes. PFML has no Iceberg bucket.
+GHSA-2rcv-vpjw-5g6c  2026-10-24  Realtime cross-tenant channels. The site never uses Realtime.
+GHSA-9vjf-j9f7-j42c  2026-10-24  Realtime broadcast frames. The site never uses Realtime.
+GHSA-x5vv-ww37-gvwm  2026-10-24  Postgres Nix setup docs, local privilege escalation. Self-hosting only.

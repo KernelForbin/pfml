@@ -1,5 +1,35 @@
 # Changelog
 
+## 2026-10-24 (follow-up 11): a daily security check, and a correction
+
+- **Correction:** the security card shipped an hour earlier said none of the
+  last 30 days' problems affected PFML. A recheck found one that had: on
+  October 14, Supabase published a critical Storage flaw (GHSA-8rrf-w776-x75g)
+  letting a stranger upload or overwrite files, private buckets included.
+  It's only on Supabase's own repo, which the first pass didn't read. Live
+  Storage is 1.80.2, the fixed version, and every file in both private
+  buckets matched the local copies byte for byte. The card now says so.
+- **Playlist links from the data become links only when they're `https`**
+  (round pages and Home's tiles), since that data lives in the bucket the
+  flaw could write to. All 54 current links already are.
+- **A daily security check** (GitHub Actions, 11:17 UTC,
+  `scripts/security_check.py`):
+  - advisories affecting the exact versions the site runs
+  - Supabase's own new advisories (all 123 of its repos), which wait for a
+    person
+  - live Storage and Auth versions against Supabase's advisory ranges
+  - the outside test, built from `schema.sql`
+  
+  A clean run redeploys, and the privacy page shows when it last passed, in
+  the reader's own time. Run against today's data it passes; with an empty
+  reviewed list and Storage faked at 1.80.1, it flagged all five recent
+  Supabase advisories and the October 14 range.
+- **Verified:** the suite passes, with 26 new tests (the check against a
+  made-up world, the stamp, the workflows, the link guard), break-checked
+  (17 breaks; one got through because `strptime` refuses the same input,
+  so it changed nothing). The live test (`test_live_security_check.py`)
+  passes.
+
 ## 2026-10-24 (follow-up 10): a security check, posted on the Privacy page
 
 - **A Security check card on the Privacy page**, in plain language: what

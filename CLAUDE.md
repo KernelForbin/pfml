@@ -188,6 +188,19 @@ It's standalone on purpose: public, no sign-in, no `style.css`, no
 tokens, light and dark, are copied from `style.css`, so a palette change
 there updates them too (a test compares both).
 
+## The daily security check
+
+`.github/workflows/security-check.yml` runs `scripts/security_check.py`
+every morning; a clean run redeploys, and the privacy page shows when it
+last passed (README, Security check). When it fails, read the run's
+summary. A new Supabase advisory needs a judgment on whether it touches
+PFML, then a line in `scripts/security_reviewed.txt` (id, date, why).
+Supabase publishes some advisories only on its own repos, not in GitHub's
+global database, and a 30-day review once missed a critical Storage one
+that way (2026-10-24), so read those repos too when rechecking by hand. A
+full review by hand also updates the card's "Full review" date and its
+wording, and every claim on it has to stay true.
+
 ## Dark mode: colours go through tokens
 
 Dark mode is a choice, light by default whatever the device says: the Dark
@@ -225,7 +238,9 @@ verified" has to be both.
   whenever the supabase-js version or its integrity hash changes (a wrong
   hash blanks every page), and `-p test_live_round_repeats.py` whenever
   `fp_kind()` or the round-check functions change (read-only; the only
-  place that SQL actually runs before members use it).
+  place that SQL actually runs before members use it), and
+  `-p test_live_security_check.py` whenever `scripts/security_check.py`
+  changes (needs `GH_TOKEN=$(gh auth token)` too, for GitHub's rate limit).
   Note: `python -m unittest tests.test_x` does not work here, since
   `tests/` isn't a package on the path; use `discover`.
 - Main branch: `main`. Work on a branch; don't merge or push to `main`

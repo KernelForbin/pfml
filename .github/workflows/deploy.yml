@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # After each daily security check, so a clean one's time reaches the
+  # privacy page (security-check.yml; README, Security check).
+  workflow_run:
+    workflows: [Security check]
+    types: [completed]
+    branches: [main]
 
 # Read-only by default. Only the deploy job, which runs no repo code, gets
 # the Pages and token permissions; the build job runs the test suite.
@@ -30,8 +36,14 @@ concurrency:
 # CLAUDE.md, Deploy.
 jobs:
   build:
+    # A failed security check deploys nothing, so the page keeps its last
+    # clean time; the skipped build skips the deploy job too.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read   # to look up the last clean security check
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -72,6 +84,17 @@ jobs:
       # files stay as they are. scripts/stamp_assets.py says more.
       - name: Stamp scripts and styles with this commit
         run: python scripts/stamp_assets.py site "${GITHUB_SHA::12}"
+
+      # The privacy page says when the daily security check last passed.
+      # Every deploy looks it up, so a push never resets it, and the time is
+      # in this checkout only, like the stamps above.
+      - name: Stamp the last clean security check
+        timeout-minutes: 2
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          at="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow security-check.yml --status success --limit 1 --json updatedAt --jq '.[0].updatedAt // empty')"
+          python scripts/stamp_check_time.py site "$at"
 
       # No configure-pages step: it only reports the site's base URL for
       # static site generators, which plain HTML doesn't need, and it would

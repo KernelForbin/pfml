@@ -26,6 +26,7 @@
   .sec-card h2 { margin: 0; font-size: 1.15rem; }
   .sec-status { padding: 3px 10px; border-radius: 999px; background: var(--wash); color: var(--deep); font: 700 0.8rem/1.4 "Archivo", sans-serif; }
   .sec-when { color: var(--muted); font-size: 0.86rem; width: 100%; }
+  .sec-when + .sec-when { margin-top: -6px; }
   .sec-card ul { margin: 12px 0 0; padding-left: 20px; }
   .sec-card li { margin: 6px 0; }
   .sec-card h3 { margin: 14px 0 4px; font-size: 0.98rem; }
@@ -49,14 +50,16 @@
     <div class="sec-head">
       <h2 id="sec-title">Security check</h2>
       <span class="sec-status">1 problem found and fixed</span>
-      <span class="sec-when">Last checked October 24, 2026</span>
+      <span class="sec-when">Full review: October 24, 2026</span>
+      <span class="sec-when" id="secAuto">Daily check: not run yet</span>
     </div>
     <ul>
-      <li><b>New security problems:</b> we went through the security problems announced in the last 30 days for everything PFML is built on: Supabase, GitHub, the sign-in library, and the browsers you use. None of them affect PFML.</li>
+      <li><b>New security problems:</b> we went through the security problems announced in the last 30 days for everything PFML is built on: Supabase, GitHub, the sign-in library, and the browsers you use. One mattered: on October 14, Supabase announced a serious flaw in its file storage that could let a stranger replace stored files. Supabase has fixed it on PFML's project, and we checked every stored league file against our own copy: they all match. None of the others affect PFML.</li>
       <li><b>Tested from the outside:</b> we tried to get into the site the way a stranger would, without signing in. Every part of the league's data, every members-only feature and the stored files all said no. Nothing could be read or changed.</li>
       <li><b>A locked sign-in library:</b> the code that handles signing in is fixed to one exact version and checked against its fingerprint. If anyone tampered with the copy online, your browser would refuse to run it.</li>
       <li><b>Checked our own code:</b> anything members type, like replies and comments, is shown as plain text, so it can't run as code in someone else's browser.</li>
       <li><b>One problem, fixed:</b> a signed-in member could save a reaction with a specially chosen name that stopped votes, reactions and replies from loading on that round, for everyone. It couldn't read or change anyone's data. Now any reaction is treated as plain text.</li>
+      <li><b>Checked every day:</b> each morning, an automatic check looks for newly announced problems in Supabase, the sign-in library and the tools that publish the site, makes sure the Supabase services PFML runs on have every fix, and repeats the test from the outside. The time above is when it last passed. If something needs a person to look at it, the time stays put until they have.</li>
     </ul>
     <h3>What you can do</h3>
     <ul>
@@ -106,6 +109,15 @@
   if (/\.html$/i.test(location.pathname)) {
     history.replaceState(history.state, "",
       location.pathname.replace(/\.html$/i, "").replace(/\/index$/i, "/") + location.search + location.hash);
+  }
+  /* The deploy writes when the daily security check last passed, in UTC
+     (scripts/stamp_check_time.py); show it in the reader's own time. */
+  var checked = document.querySelector("#secAuto time");
+  if (checked) {
+    var at = new Date(checked.getAttribute("datetime"));
+    if (!isNaN(at)) checked.textContent = at.toLocaleString("en-US",
+      { month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })
+      .replace(/\s(AM|PM)$/, " $1");   // keeps "AM" with its time on a phone
   }
 </script>
 </body>

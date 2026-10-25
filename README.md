@@ -41,6 +41,11 @@ scripts/update_emoji_data.py  regenerates site/emoji-data.js from Unicode's
                               emoji list; run by hand, rarely
 scripts/enrich_comments.py    run by hand, calls the Claude API. Never run
                               by build.py or by the Action.
+scripts/security_check.py     the daily security check (security-check.yml);
+                              scripts/security_reviewed.txt lists the Supabase
+                              advisories already judged
+scripts/stamp_check_time.py   at deploy, puts the last clean check's time on
+                              the privacy page
 supabase/schema.sql      tables, access rules and buckets; run once
 supabase/migrations/     one-off changes to the live project, run by hand in
                          the SQL Editor (schema.sql already includes them)
@@ -262,16 +267,65 @@ card itself (`showGate` in `auth.js`), since a signed-out visitor sees
 only that card; the footers are hidden until sign-in. The privacy page's
 own footer links back to the site and to the features page.
 
-Near its top, a **Security check** card gives members a plain-language
-summary of the latest check and its date. The 2026-10-24 check covered:
-security advisories from the previous 30 days for Supabase, GitHub
-Actions, supabase-js and browsers (none applied); a read-only probe of the
-live project with only the public key (every table returned 0 rows,
-writes and members-only functions were refused, storage listed nothing,
-and the search function said "members only"); and a review of every place
-the pages put text into HTML (all escaped). That review also found the
-reaction-name problem under Reactions, which was fixed. Update the card's
-date and wording at every recheck, and keep each claim true.
+### Security check
+
+Near the privacy page's top, a **Security check** card gives members a
+plain-language summary, with two times: the last full review (by hand,
+in the card's wording) and when the daily check last passed (stamped at
+deploy). Keep each claim on it true.
+
+**The 2026-10-24 full review** covered security advisories from the
+previous 30 days for Supabase, GitHub Actions, supabase-js and browsers; a
+read-only probe of the live project with only the public key (every table
+returned 0 rows, writes and members-only functions were refused, storage
+listed nothing, and the search function said "members only"); and a review
+of every place the pages put text into HTML (all escaped). That review
+found the reaction-name problem under Reactions, which was fixed.
+
+The first pass missed one advisory, which a recheck the same evening
+caught. Supabase Storage GHSA-8rrf-w776-x75g (critical, published
+2026-10-14) let a stranger upload or overwrite files, in private buckets
+too, through signed resumable-upload routes, up to Storage 1.80.1. It's
+published only on Supabase's own repo: it isn't in GitHub's global advisory
+database, and NVD's "supabase" keyword mostly finds other apps (22 of 24
+CVEs in four months, measured 2026-10-24). Live Storage reported 1.80.2,
+the fixed version (`/storage/v1/version`). Every object in both buckets was
+read back with the secret key and matched the local copies byte for byte,
+all written by the publish at 00:56 UTC on 2026-10-25, with no files
+`publish.py` doesn't send. Whether anything was swapped before Supabase
+patched the project can't be known, and that publish would have overwritten
+it. Since the bucket's data reaches the page, playlist links from it now
+become links only when they're `https`.
+
+**The daily check** (`.github/workflows/security-check.yml`, 11:17 UTC)
+runs `scripts/security_check.py`, which fails when:
+
+- an advisory in GitHub's database affects the exact version of
+  supabase-js, a package it bundles, or a pinned action (reviewed or malware)
+- live Storage or Auth (they report their versions) sits inside the range
+  of one of Supabase's own advisories for it
+- any Supabase repo, or PostgREST, published an advisory since the last
+  clean run that isn't listed in `scripts/security_reviewed.txt`
+- the outside test reaches anything: a row of any table in `schema.sql`, a
+  write to a table with an insert policy (each attempt breaks a check
+  constraint, so it can't land even if a policy let it through), a function
+  other than `is_member`/`is_admin` (which answer a stranger `false`), a
+  bucket's files, or an Edge Function
+
+A clean run triggers the deploy (`workflow_run`), and every deploy looks
+up the latest clean run and writes its time into the deploy's copy of the
+privacy page (`scripts/stamp_check_time.py`), so no commit is needed. The
+page shows it in the reader's own time. A failed run deploys nothing, so
+the page keeps its last clean time, and GitHub emails the failure to the
+account that last changed the schedule.
+
+When it fails: read the run's summary. For a new Supabase advisory, judge
+whether it touches PFML and add a line to `scripts/security_reviewed.txt`
+(id, date, why), then push. Listing an advisory never quiets the version
+check: a live service inside its range keeps failing until Supabase patches
+it. GitHub turns off scheduled workflows in a public repo after 60 days with
+no commits, and the card's time would then show its age; re-enable it under
+Actions.
 
 ## Results by round, and the comments on them
 

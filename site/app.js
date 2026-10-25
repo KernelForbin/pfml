@@ -294,21 +294,24 @@
   function playlistTile(item, group, stats) {
     var name = String(item.label || "").replace(/^PFML\s*-\s*(S\d+\s*-\s*)?/i, "");
     var icon = /podium/i.test(item.label) ? PLAYLIST_ICONS.podium : PLAYLIST_ICONS.all;
-    var idm = /playlist\/([A-Za-z0-9]+)/.exec(item.url || "");
+    // https only: the data comes from the storage bucket, and a swapped file
+    // mustn't be able to plant a javascript: link (README, Members only)
+    var url = /^https:\/\//i.test(item.url || "") ? item.url : "";
+    var idm = /playlist\/([A-Za-z0-9]+)/.exec(url);
     var st = idm && stats && stats[idm[1]];
     var inner = '<span class="pl-top"><span class="pl-icon">' + icon + "</span>" +
-        (item.url ? '<span class="pl-out" aria-hidden="true">&nearr;</span>' : "") + "</span>" +
+        (url ? '<span class="pl-out" aria-hidden="true">&nearr;</span>' : "") + "</span>" +
       '<span class="pl-kicker">' + esc(group) + "</span>" +
       '<span class="pl-name">' + esc(name) + "</span>" +
-      '<span class="pl-cta">' + (!item.url ? "Coming soon" : !st ? "Open in Spotify" :
+      '<span class="pl-cta">' + (!url ? "Coming soon" : !st ? "Open in Spotify" :
         playlistStatsParts(st).map(function (x) { return '<span class="pl-stat">' + x + "</span>"; }).join("")) + "</span>";
-    if (!item.url) {
+    if (!url) {
       var soon = el("div", "pl-tile is-soon", inner);
       soon.setAttribute("aria-label", item.label + ", coming soon");
       return soon;
     }
     var a = el("a", "pl-tile", inner);
-    a.href = item.url; a.target = "_blank"; a.rel = "noopener";
+    a.href = url; a.target = "_blank"; a.rel = "noopener";
     a.setAttribute("aria-label", item.label + (st ? ", " + playlistStatsParts(st).join(", ") : "") + ", opens in Spotify");
     return a;
   }
