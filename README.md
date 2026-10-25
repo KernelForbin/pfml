@@ -532,6 +532,27 @@ the script's SVG and that the committed PNG is what it draws. A phone that
 added PFML to its home screen before a change keeps the old icon until it's
 removed and added again.
 
+**Getting people to add it.** On phones, a **Get the app** button sits in
+the top bar (`account.js`) until it's been tapped once, and **Add to home
+screen** stays in the initials menu. Neither shows once the site is running
+from the home screen (`display-mode: standalone`, or `navigator.standalone`
+on iOS). What the tap does depends on the device:
+- **Android Chrome** offers its own install prompt (`beforeinstallprompt`,
+  caught as soon as `account.js` loads, since it fires once and early), so
+  one tap installs.
+- **iOS** has no such prompt, so a small dialog shows the steps: Share, then
+  Add to Home Screen.
+- **Apps' built-in browsers** (Instagram, Messenger) can't add a site to the
+  home screen at all, so the dialog says to open pfml.fun in Safari or
+  Chrome. Their user agents also say iPhone or Android, so they're checked
+  first.
+- **Desktop** gets the menu item only, with browser-install steps.
+
+Measured 2026-10-24 in a browser: the button fits on the top row beside
+the inbox and initials at 375px and 320px. `.acct-item` needed an explicit
+`[hidden] { display: none }`, or the menu item would have shown inside the
+installed app too (the emoji search lesson, in CLAUDE.md).
+
 **Unverified on an iPhone:** a home-screen web app on iOS keeps its own
 storage, separate from Safari, so members sign in once inside it. Google
 sign-in in that mode has been unreliable on some iOS versions. If it fails,

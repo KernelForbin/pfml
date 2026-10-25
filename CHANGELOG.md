@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-10-24 (follow-up 9): Get the app
+
+- **A "Get the app" button in the top bar on phones**, and **Add to home
+  screen** in the initials menu. On Android, Chrome's own install prompt
+  appears in one tap. On iPhone, a short dialog shows where to tap (Share,
+  then Add to Home Screen). Inside Instagram's or Messenger's browser, it
+  says to open the site in Safari or Chrome first. The top-bar button goes
+  away after one tap, and neither shows once PFML is running from the home
+  screen.
+- **Two catches before shipping:** the menu item's `hidden` attribute lost
+  to `.acct-item`'s `display: block`, so it would have shown inside the
+  installed app. And a dark-mode rule placed mid-file would have quietly
+  exempted the rest of the stylesheet from the dark-mode checks, so a new
+  test keeps every dark rule in the block at the end.
+- **Verified:** the suite passes, with 6 new tests, break-checked (7 breaks;
+  one got through at first and its test was tightened). In a browser: the
+  button on the top row at 375px and 320px with no sideways scroll; the
+  Android steps; Chrome's prompt used directly when offered; the iPhone and
+  in-app steps in dark mode; nothing offered when running as the installed
+  app; menu item only on desktop. Not verified on a real phone.
+
 ## 2026-10-24 (follow-up 8): a new icon
 
 - **The icon is now a dark record on the purple tile**, with three grooves

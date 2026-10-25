@@ -106,6 +106,17 @@ class NoFixedLightColours(unittest.TestCase):
             with self.subTest(name):
                 self.assertNotRegex(self.outside_tokens(read(name)), r"(?<![-\w])color:\s*var\(--magenta\)")
 
+    def test_dark_overrides_live_only_in_the_dark_block_at_the_end(self):
+        # the checks here read everything before the first [data-theme="dark"]
+        # rule as the light stylesheet, so one mid-file would exempt the rest
+        css = no_comments(read("style.css"))
+        start = css.index('[data-theme="dark"]') - len(":root")
+        self.assertTrue(css[start:].startswith(DARK + " {"), "the first dark rule opens the dark block")
+        for selector in re.findall(r"([^{}]+)\{[^{}]*\}", css[start:]):
+            with self.subTest(selector.strip()[:60]):
+                for part in selector.split(","):
+                    self.assertRegex(part.strip(), r'^(:root)?\[data-theme="dark"\]')
+
     def test_no_light_background_is_hard_coded(self):
         for name in ("style.css", "features.html"):
             with self.subTest(name):

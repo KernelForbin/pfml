@@ -99,6 +99,61 @@ class AddToHomeScreen(unittest.TestCase):
         self.assertIn("-name '*.json'", (ROOT / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8"))
 
 
+class GetTheApp(unittest.TestCase):
+    """The "Get the app" button and the menu's Add to home screen
+    (account.js): Android's own install prompt where the browser offers it,
+    otherwise how to do it on that device."""
+
+    def setUp(self):
+        self.js = read("account.js")
+
+    def test_the_browsers_install_prompt_is_kept_from_the_start(self):
+        # Chrome fires it once, early; listening only after sign-in would miss it
+        # at the top level of the file (two-space indent inside its wrapper),
+        # so it runs as soon as account.js loads, not inside a function
+        top = self.js.split("function build(member) {", 1)[0]
+        self.assertIn('\n  window.addEventListener("beforeinstallprompt", function (ev) {\n    ev.preventDefault();\n    installEvent = ev;', top)
+        self.assertIn('\n  window.addEventListener("appinstalled"', top)
+
+    def test_nothing_offers_it_once_running_as_the_app(self):
+        app = js_body(self.js, "function isApp() {")
+        self.assertIn('window.matchMedia("(display-mode: standalone)").matches', app)
+        self.assertIn("navigator.standalone === true", app)
+        shown = js_body(self.js, "function showInstallControls() {")
+        self.assertIn('if (get) get.hidden = isApp() || platform() === "desktop" || installSeen();', shown)
+        self.assertIn("if (item) item.hidden = isApp();", shown)
+
+    def test_one_tap_installs_where_it_can_and_explains_where_it_cant(self):
+        add = js_body(self.js, "function addToHomeScreen() {")
+        self.assertIn('localStorage.setItem(INSTALL_SEEN_KEY, "1")', add)
+        self.assertIn("if (installEvent) {", add)
+        self.assertIn("ev.prompt();", add)
+        self.assertIn("showInstallHelp();", add.split("return;", 1)[1])
+
+    def test_every_kind_of_device_gets_its_own_steps(self):
+        steps = self.js.split("var INSTALL_STEPS = {", 1)[1].split("};", 1)[0]
+        for key in ("ios", "android", "inapp", "desktop"):
+            self.assertRegex(steps, r"\n    " + key + r": ")
+        self.assertIn("Add to Home Screen", steps.split("android:", 1)[0])
+        platform_ = js_body(self.js, "function platform() {")
+        for ret in ('return "inapp";', 'return "ios";', 'return "android";', 'return "desktop";'):
+            self.assertIn(ret, platform_)
+        # an app's built-in browser is checked before iOS or Android, since its
+        # user agent says iPhone or Android too
+        self.assertLess(platform_.index('return "inapp";'), platform_.index('return "ios";'))
+
+    def test_in_the_top_bar_and_the_menu(self):
+        build = js_body(self.js, "function build(member) {")
+        self.assertIn('<button type="button" class="acct-get" id="acctGet" hidden>Get the app</button>', build)
+        self.assertIn('<button type="button" class="acct-item" id="acctInstall" hidden>Add to home screen</button>', build)
+        self.assertIn('$("acctGet").addEventListener("click", addToHomeScreen);', build)
+        self.assertIn('$("acctInstall").addEventListener("click", addToHomeScreen);', build)
+        css = re.sub(r"/\*.*?\*/", "", read("style.css"), flags=re.S)
+        self.assertRegex(css, r"\.acct-get\[hidden\]\s*\{\s*display:\s*none")
+        # .acct-item sets display: block, which beats [hidden] on its own
+        self.assertRegex(css, r"\.acct-item\[hidden\]\s*\{\s*display:\s*none")
+
+
 class HomeBanner(unittest.TestCase):
     def setUp(self):
         self.app = read("app.js")

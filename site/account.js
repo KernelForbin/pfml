@@ -134,6 +134,94 @@
     if (sw) sw.setAttribute("aria-checked", String(on));
   }
 
+  /* ---- add to home screen ---- */
+
+  // A "Get the app" button in the top bar on phones, until it's been tapped
+  // once (then it lives in the initials menu) or the site is already running
+  // from the home screen. Android's Chrome hands over its own install prompt
+  // (beforeinstallprompt), so one tap installs; iOS has no such thing, so it
+  // shows how: Share, then Add to Home Screen. Apps' built-in browsers
+  // (Instagram, Messenger) can't add to the home screen at all.
+  var INSTALL_SEEN_KEY = "pfml.installSeen";
+  var installEvent = null;
+
+  window.addEventListener("beforeinstallprompt", function (ev) {
+    ev.preventDefault();
+    installEvent = ev;
+    showInstallControls();
+  });
+  window.addEventListener("appinstalled", function () {
+    installEvent = null;
+    showInstallControls();
+  });
+
+  function isApp() {
+    return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+  }
+
+  function platform() {
+    var ua = navigator.userAgent || "";
+    if (/FBAN|FBAV|Instagram|Messenger|Snapchat|TikTok|Line\//i.test(ua)) return "inapp";
+    if (/iPhone|iPad|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) return "ios";
+    if (/Android/.test(ua)) return "android";
+    return "desktop";
+  }
+
+  function installSeen() {
+    try { return localStorage.getItem(INSTALL_SEEN_KEY) === "1"; } catch (e) { return false; }
+  }
+
+  function showInstallControls() {
+    var get = $("acctGet"), item = $("acctInstall");
+    if (get) get.hidden = isApp() || platform() === "desktop" || installSeen();
+    if (item) item.hidden = isApp();
+  }
+
+  var SHARE_ICON =
+    '<svg viewBox="0 0 24 24" width="18" height="18" aria-label="the Share button" role="img">' +
+    '<path d="M12 3v12M8 7l4-4 4 4M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1" ' +
+    'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  var INSTALL_STEPS = {
+    ios: "<ol><li>Tap " + SHARE_ICON + " Share, at the bottom of Safari (the top on an iPad).</li>" +
+      "<li>Scroll down and tap <b>Add to Home Screen</b>.</li><li>Tap <b>Add</b>.</li></ol>",
+    android: "<ol><li>Tap the <b>&#8942;</b> menu at the top right of Chrome.</li>" +
+      "<li>Tap <b>Add to Home screen</b> or <b>Install app</b>.</li><li>Tap <b>Install</b> or <b>Add</b>.</li></ol>",
+    inapp: "<p>This app's built-in browser can't add websites to your home screen. Open <b>pfml.fun</b> in Safari " +
+      "(iPhone) or Chrome (Android), then tap your initials and <b>Add to home screen</b>.</p>",
+    desktop: "<p>In Chrome or Edge, use the install button at the right of the address bar, or <b>Install</b> in the " +
+      "browser's menu. In Safari on a Mac, choose <b>File</b>, then <b>Add to Dock</b>.</p>"
+  };
+
+  function showInstallHelp(which) {
+    var dialog = $("acctInstallHelp");
+    if (!dialog) {
+      dialog = document.createElement("dialog");
+      dialog.id = "acctInstallHelp";
+      dialog.className = "acct-install";
+      document.body.appendChild(dialog);
+    }
+    dialog.innerHTML = "<h2>Put PFML on your home screen</h2>" + INSTALL_STEPS[which || platform()] +
+      '<p class="acct-install-note">It opens full screen, like an app. You sign in once inside it.</p>' +
+      '<form method="dialog"><button class="acct-install-done">Got it</button></form>';
+    if (dialog.showModal) dialog.showModal(); else dialog.setAttribute("open", "");
+  }
+
+  function addToHomeScreen() {
+    try { localStorage.setItem(INSTALL_SEEN_KEY, "1"); } catch (e) { /* private mode: the button stays */ }
+    close(true);
+    showInstallControls();
+    if (installEvent) {
+      var ev = installEvent;
+      ev.prompt();
+      if (ev.userChoice) ev.userChoice.then(function () { installEvent = null; showInstallControls(); });
+      return;
+    }
+    showInstallHelp();
+  }
+
+  PFML.showInstallHelp = showInstallHelp;
+
   function build(member) {
     var bar = document.querySelector(".topbar-inner");
     if (!bar || bar.querySelector(".acct")) return;
@@ -141,6 +229,7 @@
     var box = document.createElement("div");
     box.className = "acct";
     box.innerHTML =
+      '<button type="button" class="acct-get" id="acctGet" hidden>Get the app</button>' +
       '<button type="button" class="acct-btn acct-inbox-btn" id="acctInboxBtn" aria-expanded="false" aria-controls="acctInbox" aria-label="Inbox">' +
         INBOX_ICON + '<span class="acct-badge" id="acctBadge" hidden></span></button>' +
       '<button type="button" class="acct-btn acct-me-btn" id="acctMeBtn" aria-expanded="false" aria-controls="acctMenu" ' +
@@ -151,6 +240,7 @@
         '<a class="acct-item" href="submit">Submit a track</a>' +
         '<a class="acct-item" href="repeats">Repeat checker</a>' +
         '<a class="acct-item" href="profile">My profile</a>' +
+        '<button type="button" class="acct-item" id="acctInstall" hidden>Add to home screen</button>' +
         '<button type="button" class="acct-item acct-theme" id="acctTheme" role="switch" aria-checked="' + isDark() + '">' +
           'Dark mode<span class="acct-switch" aria-hidden="true"></span></button>' +
         '<button type="button" class="acct-item" id="acctSignOut">Sign out</button>' +
@@ -165,6 +255,9 @@
     $("acctMeBtn").addEventListener("click", function () { toggle("menu"); });
     $("acctSignOut").addEventListener("click", function () { PFML.signOut(); });
     $("acctTheme").addEventListener("click", function () { setDark(!isDark()); });
+    $("acctGet").addEventListener("click", addToHomeScreen);
+    $("acctInstall").addEventListener("click", addToHomeScreen);
+    showInstallControls();
     document.addEventListener("click", closeFromOutside);
     document.addEventListener("keydown", closeOnEscape);
     document.addEventListener("visibilitychange", function () {
