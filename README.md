@@ -1647,7 +1647,8 @@ calls it by its number.
 - **Live:** `tests/test_live_seasons.py` (read-only).
 - **The rehearsal:** `supabase/checks/2026-10-25_seasons_rehearsal.sql`
   plays a whole Accelerated season, a Speedy one and a Steady one as the
-  admin and three members. It should say "24 checks held".
+  admin and three members. It said "24 checks held" on 2026-10-25, the
+  day the migration ran.
 - **In a browser,** at 375 and 1280, light and dark, against a stand-in
   following the same rules: every step of setting up, with real clicks and
   typing; Create; the season's section (move, remove, add, a settings save

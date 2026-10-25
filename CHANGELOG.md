@@ -19,14 +19,16 @@
   - the Submit page waits for a round to open, with Coming up below;
   - "x/N submitted" counts the season's players;
   - a round is announced when it opens, to its players.
-- **Waits on:** the migration `2026-10-25_seasons.sql` and its rehearsal
-  (24 checks). Push only after both.
+- **Set up the same day:** the user ran the migration, then the rehearsal
+  ("Rehearsal passed: 24 checks held"). The live checks pass: strangers
+  are refused the eight new functions and both tables, only a commissioner
+  sets up a season, and every live round has an opening time before its
+  deadline.
 - **Verified:**
   - the suite passes (647), with 57 breaks in a scratch clone, all caught;
   - in a browser with a stand-in following the same rules, at 375 and
     1280, light and dark. Six problems were found and fixed there (README,
     Seasons on the site).
-  - Not yet run: the rehearsal in the real database.
 
 ## 2026-10-25 (follow-up 9): commissioners, stage 1
 
