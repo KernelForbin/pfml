@@ -1756,6 +1756,14 @@ turn notifications on again.
 - **Not possible here:** the browser pane allows no service workers at all
   (a one-line worker failed too), and it blocks notifications. So the real
   end-to-end check is a phone after setup.
+- **On a real phone, 2026-10-25:** the user's iPhone, in the installed app,
+  turned notifications on and Send me a test arrived. The database then
+  held one device, on Apple's push service (`web.push.apple.com`), so
+  Apple accepted the WebCrypto encryption and VAPID signature.
+  - **Gotcha:** right after the deploy, the menu had no Notifications.
+    The installed app kept showing the page it already had (and Pages lets
+    phones keep files for 10 minutes). Fully closing the app and reopening
+    it brought the new version.
 
 ## Scoring model
 

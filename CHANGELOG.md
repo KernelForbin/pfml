@@ -25,7 +25,10 @@
   features pages cover notifications once the key is set. Live, read-only:
   every new function refuses a stranger, the function refuses anyone
   without the secret, and a call as the timer answered
-  `{"claimed":0,"sent":0}`. Not yet seen: a notification on a real phone.
+  `{"claimed":0,"sent":0}`. Then on a real phone: the user's iPhone, in
+  the installed app, turned notifications on and the test arrived, through
+  Apple's push service. It took a full close and reopen of the app first,
+  to drop the page it was still showing from before the deploy.
 
 ## 2026-10-25 (follow-up 6): reminders, built and waiting on setup
 
