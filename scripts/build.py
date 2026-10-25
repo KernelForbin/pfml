@@ -418,11 +418,84 @@ def read_csv(path):
 
 
 def track_id(uri):
-    """spotify:track:XXXX -> XXXX"""
+    """spotify:track:XXXX -> XXXX. A site round's YouTube or SoundCloud key
+    (site_uri) has the same shape, so the service is checked too."""
     if not uri:
         return None
     parts = uri.split(":")
-    return parts[-1] if len(parts) == 3 and parts[1] == "track" else None
+    return parts[-1] if len(parts) == 3 and parts[0] == "spotify" and parts[1] == "track" else None
+
+
+# ---- rounds voted on the site (README, Site rounds in the stats) ----
+
+SITE_ROUNDS_FILE = "site_rounds.json"
+SITE_NAMES = {"spotify": "Spotify", "youtube": "YouTube", "soundcloud": "SoundCloud"}
+
+
+def with_link(out, track):
+    """out, plus the track's link when it was sent from YouTube or
+    SoundCloud: copies of a track carry it wherever its spotifyId goes."""
+    if track.get("link"):
+        out["link"] = track["link"]
+    return out
+
+
+def site_uri(platform, track):
+    """The key a site track goes by here, in place of Music League's Spotify
+    URI: Spotify's own for a Spotify pick, so it lines up with everything
+    keyed that way, and the same shape for YouTube and SoundCloud."""
+    return f"{platform}:track:{track}"
+
+
+def site_season_rows(folder):
+    """A season's rounds voted on pfml.fun (site_rounds.json, which
+    scripts/publish.py writes from the database's site_rounds_export()), as
+    rows shaped like Music League's CSVs, so everything below counts them
+    the same way. Plus what those rows can't carry, by (round id, uri): the
+    track's Spotify copy (album art, repeat checks), its link when it was
+    submitted on YouTube or SoundCloud, and a forfeit when its submitter
+    didn't vote and the round says that costs their points.
+    Returns (competitors, rounds, submissions, votes, extras)."""
+    path = folder / SITE_ROUNDS_FILE
+    if not path.exists():
+        return [], [], [], [], {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    players = data.get("players") or {}
+    rounds, subs, votes, extras = [], [], [], {}
+    taking_part = set()
+    for r in data.get("rounds") or []:
+        playlist = r.get("spotify_playlist")
+        rounds.append({"ID": r["id"], "Created": r["created_at"], "Name": r["name"],
+                       "Description": r.get("prompt") or "",
+                       "Playlist URL": f"https://open.spotify.com/playlist/{playlist}" if playlist else ""})
+        voted = {v["voter"] for v in r.get("votes") or []}
+        uri_of = {}
+        for s in r.get("submissions") or []:
+            uri = site_uri(s["platform"], s["track"])
+            uri_of[s["id"]] = uri
+            submitter = s.get("submitter") or ""
+            title = s.get("title")
+            if not title:
+                # the playlists step names tracks; a round it never ran on
+                title = f"{SITE_NAMES.get(s['platform'], 'A')} track {s.get('tag') or ''}".strip()
+                print(f"  ! {folder.name}: {r['name']}: a track has no title yet (run scripts/round_playlists.py)")
+            subs.append({"Spotify URI": uri, "Title": title, "Album": "", "Artist(s)": s.get("artist") or "",
+                         "Submitter ID": submitter, "Created": r["created_at"], "Comment": "",
+                         "Round ID": r["id"], "Visible To Voters": "Yes"})
+            extra = {"spotifyId": s["track"] if s["platform"] == "spotify" else s.get("spotify_match")}
+            if s["platform"] != "spotify":
+                extra["link"] = {"platform": s["platform"], "id": s["track"]}
+            if submitter and submitter not in voted and not r.get("nonvoters_keep_points"):
+                extra["forfeit"] = True
+            extras[(r["id"], uri)] = extra
+            taking_part.add(submitter)
+        for v in r.get("votes") or []:
+            votes.append({"Spotify URI": uri_of[v["submission"]], "Voter ID": v["voter"],
+                          "Created": v.get("cast_at") or "", "Points Assigned": str(v["points"]),
+                          "Comment": v.get("comment") or "", "Round ID": r["id"]})
+            taking_part.add(v["voter"])
+    competitors = [{"ID": pid, "Name": players[pid]} for pid in sorted(taking_part) if pid in players]
+    return competitors, rounds, subs, votes, extras
 
 
 def playlist_id(url):
@@ -612,6 +685,28 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
     sub_rows = read_csv(folder / "submissions.csv")
     vote_rows = read_csv(folder / "votes.csv")
 
+    # rounds voted on the site join the export's, in the same shape
+    site_people, site_rounds, site_subs, site_votes, site_extra = site_season_rows(folder)
+    known = {r["ID"] for r in competitor_rows}
+    competitor_rows += [r for r in site_people if r["ID"] not in known]
+    round_rows += site_rounds
+    sub_rows += site_subs
+    vote_rows += site_votes
+
+    def spotify_of(rid, uri):
+        """The track's Spotify id: its own, or a site track's Spotify copy."""
+        extra = site_extra.get((rid, uri))
+        return extra["spotifyId"] if extra else track_id(uri)
+
+    def track_ref(rid, uri):
+        """What a page needs to link a track: its Spotify id, and for a site
+        track sent from YouTube or SoundCloud, where it was sent from."""
+        ref = {"spotifyId": spotify_of(rid, uri)}
+        link = site_extra.get((rid, uri), {}).get("link")
+        if link:
+            ref["link"] = link
+        return ref
+
     names = {r["ID"]: r["Name"] for r in competitor_rows}
     if translations is None:
         translations = load_translations()
@@ -680,7 +775,7 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
             "roundId": v["Round ID"],
             "roundName": round_name_by_id.get(v["Round ID"], ""),
             "trackTitle": sub.get("Title", "") if sub else "",
-            "spotifyId": track_id(v["Spotify URI"]),
+            **track_ref(v["Round ID"], v["Spotify URI"]),
             "submitterId": sub.get("Submitter ID") if sub else None,
         }
         # Only ever attached when enrich_comments.py has actually labelled
@@ -736,12 +831,16 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
                     downvotes += 1
                 received.append({"voterId": vid, "voterName": names.get(vid, "Unknown"), "points": pts})
 
-            total = sum(r["points"] for r in received)
+            earned = sum(r["points"] for r in received)
+            # a site round's track whose submitter didn't vote scores 0 when
+            # the round says so (README, Voting on the site)
+            forfeit = site_extra.get((rid, uri), {}).get("forfeit", False)
+            total = 0 if forfeit else earned
             artists = split_artists(s["Artist(s)"])
             received.sort(key=lambda r: r["points"], reverse=True)
 
             song = {
-                "spotifyId": track_id(uri),
+                **track_ref(rid, uri),
                 "title": s["Title"],
                 "album": s["Album"],
                 "artists": artists,
@@ -755,7 +854,7 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
                 "backers": len(received),
                 "spread": round(statistics.pstdev([r["points"] for r in received]), 2) if len(received) > 1 else 0,
                 "comments": comments_at.get((rid, uri), []),
-                "art": track_art.get(track_id(uri)),
+                "art": track_art.get(spotify_of(rid, uri)),
                 # every scoring vote, compact: [voter id, points], biggest
                 # first. Zero-point rows aren't votes (they're comments,
                 # already in "comments"); names come from "competitors".
@@ -764,6 +863,12 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
             tr = translation_for(translations, f"{rid}|{uri}", song["note"], translated) if song["note"] else None
             if tr:
                 song["noteTranslation"] = tr
+            if forfeit:
+                song["forfeit"] = {"earned": earned}
+            if not track_id(uri):
+                # a site track's own key, for the comment lookup (lookup.json)
+                song["uri"] = uri
+            song["_uri"] = uri      # for this round's kingmaker check; dropped below
             songs.append(song)
             all_songs.append(song)
 
@@ -783,7 +888,7 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
                     bonus = total
                     dd_used[submitter] = {
                         "roundId": rid, "roundName": rnd["Name"], "trackTitle": s["Title"],
-                        "spotifyId": track_id(uri), "basePoints": total, "bonus": bonus,
+                        "spotifyId": spotify_of(rid, uri), "basePoints": total, "bonus": bonus,
                     }
                     song["dailyDouble"] = {"bonus": bonus}
 
@@ -811,7 +916,11 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
                 if rank <= 3:
                     player[pid]["podiums"] += 1
 
-        winning_uris = {s["spotifyId"] for s in songs if s.get("place") == 1}
+        # by the build's own key, not the Spotify id: two site tracks with
+        # no Spotify copy would both have none, and look like one track
+        winning_uris = {s["_uri"] for s in songs if s.get("place") == 1}
+        for s in songs:
+            del s["_uri"]
 
         # voter behaviour for this round
         for vid in electorate:
@@ -825,9 +934,9 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
                 backed += 1
                 if pts > top_bet:
                     top_bet = pts
-                    top_uris = [track_id(s["Spotify URI"])]
+                    top_uris = [s["Spotify URI"]]
                 elif pts == top_bet:
-                    top_uris.append(track_id(s["Spotify URI"]))
+                    top_uris.append(s["Spotify URI"])
             if vid in voter and backed:
                 voter[vid]["roundsVoted"] += 1
                 voter[vid]["tracksBackedTotal"] += backed
@@ -1038,7 +1147,7 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
             "words": len(comment_words(text)),
             "roundName": round_name_by_id.get(r["Round ID"], ""),
             "trackTitle": r.get("Title", ""),
-            "spotifyId": track_id(r["Spotify URI"]),
+            **track_ref(r["Round ID"], r["Spotify URI"]),
         })
     subs_by_player = {}
     for r in sub_rows:
@@ -1085,15 +1194,15 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
         track_label = lambda t: f'{t["title"]} ({t["submitterName"]})'
         track_order = lambda t: (t["title"].lower(), t["submitterName"].lower())
         g = best_of(all_songs, lambda t: t["points"], order=track_order)
-        highlights["topTrack"] = with_ties({k: g[0][k] for k in
-                                           ("title", "artistText", "album", "submitterName", "points", "spotifyId", "roundName")},
+        highlights["topTrack"] = with_ties(with_link({k: g[0][k] for k in
+                                           ("title", "artistText", "album", "submitterName", "points", "spotifyId", "roundName")}, g[0]),
                                           g, track_label)
 
         contested = [s for s in all_songs if s["backers"] >= 3]
         if contested:
             g = best_of(contested, lambda t: t["spread"], order=track_order)
-            highlights["divisiveTrack"] = with_ties({k: g[0][k] for k in
-                                                    ("title", "artistText", "submitterName", "spread", "spotifyId", "roundName")},
+            highlights["divisiveTrack"] = with_ties(with_link({k: g[0][k] for k in
+                                                    ("title", "artistText", "submitterName", "spread", "spotifyId", "roundName")}, g[0]),
                                                    g, track_label)
 
         shut_out = [s for s in all_songs if s["points"] <= 0]
@@ -1200,8 +1309,8 @@ SKIN_TONE_RE = re.compile("[\U0001F3FB-\U0001F3FF]")
 def comment_card(e):
     """One comment as a quote card shows it: the text, its English when it
     was written in another language, and the track and round it was on."""
-    card = {"text": e["text"], "words": len(comment_words(e["text"])), "roundName": e["roundName"],
-            "trackTitle": e["trackTitle"], "spotifyId": e["spotifyId"], "points": e["points"]}
+    card = with_link({"text": e["text"], "words": len(comment_words(e["text"])), "roundName": e["roundName"],
+                      "trackTitle": e["trackTitle"], "spotifyId": e["spotifyId"], "points": e["points"]}, e)
     if e.get("translation"):
         card["translation"] = e["translation"]
     return card
@@ -1589,12 +1698,12 @@ def build_profiles(season_datas):
         for n, r in enumerate(d["rounds"], 1):
             for s in r["songs"]:
                 sub = profile(s["submitterId"], s["submitterName"])
-                sub["tracks"].append({
+                sub["tracks"].append(with_link({
                     "title": s["title"], "artistText": s["artistText"], "spotifyId": s["spotifyId"],
                     "art": s.get("art"), "points": s["points"], "place": s["place"],
                     "roundId": r["id"], "roundName": r["name"], "roundNumber": n,
                     "seasonKey": d["key"], "seasonLabel": d["label"],
-                })
+                }, s))
                 for voter, pts in s["votes"]:
                     if pts <= 0:
                         continue
@@ -1640,13 +1749,13 @@ def build_vault(season_datas):
                     continue
                 comments = sorted(s["comments"], key=lambda c: (-c["points"], -len(c["comment"])))
                 best = comments[0] if comments else None
-                winners.append({
+                winners.append(with_link({
                     "seasonKey": d["key"], "seasonLabel": d["label"], "roundId": r["id"], "roundNumber": n,
                     "roundName": r["name"], "title": s["title"], "artistText": s["artistText"],
                     "submitterId": s["submitterId"], "submitterName": s["submitterName"],
                     "spotifyId": s["spotifyId"], "art": s.get("art"), "points": s["points"], "note": s["note"],
                     "comment": {k: best[k] for k in ("voterName", "comment", "translation") if k in best} if best else None,
-                })
+                }, s))
     return {"winners": winners}
 
 
@@ -1660,7 +1769,9 @@ def build_lookup(season_datas):
         for n, r in enumerate(d["rounds"], 1):
             rounds[r["id"]] = {
                 "season": d["key"], "seasonLabel": d["label"], "number": n, "name": r["name"],
-                "tracks": {"spotify:track:" + s["spotifyId"]: s["title"] for s in r["songs"] if s["spotifyId"]},
+                # keyed as comment ids are: a site track by its own key
+                "tracks": {s.get("uri") or "spotify:track:" + s["spotifyId"]: s["title"]
+                           for s in r["songs"] if s.get("uri") or s["spotifyId"]},
             }
     return {"rounds": rounds}
 
@@ -1676,9 +1787,9 @@ def build_catalog(season_datas):
             rounds.append({"season": d["key"], "seasonLabel": d["label"], "number": n,
                            "name": r["name"], "id": r["id"]})
             for s in r["songs"]:
-                tracks.append({"title": s["title"], "artists": s["artists"], "album": s["album"],
-                               "round": len(rounds) - 1, "submitterName": s["submitterName"],
-                               "place": s.get("place"), "spotifyId": s["spotifyId"], "art": s.get("art")})
+                tracks.append(with_link({"title": s["title"], "artists": s["artists"], "album": s["album"],
+                                         "round": len(rounds) - 1, "submitterName": s["submitterName"],
+                                         "place": s.get("place"), "spotifyId": s["spotifyId"], "art": s.get("art")}, s))
     return {"rounds": rounds, "tracks": tracks}
 
 

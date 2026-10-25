@@ -67,7 +67,9 @@
      Artist and album names are text only, with no IDs, so those go to a
      Spotify search scoped to the name. */
 
-  function trackLink(id) { return id ? "https://open.spotify.com/track/" + id : null; }
+  // where the track was submitted: Spotify, or YouTube/SoundCloud for a
+  // round voted on the site (PFML.songUrl, account.js)
+  function trackLink(t) { return PFML.songUrl(t); }
   function searchLink(q) { return "https://open.spotify.com/search/" + encodeURIComponent(q); }
 
   function extLink(href, text, cls) {
@@ -418,7 +420,7 @@
           '<p class="vault-by">' + esc(w.artistText) + ' &middot; won with ' + w.points + ' pts, sent by <a href="' + profileUrl(w.submitterId) + '">' + esc(w.submitterName) + "</a></p>" +
           (w.note ? '<p class="vault-note">“' + esc(w.note) + "” <small>" + esc(w.submitterName) + "</small></p>" : "") +
           (c ? '<p class="vault-comment">“' + esc(c.comment) + "” <small>" + esc(c.voterName) + "</small>" + PFML.translationHtml(c.translation) + "</p>" : "") +
-          (w.spotifyId ? '<a class="pill" href="https://open.spotify.com/track/' + encodeURIComponent(w.spotifyId) + '" target="_blank" rel="noopener">Play on Spotify &nearr;</a>' : "") +
+          (PFML.songUrl(w) ? '<a class="pill" href="' + esc(PFML.songUrl(w)) + '" target="_blank" rel="noopener">Play on ' + PFML.songService(w) + " &nearr;</a>" : "") +
         "</div></article>";
       $("block-vault").hidden = false;
     }).catch(function (err) { console.error(err); });
@@ -695,19 +697,19 @@
 
     if (songs.length) {
       var best = songs.reduce(function (a, b) { return b.points > a.points ? b : a; });
-      g.appendChild(tile("Best submission", extLink(trackLink(best.spotifyId), best.title),
+      g.appendChild(tile("Best submission", extLink(trackLink(best), best.title),
         esc(best.artistText) + "<br>" + best.points + " points &middot; " + esc(best.roundName)));
     }
     if (songs.length >= 2) {
       var worst = songs.reduce(function (a, b) { return b.points < a.points ? b : a; });
-      g.appendChild(tile("Weakest submission", extLink(trackLink(worst.spotifyId), worst.title),
+      g.appendChild(tile("Weakest submission", extLink(trackLink(worst), worst.title),
         esc(worst.artistText) + "<br>" + worst.points + " points &middot; " + esc(worst.roundName)));
     }
     var contested = songs.filter(function (s) { return s.backers >= 3; });
     if (contested.length) {
       var divisive = contested.reduce(function (a, b) { return b.spread > a.spread ? b : a; });
       if (divisive.spread > 0) {
-        g.appendChild(tile("Most divisive submission", extLink(trackLink(divisive.spotifyId), divisive.title),
+        g.appendChild(tile("Most divisive submission", extLink(trackLink(divisive), divisive.title),
           "&sigma; " + divisive.spread + " among voters who backed it &middot; " + esc(divisive.roundName)));
       }
     }
@@ -919,12 +921,12 @@
     var g = el("div", "hl-grid");
 
     if (h.topTrack) {
-      g.appendChild(tile("Highest-scoring track", extLink(trackLink(h.topTrack.spotifyId), h.topTrack.title),
+      g.appendChild(tile("Highest-scoring track", extLink(trackLink(h.topTrack), h.topTrack.title),
         esc(h.topTrack.artistText) + "<br>" + who(h.topTrack.submitterName) + " &middot; " + h.topTrack.points +
         " points &middot; " + esc(h.topTrack.roundName), false, h.topTrack.tiedWith));
     }
     if (h.divisiveTrack) {
-      g.appendChild(tile("Most divisive track", extLink(trackLink(h.divisiveTrack.spotifyId), h.divisiveTrack.title),
+      g.appendChild(tile("Most divisive track", extLink(trackLink(h.divisiveTrack), h.divisiveTrack.title),
         esc(h.divisiveTrack.artistText) + "<br>widest spread between voters who backed it (&sigma; " +
         h.divisiveTrack.spread + "), from " + who(h.divisiveTrack.submitterName), false, h.divisiveTrack.tiedWith));
     }
@@ -1227,7 +1229,7 @@
     if (showRound) meta += " &middot; " + esc(s.roundName);
     row.innerHTML =
       '<div class="trk-pos">' + pos + "</div>" +
-      '<div class="trk-body"><div class="trk-title">' + extLink(trackLink(s.spotifyId), s.title) +
+      '<div class="trk-body"><div class="trk-title">' + extLink(trackLink(s), s.title) +
       (s.dailyDouble ? ' <span class="dd-badge" title="Counts twice toward ' + esc(s.submitterName) +
         '&#39;s season total: +' + s.dailyDouble.bonus + ' pts">Daily Double</span>' : "") + "</div>" +
       '<div class="trk-meta">' + meta + "</div></div>" +
@@ -1514,7 +1516,7 @@
 
   function commentQuote(c, label, stats) {
     var meta = [];
-    if (c.trackTitle) meta.push(extLink(trackLink(c.spotifyId), c.trackTitle));
+    if (c.trackTitle) meta.push(extLink(trackLink(c), c.trackTitle));
     if (c.roundName) meta.push(esc(c.roundName));
     if (c.seasonLabel) meta.push(esc(c.seasonLabel));
     (stats || [c.words + " words"]).forEach(function (s) { meta.push(esc(s)); });

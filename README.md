@@ -1516,17 +1516,67 @@ then, in one change:
 - The privacy page and the Submit page's footer: "stored without your
   name" and "nobody can see who submitted which track" become "until
   voting closes" for a round that votes here.
+- The footers on Home, All-Time, profiles and the season pages ("Results
+  come from the league's Music League exports") and the round page's
+  ("Built from Music League's CSV export"): results can come from pfml.fun
+  too.
 - The features page, with a What's new line.
 - Telling the league.
 
-**Not built yet:**
+**Not built yet:** no reminders to vote; the page is still titled "Submit
+a track" during voting; and the site has no submitter note, so no Daily
+Double request (Season 3 asks for it in the note) can be made in a round
+voted here. Results reach the stats (Site rounds in the stats, below).
 
-- **Results in the stats.** A round voted here doesn't reach the season
-  pages or the stats: `build.py` reads Music League's CSVs, keyed by
-  Spotify URI, and site tracks can be YouTube or SoundCloud. Turning site
-  results into the build's input is the next piece.
-- **Smaller gaps:** no reminders to vote, and the page is still titled
-  "Submit a track" during voting.
+## Site rounds in the stats
+
+A round voted on pfml.fun counts in the season pages and every stat,
+exactly like a round from Music League's export (built 2026-10-25, ahead of
+voting being switched on):
+
+- **Getting it out of the database.** `site_rounds_export()`
+  (`supabase/migrations/2026-10-25_site_rounds_export.sql`) returns every
+  round voted here whose voting has closed, whole: tracks with their
+  submitters, every vote and comment, and the players' names. It hands
+  over nothing else, so who sent what can't leave the database before the
+  close, whatever a script does. Only the secret key can call it.
+- **Saving it.** `publish.py` calls it first, before anything else, and
+  writes each season's rounds to `data/<season>/site_rounds.json`
+  (local-only like the rest of `data/`; backed up with the exports). It
+  makes the season folder if a season is played only on the site. A
+  season whose file the database no longer backs keeps it, with a warning.
+  A dry run fetches too when the keys are there.
+- **Building it.** `build.site_season_rows()` turns the file into rows
+  shaped like Music League's CSVs and `build_season` adds them to the
+  export's, so standings, places, voter stats, comments, profiles, the
+  vault and the repeat checker all count them with no special cases.
+  With no file, the build is byte for byte what it was (measured on the
+  real data, 2026-10-25).
+- **Tracks off Spotify.** A site track is keyed `<platform>:track:<id>` in
+  place of a Spotify URI (`build.site_uri`); `track_id` reads only
+  `spotify:` keys, so a SoundCloud path is never taken for a Spotify id.
+  Its `spotifyId` is its own for a Spotify pick, or the Spotify copy the
+  playlists step found (album art, repeat checks), or none. A YouTube or
+  SoundCloud pick also carries `link`, which follows it into highlights,
+  comment cards, profiles, the vault and the catalog; every page links a
+  track through `PFML.songUrl` (`account.js`), which goes to where it was
+  submitted, then Spotify. Comment ids and `lookup.json` use the site key.
+- **A submitter who didn't vote** (when the round says that costs them):
+  the track scores 0, places on 0, and adds 0 to the standings; it keeps
+  `forfeit.earned`, and the round page says "Didn't vote, so it scored 0
+  (voters gave it 6)". The votes on it still show and still count in the
+  voters' own stats.
+- **Kingmaker** (who backed the winner) compares the build's own track
+  keys, not Spotify ids: two site tracks with no Spotify copy would both
+  have none and look like one track.
+- **A track the playlists step never named** gets "YouTube track B3" and a
+  warning in the build.
+
+**Checked:** `tests/test_site_results.py` (a made-up season with a Music
+League round and a site round), break-checked; and in a browser against a
+build of that made-up season: the round page links each track to its own
+service and explains the 0, the season standings count the round, and the
+repeat checker links a SoundCloud pick to SoundCloud.
 
 ## Scoring model
 

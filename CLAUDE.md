@@ -195,7 +195,16 @@ Never let it reach Round 7 or any round already open: a round votes here
 only if it was opened that way, and the database refuses to change that
 later. Switching it on changes what the site promises (who submitted what
 is shown once voting closes), so the README's checklist goes with it:
-privacy page, Submit page footer, features page. README, Voting on the site.
+privacy page, Submit page footer, the other footers, features page. README,
+Voting on the site.
+
+A finished site-voted round reaches the stats through `publish.py`, which
+fetches it from `site_rounds_export()` (secret key only; it returns a round
+only once its voting has closed) into `data/<season>/site_rounds.json`. So
+"update the data" picks site rounds up too, and a publish is all a finished
+site round needs. Never read `site_submission_owners` or `site_votes`
+directly from a script: the export function is the one door, and it holds
+the "only after voting closes" rule. README, Site rounds in the stats.
 
 ## The daily security check
 

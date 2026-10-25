@@ -813,6 +813,44 @@ grant execute on function public.site_round_results(uuid) to authenticated;
 revoke all on function public.site_round_votes(uuid) from public, anon;
 grant execute on function public.site_round_votes(uuid) to authenticated;
 
+-- ---------------------------------------------------------------- site rounds in the stats
+-- supabase/migrations/2026-10-25_site_rounds_export.sql adds the same to the
+-- live project. README, Site rounds in the stats.
+
+create or replace function public.site_rounds_export()
+returns jsonb language sql stable security definer set search_path = public as $$
+  select jsonb_build_object(
+    'rounds', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', r.id, 'season_key', r.season_key, 'name', r.name, 'prompt', r.prompt,
+        'created_at', r.created_at, 'voting_ended_at', coalesce(r.voting_closed_at, r.voting_closes_at),
+        'spotify_playlist', r.spotify_playlist, 'point_budget', r.point_budget,
+        'nonvoters_keep_points', r.nonvoters_keep_points,
+        'submissions', coalesce((
+          select jsonb_agg(jsonb_build_object(
+            'id', s.id, 'tag', s.tag, 'platform', s.platform, 'track', s.track,
+            'title', s.title, 'artist', s.artist, 'spotify_match', s.spotify_match,
+            'position', s.position, 'submitter', m.competitor_id) order by s.tag)
+            from public.site_submissions s
+            left join public.site_submission_owners o on o.submission_id = s.id
+            left join public.members m on m.user_id = o.user_id
+           where s.round_id = r.id), '[]'::jsonb),
+        'votes', coalesce((
+          select jsonb_agg(jsonb_build_object(
+            'submission', v.submission_id, 'voter', m.competitor_id, 'points', v.points,
+            'comment', v.comment, 'cast_at', v.cast_at) order by v.submission_id, m.competitor_id)
+            from public.site_votes v
+            join public.members m on m.user_id = v.user_id
+           where v.round_id = r.id), '[]'::jsonb)
+      ) order by r.created_at)
+        from public.site_rounds r
+       where r.votes_on_site and public.site_round_phase(r.id) = 'finished'), '[]'::jsonb),
+    'players', coalesce((select jsonb_object_agg(p.competitor_id, p.name) from public.players p), '{}'::jsonb));
+$$;
+
+revoke all on function public.site_rounds_export() from public, anon, authenticated;
+grant execute on function public.site_rounds_export() to service_role;
+
 -- ---------------------------------------------------------------- storage
 
 insert into storage.buckets (id, name, public)

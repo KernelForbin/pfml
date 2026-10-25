@@ -125,8 +125,24 @@
     return "finished";
   }
 
+  // Where a track lives, to link it: where it was submitted (a round voted
+  // on the site carries `link` for a YouTube or SoundCloud pick; README,
+  // Site rounds in the stats), else Spotify. Null when there's neither.
+  var LINK_SERVICES = { youtube: "YouTube", soundcloud: "SoundCloud" };
+  function songUrl(t) {
+    var link = t && t.link;
+    if (link && link.platform === "youtube") return "https://www.youtube.com/watch?v=" + encodeURIComponent(link.id);
+    if (link && link.platform === "soundcloud") {
+      return "https://soundcloud.com/" + String(link.id).split("/").map(encodeURIComponent).join("/");
+    }
+    return t && t.spotifyId ? "https://open.spotify.com/track/" + encodeURIComponent(t.spotifyId) : null;
+  }
+  function songService(t) { return (t && t.link && LINK_SERVICES[t.link.platform]) || "Spotify"; }
+
   PFML.avatar = avatar;
   PFML.roundOrder = roundOrder;
+  PFML.songUrl = songUrl;
+  PFML.songService = songService;
   PFML.reactionGlyph = reactionGlyph;
   PFML.when = when;
   PFML.translationHtml = translationHtml;

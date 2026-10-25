@@ -83,8 +83,8 @@
         '<span class="rc-where"><a href="' + esc(where) + '">' + esc(r.seasonLabel) + " · Round " + r.number + ": " + esc(r.name) + "</a>" +
         " · by " + esc(t.submitterName) +
         (t.place ? " · " + ordinal(t.place) + " of " + roundSize[t.round] : "") + "</span></span>" +
-      '<a class="rc-play" href="https://open.spotify.com/track/' + encodeURIComponent(t.spotifyId) +
-        '" target="_blank" rel="noopener" aria-label="Open ' + esc(t.title) + ' on Spotify">↗</a></li>';
+      (PFML.songUrl(t) ? '<a class="rc-play" href="' + esc(PFML.songUrl(t)) +
+        '" target="_blank" rel="noopener" aria-label="Open ' + esc(t.title) + " on " + PFML.songService(t) + '">↗</a>' : "") + "</li>";
   }
 
   function group(title, list) {

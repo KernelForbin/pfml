@@ -560,8 +560,9 @@
   function trackHtml(s, tiedPlaces) {
     var rows = voteRows(s);
     var voters = (s.votes || []).length;
-    var title = s.spotifyId
-      ? '<a href="https://open.spotify.com/track/' + esc(s.spotifyId) + '" target="_blank" rel="noopener">' + esc(s.title) + "</a>"
+    var url = PFML.songUrl(s);
+    var title = url
+      ? '<a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(s.title) + "</a>"
       : esc(s.title);
     return '<article class="rp-track" id="t-' + esc(s.spotifyId || s.title) + '">' +
       '<div class="rp-track-main">' + artHtml(s.art, "rp-art") +
@@ -572,6 +573,9 @@
         "</div>" +
         '<div class="rp-score"><b>' + pointsLabel(s.points) + "</b><span>" + counted(voters, "voter") + "</span></div>" +
       "</div>" +
+      // a round voted on the site: its submitter didn't vote, so it scored 0
+      (s.forfeit ? '<p class="rp-forfeit">Didn\u2019t vote, so it scored 0' +
+        (s.forfeit.earned ? " (voters gave it " + s.forfeit.earned + ")" : "") + ".</p>" : "") +
       '<div class="rp-submitter">' + avatar(s.submitterId, s.submitterName) +
         "<span>Submitted by <b>" + personLink(s.submitterId, s.submitterName) + "</b></span>" +
         (s.dailyDouble ? '<span class="dd-badge">Daily Double +' + s.dailyDouble.bonus + "</span>" : "") + "</div>" +

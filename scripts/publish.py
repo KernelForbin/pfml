@@ -7,9 +7,12 @@ season data no longer lives in the public repo or on the public site.
     python scripts/publish.py --dry-run  build and list what would upload
 
 What it does:
-  0. looks up album art for any track it hasn't seen before (Spotify's
-     public oEmbed endpoint, no key or account) and caches it in
-     data/track_art.json, so the build itself stays offline
+  0. fetches the rounds voted on pfml.fun whose voting has closed into
+     data/<season>/site_rounds.json, which the build counts next to the
+     exports (README, Site rounds in the stats); then looks up album art
+     for any track it hasn't seen before (Spotify's public oEmbed endpoint,
+     no key or account) and caches it in data/track_art.json, so the build
+     itself stays offline
   1. runs scripts/build.py (site/data/*.json + site/seasonN.html), then
      writes site/data/playlist_stats.json: each home-page playlist's track
      count and running time, from Spotify's public pages (no key)
@@ -68,6 +71,36 @@ def backup_files():
     return files
 
 
+def fetch_site_rounds():
+    """Rounds voted on pfml.fun whose voting has closed, from the database's
+    site_rounds_export() (secret key only), into data/<season>/site_rounds.json
+    for the build (README, Site rounds in the stats). The database hands over
+    a round only once its voting has closed, so who sent which track can't
+    leave it any earlier, whatever this script does. A season with no such
+    round keeps any file it has, with a warning, rather than losing it."""
+    data = supa.request("POST", "/rest/v1/rpc/site_rounds_export", body={}) or {}
+    players = data.get("players") or {}
+    by_season = {}
+    for r in data.get("rounds") or []:
+        if not re.fullmatch(r"season\d+", r.get("season_key") or ""):
+            raise SystemExit(f"Site round {r.get('name')!r} has a season key the build can't use: {r.get('season_key')!r}")
+        by_season.setdefault(r["season_key"], []).append(r)
+    for key, rounds in sorted(by_season.items()):
+        folder = build.DATA_DIR / key
+        folder.mkdir(exist_ok=True)
+        ids = {s.get("submitter") for r in rounds for s in r["submissions"]} | {v["voter"] for r in rounds for v in r["votes"]}
+        out = {"rounds": rounds, "players": {pid: players[pid] for pid in sorted(ids) if pid in players}}
+        (folder / build.SITE_ROUNDS_FILE).write_text(json.dumps(out, ensure_ascii=False, indent=1, sort_keys=True),
+                                                     encoding="utf-8")
+        print(f"Site rounds: {key}: {len(rounds)} finished round(s) voted on pfml.fun.")
+    for folder in build.season_folders():
+        if folder.name not in by_season and (folder / build.SITE_ROUNDS_FILE).exists():
+            print(f"  ! {folder.name}/{build.SITE_ROUNDS_FILE} is here but the database has no finished site round "
+                  f"for {folder.name}; it's kept as it is.")
+    if not by_season:
+        print("Site rounds: none finished yet.")
+
+
 class RateLimited(Exception):
     pass
 
@@ -107,6 +140,8 @@ def refresh_art():
             tid = build.track_id(r.get("Spotify URI"))
             if tid:
                 ids.add(tid)
+        # rounds voted on the site: their Spotify tracks and Spotify copies
+        ids |= {e["spotifyId"] for e in build.site_season_rows(folder)[4].values() if e.get("spotifyId")}
     missing = sorted(i for i in ids if not cache.get(i))
     if not missing:
         print(f"Album art: all {len(ids)} tracks cached.")
@@ -199,6 +234,11 @@ def main():
     ap.add_argument("--dry-run", action="store_true", help="build and list uploads, send nothing")
     args = ap.parse_args()
 
+    # read-only, so a dry run fetches them too (but needs the keys for it)
+    if args.dry_run and not supa.has_keys():
+        print("Site rounds: not fetched (no keys in .env); the build uses any saved site_rounds.json.")
+    else:
+        fetch_site_rounds()
     refresh_art()
     print("Building...")
     build.main()

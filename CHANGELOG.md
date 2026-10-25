@@ -1,5 +1,34 @@
 # Changelog
 
+## 2026-10-25 (follow-up 4): rounds voted on the site count in the stats
+
+- **A round voted on pfml.fun now counts in the season pages and every
+  stat**, like one from Music League's export: standings, places, voter
+  stats, comments, profiles, the vault and the repeat checker. Nothing
+  shows yet, since voting is still switched off.
+- **How:** a new database function, `site_rounds_export()`, hands
+  `publish.py` (secret key only) each site round whose voting has closed,
+  and never one before. `publish.py` saves them to
+  `data/<season>/site_rounds.json`, and `build.py` reads them next to the
+  CSVs as rows of the same shape. Waiting on the user:
+  `supabase/migrations/2026-10-25_site_rounds_export.sql`.
+- **Tracks off Spotify** link to where they were submitted (YouTube or
+  SoundCloud), through one helper every page uses. The Spotify copy, where
+  the playlists step found one, gives album art and repeat checks.
+- **A submitter who didn't vote scores 0** for the round, and the round
+  page says why.
+- **Two fixes found on the way:** the build would have read a SoundCloud
+  key as a Spotify id. And "backed the winner" compared Spotify ids, so two
+  tracks with no Spotify copy would have counted as the same one.
+- **Verified:** the suite passes, with 26 new tests, break-checked (18
+  breaks; one got through and its test was tightened). With no site
+  rounds, the real data builds byte for byte as before. In a browser,
+  against a build of a made-up season with a site round:
+  - the round page links each track to its own service and explains the 0;
+  - the standings count the round;
+  - the repeat checker links a SoundCloud pick to SoundCloud;
+  - no console errors from the site's own code.
+
 ## 2026-10-25 (follow-up 3): voting on the site, built and switched off
 
 - **Voting on pfml.fun, for a later round, not Round 7.** The user wants the

@@ -26,6 +26,12 @@ def _load_env_file():
         os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
 
 
+def has_keys():
+    """Whether the URL and secret key are set, without stopping if not."""
+    _load_env_file()
+    return bool(os.environ.get("SUPABASE_URL") and os.environ.get("SUPABASE_SECRET_KEY"))
+
+
 def config():
     _load_env_file()
     url = os.environ.get("SUPABASE_URL", "").rstrip("/")
