@@ -1539,8 +1539,9 @@ for the league's commissioners." It has:
 - **League status (the admin only):** as before (Admin status, above).
 
 **What a commissioner can't do:** choose commissioners, see who has an
-invite link waiting, delete a round, delete other members' replies, or see
-who submitted which track (nobody can). The admin promotes someone from the
+invite link waiting, delete a round (the admin can, within limits: Deleting a
+round, below), delete other members' replies, or see who submitted which
+track (nobody can). The admin promotes someone from the
 page, so no player's name goes into this public repo.
 
 **Database** (`supabase/migrations/2026-10-25_commissioner.sql`, the same
@@ -1895,6 +1896,58 @@ the notification switches and `site_rounds_export`.
   - when the repeat data failed to load, the repeat box vanished, block
     and all;
   - the form's own text still offered Spotify in a YouTube-only round.
+
+## Deleting a round
+
+Asked for 2026-10-25, after four test rounds from 2026-10-18/19 ("Round 7:
+Live Tracks" 1 to 4, each open 15 minutes or less) had to be deleted by
+hand in the SQL Editor. The user's call: **the admin only**, and only a
+round nobody really played.
+
+**On the Commissioner page,** under Earlier rounds, the admin sees "Delete
+this round" on each round the database says can go. It asks first ("Its 1
+track goes with it. This can't be undone."), and a refusal shows in the
+round's own form.
+
+**What can go** (`site_round_delete_problem`, one rule for the list and the
+delete). A round qualifies only if:
+- it's voted in Music League (a season set up on the site removes its
+  rounds under Seasons, before they open);
+- its submissions have closed;
+- it has no playlists;
+- no more than one player sent tracks to it;
+- it has no votes on the site.
+
+The "one player" line is what keeps real rounds safe. "Nobody voted on it"
+alone wouldn't do it: a Music League round is never voted on the site, so
+the real Round 7 would qualify between its close and its playlists.
+
+**The database** (`supabase/migrations/2026-10-25_delete_round.sql`, the
+same block at the end of `schema.sql`):
+- **`deletable_site_rounds()`:** the admin's list, with how many tracks each
+  round would take with it.
+- **`delete_site_round(p_round)`:** locks the round, checks it, deletes it
+  (its tracks and anything else tied to it go by `on delete cascade`), and
+  returns its name.
+- **No direct delete:** the admin's direct delete policy is dropped. It
+  would have deleted any round, the real Round 7 too, so these functions
+  are the only way now.
+
+**Checked:**
+- **Tests:** `tests/test_delete_round.py`. Each assertion was
+  break-checked in a scratch clone (19 breaks, all caught; one got
+  through at first, and the test was tightened).
+- **Live:** `tests/test_live_delete_round.py`. Strangers are refused, the
+  secret key isn't the admin, and no round there now qualifies.
+- **The rehearsal:** `supabase/checks/2026-10-25_delete_round_rehearsal.sql`,
+  "8 checks held" when every rule holds. It also tries to delete every
+  real round and checks they all stay.
+- **In a browser,** at 375 and 1280, light and dark, against a stand-in:
+  - the admin sees Delete only on the listed rounds;
+  - the confirm text;
+  - after a delete the list reloads without the round;
+  - the database's refusal shows in place;
+  - a commissioner sees no Delete, and the list isn't even asked for.
 
 ## Voting on the site
 

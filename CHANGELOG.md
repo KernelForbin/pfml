@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-10-25 (follow-up 15): the admin can delete a round nobody played
+
+- **Four test rounds** from 2026-10-18/19 ("Round 7: Live Tracks" 1 to 4)
+  were deleted by hand in the SQL Editor (the user ran it; it returned
+  those four, and the real Round 7 was untouched).
+- **A Delete button** on the Commissioner page, for the admin only (the
+  user's call). It shows only on a round that was never really played: one
+  voted in Music League, closed, with no playlists, no votes on the site,
+  and tracks from one player at most. Real rounds like Round 7 never
+  qualify, and the database refuses them whatever the page does.
+- **No direct delete any more:** the admin's direct delete policy is
+  dropped, so `delete_site_round` is the only way to delete a round.
+- **Waits on:** the migration `2026-10-25_delete_round.sql` and its
+  rehearsal (8 checks).
+- **Verified:**
+  - the suite passes (742), with 19 breaks in a scratch clone, all caught
+    (one got through at first, and the test was tightened);
+  - in a browser with a stand-in, at 375 and 1280, light and dark.
+
 ## 2026-10-25 (follow-up 14): notes, announcements, services and the repeat rule (commissioners, stage 4)
 
 - **Allowed services:** a season or round can take any of Spotify, YouTube

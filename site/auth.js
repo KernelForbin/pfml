@@ -528,6 +528,15 @@
     updateSiteRound: function (roundId, fields) {
       return client.from("site_rounds").update(fields).eq("id", roundId).select("id").then(must);
     },
+    // The admin only: the rounds that were never really played, which can
+    // be deleted ([{ round_id, tracks }]), and deleting one (README,
+    // Deleting a round).
+    deletableSiteRounds: function () {
+      return client.rpc("deletable_site_rounds").then(must);
+    },
+    deleteSiteRound: function (roundId) {
+      return client.rpc("delete_site_round", { p_round: roundId }).then(must);
+    },
     // Seasons set up on the site (README, Seasons on the site), with who's
     // playing each.
     siteSeasons: function () {

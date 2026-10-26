@@ -277,6 +277,11 @@ its own change with its own migration and rehearsal:
   Daily Double on the site), a repeat rule per round (off, warn, block),
   and announcements pushed to everyone. A block checks **this round
   only**, not the league's history (the user's call).
+- **Deleting a round** (2026-10-25): the admin only, and only a round
+  nobody really played (README, Deleting a round). Keep the "one player at
+  most" rule: without it the real Round 7 would qualify between its close
+  and its playlists. To delete anything else, the user runs SQL by hand
+  after seeing what goes.
 - **Playlists stay manual:** `round_playlists.py` with the user's
   go-ahead each time. The user's account tokens stay in `.env`, never in
   Supabase.

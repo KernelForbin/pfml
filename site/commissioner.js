@@ -4,7 +4,8 @@
    Where the admin and the commissioners run the site's rounds: open one,
    change the open one (name, description, deadline, and voting's when it
    votes here), close it early, and rename or redescribe any earlier one.
-   The admin also chooses who's a commissioner, and sees the league status.
+   The admin also chooses who's a commissioner, sees the league status, and
+   can delete an earlier round that was never really played.
    It took over the admin form the Submit page used to have (2026-10-25).
 
    The database holds every rule (supabase/schema.sql, commissioners): only
@@ -29,7 +30,9 @@
   function isAdmin() { return role() === "admin"; }
   function isCommissioner() { return role() === "admin" || role() === "commissioner"; }
 
-  var state = { rounds: [], seasons: [], index: null, timer: 0 };
+  // deletable: for the admin, round id -> how many tracks it holds, for each
+  // round the database would let them delete (deletable_site_rounds)
+  var state = { rounds: [], seasons: [], index: null, timer: 0, deletable: {} };
 
   function isOpen(r) { return PFML.roundPhase(r) === "submitting"; }
   // a season set up on the site runs its rounds from its own section
@@ -61,10 +64,16 @@
 
   function load() {
     clearTimeout(state.timer);
-    return Promise.all([api().siteRounds(), api().siteSeasons()]).then(function (res) {
+    // without the list the page still works; it just offers no Delete
+    var deletable = isAdmin()
+      ? api().deletableSiteRounds().catch(function (err) { console.error(err); return []; })
+      : Promise.resolve([]);
+    return Promise.all([api().siteRounds(), api().siteSeasons(), deletable]).then(function (res) {
       var rounds = res[0];
       state.seasons = res[1] || [];
       state.rounds = rounds || [];
+      state.deletable = {};
+      (res[2] || []).forEach(function (d) { state.deletable[d.round_id] = d.tracks; });
       // redraw when the open round's deadline passes, so its form goes, or
       // when the next scheduled round opens
       var open = state.rounds.filter(isOpen)[0];
@@ -185,9 +194,34 @@
           '<label class="sub-label" for="cmPrompt-' + esc(r.id) + '">Description</label>' +
           '<textarea class="sub-input sub-textarea" id="cmPrompt-' + esc(r.id) + '" name="prompt" maxlength="2000" rows="3">' + esc(r.prompt) + "</textarea>" +
           '<p class="sub-msg" role="status" hidden></p>' +
-          '<div class="sub-actions"><button type="submit" class="sub-btn">Save</button></div>' +
+          '<div class="sub-actions"><button type="submit" class="sub-btn">Save</button>' +
+            (r.id in state.deletable ? '<button type="button" class="sub-btn sub-btn-quiet cm-round-delete">Delete this round</button>' : "") +
+          "</div>" +
         "</form></details>";
     }).join("");
+  }
+
+  // The admin deletes a round that was never really played: empty, or a
+  // test. The database decides which (site_round_delete_problem) and refuses
+  // the rest, Round 7 and every real round among them. No undo.
+  function onRoundDelete(ev) {
+    var b = ev.target.closest(".cm-round-delete");
+    if (!b) return;
+    var form = b.closest(".cm-round-form");
+    var id = form.closest(".cm-round").getAttribute("data-round");
+    var r = state.rounds.filter(function (x) { return x.id === id; })[0];
+    var tracks = state.deletable[id] || 0;
+    if (!r || !window.confirm("Delete “" + r.name + "” for good? " +
+        (tracks ? (tracks === 1 ? "Its 1 track goes" : "Its " + tracks + " tracks go") + " with it. " : "") +
+        "This can’t be undone.")) return;
+    var msg = form.querySelector(".sub-msg");
+    b.disabled = true;
+    api().deleteSiteRound(id).then(load).catch(function (err) {
+      b.disabled = false;
+      msg.textContent = errText(err);
+      msg.className = "sub-msg is-error";
+      msg.hidden = false;
+    });
   }
 
   function onRoundSave(ev) {
@@ -335,6 +369,7 @@
       return;
     }
     $("cmRoundList").addEventListener("submit", onRoundSave);
+    $("cmRoundList").addEventListener("click", onRoundDelete);
     $("cmPeopleList").addEventListener("click", onPersonClick);
     $("cmAnnounce").addEventListener("submit", onAnnounce);
     $("cmAnnounce").addEventListener("click", onAnnounce);

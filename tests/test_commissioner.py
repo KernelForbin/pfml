@@ -40,6 +40,8 @@ class TheDatabase(unittest.TestCase):
         self.assertIn("public.is_commissioner()", last_policy(self.sql, "site_rounds", "insert"))
         update = last_policy(self.sql, "site_rounds", "update")
         self.assertIn("using (public.is_commissioner()) with check (public.is_commissioner())", update)
+        # The admin's delete policy stood until 2026-10-25_delete_round.sql
+        # dropped it for delete_site_round (test_delete_round.py).
         self.assertIn("public.is_admin()", last_policy(self.sql, "site_rounds", "delete"))
         # the admin's old policies are dropped by name, so they don't linger
         for name in ("admin opens site rounds", "admin edits site rounds"):
