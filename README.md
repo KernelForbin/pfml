@@ -1641,6 +1641,28 @@ the address said `?site=`. Once signed in, it wraps `PFML.api`:
 league submission, since league data never goes in this public repo. Their
 lengths are in comments beside them, and a test holds them under 5 minutes.
 
+**Its rows are what a real round's would be** (asked the same day):
+- **The copies:** `round_playlists.py`'s own matcher found each track's
+  copy on the other service. Spotify was looked up with an app-only token,
+  so `.env` was never rewritten. All 5 YouTube copies came back "sure".
+  The one "unsure", the Spotify copy of a YouTube track, was the very
+  Spotify track that video had been found from, so it was accepted. One
+  YouTube copy changed from the first, hand-picked list.
+- **The order:** the round's one shuffle set the positions.
+- **The playlist:** the stand-in has a real YouTube playlist, "PFML listening
+  demo". It's **public** (the user's call: to share and play off the site),
+  on the user's account, and holds all 10 in the round's order.
+  - Making it, YouTube answered "not found" for a moment straight after
+    creating it, then refused an add with "409 The operation was aborted".
+    Adding one at a time with a pause got all 10 in, with no duplicate
+    playlist.
+  - Checked from outside without signing in: the public page lists all 10,
+    in order.
+
+The listening section now words its playlist note for the playlists a
+round actually has. With only YouTube's it says "same order as the list
+below" rather than "in both apps".
+
 **Checked:**
 - **In a browser,** with a stand-in sign-in that logged every database
   call:

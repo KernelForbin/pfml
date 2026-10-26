@@ -79,10 +79,13 @@
       return;
     }
     var built = !!(r.spotify_playlist || r.youtube_playlist);
+    var both = !!(r.spotify_playlist && r.youtube_playlist);
     host.innerHTML = "<h2>Listen</h2>" +
       (built
-        ? '<div class="sub-playlists"><p class="sub-play-note">The whole round, shuffled, in one tap. Same order in both apps; ' +
-          "they keep playing with your phone locked (YouTube needs Premium for that).</p>" +
+        ? '<div class="sub-playlists"><p class="sub-play-note">The whole round, shuffled, in one tap. ' +
+          (both ? "Same order in both apps; they keep playing with your phone locked (YouTube needs Premium for that)."
+            : r.youtube_playlist ? "Same order as the list below; it keeps playing with your phone locked if you have YouTube Premium."
+            : "Same order as the list below; it keeps playing with your phone locked.") + "</p>" +
           '<div class="sub-actions">' + playlistButtons(r) + "</div></div>"
         : "") +
       '<div class="rp" id="lnPlayer"></div>' +

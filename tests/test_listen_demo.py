@@ -13,7 +13,7 @@ DEMO = (SITE / "listen-demo.js").read_text(encoding="utf-8")
 
 def tracks():
     body = DEMO.split("var TRACKS = [", 1)[1].split("\n  ];", 1)[0]
-    return re.findall(r'\{ platform: "(\w+)", track: "([^"]+)", title: "[^"]+", artist: "[^"]+", '
+    return re.findall(r'\{ platform: "(\w+)", track: "([^"]+)", title: "[^"]+", artist: "[^"]+", position: (\d+), '
                       r'spotify_match: (null|"[^"]+"), youtube_match: (null|"[^"]+") \},?\s+// (\d+):(\d\d)', body)
 
 
@@ -39,12 +39,19 @@ class TheRound(unittest.TestCase):
         found = tracks()
         self.assertEqual(len(found), 10)
         self.assertEqual(sorted(p for p, *_ in found), ["spotify"] * 5 + ["youtube"] * 5)
-        for platform, track, spotify, youtube, minutes, seconds in found:
+        for platform, track, _, spotify, youtube, minutes, seconds in found:
             with self.subTest(track):
                 self.assertRegex(track, r"^[A-Za-z0-9]{22}$" if platform == "spotify" else r"^[A-Za-z0-9_-]{11}$")
                 copy = youtube if platform == "spotify" else spotify
                 self.assertRegex(copy, r'^"[A-Za-z0-9_-]{11}"$' if platform == "spotify" else r'^"[A-Za-z0-9]{22}"$')
+                # its own service's match is the track itself, as round_playlists.py stores it
+                own = spotify if platform == "spotify" else youtube
+                self.assertEqual(own, f'"{track}"')
                 self.assertLess(int(minutes) * 60 + int(seconds), 300)
+
+    def test_each_has_its_place_in_the_rounds_order_and_the_round_its_playlist(self):
+        self.assertEqual(sorted(int(p) for _, _, p, *_ in tracks()), list(range(1, 11)))
+        self.assertRegex(DEMO, r'spotify_playlist: null, youtube_playlist: "[A-Za-z0-9_-]{10,40}"')
 
     def test_it_is_closed_and_not_voted_here(self):
         self.assertIn('closes_at: new Date(now - day).toISOString(), closed_at: null', DEMO)

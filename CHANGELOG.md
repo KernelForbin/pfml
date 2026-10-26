@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-10-26 (follow-up 3): the demo round, built like a real one, with a public YouTube playlist
+
+- **The demo's copies and order come from `round_playlists.py`'s own
+  matcher and shuffle**, as a real round's would: all 5 YouTube copies
+  were "sure", and one changed from the hand-picked list.
+- **A public YouTube playlist, "PFML listening demo", on the user's
+  account** (their call), with all 10 in the round's order. It's linked
+  as Play on YouTube on pfml.fun/round?demo=1, to share and play off the
+  site.
+- **The playlist note fits the playlists a round has:** with only
+  YouTube's, it says "same order as the list below".
+- **Verified:**
+  - the suite passes, with 5 breaks in a scratch clone, all caught;
+  - the playlist's public page, without signing in, lists all 10 in order;
+  - in a browser: the demo's list in the playlist's order, one Play on
+    YouTube button, and a phone starting on YouTube copies.
+
 ## 2026-10-26 (follow-up 2): listening moves to the round page
 
 - **The user's call:** a closed round's playlists, track list and player

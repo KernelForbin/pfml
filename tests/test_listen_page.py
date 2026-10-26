@@ -52,6 +52,12 @@ class TheSection(unittest.TestCase):
         self.assertLess(render.index('if (phase === "upcoming" || phase === "submitting") {'),
                         render.index("PFML.api.roundSubmissions(r.id)"))
 
+    def test_the_playlist_note_fits_the_playlists_there_are(self):
+        render = js_body(LISTEN, "function render(host, r) {")
+        self.assertIn("var both = !!(r.spotify_playlist && r.youtube_playlist);", render)
+        self.assertIn('(both ? "Same order in both apps;', render)
+        self.assertIn(': r.youtube_playlist ? "Same order as the list below; it keeps playing with your phone locked if you have YouTube Premium."', render)
+
     def test_the_playlists_come_first(self):
         render = js_body(LISTEN, "function render(host, r) {")
         self.assertLess(render.index("playlistButtons(r)"), render.index('<div class="rp" id="lnPlayer"></div>'))
