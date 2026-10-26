@@ -63,6 +63,12 @@ class Behaviour(unittest.TestCase):
         self.assertIn(": setTimeout(function () { tap.hidden = false; }, automatic ? STALL_MS : STALL_MS * 2);", self.js)
         self.assertIn("playing: function () { clearTimeout(stallTimer); tap.hidden = true; hint.hidden = true; },", self.js)
 
+    def test_the_note_under_the_player_promises_only_what_holds(self):
+        # the user's call, 2026-10-26: "with the phone locked, use the
+        # playlists" didn't hold, and the Spotify sign-in line went too
+        note = re.search(r'<p class="rp-note">(.*?)</p>', self.js).group(1)
+        self.assertEqual(note, "Keeps going while this page is open and the screen is on.")
+
     def test_a_phone_is_told_to_tap_the_video_not_given_the_cover(self):
         # the cover can't start YouTube on an iPhone and sits over its button
         go = self.js.split("function go(i, automatic) {", 1)[1].split("\n    }\n", 1)[0]

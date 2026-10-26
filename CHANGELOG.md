@@ -17,6 +17,10 @@
     a list tap plays through it.
 - **Measured after it shipped:** on the user's iPhone, a tap on a track in
   the list starts it straight away, and the round plays on by itself.
+- **The note under the player** now says only "Keeps going while this page
+  is open and the screen is on." The user's call: "with the phone locked,
+  use the playlists" didn't hold, and the Spotify sign-in line went too.
+  The features page dropped the same locked-phone claim.
 
 ## 2026-10-26 (follow-up 3): the demo round, built like a real one, with a public YouTube playlist
 

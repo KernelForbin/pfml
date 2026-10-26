@@ -248,8 +248,7 @@
       '<p class="rp-hint" hidden>Tap ▶ on the video to start it. After that the round plays on by itself.</p>' +
       '<div class="rp-stage-wrap" hidden><div class="rp-stage"></div>' +
         '<button type="button" class="rp-tap" data-rp="tap" hidden>Tap to play next</button></div>' +
-      '<p class="rp-note">Keeps going while this page is open and the screen is on. With the phone locked, use the playlists. ' +
-        "Spotify plays full tracks only if you're signed in to Spotify in this browser.</p>";
+      '<p class="rp-note">Keeps going while this page is open and the screen is on.</p>';
 
     var q = function (sel) { return box.querySelector(sel); };
     var stage = q(".rp-stage"), tap = q(".rp-tap"), now = q(".rp-now"), toggle = q(".rp-toggle"), hint = q(".rp-hint");
