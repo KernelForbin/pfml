@@ -1539,6 +1539,17 @@ good (`site/listen.js`, drawn into the round page's `rpListen` section):
   for a round voted on the site the ballot and the results. It no longer
   loads `player.js`.
 
+**Home's banner** (asked 2026-10-26). A Music League round never votes on
+the site, so once it closed, Home's banner used to go blank, and the only
+way to its listening page was the Submit page.
+- **Now:** with no round open and none voting, the banner shows the latest
+  round that has closed (`listenBanner` in `app.js`), until the next round
+  opens. It says "Submissions closed", or "Playlist ready" once the
+  playlists are built, and links to `round?site=<id>`.
+- **What wins the spot:** an open round first, then a round voting on the
+  site, then this.
+- **Checked in a browser** in each state, at 375 too.
+
 **Each track's details** (asked 2026-10-26). Each track shows its length,
 and its album and year where Spotify knows them, as "3:47 · Album ·
 1999", and nothing links off the site from a track.

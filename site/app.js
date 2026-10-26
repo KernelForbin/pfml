@@ -362,7 +362,7 @@
     if (!box) return;
     PFML.api.siteRounds().then(function (rounds) {
       var open = (rounds || []).filter(function (r) { return PFML.roundPhase(r) === "submitting"; })[0];
-      if (!open) { votingBanner(rounds || []); return; }
+      if (!open) { if (!votingBanner(rounds || [])) listenBanner(rounds || []); return; }
       var closes = PFML.closes(open.closes_at);
       box.innerHTML = '<a class="sub-banner-link" href="submit"><span class="sub-banner-kicker">Open for submissions</span>' +
         "<b>" + esc(open.name) + '</b><span class="sub-banner-count" id="submitBannerCount"></span>' +
@@ -378,10 +378,11 @@
   // A round voting on the site (README, Voting on the site), only while the
   // switch in account.js is on: when voting closes, and whether the reader's
   // ballot is in. Only players with a track in the round vote.
+  // Says whether it showed.
   function votingBanner(rounds) {
-    if (!PFML.siteVoting) return;
+    if (!PFML.siteVoting) return false;
     var r = rounds.filter(function (x) { return PFML.roundPhase(x) === "voting"; })[0];
-    if (!r) return;
+    if (!r) return false;
     var closes = PFML.closes(r.voting_closes_at);
     $("submitBanner").innerHTML = '<a class="sub-banner-link" href="submit"><span class="sub-banner-kicker">Voting is open</span>' +
       "<b>" + esc(r.name) + "</b>" +
@@ -396,6 +397,24 @@
       $("submitBannerMine").classList.toggle("is-in", !!voted);
       if (voted) $("submitBannerGo").textContent = "Change your ballot →";
     }).catch(function (err) { console.error(err); });
+    return true;
+  }
+
+  // The latest round that has closed, until the next one opens: straight
+  // to its listening page (listen.js), so a closed round isn't left with
+  // nothing on Home (asked 2026-10-26). Says when its playlist is ready.
+  function listenBanner(rounds) {
+    var done = rounds.filter(function (r) { var p = PFML.roundPhase(r); return p === "closed" || p === "finished"; })
+      .sort(function (a, b) { return Date.parse(b.closed_at || b.closes_at) - Date.parse(a.closed_at || a.closes_at); })[0];
+    if (!done) return;
+    var built = !!(done.spotify_playlist || done.youtube_playlist);
+    var box = $("submitBanner");
+    box.innerHTML = '<a class="sub-banner-link" href="round?site=' + encodeURIComponent(done.id) + '">' +
+      '<span class="sub-banner-kicker">' + (built ? "Playlist ready" : "Submissions closed") + "</span>" +
+      "<b>" + esc(done.name) + "</b>" +
+      '<span class="sub-banner-when">Tap any track to play the round, right here on the site.</span>' +
+      '<span class="sub-banner-go">Listen to the round →</span></a>';
+    box.hidden = false;
   }
 
   // Whether the reader has a track in: their own submission only, the one

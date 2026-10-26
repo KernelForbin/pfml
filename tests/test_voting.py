@@ -192,7 +192,7 @@ class TheSwitch(unittest.TestCase):
         self.assertIn("if (!PFML.siteVoting || !r || !r.votes_on_site) return \"\";", js_body(voting, "function adminFields(r) {"))
         self.assertIn("if (!on(r) || PFML.roundPhase(r) !== \"voting\") return null;", js_body(voting, "function adminPanel(r, done, fail) {"))
         banner = js_body(read(SITE / "app.js"), "function votingBanner(rounds) {")
-        self.assertTrue(banner.lstrip().startswith("if (!PFML.siteVoting) return;"))
+        self.assertTrue(banner.lstrip().startswith("if (!PFML.siteVoting) return false;"))
 
     def test_no_form_asks_for_site_voting(self):
         # a round votes here only as part of a season set up on the site;

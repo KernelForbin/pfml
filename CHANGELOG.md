@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-26 (follow-up 8): Home points to a closed round's listening
+
+- **Once a round closes,** Home's banner shows it, "Submissions closed",
+  or "Playlist ready" once the playlists are built, with Listen to the
+  round → its listening page, until the next round opens. Before, a
+  Music League round's banner went blank at the close.
+- **Verified:**
+  - the suite passes (800), with 6 breaks in a scratch clone, all caught;
+  - in a browser in each state, open, closed and playlist ready, at 375
+    too.
+
 ## 2026-10-26 (follow-up 7): each track's length, album and year; no links off the site
 
 - **Each track on the round page** shows its length, and its album and year

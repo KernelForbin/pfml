@@ -101,6 +101,25 @@ class TrackDetails(unittest.TestCase):
             self.assertIn(col, mig)
 
 
+class HomeBanner(unittest.TestCase):
+    """Asked 2026-10-26: when a round closes, Home's banner sends people to
+    its listening page, until the next round opens."""
+
+    def test_it_takes_the_spot_when_nothing_is_open_or_voting(self):
+        banner = js_body(APP, "function renderSubmitBanner() {")
+        self.assertIn("if (!open) { if (!votingBanner(rounds || [])) listenBanner(rounds || []); return; }", banner)
+        voting = js_body(APP, "function votingBanner(rounds) {")
+        self.assertIn("if (!r) return false;", voting)
+        self.assertTrue(voting.rstrip().endswith("return true;"))
+
+    def test_it_is_the_latest_closed_round_and_links_its_listening_page(self):
+        listen = js_body(APP, "function listenBanner(rounds) {")
+        self.assertIn('return p === "closed" || p === "finished";', listen)
+        self.assertIn("Date.parse(b.closed_at || b.closes_at) - Date.parse(a.closed_at || a.closes_at)", listen)
+        self.assertIn("'<a class=\"sub-banner-link\" href=\"round?site=' + encodeURIComponent(done.id) + '\">'", listen)
+        self.assertIn('(built ? "Playlist ready" : "Submissions closed")', listen)
+
+
 class TheSubmitPage(unittest.TestCase):
     def test_a_closed_round_links_to_its_round_page(self):
         self.assertIn('$("subListenLink").href = "round?site=" + encodeURIComponent(r.id);', SUBMIT)
