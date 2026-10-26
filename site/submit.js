@@ -838,12 +838,16 @@
       rows = PFML.roundOrder(r.id, rows || []);
       if (!rows.length) { $("subTracks").innerHTML = '<li class="sub-empty">No tracks were submitted.</li>'; return; }
       // the round player (player.js) plays them top to bottom; the list
-      // marks the one playing, and a tap starts the round from that track
+      // marks the one playing, a tap on another starts the round from that
+      // track, and a tap on the one playing pauses or resumes it
       var list = { original: rows, order: rows, player: null };
-      list.player = window.PFMLPlayer.mount($("subPlayer"), rows, function (playing) { markPlaying(playing); });
+      list.player = window.PFMLPlayer.mount($("subPlayer"), rows, function (playing, paused) { markPlaying(playing, paused); });
       $("subTracks").onclick = function (ev) {
         var b = ev.target.closest(".sub-track-btn");
-        if (b) list.player.playAt(+b.dataset.i);
+        if (!b) return;
+        var i = +b.dataset.i;
+        if (list.player.playing() === list.order[i]) list.player.togglePause();
+        else list.player.playAt(i);
       };
       $("subShuffle").onclick = function () { reorder(list, shuffled(list)); };
       $("subOriginal").onclick = function () { reorder(list, list.original); };
@@ -869,22 +873,32 @@
       var name = s.title
         ? '<span class="sub-track-name"><b>' + esc(s.title) + "</b>" + (s.artist ? "<small>" + esc(s.artist) + "</small>" : "") + "</span>"
         : '<span class="sub-track-where">' + NAMES[s.platform] + "</span>";
+      var label = s.title ? s.title + (s.artist ? " – " + s.artist : "") : "track " + (i + 1) + " on " + NAMES[s.platform];
       return '<li class="sub-track">' +
-        '<button type="button" class="sub-track-btn" data-i="' + i + '" aria-current="false">' +
+        '<button type="button" class="sub-track-btn" data-i="' + i + '" data-label="' + esc(label) + '" ' +
+          'aria-label="Play ' + esc(label) + '" aria-current="false">' +
           '<span class="sub-pos">' + (i + 1) + "</span>" +
-          '<span class="sub-tag sub-tag-sm">' + esc(s.tag) + "</span>" + name + "</button>" +
+          '<span class="sub-track-play" aria-hidden="true">' + PLAY_ICON + "</span>" + name + "</button>" +
         gapNote(s) +
         (s.note ? '<p class="sub-track-note">' + esc(s.note) + "</p>" : "") +
         '<a class="sub-track-open" href="' + esc(trackUrl(s)) + '" target="_blank" rel="noopener">Open on ' + NAMES[s.platform] + "</a></li>";
     }).join("");
     var playing = list.player.playing();
-    markPlaying(playing ? list.order.indexOf(playing) : -1);
+    markPlaying(playing ? list.order.indexOf(playing) : -1, list.player.paused());
   }
 
-  function markPlaying(playing) {
+  // Play on every track, pause on the one playing (play again while it's
+  // paused); the one playing is outlined either way.
+  var PLAY_ICON = '<svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg>';
+  var PAUSE_ICON = '<svg viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>';
+  function markPlaying(playing, paused) {
     $("subTracks").querySelectorAll(".sub-track").forEach(function (li, i) {
-      li.classList.toggle("is-playing", i === playing);
-      li.querySelector(".sub-track-btn").setAttribute("aria-current", String(i === playing));
+      var on = i === playing, sounding = on && !paused;
+      var b = li.querySelector(".sub-track-btn");
+      li.classList.toggle("is-playing", on);
+      b.setAttribute("aria-current", String(on));
+      b.setAttribute("aria-label", (sounding ? "Pause " : "Play ") + b.getAttribute("data-label"));
+      li.querySelector(".sub-track-play").innerHTML = sounding ? PAUSE_ICON : PLAY_ICON;
     });
   }
 

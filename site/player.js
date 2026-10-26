@@ -200,10 +200,11 @@
 
   /* ---- the player ---- */
 
-  // `box` is an empty element; `tracks` are in play order, each with tag,
+  // `box` is an empty element; `tracks` are in play order, each with
   // platform, track and (once the playlists are built) title, artist,
-  // spotify_match and youtube_match. `onTrack(i)` hears which one is
-  // playing (-1 when stopped), so the list can mark it.
+  // spotify_match and youtube_match. `onTrack(i, paused)` hears which one is
+  // playing (-1 when stopped) and whether it's paused, so the list can mark
+  // it and show play or pause on it.
   function mount(box, tracks, onTrack) {
     var hasMatches = tracks.some(function (t) { return t.spotify_match || t.youtube_match; });
     box.innerHTML =
@@ -237,24 +238,37 @@
     var hooks = {
       playing: function () { clearTimeout(stallTimer); tap.hidden = true; },
       paused: function (p) {
-        isPaused = p;
-        toggle.textContent = p ? "▶" : "⏸";
-        toggle.setAttribute("aria-label", p ? "Play" : "Pause");
+        // Spotify says it many times a second; the list hears only a change
+        var changed = p !== isPaused;
+        setPaused(p);
+        if (changed && onTrack && index >= 0) onTrack(index, p);
       },
       ended: function () { if (index >= 0) go(index + 1, true); },
       failed: function () {
         if (index < 0) return;
         var failedAt = index;
-        now.textContent = "Couldn’t play " + tracks[failedAt].tag + " here; skipping it.";
+        now.textContent = "Couldn’t play track " + (failedAt + 1) + " here; skipping it.";
         setTimeout(function () { if (index === failedAt) go(failedAt + 1, true); }, 1500);
       }
     };
+
+    function setPaused(p) {
+      isPaused = p;
+      toggle.textContent = p ? "▶" : "⏸";
+      toggle.setAttribute("aria-label", p ? "Play" : "Pause");
+    }
+
+    function togglePause() {
+      if (!active) return;
+      if (isPaused) active.play(); else active.pause();
+    }
 
     function go(i, automatic) {
       clearTimeout(stallTimer);
       if (i < 0) i = 0;
       if (i >= tracks.length) { stop("That’s the whole round."); return; }
       index = i;
+      setPaused(false);                         // a new track is meant to play
       var t = tracks[i], src = sourceFor(t, pref);
       // one live player at a time: a change of service removes the other
       Object.keys(adapters).forEach(function (k) {
@@ -267,7 +281,7 @@
       q(".rp-start").hidden = true;
       now.hidden = false;
       showNow(i, src);
-      if (onTrack) onTrack(i);
+      if (onTrack) onTrack(i, false);
       active.load(src.id).catch(function (err) { console.error(err); hooks.failed(); });
       // a browser that won't start it without a tap gets a big button
       stallTimer = setTimeout(function () { tap.hidden = false; }, automatic ? STALL_MS : STALL_MS * 2);
@@ -275,7 +289,7 @@
 
     function showNow(i, src) {
       var t = tracks[i];
-      now.innerHTML = "<b>" + (i + 1) + " of " + tracks.length + "</b> · " + esc(t.tag) +
+      now.innerHTML = "<b>" + (i + 1) + " of " + tracks.length + "</b>" +
         (t.title ? " · " + esc(t.title) + (t.artist ? " – " + esc(t.artist) : "") : "") +
         ' <span class="rp-from">on ' + NAMES[src.platform] + "</span>";
     }
@@ -289,7 +303,7 @@
       if (!playing) return;
       index = tracks.indexOf(playing);
       showNow(index, sourceFor(playing, pref));
-      if (onTrack) onTrack(index);
+      if (onTrack) onTrack(index, isPaused);
     }
 
     function stop(message) {
@@ -302,7 +316,7 @@
       start.hidden = false;
       start.textContent = "Play the round again";
       now.textContent = message;
-      if (onTrack) onTrack(-1);
+      if (onTrack) onTrack(-1, false);
     }
 
     box.addEventListener("click", function (ev) {
@@ -313,7 +327,7 @@
       else if (what === "next") go(index + 1, false);
       else if (what === "prev") go(index - 1, false);
       else if (what === "tap") { tap.hidden = true; if (active) active.play(); }
-      else if (what === "toggle" && active) { if (isPaused) active.play(); else active.pause(); }
+      else if (what === "toggle") togglePause();
     });
     if (sel) sel.addEventListener("change", function () {
       pref = sel.value;
@@ -321,8 +335,9 @@
       if (index >= 0) go(index, false);        // replay this track from the chosen copy
     });
 
-    return { playAt: function (i) { go(i, false); }, setOrder: setOrder,
-             playing: function () { return index >= 0 ? tracks[index] : null; } };
+    return { playAt: function (i) { go(i, false); }, setOrder: setOrder, togglePause: togglePause,
+             playing: function () { return index >= 0 ? tracks[index] : null; },
+             paused: function () { return isPaused; } };
   }
 
   window.PFMLPlayer = { mount: mount };

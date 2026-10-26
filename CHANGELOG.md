@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-10-26 (follow-up 1): play buttons on a round's tracks, no tags
+
+- **No submission tags** (A1, B3) on a closed round's track list or in the
+  player's "now playing" line. Members don't need them.
+- **A play button on each track:** tap one to play the round from there,
+  and tap the one playing to pause or resume it. It shows pause only while
+  its track is sounding, and stays in step with the player's own buttons.
+- **Verified:**
+  - the suite passes, with 15 breaks in a scratch clone, all caught;
+  - in a browser on the listening demo, at 375 and 1280, light and dark:
+    play, pause and resume from the list, a jump from YouTube to Spotify,
+    a pause from the player's button, and Shuffle while paused.
+
 ## 2026-10-26: a listening demo for trying the round player on a phone
 
 - **pfml.fun/submit?demo=1:** the real Submit page with a stand-in closed

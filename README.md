@@ -1514,6 +1514,33 @@ video, a Spotify track as its 30-second preview, a SoundCloud track):
 - **Not measured:** Safari on an iPhone, where a tap per track may be
   needed; the button is there for exactly that.
 
+### The track list's play buttons
+
+Asked for 2026-10-26: the list no longer shows each track's submission tag
+(A1, B3: members don't need them), and neither does the player's "now
+playing" line. A track that won't play is named by its place ("Couldn't
+play track 3"). Each track has a play button instead:
+- **Tap a track** to play the round from there.
+- **Tap the one playing** to pause it, and again to resume.
+- **The button shows pause** only while its track is sounding; a paused
+  track keeps its outline and shows play.
+- **Screen readers** hear "Play" or "Pause" and the track's name.
+
+The player (`player.js`) tells the list when a track starts or stops and
+when it's paused (`onTrack(i, paused)`). It reports a pause only when it
+changes, since Spotify reports its state many times a second. The list
+and the player's own ⏸ button stay in step either way.
+
+Checked in a browser on the listening demo, at 375 and 1280, with real
+clicks:
+- play from the list;
+- pause and resume from the list;
+- jump from a YouTube track to a Spotify one;
+- pause with the player's own button;
+- Shuffle with a track paused.
+
+Contrast is 6.5:1 in light and dark.
+
 ### Listening demo (/submit?demo=1)
 
 Asked for 2026-10-26, to try the round player on a phone without a real
