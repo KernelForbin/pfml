@@ -15,8 +15,8 @@
   - the suite passes (788), with 7 breaks in a scratch clone, all caught;
   - in the browser's phone view: the player is waiting before any tap, and
     a list tap plays through it.
-- **Not yet measured:** whether the iPhone now starts from that first list
-  tap.
+- **Measured after it shipped:** on the user's iPhone, a tap on a track in
+  the list starts it straight away, and the round plays on by itself.
 
 ## 2026-10-26 (follow-up 3): the demo round, built like a real one, with a public YouTube playlist
 

@@ -1582,8 +1582,10 @@ first track waiting and not playing. A tap on the list or on Play the
 round then calls `loadVideoById` on that player straight away, inside the
 tap, with no promise step in between (`load`). iOS starts sound only from
 a tap, and a player made after the tap had missed it.
-- **Whether iOS honours a tap on our page for YouTube's frame** isn't
-  documented. It's for the phone to show.
+- **Measured on the user's iPhone (2026-10-26), after this shipped:** a tap
+  on a track in our list starts it on the first tap, and the round plays
+  on by itself from there. So iOS honours a tap on our page for a YouTube
+  player that was already made, though not for one made after the tap.
 - **If a track hasn't started after 2.5 seconds on a phone,** a line says
   "Tap ▶ on the video to start it. After that the round plays on by
   itself." The big "Tap to play next" cover isn't used there: its play
