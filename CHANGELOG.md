@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-10-26 (follow-up 4): the first tap on a phone, on the list
+
+- **Measured on the user's iPhone:** with every track on YouTube, only the
+  first track needed an extra tap, on YouTube's own player. After that the
+  round played on by itself.
+- **A phone now has its YouTube player ready before the first tap,** with
+  the first track waiting. A tap on the list starts that player inside the
+  tap, which is what iOS needs.
+- **If it still doesn't start,** a phone gets "Tap ▶ on the video to start
+  it" after 2.5 seconds, instead of the cover that hid YouTube's own
+  button.
+- **Verified:**
+  - the suite passes (788), with 7 breaks in a scratch clone, all caught;
+  - in the browser's phone view: the player is waiting before any tap, and
+    a list tap plays through it.
+- **Not yet measured:** whether the iPhone now starts from that first list
+  tap.
+
 ## 2026-10-26 (follow-up 3): the demo round, built like a real one, with a public YouTube playlist
 
 - **The demo's copies and order come from `round_playlists.py`'s own

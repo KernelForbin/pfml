@@ -34,6 +34,7 @@
   };
   var NAMES = { spotify: "Spotify", youtube: "YouTube", soundcloud: "SoundCloud" };
   var STALL_MS = 6000;          // how long a track gets to start before "Tap to play next"
+  var PHONE_HINT_MS = 2500;     // on a phone, before "Tap ▶ on the video"
   var PREF_KEY = "pfml-player-source";
 
   function esc(s) {
@@ -109,7 +110,9 @@
 
   function youtubeAdapter(stage, hooks) {
     var player = null, ready = null;
-    function make(YT, id) {
+    // `cueOnly`: made ahead of the first tap, holding a track without
+    // playing it (cue, below)
+    function make(YT, id, cueOnly) {
       return new Promise(function (resolve) {
         var box = document.createElement("div");
         box.className = "rp-video";
@@ -119,9 +122,9 @@
         new YT.Player(host, {
           host: "https://www.youtube-nocookie.com",
           videoId: id,
-          playerVars: { autoplay: 1, playsinline: 1, rel: 0 },
+          playerVars: { autoplay: cueOnly ? 0 : 1, playsinline: 1, rel: 0 },
           events: {
-            onReady: function (e) { player = e.target; player.playVideo(); resolve(player); },
+            onReady: function (e) { player = e.target; if (!cueOnly) player.playVideo(); resolve(player); },
             onStateChange: function (e) {
               if (e.data === YT.PlayerState.PLAYING) { hooks.playing(); hooks.paused(false); }
               else if (e.data === YT.PlayerState.PAUSED) hooks.paused(true);
@@ -134,10 +137,19 @@
       });
     }
     return {
+      // A player that's ready is told straight away, inside the tap that
+      // asked, not a step later: an iPhone lets a page start sound only
+      // from a tap (README, Listening on the round page).
       load: function (id) {
-        if (!ready) ready = loadScript("youtube").then(function (YT) { return make(YT, id); });
+        if (player) { player.loadVideoById(id); ready = Promise.resolve(player); }
+        else if (!ready) ready = loadScript("youtube").then(function (YT) { return make(YT, id); });
         else ready = ready.then(function (p) { p.loadVideoById(id); return p; });
         return ready;
+      },
+      // A phone makes the player before anyone taps, with the first track
+      // waiting in it, so the first tap finds it ready (player.js mount).
+      cue: function (id) {
+        if (!ready) ready = loadScript("youtube").then(function (YT) { return make(YT, id, true); });
       },
       play: function () { if (player) player.playVideo(); },
       pause: function () { if (player) player.pauseVideo(); },
@@ -233,19 +245,21 @@
           : "") +
       "</div>" +
       '<p class="rp-now" aria-live="polite" hidden></p>' +
+      '<p class="rp-hint" hidden>Tap ▶ on the video to start it. After that the round plays on by itself.</p>' +
       '<div class="rp-stage-wrap" hidden><div class="rp-stage"></div>' +
         '<button type="button" class="rp-tap" data-rp="tap" hidden>Tap to play next</button></div>' +
       '<p class="rp-note">Keeps going while this page is open and the screen is on. With the phone locked, use the playlists. ' +
         "Spotify plays full tracks only if you're signed in to Spotify in this browser.</p>";
 
     var q = function (sel) { return box.querySelector(sel); };
-    var stage = q(".rp-stage"), tap = q(".rp-tap"), now = q(".rp-now"), toggle = q(".rp-toggle");
+    var stage = q(".rp-stage"), tap = q(".rp-tap"), now = q(".rp-now"), toggle = q(".rp-toggle"), hint = q(".rp-hint");
     var pref = readPref(), sel = q('[data-rp="pref"]');
     if (sel) sel.value = pref;
     var adapters = {}, active = null, index = -1, stallTimer = 0, isPaused = false;
+    var phone = isPhone();
 
     var hooks = {
-      playing: function () { clearTimeout(stallTimer); tap.hidden = true; },
+      playing: function () { clearTimeout(stallTimer); tap.hidden = true; hint.hidden = true; },
       paused: function (p) {
         // Spotify says it many times a second; the list hears only a change
         var changed = p !== isPaused;
@@ -291,9 +305,24 @@
       now.hidden = false;
       showNow(i, src);
       if (onTrack) onTrack(i, false);
+      hint.hidden = true;
       active.load(src.id).catch(function (err) { console.error(err); hooks.failed(); });
-      // a browser that won't start it without a tap gets a big button
-      stallTimer = setTimeout(function () { tap.hidden = false; }, automatic ? STALL_MS : STALL_MS * 2);
+      // A browser that won't start it without a tap gets a big button. A
+      // phone gets a line saying to tap the video itself instead, sooner: its
+      // own play button is the tap an iPhone counts, and the big button
+      // would cover it (measured on an iPhone, 2026-10-26).
+      stallTimer = phone
+        ? setTimeout(function () { hint.hidden = false; }, PHONE_HINT_MS)
+        : setTimeout(function () { tap.hidden = false; }, automatic ? STALL_MS : STALL_MS * 2);
+    }
+
+    // A phone makes its YouTube player now, hidden, with the first track
+    // waiting, so a tap on the list or on Play the round can start it within
+    // that tap, which an iPhone needs (adapters' cue and load).
+    var first = tracks.length ? sourceFor(tracks[0], pref) : null;
+    if (phone && first && first.platform === "youtube") {
+      active = adapters.youtube = ADAPTERS.youtube(stage, hooks);
+      active.cue(first.id);
     }
 
     function showNow(i, src) {

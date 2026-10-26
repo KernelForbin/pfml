@@ -60,8 +60,24 @@ class Behaviour(unittest.TestCase):
 
     def test_a_track_that_wont_start_gets_a_tap_button(self):
         self.assertIn('class="rp-tap" data-rp="tap" hidden>Tap to play next', self.js)
-        self.assertRegex(self.js, r"stallTimer = setTimeout\(function \(\) \{ tap\.hidden = false; \}")
-        self.assertRegex(self.js, r"playing: function \(\) \{ clearTimeout\(stallTimer\); tap\.hidden = true; \}")
+        self.assertIn(": setTimeout(function () { tap.hidden = false; }, automatic ? STALL_MS : STALL_MS * 2);", self.js)
+        self.assertIn("playing: function () { clearTimeout(stallTimer); tap.hidden = true; hint.hidden = true; },", self.js)
+
+    def test_a_phone_is_told_to_tap_the_video_not_given_the_cover(self):
+        # the cover can't start YouTube on an iPhone and sits over its button
+        go = self.js.split("function go(i, automatic) {", 1)[1].split("\n    }\n", 1)[0]
+        self.assertIn("stallTimer = phone\n        ? setTimeout(function () { hint.hidden = false; }, PHONE_HINT_MS)", go)
+        self.assertIn('<p class="rp-hint" hidden>Tap ▶ on the video to start it.', self.js)
+
+    def test_a_phone_has_its_youtube_player_ready_before_the_first_tap(self):
+        self.assertIn("if (phone && first && first.platform === \"youtube\") {\n"
+                      "      active = adapters.youtube = ADAPTERS.youtube(stage, hooks);\n"
+                      "      active.cue(first.id);", self.js)
+        adapter = self.js.split("function youtubeAdapter(stage, hooks) {", 1)[1].split("\n  }\n", 1)[0]
+        self.assertIn("playerVars: { autoplay: cueOnly ? 0 : 1, playsinline: 1, rel: 0 },", adapter)
+        self.assertIn("onReady: function (e) { player = e.target; if (!cueOnly) player.playVideo(); resolve(player); },", adapter)
+        # a ready player is told inside the tap, with no promise step between
+        self.assertIn("if (player) { player.loadVideoById(id); ready = Promise.resolve(player); }", adapter)
 
     def test_spotify_ignores_reports_about_the_track_before(self):
         self.assertIn("if (d.playingURI && d.playingURI !== uri) return;", self.js)

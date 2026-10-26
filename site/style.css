@@ -1521,6 +1521,8 @@ body.auth-checking::before {
   color: #fff; font: 800 1.2rem/1.2 "Archivo", sans-serif; cursor: pointer;
 }
 .rp-tap[hidden] { display: none; }
+/* on a phone, instead of the big button over the video (player.js) */
+.rp-hint { margin: 10px 0 0; font-size: 0.95rem; font-weight: 600; color: var(--magenta-text); }
 .rp-note { margin: 10px 0 0; font-size: 0.82rem; color: var(--muted); max-width: 64ch; }
 .sub-playlists { margin: 4px 0 18px; padding: 16px 18px; border-radius: var(--r); background: var(--wash); }
 .sub-playlists[hidden] { display: none; }

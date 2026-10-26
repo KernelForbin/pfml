@@ -1572,8 +1572,26 @@ where there is one".
   YouTube player plays the whole round. Checked in the browser's phone
   view: track 1, a Spotify submission, played its YouTube copy, and Next
   kept the same player.
-- **Not measured:** whether an iPhone then plays on to the next track by
-  itself.
+- **Measured on the user's iPhone (2026-10-26),** with everything on
+  YouTube: only the first track needed an extra tap, on YouTube's own
+  player. After that the round played on by itself.
+
+**So that the first tap can be the one on our list,** a phone now gets its
+YouTube player ready before anyone taps (`cue`). It's made hidden, with the
+first track waiting and not playing. A tap on the list or on Play the
+round then calls `loadVideoById` on that player straight away, inside the
+tap, with no promise step in between (`load`). iOS starts sound only from
+a tap, and a player made after the tap had missed it.
+- **Whether iOS honours a tap on our page for YouTube's frame** isn't
+  documented. It's for the phone to show.
+- **If a track hasn't started after 2.5 seconds on a phone,** a line says
+  "Tap ▶ on the video to start it. After that the round plays on by
+  itself." The big "Tap to play next" cover isn't used there: its play
+  can't start YouTube on an iPhone, and it sits over YouTube's own button.
+- **Checked in the browser's phone view:** the hidden player was there,
+  with track 1 waiting, before any tap. A tap on track 6 in the list played
+  it through that same player. A computer makes nothing ahead. The line's
+  contrast is 6.1:1 light and 5.8:1 dark.
 
 **Checked in a browser,** with a stand-in sign-in and a local copy of the
 real Season 3 stats:
