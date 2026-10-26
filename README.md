@@ -1611,6 +1611,20 @@ Google's reference says browsers may block `playVideo` and
 playlists are the way to listen, and they come first. The features page
 says so.
 
+**Playing in the background on an iPhone: measured, it doesn't**
+(2026-10-26, the user's phone):
+- with the page closed, nothing can play: the player lives in the page;
+- with the screen locked, iOS pauses the video and YouTube stops, and
+  YouTube keeps background play for Premium;
+- pressing play on the lock screen didn't bring it back;
+- full screen, then swiping home for picture-in-picture, didn't keep it
+  playing.
+
+Pulling YouTube's audio out to play it ourselves would break YouTube's
+terms, so it's not an option. The way to listen in the background is the
+round's Spotify playlist in the Spotify app, which plays locked on the
+free plan too, or the YouTube playlist in the YouTube app with Premium.
+
 **A phone starts the player on the YouTube copies** (asked the same day;
 `readPref` in `player.js`). Spotify's player only previews there, so a
 phone (`(hover: none) and (pointer: coarse)`) starts on "YouTube copies
