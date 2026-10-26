@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-26 (follow-up 5): a Listening demo link for the admin
+
+- **In the initials menu, admin only:** Listening demo, opening
+  pfml.fun/round?demo=1, so the demo can be tried from the app installed on
+  a phone, which has no address bar. Commissioners and members don't see it.
+- **Verified:**
+  - the suite passes (790), with 3 breaks in a scratch clone, all caught;
+  - in a browser, measured on screen: shown for the admin and opens the
+    demo; hidden for a commissioner and a member.
+
 ## 2026-10-26 (follow-up 4): the first tap on a phone, on the list
 
 - **Measured on the user's iPhone:** with every track on YouTube, only the

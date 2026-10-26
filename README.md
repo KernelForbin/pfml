@@ -1641,7 +1641,9 @@ Asked for 2026-10-26, to try the round player on a phone without a real
 round to play. **pfml.fun/round?demo=1** is the real round page, signed in
 as usual, showing a stand-in closed round, "Listening demo", of 10 tracks.
 It was on the Submit page (`/submit?demo=1`) until listening moved to the
-round page the same day. The tracks are:
+round page the same day. The admin, and only the admin, has a Listening
+demo link in the initials menu (`acctDemo` in `account.js`), since the app
+installed on a phone's home screen has no address bar. The tracks are:
 - 5 sent from Spotify and 5 from YouTube;
 - each under 5 minutes;
 - each with its copy on the other service, as a round has once its

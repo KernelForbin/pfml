@@ -28,6 +28,14 @@ class ThePage(unittest.TestCase):
                 with self.subTest(page.name):
                     self.assertNotIn("listen-demo.js", page.read_text(encoding="utf-8"))
 
+    def test_the_admin_alone_has_a_link_to_it_in_the_initials_menu(self):
+        # the installed app has no address bar (asked 2026-10-26)
+        account = (SITE / "account.js").read_text(encoding="utf-8")
+        self.assertIn("'<a class=\"acct-item\" href=\"round?demo=1\" id=\"acctDemo\" hidden>Listening demo</a>' +", account)
+        self.assertIn('$("acctDemo").hidden = member.role !== "admin";', account)
+        css = (SITE / "style.css").read_text(encoding="utf-8")
+        self.assertIn(".acct-item[hidden] { display: none; }", css)
+
     def test_it_does_nothing_without_demo_1(self):
         start = DEMO.index('"use strict";')
         self.assertTrue(DEMO[start:].split("\n", 2)[2].lstrip().startswith(
