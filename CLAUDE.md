@@ -255,10 +255,12 @@ Rules for the work:
 Asked for 2026-10-25 (README, Commissioners). The admin makes members
 commissioners from the Commissioner page; never write a player's name into
 the repo to do it (the user's first pick was named in chat, and that's
-where it stays). Stages 1 (the role and the page), 2 (seasons on the site)
-and 3 (more songs and downvotes) are live; stage 4, the extras, is built
-(README, Commissioner extras). The user's calls, in order, each its own
-change with its own migration and rehearsal:
+where it stays). All four stages are live: 1 (the role and the page), 2
+(seasons on the site), 3 (more songs and downvotes) and 4, the extras
+(README, Commissioner extras). A stage that changes a function a live test
+covers reruns that live test too: stage 3 changed `my_submission_described`
+and its live test sat stale until stage 4. The user's calls, in order, each
+its own change with its own migration and rehearsal:
 
 - **Stage 2, seasons:**
   - the season setup in steps (Details, Songs + Votes, Timing, Rounds,

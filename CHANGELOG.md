@@ -16,10 +16,19 @@
   Announcements on in the bell.
 - **No Daily Double on the site** (the user's call).
 - **Every existing round:** keeps all three services and the warning.
-- **Waits on:** the migration `2026-10-25_extras.sql`, its rehearsal (16
-  checks) and redeploying `send-reminders`.
+- **Set up the same day:** the user ran the migration, then the rehearsal
+  ("Rehearsal passed: 16 checks held"), and redeployed `send-reminders`.
+  The live checks pass: strangers are refused the five new functions and
+  the announcements table, only a commissioner posts, and every round kept
+  all three services and the warning.
+- **A live test that was stale since stage 3:** `my_submission_described`
+  answers true for a caller with no tracks since more songs a round; the
+  live repeats test still expected false and wasn't rerun then. The
+  database was right (the page asks only when the reader has tracks); the
+  test is fixed.
 - **Verified:**
-  - the suite passes (695), with 45 breaks in a scratch clone, all caught;
+  - the suite passes (695 before the rebase onto today's other changes,
+    728 after), with 45 breaks in a scratch clone, all caught;
   - in a browser with a stand-in, at 375 and 1280, light and dark. Three
     problems were found and fixed there (README, Commissioner extras).
 ## 2026-10-25 (follow-up 13): how it's built, on the features page

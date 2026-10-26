@@ -1883,8 +1883,8 @@ the notification switches and `site_rounds_export`.
   commissioner posts, every live round kept its services and rule).
 - **The rehearsal:** `supabase/checks/2026-10-25_extras_rehearsal.sql`
   plays three made-up seasons (YouTube only, block song, block artist) as
-  the admin and two members, with notes and an announcement. "16 checks
-  held" when every rule holds.
+  the admin and two members, with notes and an announcement. It said "16
+  checks held" on 2026-10-25, the day the migration ran.
 - **In a browser,** at 375 and 1280, light and dark, against a stand-in:
   a YouTube-only round, both blocks, notes on the picker, Your tracks, the
   ballot and the results, the setup's and round form's new fields, and
