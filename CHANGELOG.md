@@ -16,7 +16,11 @@
 - **Measured on an iPhone** (Safari and Chrome, signed in to Spotify): no
   playing on to the next track by itself, a YouTube track needs a tap on
   YouTube's own player, and Spotify plays previews only. So the playlists
-  come first, and the features page says the iPhone needs a tap per track.
+  come first, and the features page says the iPhone may need a tap per track.
+- **A phone starts the player on the YouTube copies** (the user's call):
+  each Spotify track plays its YouTube copy, the exact track or the closest
+  one, found when the playlists are built. A choice made in the Play menu
+  is kept.
 - **Verified:**
   - the suite passes, with 16 breaks in a scratch clone, all caught;
   - in a browser with a stand-in and a local copy of the real Season 3

@@ -1556,6 +1556,25 @@ Google's reference says browsers may block `playVideo` and
 playlists are the way to listen, and they come first. The features page
 says so.
 
+**A phone starts the player on the YouTube copies** (asked the same day;
+`readPref` in `player.js`). Spotify's player only previews there, so a
+phone (`(hover: none) and (pointer: coarse)`) starts on "YouTube copies
+where there is one".
+- **The copies:** each Spotify track's YouTube copy is the exact track or
+  the closest one. `round_playlists.py` finds it when it builds the
+  playlists, and the round's YouTube playlist is the whole round from
+  YouTube.
+- **Before the playlists are built** there are no copies yet, so a Spotify
+  track still previews.
+- **A choice made in the picker is kept,** as ever. A computer starts on
+  "each track as submitted".
+- **One player for the whole round:** with every track on YouTube, the same
+  YouTube player plays the whole round. Checked in the browser's phone
+  view: track 1, a Spotify submission, played its YouTube copy, and Next
+  kept the same player.
+- **Not measured:** whether an iPhone then plays on to the next track by
+  itself.
+
 **Checked in a browser,** with a stand-in sign-in and a local copy of the
 real Season 3 stats:
 - a site "Round 6" showed Season 3's real 6th round with its listening

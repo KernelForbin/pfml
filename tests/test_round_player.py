@@ -81,6 +81,12 @@ class Behaviour(unittest.TestCase):
         self.assertIn('if (pref === "spotify" && t.spotify_match)', fn)
         self.assertIn("return { platform: t.platform, id: t.track };", fn)
 
+    def test_a_phone_starts_on_the_youtube_copies_unless_someone_chose(self):
+        fn = self.js.split("function readPref() {", 1)[1].split("\n  }\n", 1)[0]
+        self.assertIn('return saved || (isPhone() ? "youtube" : "submitted");', fn)
+        phone = self.js.split("function isPhone() {", 1)[1].split("\n  }\n", 1)[0]
+        self.assertIn('window.matchMedia("(hover: none) and (pointer: coarse)").matches', phone)
+
     def test_the_saved_choice_never_breaks_the_page(self):
         for fn in ("readPref", "writePref"):
             body = self.js.split(f"function {fn}(", 1)[1].split("\n  }\n", 1)[0]

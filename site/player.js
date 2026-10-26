@@ -191,8 +191,17 @@
     return { platform: t.platform, id: t.track };
   }
 
+  // A phone starts on the YouTube copies: Spotify's player plays only
+  // 30-second previews there, signed in or not (measured on an iPhone,
+  // 2026-10-26), and the copies (round_playlists.py) are the exact track or
+  // the closest one. A choice made in the picker is kept, as ever.
   function readPref() {
-    try { return localStorage.getItem(PREF_KEY) || "submitted"; } catch (e) { return "submitted"; }
+    var saved = null;
+    try { saved = localStorage.getItem(PREF_KEY); } catch (e) { /* no storage: the default */ }
+    return saved || (isPhone() ? "youtube" : "submitted");
+  }
+  function isPhone() {
+    return !!(window.matchMedia && window.matchMedia("(hover: none) and (pointer: coarse)").matches);
   }
   function writePref(v) {
     try { localStorage.setItem(PREF_KEY, v); } catch (e) { /* no storage: lasts for this page */ }
