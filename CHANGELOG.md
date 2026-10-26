@@ -14,8 +14,10 @@
 - **The Submit page:** the switch under the note box and in each Edit your
   note, and a line on each of Your tracks saying when its note shows. The
   privacy and features pages say the same.
-- **Waits on:** the migration `2026-10-25_note_toggle.sql` and its
-  rehearsal (10 checks), after `2026-10-25_delete_round.sql`.
+- **Set up the same day:** the user ran the migration, then the rehearsal
+  ("Rehearsal passed: 10 checks held"). The live checks pass: strangers
+  are refused the notes table and the note function, a track no longer
+  has a note column, and the old three-argument call is gone.
 - **Verified:**
   - the suite passes, with 27 breaks in a scratch clone, all caught (one
     got through at first, and the tests were tightened);
@@ -35,8 +37,10 @@
   qualify, and the database refuses them whatever the page does.
 - **No direct delete any more:** the admin's direct delete policy is
   dropped, so `delete_site_round` is the only way to delete a round.
-- **Waits on:** the migration `2026-10-25_delete_round.sql` and its
-  rehearsal (8 checks).
+- **Set up the same day:** the user ran the migration, then the rehearsal
+  ("Rehearsal passed: 8 checks held"). The live checks pass: strangers are
+  refused, the secret key isn't the admin, and no round there now
+  qualifies.
 - **Verified:**
   - the suite passes (742), with 19 breaks in a scratch clone, all caught
     (one got through at first, and the test was tightened);

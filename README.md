@@ -1878,7 +1878,8 @@ Before that nobody reads any, the admin included. The page fetches the
 tracks, then the notes it's allowed, and puts each with its track
 (`roundSubmissions`). `my_submission` gives the owner their own note and
 switch at any time. The rehearsal (`2026-10-25_note_toggle_rehearsal.sql`,
-"10 checks held") plays a round through all three phases.
+"10 checks held" on 2026-10-25, the day the migration ran) plays a round
+through all three phases.
 
 **Announcements** (`site_announcements`): a commissioner writes one on the
 Commissioner page (1 to 1000 characters) and can take it down. Members see
@@ -1963,7 +1964,7 @@ same block at the end of `schema.sql`):
 - **Live:** `tests/test_live_delete_round.py`. Strangers are refused, the
   secret key isn't the admin, and no round there now qualifies.
 - **The rehearsal:** `supabase/checks/2026-10-25_delete_round_rehearsal.sql`,
-  "8 checks held" when every rule holds. It also tries to delete every
+  "8 checks held" on 2026-10-25, the day the migration ran. It also tries to delete every
   real round and checks they all stay.
 - **In a browser,** at 375 and 1280, light and dark, against a stand-in:
   - the admin sees Delete only on the listed rounds;
