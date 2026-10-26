@@ -81,7 +81,7 @@ class TheDatabase(unittest.TestCase):
 class ThePages(unittest.TestCase):
     def test_tracks_come_without_notes_and_notes_come_as_allowed(self):
         body = AUTH.split("roundSubmissions: function (roundId) {", 1)[1].split("\n    },\n", 1)[0]
-        self.assertIn('.select("id, tag, platform, track, position, title, artist, spotify_match, youtube_match")', body)
+        self.assertIn('.select("id, tag, platform, track, position, title, artist, spotify_match, youtube_match, seconds, album, year")', body)
         self.assertIn('client.from("site_submission_notes").select("submission_id, note").eq("round_id", roundId)', body)
         self.assertIn('s.note = notes[s.id] || "";', body)
         self.assertIn("p_in_voting: !!inVoting", AUTH)

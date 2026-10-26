@@ -216,6 +216,15 @@ def split_youtube_title(title, channel):
     return re.sub(r"(?i)vevo$|\s*official$", "", channel).strip(), title
 
 
+def album_of(item):
+    """The album and the year it came out, from a Spotify track, where known:
+    shown with each track on the round page (asked 2026-10-26)."""
+    album = item.get("album") or {}
+    year = (album.get("release_date") or "")[:4]
+    return {"album": (album.get("name") or "")[:300] or None,
+            "year": int(year) if year.isdigit() and 1000 <= int(year) <= 2100 else None}
+
+
 def iso_seconds(iso):
     """YouTube's PT4M13S as seconds."""
     m = re.fullmatch(r"P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", iso or "")
@@ -302,8 +311,8 @@ class Spotify:
 
     def track(self, track_id):
         d = self.call("GET", f"/tracks/{track_id}")
-        return {"title": d["name"], "artist": ", ".join(a["name"] for a in d["artists"]),
-                "seconds": round(d["duration_ms"] / 1000), "id": d["id"]}
+        return dict({"title": d["name"], "artist": ", ".join(a["name"] for a in d["artists"]),
+                     "seconds": round(d["duration_ms"] / 1000), "id": d["id"]}, **album_of(d))
 
     def search(self, title, artist):
         seen, out = set(), []
@@ -313,8 +322,8 @@ class Spotify:
             for t in (d.get("tracks") or {}).get("items") or []:
                 if t and t["id"] not in seen:
                     seen.add(t["id"])
-                    out.append({"id": t["id"], "title": t["name"], "seconds": round(t["duration_ms"] / 1000),
-                                "artist": ", ".join(a["name"] for a in t["artists"])})
+                    out.append(dict({"id": t["id"], "title": t["name"], "seconds": round(t["duration_ms"] / 1000),
+                                     "artist": ", ".join(a["name"] for a in t["artists"])}, **album_of(t)))
             if out:
                 break
         return out
@@ -522,7 +531,7 @@ def match_round(subs, spotify, youtube, overrides, accept=(), rematch=False, log
             info = soundcloud_info(s["track"])
         if not info:
             log(f"  {s['tag']}: couldn't look up the {s['platform']} track (gone or private?); left out")
-            row.update(title=None, artist=None)
+            row.update(title=None, artist=None, seconds=None, album=None, year=None)
             rows.append(row)
             continue
         row["title"], row["artist"] = info["title"][:300], info["artist"][:300]
@@ -542,6 +551,17 @@ def match_round(subs, spotify, youtube, overrides, accept=(), rematch=False, log
                 row[svc + "_match"] = None
                 if verdict == "unsure":
                     unsure.append((s["tag"], svc, info, cand))
+        # What the round page shows with each track: the submitted track's
+        # own length, and the album and year from Spotify (the track itself,
+        # or its Spotify copy).
+        row["seconds"] = info.get("seconds")
+        details = info if s["platform"] == "spotify" else None
+        if details is None and row.get("spotify_match"):
+            try:
+                details = spotify.track(row["spotify_match"])
+            except ApiError:
+                details = None
+        row["album"], row["year"] = (details or {}).get("album"), (details or {}).get("year")
         rows.append(row)
     return rows, unsure
 
@@ -603,7 +623,7 @@ def save_round(r, rows, spotify_id, youtube_id, db=None):
     db = db or supa.request
     for row in rows:
         db("PATCH", "/rest/v1/site_submissions?id=eq." + urllib.parse.quote(row["id"]), body={
-            k: row.get(k) for k in ("position", "title", "artist", "spotify_match", "youtube_match")},
+            k: row.get(k) for k in ("position", "title", "artist", "spotify_match", "youtube_match", "seconds", "album", "year")},
             headers={"Prefer": "return=minimal"})
     db("PATCH", "/rest/v1/site_rounds?id=eq." + urllib.parse.quote(r["id"]), body={
         "spotify_playlist": spotify_id, "youtube_playlist": youtube_id,

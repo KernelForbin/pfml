@@ -13,8 +13,13 @@ DEMO = (SITE / "listen-demo.js").read_text(encoding="utf-8")
 
 def tracks():
     body = DEMO.split("var TRACKS = [", 1)[1].split("\n  ];", 1)[0]
-    return re.findall(r'\{ platform: "(\w+)", track: "([^"]+)", title: "[^"]+", artist: "[^"]+", position: (\d+), '
-                      r'spotify_match: (null|"[^"]+"), youtube_match: (null|"[^"]+") \},?\s+// (\d+):(\d\d)', body)
+    found = re.findall(r'\{ platform: "(\w+)", track: "([^"]+)", title: "[^"]+", artist: "[^"]+", position: (\d+), '
+                       r'spotify_match: (null|"[^"]+"), youtube_match: (null|"[^"]+"), seconds: (\d+), album: "[^"]+", '
+                       r'year: (\d{4}) \},?\s+// (\d+):(\d\d)', body)
+    # the length round_playlists.py would keep is the one in the comment
+    for *_, seconds, _year, minutes, secs in found:
+        assert int(seconds) == int(minutes) * 60 + int(secs), (seconds, minutes, secs)
+    return [(p, t, pos, sp, yt, minutes, secs) for p, t, pos, sp, yt, _s, _y, minutes, secs in found]
 
 
 class ThePage(unittest.TestCase):

@@ -41,7 +41,12 @@ class LiveSpotify(unittest.TestCase):
         info = sp.track(SPOTIFY_TRACK)
         self.assertEqual(info["artist"], "Rick Astley")
         self.assertGreater(info["seconds"], 200)
-        verdict, cand = rp.best(info, sp.search(info["title"], info["artist"]))
+        # the album and year the round page shows (2026-10-26)
+        self.assertTrue(info["album"])
+        self.assertEqual(info["year"], 1987)
+        found = sp.search(info["title"], info["artist"])
+        self.assertTrue(all("album" in c and "year" in c for c in found))
+        verdict, cand = rp.best(info, found)
         self.assertEqual(verdict, "sure", "matching can't find a track by its own title")
 
 

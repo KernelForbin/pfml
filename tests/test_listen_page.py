@@ -72,6 +72,35 @@ class TheSection(unittest.TestCase):
         self.assertIn(">Open in YouTube</a>", buttons)
 
 
+class TrackDetails(unittest.TestCase):
+    """Asked 2026-10-26: no per-track links off the site, and each track's
+    length, album and year (kept by round_playlists.py)."""
+
+    def test_no_track_links_off_the_site(self):
+        draw = js_body(LISTEN, "function drawTracks(list) {")
+        self.assertNotIn("<a ", draw)
+        self.assertNotIn("trackUrl", LISTEN)
+
+    def test_each_track_shows_what_is_known_of_its_length_album_and_year(self):
+        details = js_body(LISTEN, "function detailsText(s) {")
+        for line in ("if (s.seconds > 0) out.push(lengthText(s.seconds));", "if (s.album) out.push(s.album);",
+                     "if (s.year) out.push(String(s.year));", 'return out.join(" · ");'):
+            self.assertIn(line, details)
+        draw = js_body(LISTEN, "function drawTracks(list) {")
+        self.assertIn("(details ? '<small class=\"sub-track-meta\">' + esc(details) + \"</small>\" : \"\")", draw)
+        self.assertIn('return h ? h + ":" + pad(m) + ":" + pad(s) : m + ":" + pad(s);', js_body(LISTEN, "function lengthText(seconds) {"))
+
+    def test_the_page_asks_for_them_and_the_database_has_them(self):
+        auth = (SITE / "auth.js").read_text(encoding="utf-8")
+        self.assertIn("youtube_match, seconds, album, year\").eq(\"round_id\", roundId)", auth)
+        sql = (ROOT / "supabase" / "schema.sql").read_text(encoding="utf-8")
+        mig = (ROOT / "supabase" / "migrations" / "2026-10-26_track_details.sql").read_text(encoding="utf-8")
+        self.assertIn(mig[mig.index("alter table public.site_submissions add column if not exists seconds"):], sql)
+        for col in ("seconds integer\n  check (seconds between 1 and 86400)", "album text\n  check (char_length(album) <= 300)",
+                    "year smallint\n  check (year between 1000 and 2100)"):
+            self.assertIn(col, mig)
+
+
 class TheSubmitPage(unittest.TestCase):
     def test_a_closed_round_links_to_its_round_page(self):
         self.assertIn('$("subListenLink").href = "round?site=" + encodeURIComponent(r.id);', SUBMIT)

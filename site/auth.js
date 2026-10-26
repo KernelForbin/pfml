@@ -471,7 +471,7 @@
     // has closed (site_submission_notes; README, Commissioner extras, Notes).
     roundSubmissions: function (roundId) {
       return Promise.all([
-        client.from("site_submissions").select("id, tag, platform, track, position, title, artist, spotify_match, youtube_match").eq("round_id", roundId).then(must),
+        client.from("site_submissions").select("id, tag, platform, track, position, title, artist, spotify_match, youtube_match, seconds, album, year").eq("round_id", roundId).then(must),
         client.from("site_submission_notes").select("submission_id, note").eq("round_id", roundId).then(must)
       ]).then(function (res) {
         var notes = {};

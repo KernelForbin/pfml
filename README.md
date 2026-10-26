@@ -1539,6 +1539,21 @@ good (`site/listen.js`, drawn into the round page's `rpListen` section):
   for a round voted on the site the ballot and the results. It no longer
   loads `player.js`.
 
+**Each track's details** (asked 2026-10-26). Each track shows its length,
+and its album and year where Spotify knows them, as "3:47 · Album ·
+1999", and nothing links off the site from a track.
+- **Where they come from:** `round_playlists.py` already looked every track
+  up to build the playlists. It now keeps `seconds` (the submitted track's
+  own length: Spotify's or the video's) and `album` and `year`, from
+  Spotify, for a YouTube or SoundCloud track through its Spotify copy.
+- **The database:** `2026-10-26_track_details.sql` adds the three columns
+  to `site_submissions`, read through the existing closed-round policy.
+- **Before a round's playlists are built** the details aren't known, so
+  nothing shows.
+- **Measured 2026-10-26** against the real Spotify (`test_live_playlists`):
+  a track lookup and a search both bring the album and year ("Never Gonna
+  Give You Up": 1987).
+
 **Which stats round a site round is** (`PFMLListen.statsIndex`):
 - **A season played on the site:** the same id, since its export keeps the
   site's ids.

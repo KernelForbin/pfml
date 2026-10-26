@@ -226,6 +226,19 @@ class ServiceCalls(unittest.TestCase):
         self.assertNotIn("%22Lover%22%22", fake.calls[1]["url"])
         self.assertEqual(found[0]["id"], sid(4))
 
+    def test_a_track_lookup_brings_its_album_and_year(self):
+        token = (200, {"access_token": "t"}, {})
+        item = {"id": sid(1), "name": "X", "duration_ms": 200000, "artists": [{"name": "Y"}],
+                "album": {"name": "Blue", "release_date": "1971-06-22"}}
+        fake = FakeHttp([("POST", "api/token", token), ("GET", f"/v1/tracks/{sid(1)}", (200, item, {})),
+                         ("GET", "/v1/search", (200, {"tracks": {"items": [item]}}, {}))])
+        with fake_env(), mock.patch.object(rp, "http", fake):
+            sp = rp.Spotify()
+            info = sp.track(sid(1))
+            found = sp.search("X", "Y")
+        self.assertEqual((info["album"], info["year"], info["seconds"]), ("Blue", 1971, 200))
+        self.assertEqual((found[0]["album"], found[0]["year"]), ("Blue", 1971))
+
     def test_a_rotated_spotify_token_is_saved_and_never_printed(self):
         fake = FakeHttp([("POST", "api/token", (200, {"access_token": "t", "refresh_token": "rotated-secret"}, {})),
                          ("GET", f"/v1/tracks/{sid(1)}", (200, {"id": sid(1), "name": "X", "duration_ms": 1000,
@@ -263,10 +276,16 @@ class ServiceCalls(unittest.TestCase):
 class FakeSpotify:
     def __init__(self):
         self.created, self.updated, self.items = [], [], {}
-        self.catalog = {sid(1): {"id": sid(1), "title": "Bring It On Home To Me - Live", "artist": "Sam Cooke", "seconds": 230},
-                        sid(2): {"id": sid(2), "title": "Mercy, Mercy, Mercy - Live", "artist": "Cannonball Adderley", "seconds": 310}}
+        self.catalog = {sid(1): {"id": sid(1), "title": "Bring It On Home To Me - Live", "artist": "Sam Cooke", "seconds": 230,
+                                 "album": "Live at the Harlem Square Club, 1963", "year": 1985},
+                        sid(2): {"id": sid(2), "title": "Mercy, Mercy, Mercy - Live", "artist": "Cannonball Adderley", "seconds": 310,
+                                 "album": "Mercy, Mercy, Mercy!", "year": 1966}}
 
     def track(self, t):
+        self.looked_up = getattr(self, "looked_up", []) + [t]
+        # like the real one: a track Spotify doesn't have is an API error
+        if t not in self.catalog:
+            raise rp.ApiError(f"Spotify GET /tracks/{t}: 404")
         return dict(self.catalog[t])
 
     def search(self, title, artist):
@@ -347,6 +366,35 @@ class Build(unittest.TestCase):
         self.assertIn("Not on Spotify: K2", sp.created[0][1])
         round_write = [b for p, b in db.writes if "site_rounds" in p][0]
         self.assertEqual((round_write["spotify_playlist"], round_write["youtube_playlist"]), (sid(99), "PLnew0000000"))
+
+    def test_each_track_keeps_its_length_album_and_year(self):
+        # asked 2026-10-26: shown with each track on the round page
+        (_, rows, _, _), db, *_ = self.run_build(overrides={"K2": {"spotify": sid(2)}})
+        by_tag = {r["tag"]: r for r in rows}
+        # a Spotify track: its own length, album and year
+        self.assertEqual((by_tag["Q7"]["seconds"], by_tag["Q7"]["album"], by_tag["Q7"]["year"]),
+                         (230, "Live at the Harlem Square Club, 1963", 1985))
+        # a YouTube track: the video's length, the album and year of its Spotify copy
+        self.assertEqual((by_tag["K2"]["seconds"], by_tag["K2"]["album"], by_tag["K2"]["year"]),
+                         (260, "Mercy, Mercy, Mercy!", 1966))
+        written = {b["position"]: b for p, b in db.writes if "site_submissions" in p}
+        self.assertTrue(all({"seconds", "album", "year"} <= set(b) for b in written.values()))
+
+    def test_a_spotify_track_is_looked_up_once(self):
+        (_, rows, _, _), db, sp, yt, _ = self.run_build(dry_run=True)
+        spotify_sent = [r["track"] for r in rows if r["platform"] == "spotify"]
+        self.assertEqual(sorted(sp.looked_up), sorted(spotify_sent))
+
+    def test_a_spotify_copy_spotify_has_lost_leaves_the_album_blank(self):
+        (_, rows, _, _), *_ = self.run_build(overrides={"K2": {"spotify": sid(7)}})
+        k2 = {r["tag"]: r for r in rows}["K2"]
+        self.assertEqual((k2["seconds"], k2["album"], k2["year"]), (260, None, None))
+
+    def test_album_and_year_come_from_spotifys_album(self):
+        self.assertEqual(rp.album_of({"album": {"name": "Blue", "release_date": "1971-06-22"}}), {"album": "Blue", "year": 1971})
+        self.assertEqual(rp.album_of({"album": {"name": "", "release_date": "0000"}}), {"album": None, "year": None})
+        self.assertEqual(rp.album_of({}), {"album": None, "year": None})
+        self.assertEqual(len(rp.album_of({"album": {"name": "x" * 400}})["album"]), 300)
 
     def test_accept_takes_an_unsure_match(self):
         (_, rows, _, _), *_ = self.run_build(accept={"B4"})

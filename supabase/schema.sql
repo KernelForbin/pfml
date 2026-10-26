@@ -3162,6 +3162,17 @@ grant execute on function public.set_submission_note(uuid, text, text, boolean) 
 revoke all on function public.site_rounds_export() from public, anon, authenticated;
 grant execute on function public.site_rounds_export() to service_role;
 
+-- ---------------------------------------------------------------- track details
+-- supabase/migrations/2026-10-26_track_details.sql adds the same to the live
+-- project. README, Listening on the round page.
+
+alter table public.site_submissions add column if not exists seconds integer
+  check (seconds between 1 and 86400);
+alter table public.site_submissions add column if not exists album text
+  check (char_length(album) <= 300);
+alter table public.site_submissions add column if not exists year smallint
+  check (year between 1000 and 2100);
+
 -- ---------------------------------------------------------------- storage
 
 insert into storage.buckets (id, name, public)

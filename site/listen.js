@@ -27,10 +27,19 @@
   }
   function errText(err) { return (err && err.message) || String(err); }
 
-  function trackUrl(sub) {
-    if (sub.platform === "spotify") return "https://open.spotify.com/track/" + sub.track;
-    if (sub.platform === "youtube") return "https://www.youtube.com/watch?v=" + sub.track;
-    return "https://soundcloud.com/" + sub.track;
+  // A track's length, album and year (round_playlists.py keeps them when it
+  // builds the playlists): "3:47 · Album · 1999", whichever are known.
+  function lengthText(seconds) {
+    var h = Math.floor(seconds / 3600), m = Math.floor(seconds % 3600 / 60), s = seconds % 60;
+    var pad = function (n) { return (n < 10 ? "0" : "") + n; };
+    return h ? h + ":" + pad(m) + ":" + pad(s) : m + ":" + pad(s);
+  }
+  function detailsText(s) {
+    var out = [];
+    if (s.seconds > 0) out.push(lengthText(s.seconds));
+    if (s.album) out.push(s.album);
+    if (s.year) out.push(String(s.year));
+    return out.join(" · ");
   }
 
   // Which of a season's stats rounds a site round is, or -1: the same id (a
@@ -138,8 +147,10 @@
         "Tap a track to play the round from there.";
     $("lnOriginal").hidden = !mixed;
     $("lnTracks").innerHTML = list.order.map(function (s, i) {
+      var details = detailsText(s);
       var name = s.title
-        ? '<span class="sub-track-name"><b>' + esc(s.title) + "</b>" + (s.artist ? "<small>" + esc(s.artist) + "</small>" : "") + "</span>"
+        ? '<span class="sub-track-name"><b>' + esc(s.title) + "</b>" + (s.artist ? "<small>" + esc(s.artist) + "</small>" : "") +
+          (details ? '<small class="sub-track-meta">' + esc(details) + "</small>" : "") + "</span>"
         : '<span class="sub-track-where">' + NAMES[s.platform] + "</span>";
       var label = s.title ? s.title + (s.artist ? " – " + s.artist : "") : "track " + (i + 1) + " on " + NAMES[s.platform];
       return '<li class="sub-track">' +
@@ -148,8 +159,7 @@
           '<span class="sub-pos">' + (i + 1) + "</span>" +
           '<span class="sub-track-play" aria-hidden="true">' + PLAY_ICON + "</span>" + name + "</button>" +
         gapNote(s) +
-        (s.note ? '<p class="sub-track-note">' + esc(s.note) + "</p>" : "") +
-        '<a class="sub-track-open" href="' + esc(trackUrl(s)) + '" target="_blank" rel="noopener">Open on ' + NAMES[s.platform] + "</a></li>";
+        (s.note ? '<p class="sub-track-note">' + esc(s.note) + "</p>" : "") + "</li>";
     }).join("");
     var playing = list.player.playing();
     markPlaying(playing ? list.order.indexOf(playing) : -1, list.player.paused());

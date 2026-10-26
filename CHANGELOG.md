@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-10-26 (follow-up 7): each track's length, album and year; no links off the site
+
+- **Each track on the round page** shows its length, and its album and year
+  where Spotify knows them. The per-track Open on Spotify / YouTube links
+  are gone (the user's call).
+- **`round_playlists.py` keeps them** when it builds a round's playlists,
+  from the lookups it already made.
+- **Waits on:** the migration `2026-10-26_track_details.sql`, which must
+  run before this ships and before any round's playlists are built.
+- **Verified:**
+  - the suite passes (798), with 13 breaks in a scratch clone, all caught
+    (two got through at first, and the tests were tightened);
+  - the live Spotify lookups return the album and year;
+  - on the demo at 375, light and dark: the details on every track, no
+    links in the list, contrast 5.9:1 or better.
+
 ## 2026-10-26 (follow-up 6): playing here first, the apps' playlists after
 
 - **The listening section now leads with playing on the site:** "Play the

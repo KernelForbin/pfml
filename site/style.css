@@ -1487,7 +1487,6 @@ body.auth-checking::before {
   flex: 1 1 100%; display: flex; align-items: center; gap: 12px; padding: 0; border: 0; background: none;
   color: var(--ink); font: 600 0.95rem/1.2 "Inter", sans-serif; text-align: left; cursor: pointer;
 }
-.sub-track-open { font-size: 0.88rem; }
 /* Shuffle and Original order, above the list they reorder */
 .sub-order { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 4px; }
 .sub-order[hidden], .sub-order .sub-btn[hidden] { display: none; }
@@ -1538,6 +1537,7 @@ body.auth-checking::before {
 .sub-track-name { display: flex; flex-direction: column; min-width: 0; }
 .sub-track-name b { font-weight: 600; overflow-wrap: anywhere; }
 .sub-track-name small { color: var(--muted); font-size: 0.84rem; overflow-wrap: anywhere; }
+.sub-track-name .sub-track-meta { font-size: 0.78rem; margin-top: 2px; font-variant-numeric: tabular-nums; }
 .sub-gap { font-size: 0.78rem; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 3px 8px; white-space: nowrap; }
 .sub-anon { font-size: 0.86rem; }
 .sub-admin { border-top: 1px dashed var(--border); }
