@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-10-26: a listening demo for trying the round player on a phone
+
+- **pfml.fun/submit?demo=1:** the real Submit page with a stand-in closed
+  round of 10 tracks (5 sent from Spotify, 5 from YouTube, each under 5
+  minutes, each with its copy on the other service), so the round player
+  can be tried on a phone, screen locked included.
+- **Nothing reaches the database:** `listen-demo.js` answers the round
+  and its tracks itself, and any call naming the demo round. Without
+  `?demo=1` it does nothing.
+- **Not league data:** the tracks were picked at random from Spotify and
+  checked against the league's catalog. None was ever submitted to the
+  league.
+- **Verified:**
+  - the suite passes (766), with 12 breaks in a scratch clone, all caught;
+  - in a browser: the real round without `?demo=1`, the demo with it, Play
+    working at 375, and no call naming the demo round got through.
+
 ## 2026-10-25 (follow-up 16): a note's switch, shown while voting or only after
 
 - **The user's call:** each note has a switch, "Show it to voters while

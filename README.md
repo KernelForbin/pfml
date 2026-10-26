@@ -1514,6 +1514,42 @@ video, a Spotify track as its 30-second preview, a SoundCloud track):
 - **Not measured:** Safari on an iPhone, where a tap per track may be
   needed; the button is there for exactly that.
 
+### Listening demo (/submit?demo=1)
+
+Asked for 2026-10-26, to try the round player on a phone without a real
+round to play. **pfml.fun/submit?demo=1** is the real Submit page, signed
+in as usual, showing a stand-in closed round, "Listening demo", of 10
+tracks:
+- 5 sent from Spotify and 5 from YouTube;
+- each under 5 minutes;
+- each with its copy on the other service, as a round has once its
+  playlists are built, so the Play picker's copies work too.
+
+`site/listen-demo.js` does it, and only with `?demo=1` in the address. It
+loads after `account.js` and before `player.js` and `submit.js`. Once
+signed in, it wraps `PFML.api`:
+- `siteRounds` and `roundSubmissions` answer with the stand-in;
+- any other call naming the stand-in round's id is answered on the page,
+  so nothing about the demo reaches the database and nothing is saved;
+- every other call, such as the header's, goes to the database as normal.
+
+**The tracks were picked at random from Spotify** (genre and year searches,
+2026-10-26) and checked against the league's catalog. None of them is a
+league submission, since league data never goes in this public repo. Their
+lengths are in comments beside them, and a test holds them under 5 minutes.
+
+**Checked:**
+- **In a browser,** with a stand-in sign-in that logged every database
+  call:
+  - without `?demo=1` the page showed the real round;
+  - with it, the 10-track demo, and Play started track 1 in Spotify's
+    player at 375 wide;
+  - no call naming the demo round got through.
+- **Tests:** `tests/test_listen_demo.py`, break-checked in a scratch clone
+  (12 breaks, all caught).
+- **Not measured here:** an iPhone with its screen locked, which is what
+  the demo is for.
+
 ## Commissioners
 
 Asked for 2026-10-25: the admin can make any member a **commissioner**, and

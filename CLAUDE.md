@@ -113,6 +113,10 @@ accounts and to the database, so it needs their go-ahead each time. Never
 read `site_submission_owners`; the script doesn't, and a test holds it.
 README, Submissions on the site.
 
+To try the round player without a real round, use pfml.fun/submit?demo=1
+(`site/listen-demo.js`; README, Listening demo). If its tracks change,
+never pick league submissions: the repo is public.
+
 ## Season 3: review every new export for Daily Double requests
 
 Season 3 has a Daily Double rule: once per season, a submitter can ask in
