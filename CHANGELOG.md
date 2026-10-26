@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-10-25 (follow-up 16): a note's switch, shown while voting or only after
+
+- **The user's call:** each note has a switch, "Show it to voters while
+  they vote", off by default. Off, the note shows only once the results
+  are posted, with the submitter's name. On, voters see it with the track
+  while they vote, without the name.
+- **The database holds it:** notes move to their own table,
+  `site_submission_notes`, whose row rule shows a note during voting only
+  if its switch is on, and every note once voting closes. The old note
+  column on the tracks is dropped, since any member can read a round's
+  tracks once submissions close.
+- **The Submit page:** the switch under the note box and in each Edit your
+  note, and a line on each of Your tracks saying when its note shows. The
+  privacy and features pages say the same.
+- **Waits on:** the migration `2026-10-25_note_toggle.sql` and its
+  rehearsal (10 checks), after `2026-10-25_delete_round.sql`.
+- **Verified:**
+  - the suite passes, with 27 breaks in a scratch clone, all caught (one
+    got through at first, and the tests were tightened);
+  - in a browser with a stand-in, at 375 and 1280, light and dark: the
+    switch starts off, flips, goes with the track when it's sent, saves
+    from the edit box, survives a reload, and the picker resets to off.
+
 ## 2026-10-25 (follow-up 15): the admin can delete a round nobody played
 
 - **Four test rounds** from 2026-10-18/19 ("Round 7: Live Tracks" 1 to 4)

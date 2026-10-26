@@ -410,9 +410,10 @@
       return client.rpc("submit_described", { p_round: roundId, p_platform: platform, p_track: track,
         p_song: fp.song, p_names: fp.names, p_text: fp.text }).then(must);
     },
-    // The note on one of the caller's tracks, by its tag.
-    setSubmissionNote: function (roundId, tag, note) {
-      return client.rpc("set_submission_note", { p_round: roundId, p_tag: tag, p_note: note }).then(must);
+    // The note on one of the caller's tracks, by its tag, and whether voters
+    // see it while they vote (off: only once the results are posted).
+    setSubmissionNote: function (roundId, tag, note, inVoting) {
+      return client.rpc("set_submission_note", { p_round: roundId, p_tag: tag, p_note: note, p_in_voting: !!inVoting }).then(must);
     },
     // The commissioners' announcements, newest first.
     announcements: function () {
@@ -464,9 +465,19 @@
       return client.rpc("round_repeats", { p_round: roundId, p_platform: platform, p_track: track,
         p_song: fp.song, p_names: fp.names, p_text: fp.text }).then(must);
     },
-    // Readable only once the round has closed (row level security).
+    // Readable only once the round has closed (row level security). Each
+    // gets its note when the database lets the reader see it: during voting
+    // only the ones their submitters chose to show, every one once voting
+    // has closed (site_submission_notes; README, Commissioner extras, Notes).
     roundSubmissions: function (roundId) {
-      return client.from("site_submissions").select("id, tag, platform, track, position, title, artist, spotify_match, youtube_match, note").eq("round_id", roundId).then(must);
+      return Promise.all([
+        client.from("site_submissions").select("id, tag, platform, track, position, title, artist, spotify_match, youtube_match").eq("round_id", roundId).then(must),
+        client.from("site_submission_notes").select("submission_id, note").eq("round_id", roundId).then(must)
+      ]).then(function (res) {
+        var notes = {};
+        (res[1] || []).forEach(function (n) { notes[n.submission_id] = n.note; });
+        return (res[0] || []).map(function (s) { s.note = notes[s.id] || ""; return s; });
+      });
     },
     // Voting on the site (README, Voting on the site). The caller's ballot:
     // [{submission, points, comment}], replacing any earlier one, while

@@ -65,8 +65,8 @@ class TheDatabase(unittest.TestCase):
         self.assertIn("where id = p_round and votes_on_site", fn)
         self.assertIn("(closed_at is not null or now() >= closes_at)", fn)
         self.assertIn("o.round_id = p_round and o.user_id = auth.uid() and s.tag = p_tag;", fn)
-        self.assertIn("select s.tag, s.platform, s.track, s.note", function(self.sql, "my_submission"))
-        self.assertIn("'position', s.position, 'note', s.note, 'submitter', m.competitor_id)", function(self.sql, "site_rounds_export"))
+        # since 2026-10-25_note_toggle.sql the notes live in their own table,
+        # and my_submission and the export read them there: test_note_toggle.py
 
     def test_announcements(self):
         self.assertIn("alter table public.site_announcements enable row level security;", self.sql)
@@ -185,13 +185,13 @@ class ThePages(unittest.TestCase):
     def test_notes_on_the_page(self):
         send = js_body(self.submit, "function send(ev) {")
         self.assertIn('var note = r.votes_on_site ? $("subNote").value.trim() : "";', send)
-        self.assertIn("if (note) api().setSubmissionNote(r.id, tag, note)", send)
+        # the switch that goes with it: test_note_toggle.py
+        self.assertIn("if (note) api().setSubmissionNote(r.id, tag, note, inVoting)", send)
         self.assertIn('$("subNoteBox").hidden = !(state.round && state.round.votes_on_site);', js_body(self.submit, "function renderForm() {"))
-        self.assertIn("api().setSubmissionNote(state.round.id, tag, text)", js_body(self.submit, "function saveNote(b) {"))
+        self.assertIn("api().setSubmissionNote(state.round.id, tag, text, inVoting)", js_body(self.submit, "function saveNote(b) {"))
         self.assertIn("(s.note ? '<p class=\"sub-track-note\">' + esc(s.note) + \"</p>\" : \"\")", js_body(self.submit, "function drawTracks(list, built) {"))
         voting = read(SITE / "voting.js")
         self.assertIn("(s.note ? '<p class=\"vt-track-note\">' + esc(s.note) + \"</p>\" : \"\")", js_body(voting, "function ballotRow(s, i) {"))
-        self.assertIn('"id, tag, platform, track, position, title, artist, spotify_match, youtube_match, note"', read(SITE / "auth.js"))
 
     def test_the_season_and_round_forms_set_them(self):
         rules = js_body(self.seasons, "function readRules(form) {")

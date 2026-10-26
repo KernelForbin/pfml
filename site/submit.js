@@ -296,6 +296,25 @@
     }).catch(function (err) { console.error(err); });
   }
 
+  // A note's switch: on, voters see it with the track, without the name,
+  // while they vote; off (the default), it shows only once the results are
+  // posted, with the name. The database holds it (site_submission_notes).
+  var NOTE_WHEN = {
+    "true": "On: voters see it with your track, without your name, while they vote.",
+    "false": "Off: it shows once the results are posted, with your name."
+  };
+  function noteSwitchHtml(on) {
+    return '<button type="button" class="sub-note-switch" role="switch" aria-checked="' + !!on + '">' +
+      '<span class="sub-note-switch-text"><b>Show it to voters while they vote</b><small>' + NOTE_WHEN[!!on] + "</small></span>" +
+      '<span class="acct-switch" aria-hidden="true"></span></button>';
+  }
+  function flipNoteSwitch(b) {
+    var on = b.getAttribute("aria-checked") !== "true";
+    b.setAttribute("aria-checked", String(on));
+    b.querySelector("small").textContent = NOTE_WHEN[on];
+  }
+  function noteSwitchOn(b) { return !!b && b.getAttribute("aria-checked") === "true"; }
+
   // One track: Change and Withdraw, as ever. More than one a round: each
   // with its own Remove, and the picker below until all are in.
   function renderMine(open) {
@@ -311,9 +330,11 @@
         '<p class="sub-link"><a href="' + esc(trackUrl(m)) + '" target="_blank" rel="noopener">Open on ' + NAMES[m.platform] + "</a>" +
         (n > 1 && open ? '<button type="button" class="sub-btn sub-btn-quiet sub-remove" data-tag="' + esc(m.tag) + '">Remove</button>' : "") +
         "</p>" +
-        (m.note ? '<p class="sub-mine-note">' + esc(m.note) + "</p>" : "") +
+        (m.note ? '<p class="sub-mine-note">' + esc(m.note) + "</p>" +
+          '<p class="sub-note-when">' + (m.note_in_voting ? "Voters see it while they vote." : "It shows once the results are posted.") + "</p>" : "") +
         (notes && open ? '<details class="sub-note-edit"><summary>' + (m.note ? "Edit your note" : "Add a note") + "</summary>" +
           '<textarea class="sub-input sub-textarea" maxlength="1000" rows="2" aria-label="Your note on this track">' + esc(m.note || "") + "</textarea>" +
+          noteSwitchHtml(m.note_in_voting) +
           '<button type="button" class="sub-btn sub-btn-quiet sub-note-save" data-tag="' + esc(m.tag) + '">Save note</button></details>' : "") +
         "</div>";
     }).join("");
@@ -601,6 +622,7 @@
   function resetPicker() {
     $("subLink").value = "";
     $("subNote").value = "";
+    $("subNoteSwitch").innerHTML = noteSwitchHtml(false);
     clearResults();
     state.pickFrom = null;
     setPick(null);
@@ -711,6 +733,7 @@
     var key = p.platform + ":" + p.track;
     var fp = state.fp && state.fp.key === key ? state.fp.promise : fingerprintOf(p);
     var note = r.votes_on_site ? $("subNote").value.trim() : "";
+    var inVoting = noteSwitchOn($("subNoteSwitch").querySelector(".sub-note-switch"));
     // a round that blocks repeats checks the track as it goes in, so it
     // goes with its description; any other sends it, then describes it
     var blocking = ruleOf(r).indexOf("block") === 0 && typeof api().submitDescribed === "function";
@@ -719,8 +742,8 @@
       : api().submitTrack(r.id, p.platform, p.track);
     sending.then(function (tag) {
       if (!blocking) describe(r, p, fp);
-      if (note) api().setSubmissionNote(r.id, tag, note).catch(function (err) { console.error(err); });
-      var entry = { tag: tag, platform: p.platform, track: p.track, note: note };
+      if (note) api().setSubmissionNote(r.id, tag, note, inVoting).catch(function (err) { console.error(err); });
+      var entry = { tag: tag, platform: p.platform, track: p.track, note: note, note_in_voting: !!note && inVoting };
       // one song a round swaps it (the tag stays); more add to the list
       state.mine = songsOf(r) === 1 ? [entry] : state.mine.concat([entry]);
       state.changing = false;
@@ -744,15 +767,18 @@
   // Saving a note on one of the reader's tracks.
   function saveNote(b) {
     var tag = b.getAttribute("data-tag"), text = b.parentNode.querySelector("textarea").value.trim();
+    var inVoting = noteSwitchOn(b.parentNode.querySelector(".sub-note-switch"));
     b.disabled = true;
-    api().setSubmissionNote(state.round.id, tag, text).then(function () {
-      state.mine.forEach(function (m) { if (m.tag === tag) m.note = text; });
+    api().setSubmissionNote(state.round.id, tag, text, inVoting).then(function () {
+      state.mine.forEach(function (m) { if (m.tag === tag) { m.note = text; m.note_in_voting = !!text && inVoting; } });
       render();
     }).catch(function (err) { b.disabled = false; window.alert(errText(err)); });
   }
 
-  // One of several tracks, by its tag; or a note to save.
+  // One of several tracks, by its tag; or a note's switch, or a note to save.
   function removeTrack(ev) {
+    var flip = ev.target.closest(".sub-note-switch");
+    if (flip) { flipNoteSwitch(flip); return; }
     var save = ev.target.closest(".sub-note-save");
     if (save) { saveNote(save); return; }
     var b = ev.target.closest(".sub-remove");
@@ -915,6 +941,11 @@
     });
     $("subWithdraw").addEventListener("click", withdraw);
     $("subMineEmbed").addEventListener("click", removeTrack);
+    $("subNoteSwitch").innerHTML = noteSwitchHtml(false);
+    $("subNoteSwitch").addEventListener("click", function (ev) {
+      var b = ev.target.closest(".sub-note-switch");
+      if (b) flipNoteSwitch(b);
+    });
     // season names for the round card; the page works without them
     PFML.loadJSON("index.json").then(function (index) { state.index = index; })
       .catch(function (err) { console.error(err); })

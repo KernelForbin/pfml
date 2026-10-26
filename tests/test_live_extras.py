@@ -17,7 +17,8 @@ import supa  # noqa: E402
 from test_live_reminders import LIVE, has_keys, stranger
 
 CALLS = {"submit_described": {"p_round": None, "p_platform": None, "p_track": None, "p_song": None, "p_names": None, "p_text": None},
-         "set_submission_note": {"p_round": None, "p_tag": None, "p_note": None},
+         # with its switch since 2026-10-25_note_toggle.sql
+         "set_submission_note": {"p_round": None, "p_tag": None, "p_note": None, "p_in_voting": None},
          "post_announcement": {"p_body": None}, "delete_announcement": {"p_id": None},
          "announcements_claim": {}}
 

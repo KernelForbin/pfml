@@ -1848,14 +1848,37 @@ out Send. The database holds it too:
   the playlists and the stats use the real track. The block is a guard
   against honest repeats, not a lock.
 
-**Submitter notes** (`site_submissions.note`, up to 1000 characters), only
-in rounds voted on the site. A box under the picker, and Edit your note /
-Add a note on each of Your tracks while submissions are open
-(`set_submission_note`, by tag). Voters see the note with the track on the
-ballot and in the results; the name with it shows only when voting closes,
-like the track's. The export carries it, and the build reads it as the
+**Submitter notes** (up to 1000 characters), only in rounds voted on the
+site. There's a box under the picker, and Edit your note / Add a note on
+each of Your tracks while submissions are open (`set_submission_note`, by
+tag). The export carries the notes, and the build reads each one as the
 submission's Comment, so notes reach the round pages and the translation
 check (CLAUDE.md) like Music League's.
+
+**Notes: shown while voting, or only after** (asked 2026-10-25). Each note
+has a switch, "Show it to voters while they vote", **off by default**:
+- **Off:** the note shows once voting has closed, in the results, with the
+  submitter's name.
+- **On:** voters also see it with the track on the ballot while they vote,
+  without the name.
+- **Your tracks:** each says which ("Voters see it while they vote." or "It
+  shows once the results are posted."), and the switch is in the edit box.
+
+The database holds the rule, not the page. A round's tracks
+(`site_submissions`) are readable by every member once submissions close,
+since they are the ballot, so a note in that table could be read during
+voting whatever the page showed. So `2026-10-25_note_toggle.sql` moves the
+notes to their own table, `site_submission_notes` (`note`, `in_voting`),
+and drops the old column. The table's row rule lets a member read a note
+only:
+- when its round is `finished`, or
+- when it's `in_voting` and its round is `voting`.
+
+Before that nobody reads any, the admin included. The page fetches the
+tracks, then the notes it's allowed, and puts each with its track
+(`roundSubmissions`). `my_submission` gives the owner their own note and
+switch at any time. The rehearsal (`2026-10-25_note_toggle_rehearsal.sql`,
+"10 checks held") plays a round through all three phases.
 
 **Announcements** (`site_announcements`): a commissioner writes one on the
 Commissioner page (1 to 1000 characters) and can take it down. Members see

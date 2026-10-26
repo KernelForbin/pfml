@@ -1603,6 +1603,18 @@ button.cm-person { cursor: pointer; }
 .sub-note-edit { margin-top: 6px; }
 .sub-note-edit > summary { color: var(--magenta-text); font-size: 0.85rem; cursor: pointer; }
 .sub-note-edit textarea { margin: 6px 0; }
+.sub-note-when { margin: 4px 0 0; color: var(--muted); font-size: 0.8rem; }
+/* a note's switch (submit.js): shown while people vote, or only after */
+.sub-note-switch {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; margin: 8px 0;
+  padding: 10px 12px; text-align: left; font: inherit; color: var(--ink); background: var(--card);
+  border: 1px solid var(--border); border-radius: 10px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.sub-note-switch-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sub-note-switch-text b { font-size: 0.88rem; font-weight: 600; }
+.sub-note-switch-text small { color: var(--muted); font-size: 0.78rem; line-height: 1.35; }
+.sub-note-switch[aria-checked="true"] .acct-switch { background: var(--magenta); }
+.sub-note-switch[aria-checked="true"] .acct-switch::after { transform: translateX(16px); }
 .sub-repeats.is-blocked { border-color: var(--neg); }
 .announce { margin-top: 12px; }
 .announce-card { margin-bottom: 10px; padding: 14px 16px; border: 1px solid var(--border); border-left: 4px solid var(--magenta); border-radius: 12px; background: var(--card); }
