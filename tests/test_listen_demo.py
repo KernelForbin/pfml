@@ -1,6 +1,7 @@
-"""The listening demo (/submit?demo=1, site/listen-demo.js): the real Submit
-page with a stand-in closed round of 10 tracks, for trying the round player
-on a phone. Nothing about the stand-in reaches the database."""
+"""The listening demo (/round?demo=1, site/listen-demo.js; /submit?demo=1
+until listening moved to the round page): the real round page with a
+stand-in closed round of 10 tracks, for trying the round player on a phone.
+Nothing about the stand-in reaches the database."""
 import re
 import unittest
 
@@ -17,13 +18,13 @@ def tracks():
 
 
 class ThePage(unittest.TestCase):
-    def test_only_the_submit_page_loads_it_after_sign_in_and_before_the_player(self):
-        html = (SITE / "submit.html").read_text(encoding="utf-8")
+    def test_only_the_round_page_loads_it_after_sign_in_and_before_the_player(self):
+        html = (SITE / "round.html").read_text(encoding="utf-8")
         order = [html.index(f'<script src="{s}"></script>')
-                 for s in ("auth.js", "account.js", "listen-demo.js", "player.js", "submit.js", "app.js")]
+                 for s in ("auth.js", "account.js", "listen-demo.js", "player.js", "listen.js", "app.js")]
         self.assertEqual(order, sorted(order))
         for page in SITE.glob("*.html"):
-            if page.name != "submit.html":
+            if page.name != "round.html":
                 with self.subTest(page.name):
                     self.assertNotIn("listen-demo.js", page.read_text(encoding="utf-8"))
 
@@ -59,6 +60,12 @@ class NothingReachesTheDatabase(unittest.TestCase):
         guard = DEMO.split("PFML.api = new Proxy(real, {", 1)[1]
         self.assertLess(guard.index("if (arguments[i] === DEMO_ROUND) return Promise.resolve([]);"),
                         guard.index("return fn.apply(target, arguments);"))
+
+    def test_it_names_its_round_for_the_round_page(self):
+        self.assertIn("window.PFMLDemo = { round: DEMO_ROUND };", DEMO)
+        self.assertLess(DEMO.index("window.PFMLDemo = { round: DEMO_ROUND };"), DEMO.index("PFML.ready.then("))
+        app = (SITE / "app.js").read_text(encoding="utf-8")
+        self.assertIn('var siteId = params.get("site") || (window.PFMLDemo && window.PFMLDemo.round) || "";', app)
 
     def test_it_waits_for_sign_in(self):
         self.assertIn("PFML.ready.then(function () {\n    var real = PFML.api;", DEMO)

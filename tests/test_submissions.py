@@ -279,18 +279,19 @@ class RoundOrder(unittest.TestCase):
     playlist script's in test_round_playlists.py."""
 
     def setUp(self):
-        self.submit = read(SITE / "submit.js")
+        # the list moved with listening to the round page (listen.js), 2026-10-26
+        self.listen = read(SITE / "listen.js")
         self.account = read(SITE / "account.js")
 
     def body(self, js, signature):
         return js.split(signature, 1)[1].split("\n  }\n", 1)[0]
 
     def test_everyone_starts_from_the_rounds_one_shuffle(self):
-        render = self.body(self.submit, "function renderList() {")
+        render = self.body(self.listen, "function render(host, r) {")
         self.assertIn("rows = PFML.roundOrder(r.id, rows || []);", render)
-        self.assertIn("var list = { original: rows, order: rows, player: null };", render)
+        self.assertIn("var list = { original: rows, order: rows, player: null, built: built };", render)
         # the old tag order is gone, and nothing else sorts the list
-        self.assertNotIn("a.tag < b.tag", self.submit)
+        self.assertNotIn("a.tag < b.tag", self.listen)
         self.assertIn("PFML.roundOrder = roundOrder;", self.account)
 
     def test_the_order_comes_from_the_round_and_the_tracks_alone(self):
@@ -300,20 +301,20 @@ class RoundOrder(unittest.TestCase):
         self.assertNotRegex(key, r"\.tag|\.id\b|created|user|owner")
 
     def test_shuffle_is_for_this_listener_and_never_saved(self):
-        shuffle = self.body(self.submit, "function shuffled(list) {")
+        shuffle = self.body(self.listen, "function shuffled(list) {")
         self.assertIn("Math.random()", shuffle)
         self.assertIn("var next = playing ? [playing].concat(rest) : rest.slice();", shuffle)
         for name in ("function shuffled(list) {", "function reorder(list, order) {"):
-            self.assertNotRegex(self.body(self.submit, name), r"api\(\)|localStorage|sessionStorage")
+            self.assertNotRegex(self.body(self.listen, name), r"api\b|localStorage|sessionStorage")
 
     def test_original_order_puts_back_what_everyone_first_saw(self):
-        render = self.body(self.submit, "function renderList() {")
-        self.assertIn('$("subOriginal").onclick = function () { reorder(list, list.original); };', render)
-        self.assertIn("list.player.setOrder(order);", self.body(self.submit, "function reorder(list, order) {"))
-        self.assertIn('$("subOriginal").hidden = !mixed;', self.body(self.submit, "function drawTracks(list, built) {"))
+        render = self.body(self.listen, "function render(host, r) {")
+        self.assertIn('$("lnOriginal").onclick = function () { reorder(list, list.original); };', render)
+        self.assertIn("list.player.setOrder(order);", self.body(self.listen, "function reorder(list, order) {"))
+        self.assertIn('$("lnOriginal").hidden = !mixed;', self.body(self.listen, "function drawTracks(list) {"))
 
     def test_the_list_is_numbered_in_play_order(self):
-        draw = self.body(self.submit, "function drawTracks(list, built) {")
+        draw = self.body(self.listen, "function drawTracks(list) {")
         self.assertIn("list.order.map(function (s, i) {", draw)
         self.assertIn("'<span class=\"sub-pos\">' + (i + 1) + \"</span>\"", draw)
 
@@ -327,9 +328,8 @@ class RoundOrder(unittest.TestCase):
         self.assertIn("setOrder: setOrder,", player)
 
     def test_the_buttons(self):
-        html = read(SITE / "submit.html")
-        self.assertIn('<div class="sub-order" id="subOrder" hidden>', html)
-        self.assertIn('<button type="button" class="sub-btn sub-btn-quiet" id="subOriginal" hidden>Original order</button>', html)
+        self.assertIn("'<div class=\"sub-order\" id=\"lnOrder\" hidden>' +", self.listen)
+        self.assertIn("'<button type=\"button\" class=\"sub-btn sub-btn-quiet\" id=\"lnOriginal\" hidden>Original order</button>' +", self.listen)
         css = re.sub(r"/\*.*?\*/", "", read(SITE / "style.css"), flags=re.S)
         self.assertRegex(css, r"\.sub-order\[hidden\], \.sub-order \.sub-btn\[hidden\] \{ display: none; \}")
 

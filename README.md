@@ -1514,6 +1514,61 @@ video, a Spotify track as its 30-second preview, a SoundCloud track):
 - **Not measured:** Safari on an iPhone, where a tap per track may be
   needed; the button is there for exactly that.
 
+### Listening on the round page
+
+Asked for 2026-10-26. A closed round's listening (its playlists, its
+track list and the round player) used to be on the Submit page, only until
+the next round opened. It moved to the round's own page, where it stays for
+good (`site/listen.js`, drawn into the round page's `rpListen` section):
+- **`round?site=<site round id>`** reaches a site round from the moment
+  submissions close. It shows the round's stats page once the round is in
+  the stats. Until then it's a short page of its own (`renderSiteRoundPage`):
+  the name, the prompt and where the round is up to.
+- **The round's stats page** (`round?s=…&r=…`) shows the same listening
+  section when that round was also run on the site.
+- **The order inside it:** the Spotify and YouTube playlists first, then the
+  player, Shuffle and the list.
+- **Before submissions close** it says the tracks show once they close,
+  and asks the database for nothing.
+- **The Submit page** shows "Listen to this round", linking to
+  `round?site=`, once its round closes. It keeps the form, Who's in, and
+  for a round voted on the site the ballot and the results. It no longer
+  loads `player.js`.
+
+**Which stats round a site round is** (`PFMLListen.statsIndex`):
+- **A season played on the site:** the same id, since its export keeps the
+  site's ids.
+- **A round voted in Music League:** the stats keep Music League's own ids,
+  so it goes by the round's number. A site round named "Round N…" is the
+  season's Nth stats round. That's how Season 3's rounds are named on the
+  site from Round 7. A round named otherwise only gets the `?site=` page.
+
+**Measured on an iPhone (2026-10-26),** in Safari and Chrome, signed in to
+Spotify in both:
+- the page player didn't move on to the next track by itself;
+- a tap on a YouTube track in our list didn't start it, so it took a
+  second tap on YouTube's own player;
+- Spotify tracks played 30-second previews.
+
+iOS lets media start only from a tap inside that player's own frame.
+Google's reference says browsers may block `playVideo` and
+`loadVideoById` without user interaction. So on an iPhone the round's
+playlists are the way to listen, and they come first. The features page
+says so.
+
+**Checked in a browser,** with a stand-in sign-in and a local copy of the
+real Season 3 stats:
+- a site "Round 6" showed Season 3's real 6th round with its listening
+  section on top, by `?site=` and by `?s=…&r=…` alike;
+- a site "Round 8", not in the stats, got its own page;
+- Season 3's Round 5, never run on the site, had no listening section;
+- an open round said its tracks show once submissions close, and asked for
+  none;
+- an unknown id said "Round not found";
+- the demo worked;
+- the Submit page's Listen link led to the round page;
+- play and pause worked from the list at 375 and 1280, in light and dark.
+
 ### The track list's play buttons
 
 Asked for 2026-10-26: the list no longer shows each track's submission tag
@@ -1541,20 +1596,22 @@ clicks:
 
 Contrast is 6.5:1 in light and dark.
 
-### Listening demo (/submit?demo=1)
+### Listening demo (/round?demo=1)
 
 Asked for 2026-10-26, to try the round player on a phone without a real
-round to play. **pfml.fun/submit?demo=1** is the real Submit page, signed
-in as usual, showing a stand-in closed round, "Listening demo", of 10
-tracks:
+round to play. **pfml.fun/round?demo=1** is the real round page, signed in
+as usual, showing a stand-in closed round, "Listening demo", of 10 tracks.
+It was on the Submit page (`/submit?demo=1`) until listening moved to the
+round page the same day. The tracks are:
 - 5 sent from Spotify and 5 from YouTube;
 - each under 5 minutes;
 - each with its copy on the other service, as a round has once its
   playlists are built, so the Play picker's copies work too.
 
 `site/listen-demo.js` does it, and only with `?demo=1` in the address. It
-loads after `account.js` and before `player.js` and `submit.js`. Once
-signed in, it wraps `PFML.api`:
+loads after `account.js` and before `player.js`, `listen.js` and `app.js`.
+It names its round (`window.PFMLDemo.round`) for `app.js` to open as if
+the address said `?site=`. Once signed in, it wraps `PFML.api`:
 - `siteRounds` and `roundSubmissions` answer with the stand-in;
 - any other call naming the stand-in round's id is answered on the page,
   so nothing about the demo reaches the database and nothing is saved;

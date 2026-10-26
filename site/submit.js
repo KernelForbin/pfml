@@ -190,7 +190,7 @@
 
   function render() {
     var r = state.round;
-    ["subRound", "subMine", "subForm", "subWhoBox", "subList", "subVote"].forEach(function (id) { $(id).hidden = true; });
+    ["subRound", "subMine", "subForm", "subWhoBox", "subListen", "subVote"].forEach(function (id) { $(id).hidden = true; });
     // the round form is on the Commissioner page now
     $("subCommish").hidden = !PFML.member || (PFML.member.role !== "admin" && PFML.member.role !== "commissioner");
     renderNext();
@@ -224,7 +224,9 @@
     if (state.mine.length) renderMine(open);
     if (open && (state.mine.length < songsOf(r) || state.changing)) renderForm();
     if (!open) {
-      renderList();
+      // listening is on the round's own page (listen.js), for good
+      $("subListenLink").href = "round?site=" + encodeURIComponent(r.id);
+      $("subListen").hidden = false;
       voting().render(r, state.mine);
     }
   }
@@ -790,141 +792,6 @@
       state.mine = state.mine.filter(function (m) { return m.tag !== tag; });
       render();
     }).catch(function (err) { b.disabled = false; window.alert(errText(err)); });
-  }
-
-  /* ---- a closed round: every track, nobody's name ---- */
-
-  // Built by scripts/round_playlists.py once the round has closed: the
-  // shuffled order, titles, each track's copy on the other service, and the
-  // two playlists. Before that, the list is by tag with no titles.
-  function playlistButtons(r) {
-    var out = [];
-    if (r.spotify_playlist) {
-      out.push('<a class="sub-btn sub-play sub-play-spotify" href="https://open.spotify.com/playlist/' +
-        encodeURIComponent(r.spotify_playlist) + '" target="_blank" rel="noopener">Play on Spotify</a>');
-    }
-    if (r.youtube_playlist) {
-      out.push('<a class="sub-btn sub-play sub-play-youtube" href="https://www.youtube.com/playlist?list=' +
-        encodeURIComponent(r.youtube_playlist) + '" target="_blank" rel="noopener">Play on YouTube</a>');
-    }
-    return out.join("");
-  }
-
-  // "Not on Spotify" / "Not on YouTube", for a track the playlist skips
-  function gapNote(s) {
-    if (!s.position) return "";
-    var missing = [];
-    if (!s.spotify_match) missing.push("Spotify");
-    if (!s.youtube_match) missing.push("YouTube");
-    return missing.length ? '<span class="sub-gap">Not on ' + missing.join(" or ") + "</span>" : "";
-  }
-
-  function renderList() {
-    var r = state.round;
-    var built = !!(r.spotify_playlist || r.youtube_playlist);
-    $("subPlaylists").innerHTML = built
-      ? '<p class="sub-play-note">The whole round, shuffled, in one tap. Same order in both apps; ' +
-        "they keep playing with your phone locked (YouTube needs Premium for that).</p>" +
-        '<div class="sub-actions">' + playlistButtons(r) + "</div>"
-      : "";
-    $("subPlaylists").hidden = !built;
-    $("subPlayer").innerHTML = "";
-    $("subOrder").hidden = true;
-    $("subTracks").innerHTML = '<li class="sub-empty">Loading\u2026</li>';
-    $("subList").hidden = false;
-    api().roundSubmissions(r.id).then(function (rows) {
-      // the round's one shuffle, the same for everyone from the close, and
-      // the order the playlists keep (PFML.roundOrder, account.js)
-      rows = PFML.roundOrder(r.id, rows || []);
-      if (!rows.length) { $("subTracks").innerHTML = '<li class="sub-empty">No tracks were submitted.</li>'; return; }
-      // the round player (player.js) plays them top to bottom; the list
-      // marks the one playing, a tap on another starts the round from that
-      // track, and a tap on the one playing pauses or resumes it
-      var list = { original: rows, order: rows, player: null };
-      list.player = window.PFMLPlayer.mount($("subPlayer"), rows, function (playing, paused) { markPlaying(playing, paused); });
-      $("subTracks").onclick = function (ev) {
-        var b = ev.target.closest(".sub-track-btn");
-        if (!b) return;
-        var i = +b.dataset.i;
-        if (list.player.playing() === list.order[i]) list.player.togglePause();
-        else list.player.playAt(i);
-      };
-      $("subShuffle").onclick = function () { reorder(list, shuffled(list)); };
-      $("subOriginal").onclick = function () { reorder(list, list.original); };
-      $("subOrder").hidden = rows.length < 2;
-      drawTracks(list, built);
-    }).catch(function (err) {
-      $("subTracks").innerHTML = '<li class="sub-empty">Couldn\u2019t load the tracks: ' + esc(errText(err)) + "</li>";
-    });
-  }
-
-  // The list in its current order, numbered top to bottom: the order the
-  // player goes in.
-  function drawTracks(list, built) {
-    var mixed = list.order !== list.original;
-    $("subListNote").textContent = mixed
-      ? "Shuffled for you: the player goes top to bottom. Original order puts it back the way everyone first saw it; " +
-        "the Spotify and YouTube playlists keep that order."
-      : (built ? "The round\u2019s order, the same for everyone and the same as the playlists. "
-               : "The round\u2019s order, shuffled once when submissions closed and the same for everyone. ") +
-        "Tap a track to play the round from there.";
-    $("subOriginal").hidden = !mixed;
-    $("subTracks").innerHTML = list.order.map(function (s, i) {
-      var name = s.title
-        ? '<span class="sub-track-name"><b>' + esc(s.title) + "</b>" + (s.artist ? "<small>" + esc(s.artist) + "</small>" : "") + "</span>"
-        : '<span class="sub-track-where">' + NAMES[s.platform] + "</span>";
-      var label = s.title ? s.title + (s.artist ? " – " + s.artist : "") : "track " + (i + 1) + " on " + NAMES[s.platform];
-      return '<li class="sub-track">' +
-        '<button type="button" class="sub-track-btn" data-i="' + i + '" data-label="' + esc(label) + '" ' +
-          'aria-label="Play ' + esc(label) + '" aria-current="false">' +
-          '<span class="sub-pos">' + (i + 1) + "</span>" +
-          '<span class="sub-track-play" aria-hidden="true">' + PLAY_ICON + "</span>" + name + "</button>" +
-        gapNote(s) +
-        (s.note ? '<p class="sub-track-note">' + esc(s.note) + "</p>" : "") +
-        '<a class="sub-track-open" href="' + esc(trackUrl(s)) + '" target="_blank" rel="noopener">Open on ' + NAMES[s.platform] + "</a></li>";
-    }).join("");
-    var playing = list.player.playing();
-    markPlaying(playing ? list.order.indexOf(playing) : -1, list.player.paused());
-  }
-
-  // Play on every track, pause on the one playing (play again while it's
-  // paused); the one playing is outlined either way.
-  var PLAY_ICON = '<svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg>';
-  var PAUSE_ICON = '<svg viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>';
-  function markPlaying(playing, paused) {
-    $("subTracks").querySelectorAll(".sub-track").forEach(function (li, i) {
-      var on = i === playing, sounding = on && !paused;
-      var b = li.querySelector(".sub-track-btn");
-      li.classList.toggle("is-playing", on);
-      b.setAttribute("aria-current", String(on));
-      b.setAttribute("aria-label", (sounding ? "Pause " : "Play ") + b.getAttribute("data-label"));
-      li.querySelector(".sub-track-play").innerHTML = sounding ? PAUSE_ICON : PLAY_ICON;
-    });
-  }
-
-  // A fresh shuffle for this reader only, never saved. A track that's
-  // playing goes to the top and keeps playing, so everything below it is
-  // still to come.
-  function shuffled(list) {
-    var playing = list.player.playing();
-    var rest = list.order.filter(function (s) { return s !== playing; });
-    for (var tries = 0; tries < 5; tries++) {
-      for (var i = rest.length - 1; i > 0; i--) {
-        var j = Math.floor(Math.random() * (i + 1)), t = rest[i];
-        rest[i] = rest[j];
-        rest[j] = t;
-      }
-      var next = playing ? [playing].concat(rest) : rest.slice();
-      // a shuffle that lands on the same order would look like a dead button
-      if (next.some(function (s, k) { return s !== list.order[k]; })) return next;
-    }
-    return next;
-  }
-
-  function reorder(list, order) {
-    list.order = order;
-    list.player.setOrder(order);
-    drawTracks(list, !!(state.round.spotify_playlist || state.round.youtube_playlist));
   }
 
   /* ---- start ---- */

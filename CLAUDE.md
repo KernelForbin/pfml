@@ -113,9 +113,13 @@ accounts and to the database, so it needs their go-ahead each time. Never
 read `site_submission_owners`; the script doesn't, and a test holds it.
 README, Submissions on the site.
 
-To try the round player without a real round, use pfml.fun/submit?demo=1
-(`site/listen-demo.js`; README, Listening demo). If its tracks change,
-never pick league submissions: the repo is public.
+Listening to a closed round (its playlists, list and player) is on the
+round's own page, `round?site=<id>`, for good, not on the Submit page
+(README, Listening on the round page). On an iPhone the page can't play
+track to track and Spotify only previews (measured 2026-10-26), so the
+playlists come first there. To try it without a real round, use
+pfml.fun/round?demo=1 (`site/listen-demo.js`; README, Listening demo). If
+its tracks change, never pick league submissions: the repo is public.
 
 ## Season 3: review every new export for Daily Double requests
 

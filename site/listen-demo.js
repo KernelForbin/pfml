@@ -1,13 +1,15 @@
 /* ==========================================================
-   PFML - the listening demo (/submit?demo=1)
+   PFML - the listening demo (/round?demo=1)
 
-   The Submit page as it is once a round has closed, with a stand-in round
-   of 10 tracks, so the round player (player.js) can be tried anywhere, a
-   phone with its screen locked included, without a real round to play.
-   Asked for 2026-10-26. Without ?demo=1 in the address this does nothing.
+   A round's page with a stand-in round of 10 tracks, so its listening
+   section (listen.js, player.js) can be tried anywhere, a phone with its
+   screen locked included, without a real round to play. Asked for
+   2026-10-26, first on the Submit page, then moved with listening to the
+   round page. Without ?demo=1 in the address this does nothing.
 
-   Everything but the round is the real page: sign-in, the header, submit.js
-   and player.js. Once signed in, the page's database calls are wrapped: the
+   Everything but the round is the real page: sign-in, the header, app.js,
+   listen.js and player.js. It names its round (PFMLDemo.round) for app.js
+   to open, and once signed in, the page's database calls are wrapped: the
    ones that read rounds and their tracks answer with the stand-in, and any
    call naming the stand-in round is answered here, so nothing about it
    reaches the database and nothing is saved.
@@ -38,7 +40,10 @@
     { platform: "youtube", track: "0z8J0Rt_TD8", title: "Lola Lola", artist: "Hella Chluy", spotify_match: "1fJlgVMwbx8gvegNeg2Yw9", youtube_match: null }   // 3:25
   ];
 
-  // Before submit.js boots: its boot waits on the same PFML.ready, and was
+  // the round app.js opens (initRound), as if the address said ?site=
+  window.PFMLDemo = { round: DEMO_ROUND };
+
+  // Before app.js boots: its boot waits on the same PFML.ready, and was
   // registered after this, so it runs after this.
   PFML.ready.then(function () {
     var real = PFML.api;
@@ -46,7 +51,7 @@
     var round = {
       id: DEMO_ROUND, season_key: "season3", name: "Listening demo",
       prompt: "A stand-in round for trying the player: 5 tracks sent from Spotify, 5 from YouTube. " +
-        "Nothing here is real or saved; the real Submit page is pfml.fun/submit.",
+        "Nothing here is real or saved.",
       opens_at: null, closes_at: new Date(now - day).toISOString(), closed_at: null, created_at: new Date(now - 3 * day).toISOString(),
       votes_on_site: false, songs_per_round: 1, services: ["spotify", "youtube", "soundcloud"], repeat_rule: "warn",
       spotify_playlist: null, youtube_playlist: null

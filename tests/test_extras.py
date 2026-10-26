@@ -189,7 +189,9 @@ class ThePages(unittest.TestCase):
         self.assertIn("if (note) api().setSubmissionNote(r.id, tag, note, inVoting)", send)
         self.assertIn('$("subNoteBox").hidden = !(state.round && state.round.votes_on_site);', js_body(self.submit, "function renderForm() {"))
         self.assertIn("api().setSubmissionNote(state.round.id, tag, text, inVoting)", js_body(self.submit, "function saveNote(b) {"))
-        self.assertIn("(s.note ? '<p class=\"sub-track-note\">' + esc(s.note) + \"</p>\" : \"\")", js_body(self.submit, "function drawTracks(list, built) {"))
+        # the round's list, on the round page since 2026-10-26
+        self.assertIn("(s.note ? '<p class=\"sub-track-note\">' + esc(s.note) + \"</p>\" : \"\")",
+                      js_body(read(SITE / "listen.js"), "function drawTracks(list) {"))
         voting = read(SITE / "voting.js")
         self.assertIn("(s.note ? '<p class=\"vt-track-note\">' + esc(s.note) + \"</p>\" : \"\")", js_body(voting, "function ballotRow(s, i) {"))
 

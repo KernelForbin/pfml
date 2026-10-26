@@ -421,7 +421,7 @@ class Database(unittest.TestCase):
             self.assertRegex(auth, r'site_submissions"\)\.select\("[^"]*\b' + col + r'\b')
         for col in ("spotify_playlist", "youtube_playlist"):
             self.assertRegex(auth, r'site_rounds"\)\.select\("[^"]*\b' + col + r'\b')
-        js = (ROOT / "site" / "submit.js").read_text(encoding="utf-8")
+        js = (ROOT / "site" / "listen.js").read_text(encoding="utf-8")
         self.assertIn("https://open.spotify.com/playlist/", js)
         self.assertIn("https://www.youtube.com/playlist?list=", js)
         css = re.sub(r"/\*.*?\*/", "", (ROOT / "site" / "style.css").read_text(encoding="utf-8"), flags=re.S)

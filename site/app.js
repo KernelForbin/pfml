@@ -456,7 +456,7 @@
   // The newest line in the features page's "New in the last 30 days" box (a test
   // keeps the two equal). The features page records the newest date it
   // showed in this browser; Home's button says New until that catches up.
-  var FEATURES_UPDATED = "2026-10-25";
+  var FEATURES_UPDATED = "2026-10-26";
   var FEATURES_SEEN_KEY = "pfml.featuresSeen";
 
   function renderFeaturesButton() {
@@ -2457,26 +2457,63 @@
     });
   }
 
-  /* ---- round page (round?s=<season key>&r=<round id>) ---- */
+  /* ---- round page (round?s=<season key>&r=<round id>, or round?site=<site round id>) ---- */
 
+  // A round's page: its stats (rounds.js) once it's in them, and, when it
+  // was also run on the site, its listening section (listen.js). A site
+  // round is reached by round?site=<id> from the moment it closes; once
+  // it's in the stats, that shows the stats page too, and the stats page
+  // finds it the same way (PFMLListen.statsIndex). README, Listening on the
+  // round page.
   function initRound() {
     var params = new URLSearchParams(location.search);
     var key = params.get("s") || "";
     var roundId = params.get("r") || "";
+    var siteId = params.get("site") || (window.PFMLDemo && window.PFMLDemo.round) || "";
     var page = $("roundPage");
-    if (!/^season\d+$/.test(key)) {
+    function failed(err) {
+      console.error(err);
+      page.innerHTML = '<section class="shell rp-head"><h1>Couldn’t load this round</h1><p class="hero-line">' + esc(err.message || err) + "</p></section>";
+    }
+    if (!siteId && !/^season\d+$/.test(key)) {
       page.innerHTML = '<section class="shell rp-head"><h1>Round not found</h1><p class="hero-line">This link is missing its season. <a href="./">Back to the home page</a>.</p></section>';
       return;
     }
-    Promise.all([PFML.loadJSON("index.json"), PFML.loadJSON(key + ".json")])
+    // the site's rounds are a bonus here: without them it's the stats alone
+    var siteRounds = PFML.api.siteRounds().catch(function (err) { console.error(err); return []; });
+
+    if (siteId) {
+      Promise.all([PFML.loadJSON("index.json"), siteRounds]).then(function (res) {
+        var index = res[0], site = (res[1] || []).filter(function (x) { return x.id === siteId; })[0];
+        if (!site) {
+          page.innerHTML = '<section class="shell rp-head"><h1>Round not found</h1><p class="hero-line">That round isn’t on the site. <a href="./">Back to the home page</a>.</p></section>';
+          return;
+        }
+        renderNav(index, site.season_key);
+        var listed = (index.seasons || []).filter(function (x) { return x.key === site.season_key; })[0];
+        return PFML.loadJSON(site.season_key + ".json").catch(function () { return null; }).then(function (d) {
+          var i = d ? window.PFMLListen.statsIndex(d.rounds, site) : -1;
+          if (i >= 0) window.PFMLRounds.renderRoundPage(d, d.rounds[i].id);
+          else window.PFMLRounds.renderSiteRoundPage(site, listed ? listed.label : "Season " + String(site.season_key).replace(/^season/, ""));
+          window.PFMLListen.render($("rpListen"), site);
+        });
+      }).catch(failed);
+      return;
+    }
+
+    Promise.all([PFML.loadJSON("index.json"), PFML.loadJSON(key + ".json"), siteRounds])
       .then(function (res) {
+        var d = res[1];
         renderNav(res[0], key);
-        window.PFMLRounds.renderRoundPage(res[1], roundId);
+        window.PFMLRounds.renderRoundPage(d, roundId);
+        var i = -1;
+        d.rounds.forEach(function (r, k) { if (r.id === roundId) i = k; });
+        var site = i >= 0 && (res[2] || []).filter(function (x) {
+          return x.season_key === key && window.PFMLListen.statsIndex(d.rounds, x) === i;
+        })[0];
+        if (site && $("rpListen")) window.PFMLListen.render($("rpListen"), site);
       })
-      .catch(function (err) {
-        console.error(err);
-        page.innerHTML = '<section class="shell rp-head"><h1>Couldn’t load this round</h1><p class="hero-line">' + esc(err.message || err) + "</p></section>";
-      });
+      .catch(failed);
   }
 
   /* ---- boot ---- */

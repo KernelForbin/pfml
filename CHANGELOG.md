@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-10-26 (follow-up 2): listening moves to the round page
+
+- **The user's call:** a closed round's playlists, track list and player
+  live on the round's own page, for good. They used to be on the Submit
+  page, and only until the next round opened.
+- **`round?site=<id>`** works from the moment submissions close. Once the
+  round is in the stats, the same link shows its stats page with the
+  listening section on top, and so does the stats page's own link.
+- **A Music League round is matched to its stats round by number:** "Round
+  7: …" on the site is the season's 7th round. A season played on the site
+  matches by id.
+- **The Submit page:** shows "Listen to this round" once its round closes.
+- **The demo moved to `round?demo=1`.**
+- **Measured on an iPhone** (Safari and Chrome, signed in to Spotify): no
+  playing on to the next track by itself, a YouTube track needs a tap on
+  YouTube's own player, and Spotify plays previews only. So the playlists
+  come first, and the features page says the iPhone needs a tap per track.
+- **Verified:**
+  - the suite passes, with 16 breaks in a scratch clone, all caught;
+  - in a browser with a stand-in and a local copy of the real Season 3
+    stats, at 375 and 1280, light and dark: each kind of round page, the
+    Submit page's link, the demo, and play and pause from the list.
+
 ## 2026-10-26 (follow-up 1): play buttons on a round's tracks, no tags
 
 - **No submission tags** (A1, B3) on a closed round's track list or in the

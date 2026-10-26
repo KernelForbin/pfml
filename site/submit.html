@@ -89,16 +89,10 @@
     <div class="sub-who" id="subWho"></div>
   </section>
 
-  <section class="shell block" id="subList" hidden>
-    <h2>This round's tracks</h2>
-    <div class="sub-playlists" id="subPlaylists" hidden></div>
-    <div class="rp" id="subPlayer"></div>
-    <div class="sub-order" id="subOrder" hidden>
-      <button type="button" class="sub-btn sub-btn-quiet" id="subShuffle">Shuffle</button>
-      <button type="button" class="sub-btn sub-btn-quiet" id="subOriginal" hidden>Original order</button>
-    </div>
-    <p class="block-note" id="subListNote"></p>
-    <ol class="sub-tracks" id="subTracks"></ol>
+  <section class="shell block" id="subListen" hidden>
+    <h2>Listen to this round</h2>
+    <p class="block-note">Every track, the round's playlists and a player for the whole round, on the round's own page.</p>
+    <div class="sub-actions"><a class="sub-btn" id="subListenLink" href="round">Listen</a></div>
   </section>
 
   <!-- voting.js: the ballot while voting is open, then the results; only
@@ -129,9 +123,7 @@
 <script src="config.js"></script>
 <script src="auth.js"></script>
 <script src="account.js"></script>
-<script src="listen-demo.js"></script>
 <script src="sentiment.js"></script>
-<script src="player.js"></script>
 <script src="voting.js"></script>
 <script src="submit.js"></script>
 <script src="app.js"></script>

@@ -653,6 +653,8 @@
           (/^https:\/\//i.test(r.playlistUrl || "") ? '<a class="pill" href="' + esc(r.playlistUrl) + '" target="_blank" rel="noopener">Round playlist &nearr;</a>' : "") +
         "</div>" + (status ? "" : recapHtml(recap)) + navHtml(d, i, "top") +
       "</section>" +
+      // listening (listen.js), when the round was also run on the site
+      '<section class="shell block rp-listen" id="rpListen" hidden></section>' +
       '<section class="shell rp-body"><div id="rpTracks"></div></section>' +
       '<section class="shell rp-foot">' + navHtml(d, i, "bottom") + "</section>";
 
@@ -920,5 +922,29 @@
     if (card) fillEmojiGrid(picker, card.getAttribute("data-id"));
   }
 
-  window.PFMLRounds = { renderList: renderList, renderRoundPage: renderRoundPage };
+  // A round run on the site that isn't in the stats yet (one voted in Music
+  // League, until its export comes in; one voted here, until its results are
+  // published): its name, prompt and where it's up to, and the listening
+  // section (listen.js), which app.js fills.
+  function renderSiteRoundPage(r, label) {
+    var page = document.getElementById("roundPage");
+    var phase = PFML.roundPhase(r);
+    document.title = "PFML - " + r.name;
+    var where = phase === "upcoming" ? "Opens " + PFML.closes(r.opens_at).at
+      : phase === "submitting" ? "Taking tracks until " + PFML.closes(r.closes_at).at
+      : phase === "voting" ? "Voting until " + PFML.closes(r.voting_closes_at).at
+      : phase === "finished" ? "Voting closed: the results come with the next update"
+      : "Submissions closed: the results come once the round is in the stats";
+    page.innerHTML =
+      '<section class="shell rp-head">' +
+        '<a class="rp-back" href="./">&larr; Home</a>' +
+        '<p class="rp-kicker">' + esc(label) + "</p>" +
+        "<h1>" + esc(r.name) + "</h1>" +
+        (r.prompt ? '<p class="rp-prompt">' + esc(r.prompt) + "</p>" : "") +
+        '<div class="rp-meta"><span class="rp-chip">' + esc(where) + "</span></div>" +
+      "</section>" +
+      '<section class="shell block rp-listen" id="rpListen" hidden></section>';
+  }
+
+  window.PFMLRounds = { renderList: renderList, renderRoundPage: renderRoundPage, renderSiteRoundPage: renderSiteRoundPage };
 })();

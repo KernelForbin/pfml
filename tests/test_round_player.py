@@ -1,4 +1,5 @@
-"""The round player on the Submit page (site/player.js): its wiring and the
+"""The round player on the round page (site/player.js, drawn by listen.js;
+on the Submit page until 2026-10-26): its wiring and the
 lines it mustn't cross. What it does in a browser (playing Spotify, YouTube
 and SoundCloud in turn, moving on by itself, the "Tap to play next"
 fallback, skipping a dead track) was measured in Chromium with real embeds
@@ -16,11 +17,14 @@ def read(name):
 
 
 class Wiring(unittest.TestCase):
-    def test_the_submit_page_loads_it_before_the_code_that_mounts_it(self):
-        srcs = re.findall(r'<script src="([^"]+)"', read("submit.html"))
-        self.assertLess(srcs.index("account.js"), srcs.index("player.js"))
-        self.assertLess(srcs.index("player.js"), srcs.index("submit.js"))
-        self.assertIn("window.PFMLPlayer.mount(", read("submit.js"))
+    def test_the_round_page_loads_it_before_the_code_that_mounts_it(self):
+        srcs = re.findall(r'<script src="([^"]+)"', read("round.html"))
+        order = [srcs.index(s) for s in ("account.js", "player.js", "listen.js", "rounds.js", "app.js")]
+        self.assertEqual(order, sorted(order))
+        self.assertIn("window.PFMLPlayer.mount(", read("listen.js"))
+        # listening left the Submit page (2026-10-26)
+        self.assertNotIn("player.js", read("submit.html"))
+        self.assertNotIn("PFMLPlayer", read("submit.js"))
 
     def test_only_the_three_official_player_apis_and_only_on_demand(self):
         js = read("player.js")
@@ -42,8 +46,8 @@ class Wiring(unittest.TestCase):
         self.assertIn('host: "https://www.youtube-nocookie.com"', read("player.js"))
 
     def test_the_list_starts_the_round_player_instead_of_its_own_embeds(self):
-        js = read("submit.js")
-        listing = js.split("function renderList() {", 1)[1].split("\n  }\n", 1)[0]
+        js = read("listen.js")
+        listing = js.split("function render(host, r) {", 1)[1].split("\n  }\n", 1)[0]
         self.assertIn("player.playAt(", listing)
         self.assertNotIn("embedHtml(", listing)
 
