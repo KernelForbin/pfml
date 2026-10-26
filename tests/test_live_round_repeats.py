@@ -89,8 +89,12 @@ class LiveRoundRepeats(unittest.TestCase):
                 with self.assertRaises(SystemExit) as caught:
                     supa.request("POST", f"/rest/v1/rpc/{name}", body=args)
                 self.assertIn("Only league members", str(caught.exception))
+        # Since more songs a round (2026-10-25_more_songs.sql) this asks
+        # whether every one of the caller's tracks is described, so a caller
+        # with none, like this one, gets true: nothing of theirs to describe.
+        # The page asks only when the reader has tracks (describeIfMissing).
         self.assertIs(supa.request("POST", "/rest/v1/rpc/my_submission_described",
-                                   body={"p_round": args["p_round"]}), False)
+                                   body={"p_round": args["p_round"]}), True)
 
 
 if __name__ == "__main__":
