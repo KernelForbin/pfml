@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-26 (follow-up 6): playing here first, the apps' playlists after
+
+- **The listening section now leads with playing on the site:** "Play the
+  round here: tap any track below and it plays on from there", then the
+  player and the list.
+- **The apps' playlists moved below the list,** under "Prefer an app?",
+  with Open in Spotify / Open in YouTube. Their buttons at the top read as
+  the way to listen and sent people off the site (the user's call).
+- **No promise about a locked phone** above them any more.
+- **Verified:**
+  - the suite passes (790), with 4 breaks in a scratch clone, all caught;
+  - on the demo at 375, light and dark: the new order, no sideways
+    scroll, and contrast 13.6:1 or better.
+
 ## 2026-10-26 (follow-up 5): a Listening demo link for the admin
 
 - **In the initials menu, admin only:** Listening demo, opening

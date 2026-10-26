@@ -52,16 +52,24 @@ class TheSection(unittest.TestCase):
         self.assertLess(render.index('if (phase === "upcoming" || phase === "submitting") {'),
                         render.index("PFML.api.roundSubmissions(r.id)"))
 
-    def test_the_playlist_note_fits_the_playlists_there_are(self):
+    def test_the_app_note_names_the_apps_there_are_and_promises_nothing_locked(self):
         render = js_body(LISTEN, "function render(host, r) {")
-        self.assertIn("var both = !!(r.spotify_playlist && r.youtube_playlist);", render)
-        self.assertIn('(both ? "Same order in both apps;', render)
-        self.assertIn(': r.youtube_playlist ? "Same order as the list below; it keeps playing with your phone locked if you have YouTube Premium."', render)
+        self.assertIn('var apps = r.spotify_playlist && r.youtube_playlist ? "the Spotify or YouTube app"\n'
+                      '      : r.youtube_playlist ? "the YouTube app" : "the Spotify app";', render)
+        self.assertIn("<b>Prefer an app?</b> The whole round as a playlist in ' +\n          apps +", render)
+        # the user's call, 2026-10-26: no promise about a locked phone
+        self.assertNotIn("locked", render)
 
-    def test_the_playlists_come_first(self):
+    def test_playing_here_comes_first_and_the_apps_after_the_list(self):
+        # the user's call, 2026-10-26: the app buttons at the top read as the
+        # way to listen, and people left the page for YouTube
         render = js_body(LISTEN, "function render(host, r) {")
-        self.assertLess(render.index("playlistButtons(r)"), render.index('<div class="rp" id="lnPlayer"></div>'))
-        self.assertLess(render.index('<div class="rp" id="lnPlayer"></div>'), render.index('id="lnTracks"'))
+        order = [render.index(s) for s in ('<p class="ln-lead">Play the round here: tap any track below',
+                                            '<div class="rp" id="lnPlayer"></div>', 'id="lnTracks"', "playlistButtons(r)")]
+        self.assertEqual(order, sorted(order))
+        buttons = js_body(LISTEN, "function playlistButtons(r) {")
+        self.assertIn(">Open in Spotify</a>", buttons)
+        self.assertIn(">Open in YouTube</a>", buttons)
 
 
 class TheSubmitPage(unittest.TestCase):

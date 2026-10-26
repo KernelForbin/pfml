@@ -2,9 +2,9 @@
    PFML - listening to a round (the round page)
 
    A closed site round's tracks, for everyone, with nobody's name: the
-   round's Spotify and YouTube playlists first (on a phone they're the way
-   to hear the round back to back), then every track in the round's order,
-   each with a play button, and the round player (player.js) above them.
+   round player (player.js) and every track in the round's order, each
+   with a play button, then the round's Spotify and YouTube playlists for
+   anyone who'd rather listen in the app.
    Moved here from the Submit page 2026-10-26 (the user's call), so a round
    keeps its listening for good, not only until the next round opens.
 
@@ -51,11 +51,11 @@
     var out = [];
     if (r.spotify_playlist) {
       out.push('<a class="sub-btn sub-play sub-play-spotify" href="https://open.spotify.com/playlist/' +
-        encodeURIComponent(r.spotify_playlist) + '" target="_blank" rel="noopener">Play on Spotify</a>');
+        encodeURIComponent(r.spotify_playlist) + '" target="_blank" rel="noopener">Open in Spotify</a>');
     }
     if (r.youtube_playlist) {
       out.push('<a class="sub-btn sub-play sub-play-youtube" href="https://www.youtube.com/playlist?list=' +
-        encodeURIComponent(r.youtube_playlist) + '" target="_blank" rel="noopener">Play on YouTube</a>');
+        encodeURIComponent(r.youtube_playlist) + '" target="_blank" rel="noopener">Open in YouTube</a>');
     }
     return out.join("");
   }
@@ -78,23 +78,27 @@
       host.hidden = false;
       return;
     }
+    // Playing here comes first, and the apps' playlists after the list,
+    // marked as leaving the site: their buttons at the top read as the way
+    // to listen, and people left the page for YouTube (the user's call,
+    // 2026-10-26).
     var built = !!(r.spotify_playlist || r.youtube_playlist);
-    var both = !!(r.spotify_playlist && r.youtube_playlist);
+    var apps = r.spotify_playlist && r.youtube_playlist ? "the Spotify or YouTube app"
+      : r.youtube_playlist ? "the YouTube app" : "the Spotify app";
     host.innerHTML = "<h2>Listen</h2>" +
-      (built
-        ? '<div class="sub-playlists"><p class="sub-play-note">The whole round, shuffled, in one tap. ' +
-          (both ? "Same order in both apps; they keep playing with your phone locked (YouTube needs Premium for that)."
-            : r.youtube_playlist ? "Same order as the list below; it keeps playing with your phone locked if you have YouTube Premium."
-            : "Same order as the list below; it keeps playing with your phone locked.") + "</p>" +
-          '<div class="sub-actions">' + playlistButtons(r) + "</div></div>"
-        : "") +
+      '<p class="ln-lead">Play the round here: tap any track below and it plays on from there.</p>' +
       '<div class="rp" id="lnPlayer"></div>' +
       '<div class="sub-order" id="lnOrder" hidden>' +
         '<button type="button" class="sub-btn sub-btn-quiet" id="lnShuffle">Shuffle</button>' +
         '<button type="button" class="sub-btn sub-btn-quiet" id="lnOriginal" hidden>Original order</button>' +
       "</div>" +
       '<p class="block-note" id="lnListNote"></p>' +
-      '<ol class="sub-tracks" id="lnTracks"><li class="sub-empty">Loading…</li></ol>';
+      '<ol class="sub-tracks" id="lnTracks"><li class="sub-empty">Loading…</li></ol>' +
+      (built
+        ? '<div class="sub-playlists ln-apps"><p class="sub-play-note"><b>Prefer an app?</b> The whole round as a playlist in ' +
+          apps + ", in the same order as the list.</p>" +
+          '<div class="sub-actions">' + playlistButtons(r) + "</div></div>"
+        : "");
     host.hidden = false;
     PFML.api.roundSubmissions(r.id).then(function (rows) {
       // the round's one shuffle, the same for everyone from the close, and

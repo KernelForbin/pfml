@@ -116,8 +116,9 @@ README, Submissions on the site.
 Listening to a closed round (its playlists, list and player) is on the
 round's own page, `round?site=<id>`, for good, not on the Submit page
 (README, Listening on the round page). On an iPhone the page can't play
-track to track and Spotify only previews (measured 2026-10-26), so the
-playlists come first there. To try it without a real round, use
+track to track and Spotify only previews (measured 2026-10-26), so a phone
+plays the YouTube copies in one ready-made player; the apps' playlists sit
+below the list, marked as leaving the site. To try it without a real round, use
 pfml.fun/round?demo=1 (`site/listen-demo.js`; README, Listening demo). If
 its tracks change, never pick league submissions: the repo is public.
 

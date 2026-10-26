@@ -1526,8 +1526,12 @@ good (`site/listen.js`, drawn into the round page's `rpListen` section):
   the name, the prompt and where the round is up to.
 - **The round's stats page** (`round?s=…&r=…`) shows the same listening
   section when that round was also run on the site.
-- **The order inside it:** the Spotify and YouTube playlists first, then the
-  player, Shuffle and the list.
+- **The order inside it:** "Play the round here: tap any track below…",
+  then the player, Shuffle and the list, and last the apps' playlists under
+  "Prefer an app?" with Open in Spotify / Open in YouTube. The playlists
+  came first until 2026-10-26, when the user saw their buttons read as the
+  way to listen and send people off the site. The note no longer promises
+  anything about a locked phone (the user's call).
 - **Before submissions close** it says the tracks show once they close,
   and asks the database for nothing.
 - **The Submit page** shows "Listen to this round", linking to
