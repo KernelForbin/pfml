@@ -7,8 +7,8 @@
   are gone (the user's call).
 - **`round_playlists.py` keeps them** when it builds a round's playlists,
   from the lookups it already made.
-- **Waits on:** the migration `2026-10-26_track_details.sql`, which must
-  run before this ships and before any round's playlists are built.
+- **Set up the same day:** the user ran `2026-10-26_track_details.sql`
+  before this shipped, and the live database answers for the new columns.
 - **Verified:**
   - the suite passes (798), with 13 breaks in a scratch clone, all caught
     (two got through at first, and the tests were tightened);
