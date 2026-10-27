@@ -194,7 +194,9 @@
           '<span class="sub-track-play" aria-hidden="true">' + PLAY_ICON + "</span>" + name + "</button>" +
         (b ? b.controls(s) : "") +
         gapNote(s) +
-        (s.note ? '<p class="sub-track-note">' + esc(s.note) + "</p>" : "") +
+        // the submitter's note, never their name: while voting only one
+        // they chose to show, every one once voting has closed
+        (s.note ? '<p class="sub-track-note"><span class="sub-note-from">From the submitter</span>' + esc(s.note) + "</p>" : "") +
         (b ? b.comment(s) : "") + "</li>";
     }).join("");
     if (list.ballot) list.ballot.refresh();

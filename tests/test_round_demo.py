@@ -69,6 +69,21 @@ class TheRound(unittest.TestCase):
         self.assertNotIn("title:", DEMO)
 
 
+class TheSampleNote(unittest.TestCase):
+    """Asked 2026-10-27: the demo shows where a submitter's note goes,
+    since a round voted in Music League has none to show while voting."""
+
+    def test_only_on_the_demo_s_tracks_and_only_when_none_has_a_note(self):
+        guard = DEMO.split("PFML.api = new Proxy(real, {", 1)[1]
+        self.assertIn('return demoCall && name === "roundSubmissions" ? out.then(sampleNote) : out;', guard)
+        sample = DEMO.split("function sampleNote(rows) {", 1)[1].split("\n    }\n", 1)[0]
+        self.assertIn("if (!rows.length || rows.some(function (s) { return s.note; })) return rows;", sample)
+        self.assertIn("copy.note = SAMPLE_NOTE;", sample)
+
+    def test_it_says_it_is_a_sample(self):
+        self.assertIn('var SAMPLE_NOTE = "Sample note, for the demo:', DEMO)
+
+
 class NothingReachesTheDatabase(unittest.TestCase):
     def test_the_ballot_and_who_voted_stay_on_the_page(self):
         demo = demo_block()
@@ -82,7 +97,7 @@ class NothingReachesTheDatabase(unittest.TestCase):
         guard = DEMO.split("PFML.api = new Proxy(real, {", 1)[1]
         order = [guard.index(s) for s in ("if (args[i] !== DEMO_ROUND) continue;",
                                           "if (READS.indexOf(name) === -1 || !src) return Promise.resolve([]);",
-                                          "args[i] = src.id;", "return fn.apply(target, args);")]
+                                          "args[i] = src.id;", "var out = fn.apply(target, args);")]
         self.assertEqual(order, sorted(order))
 
 
