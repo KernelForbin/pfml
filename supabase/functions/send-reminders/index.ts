@@ -185,9 +185,11 @@ type Claim = { round_id: string; kind: string; user_id: string; channel: string;
 type Sub = { endpoint: string; p256dh: string; auth: string };
 
 // What each reminder says. The voting ones only ever go to players who
-// haven't voted (reminders_claim).
+// haven't voted (reminders_claim). A new round opens the Submit page; the
+// rest open the round's own page, where it plays and votes (2026-10-26).
 export function message(c: Claim): { title: string; body: string; url: string; tag: string } {
-  const at = { url: `${SITE}submit`, tag: `${c.round_id}:${c.kind}` };
+  const page = c.kind === "round_open" ? `${SITE}submit` : `${SITE}round?site=${encodeURIComponent(c.round_id)}`;
+  const at = { url: page, tag: `${c.round_id}:${c.kind}` };
   switch (c.kind) {
     case "round_open":
       return { ...at, title: `${c.round_name} is open`, body: `Submit your track. Submissions close ${left(c.closes_at)}.` };

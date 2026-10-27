@@ -1,16 +1,19 @@
 /* PFML - voting on the site (README, Voting on the site).
 
-   Built 2026-10-25 and off until the user switches it on (PFML.siteVoting
-   in account.js). For a round opened with site voting, the Submit page hands
-   this the round once submissions close:
+   Built 2026-10-25, on for seasons set up on the site (PFML.siteVoting in
+   account.js). A round that votes here votes on its round page, once
+   submissions close (on the Submit page until 2026-10-26):
 
-   - While voting is open, the ballot: points on other players' tracks, at
+   - While voting is open, the ballot, inside the round's track list
+     (listen.js asks ballot() for it): points on other players' tracks, at
      most max_per_track on one and every point of point_budget spent, and a
-     comment on any track, your own included. Only players with a track in
-     the round vote, and they can change their ballot until voting closes.
-   - After, the results: every track's submitter and score, and every vote
-     and comment with who gave it. A submitter who didn't vote scores 0
-     unless the round says otherwise (the user's call, 2026-10-25).
+     comment on any track, your own included, each in the track's own row.
+     Only players with a track in the round vote, and they can change their
+     ballot until voting closes.
+   - After, the results (render(), below the list): every track's submitter
+     and score, and every vote and comment with who gave it. A submitter who
+     didn't vote scores 0 unless the round says otherwise (the user's call,
+     2026-10-25).
 
    It also gives the admin's form its voting fields, and the voting panel
    (change the deadline, close voting now). The database checks every rule
@@ -58,39 +61,87 @@
       "<span>" + esc(names[id] || "Member") + "</span></a>";
   }
 
-  var state = { round: null, host: null, rows: [], mineTags: [], points: {}, comments: {}, dirty: false };
+  var state = { round: null, host: null, parts: null, rows: [], mineTags: [], names: {}, points: {}, comments: {}, open: {}, dirty: false };
 
-  /* ---- the voting section ---- */
+  /* ---- the ballot, in the round's track list (listen.js) ---- */
 
-  // r: the round; mine: the reader's own tracks ([{tag, ...}], [] for none;
-  // a round can take more than one from each player); host: the section to
-  // draw in, the Submit page's unless given (the round demo's is on the
-  // round page; README, Round demo).
-  function render(r, mine, host) {
-    host = state.host = host || $("subVote");
-    var phase = on(r) ? PFML.roundPhase(r) : "";
-    if (phase !== "voting" && phase !== "finished") { host.hidden = true; host.innerHTML = ""; return; }
+  // Voting happens in the round's own list on its round page (the user's
+  // call, 2026-10-26): each track plays, takes points and takes a comment in
+  // the same row, and Shuffle reorders the ballot with the play order.
+  // rows: the round's tracks; parts: the elements listen.js keeps for it,
+  // {head, list, bar}: the rules and who has voted above the list, the list,
+  // and the points left and Save below it. Resolves to what listen.js draws
+  // into each track's row (controls beside the track, comment under it) and
+  // refresh, to call after each draw; or to null when the reader has no
+  // track in the round and so no ballot.
+  function ballot(r, rows, parts) {
     state.round = r;
-    state.mineTags = (mine || []).map(function (m) { return m.tag; });
-    host.innerHTML = '<p class="block-note">Loading the voting…</p>';
-    host.hidden = false;
-    var loads = [api().roundSubmissions(r.id), api().people()];
-    if (phase === "voting") {
-      loads.push(state.mineTags.length ? api().myBallot(r.id) : Promise.resolve([]), api().roundVoters(r.id), api().roundSubmitters(r.id));
-    } else {
-      loads.push(api().roundResults(r.id), api().roundVotes(r.id));
-    }
-    Promise.all(loads).then(function (res) {
-      if (state.round !== r) return;
-      // the round's one shuffle, as the track list above starts in
-      state.rows = PFML.roundOrder(r.id, res[0] || []);
-      var names = namesOf(res[1]);
-      if (phase === "voting") renderBallot(r, res[2] || [], res[3] || [], res[4] || [], names);
-      else renderResults(r, res[2] || [], res[3] || [], names);
-    }).catch(function (err) {
-      console.error(err);
-      host.innerHTML = '<p class="sub-msg is-error">Couldn’t load the voting: ' + esc(errText(err)) + "</p>";
+    state.rows = rows;
+    state.parts = parts;
+    state.points = {};
+    state.comments = {};
+    state.open = {};
+    state.dirty = false;
+    return Promise.all([api().mySubmissions(r.id), api().people(), api().roundVoters(r.id), api().roundSubmitters(r.id)]).then(function (res) {
+      var mine = res[0] || [], voters = res[2] || [], submitters = res[3] || [];
+      var closes = PFML.closes(r.voting_closes_at);
+      state.mineTags = mine.map(function (m) { return m.tag; });
+      state.names = namesOf(res[1]);
+      if (!mine.length) {
+        parts.head.innerHTML = '<p class="block-note">Only players with a track in this round vote. Voting closes ' + esc(closes.at) +
+          " (" + esc(closes.left) + "); the results show here after.</p>" + votedLine(voters, submitters, state.names);
+        return null;
+      }
+      return api().myBallot(r.id).then(function (saved) {
+        saved = saved || [];
+        saved.forEach(function (v) {
+          state.points[v.submission_id] = v.points;
+          state.comments[v.submission_id] = v.comment || "";
+        });
+        parts.head.innerHTML = '<p class="block-note">Give ' + r.point_budget + " points across the other tracks, at most " + r.max_per_track +
+          " on one, right in the list as they play." + (r.downvotes ? " You can also give up to " + r.downvotes +
+            (r.downvotes === 1 ? " downvote" : " downvotes") + ", at most " + r.max_down_per_track +
+            " on one: they’re optional, and press − below 0 to give them." : "") +
+          " Add a comment on any track, yours too. You can change your ballot until voting closes, " +
+          esc(closes.at) + " (" + esc(closes.left) + ").</p>" +
+          (r.nonvoters_keep_points ? "" : '<p class="block-note vt-rule">Players who don’t vote score ' +
+            (r.downvotes ? "only the downvotes they got" : "0") + " for this round.</p>") +
+          votedLine(voters, submitters, state.names);
+        // the message in the bar, since the bar stays over the list
+        parts.bar.innerHTML = '<div class="vt-bar"><span class="vt-bar-text"><span class="vt-left" id="vtLeft" aria-live="polite"></span>' +
+            '<span class="sub-msg" id="vtMsg" role="status" hidden></span></span>' +
+            '<button type="button" class="sub-btn" id="vtSave">' + (saved.length ? "Update ballot" : "Save ballot") + "</button></div>";
+        parts.bar.hidden = false;
+        parts.list.addEventListener("click", onBallotClick);
+        parts.list.addEventListener("input", onBallotInput);
+        $("vtSave").addEventListener("click", save);
+        return { controls: controls, comment: commentHtml, refresh: refreshBallot };
+      });
     });
+  }
+
+  function own(s) { return state.mineTags.indexOf(s.tag) !== -1; }
+
+  // Beside the track: the points, or "Your track" on the reader's own.
+  function controls(s) {
+    if (own(s)) return '<span class="vt-own">Your track</span>';
+    var title = s.title || ((NAMES[s.platform] || "") + " track");
+    return '<span class="vt-step">' +
+        '<button type="button" class="vt-step-btn" data-act="minus" aria-label="One point less for ' + esc(title) + '">−</button>' +
+        '<output class="vt-pts" aria-label="Points for ' + esc(title) + '">' + (state.points[s.id] || 0) + "</output>" +
+        '<button type="button" class="vt-step-btn" data-act="plus" aria-label="One point more for ' + esc(title) + '">+</button>' +
+      "</span>";
+  }
+
+  // Under it: the comment, open when it has one or the reader opened it,
+  // so a redraw (Shuffle) keeps it as it was.
+  function commentHtml(s) {
+    var comment = state.comments[s.id] || "", open = !!comment || !!state.open[s.id];
+    var title = s.title || ((NAMES[s.platform] || "") + " track");
+    return '<div class="vt-comment-box"><button type="button" class="vt-comment-btn" data-act="comment" aria-expanded="' + open + '">' +
+        (comment ? "Comment" : "Add a comment") + "</button>" +
+      '<textarea class="sub-input vt-comment" maxlength="2000" rows="2" aria-label="Your comment on ' + esc(title) + '"' +
+        (open ? "" : " hidden") + ">" + esc(comment) + "</textarea></div>";
   }
 
   // "8/12 voted", and who hasn't yet: who, never how.
@@ -103,63 +154,6 @@
     return '<p class="vt-count"><b>' + voters.length + "/" + submitters.length + "</b> voted" +
       (waiting.length ? '<span class="vt-waiting">Still to vote: ' +
         waiting.map(function (id) { return esc(names[id] || "a member"); }).join(", ") + "</span>" : "") + "</p>";
-  }
-
-  function renderBallot(r, saved, voters, submitters, names) {
-    var host = state.host;
-    var closes = PFML.closes(r.voting_closes_at);
-    if (!state.mineTags.length) {
-      host.innerHTML = "<h2>Voting</h2>" +
-        '<p class="block-note">Only players with a track in this round vote. Voting closes ' + esc(closes.at) +
-        " (" + esc(closes.left) + "); the results show here after.</p>" + votedLine(voters, submitters, names);
-      return;
-    }
-    state.points = {};
-    state.comments = {};
-    state.dirty = false;
-    saved.forEach(function (v) {
-      state.points[v.submission_id] = v.points;
-      state.comments[v.submission_id] = v.comment || "";
-    });
-    host.innerHTML = "<h2>Your ballot</h2>" +
-      '<p class="block-note">Give ' + r.point_budget + " points across the other tracks, at most " + r.max_per_track +
-      " on one." + (r.downvotes ? " You can also give up to " + r.downvotes + (r.downvotes === 1 ? " downvote" : " downvotes") +
-        ", at most " + r.max_down_per_track + " on one: they’re optional, and press − below 0 to give them." : "") +
-      " Add a comment on any track, yours too. You can change your ballot until voting closes, " +
-      esc(closes.at) + " (" + esc(closes.left) + ").</p>" +
-      (r.nonvoters_keep_points ? "" : '<p class="block-note vt-rule">Players who don’t vote score ' +
-        (r.downvotes ? "only the downvotes they got" : "0") + " for this round.</p>") +
-      votedLine(voters, submitters, names) +
-      '<ol class="vt-list">' + state.rows.map(ballotRow).join("") + "</ol>" +
-      '<div class="vt-bar"><span class="vt-left" id="vtLeft" aria-live="polite"></span>' +
-        '<button type="button" class="sub-btn" id="vtSave">' + (saved.length ? "Update ballot" : "Save ballot") + "</button></div>" +
-      '<p class="sub-msg" id="vtMsg" role="status" hidden></p>';
-    host.onclick = onBallotClick;
-    host.oninput = onBallotInput;
-    $("vtSave").addEventListener("click", save);
-    refreshBallot();
-  }
-
-  function ballotRow(s, i) {
-    var own = state.mineTags.indexOf(s.tag) !== -1;
-    var pts = state.points[s.id] || 0;
-    var comment = state.comments[s.id] || "";
-    var title = s.title || ((NAMES[s.platform] || "") + " track");
-    return '<li class="vt-row' + (own ? " is-own" : "") + '" data-id="' + esc(s.id) + '">' +
-      '<div class="vt-main">' +
-        '<span class="sub-pos">' + (i + 1) + "</span>" + trackLabel(s) +
-        (own ? '<span class="vt-own">Your track</span>'
-             : '<span class="vt-step">' +
-                 '<button type="button" class="vt-step-btn" data-act="minus" aria-label="One point less for ' + esc(title) + '">−</button>' +
-                 '<output class="vt-pts" aria-label="Points for ' + esc(title) + '">' + pts + "</output>" +
-                 '<button type="button" class="vt-step-btn" data-act="plus" aria-label="One point more for ' + esc(title) + '">+</button>' +
-               "</span>") +
-      "</div>" +
-      (s.note ? '<p class="vt-track-note">' + esc(s.note) + "</p>" : "") +
-      '<button type="button" class="vt-comment-btn" data-act="comment" aria-expanded="' + !!comment + '">' + (comment ? "Comment" : "Add a comment") + "</button>" +
-      '<textarea class="sub-input vt-comment" maxlength="2000" rows="2" aria-label="Your comment on ' + esc(title) + '"' +
-        (comment ? "" : " hidden") + ">" + esc(comment) + "</textarea>" +
-    "</li>";
   }
 
   // Upvotes given, and downvotes given (as a positive number).
@@ -179,7 +173,7 @@
       : left === 0 ? "All " + r.point_budget + " points given" : "<b>" + (-left) + "</b> too many") +
       (r.downvotes ? '<span class="vt-down-left">' + down + " of " + r.downvotes + " downvotes</span>" : "");
     $("vtLeft").classList.toggle("is-done", left === 0);
-    state.host.querySelectorAll(".vt-row").forEach(function (li) {
+    state.parts.list.querySelectorAll(".sub-track[data-id]").forEach(function (li) {
       var id = li.getAttribute("data-id"), pts = state.points[id] || 0;
       var out = li.querySelector(".vt-pts");
       if (!out) return;
@@ -195,10 +189,11 @@
   function onBallotClick(ev) {
     var b = ev.target.closest("button[data-act]");
     if (!b) return;
-    var li = b.closest(".vt-row"), id = li.getAttribute("data-id"), act = b.getAttribute("data-act");
+    var li = b.closest(".sub-track"), id = li.getAttribute("data-id"), act = b.getAttribute("data-act");
     if (act === "comment") {
       var box = li.querySelector(".vt-comment");
       box.hidden = !box.hidden;
+      state.open[id] = !box.hidden;
       b.setAttribute("aria-expanded", String(!box.hidden));
       b.textContent = box.hidden && !box.value.trim() ? "Add a comment" : "Comment";
       if (!box.hidden) box.focus();
@@ -213,7 +208,7 @@
 
   function onBallotInput(ev) {
     if (!ev.target.classList.contains("vt-comment")) return;
-    state.comments[ev.target.closest(".vt-row").getAttribute("data-id")] = ev.target.value;
+    state.comments[ev.target.closest(".sub-track").getAttribute("data-id")] = ev.target.value;
     changed();
   }
 
@@ -241,7 +236,7 @@
       $("vtSave").textContent = "Update ballot";
       message("Ballot saved. You can change it until voting closes.", "good");
       return Promise.all([api().roundVoters(r.id), api().roundSubmitters(r.id), api().people()]).then(function (res) {
-        var line = state.host.querySelector(".vt-count");
+        var line = state.parts.head.querySelector(".vt-count");
         if (line) line.outerHTML = votedLine(res[0] || [], res[1] || [], namesOf(res[2]));
       });
     }).catch(function (err) {
@@ -250,6 +245,24 @@
   }
 
   /* ---- results, once voting has closed ---- */
+
+  // Below the round page's listening, in its own section (host): every
+  // track by score, with who sent it and every vote.
+  function render(r, host) {
+    state.host = host;
+    if (!on(r) || PFML.roundPhase(r) !== "finished") { host.hidden = true; host.innerHTML = ""; return; }
+    state.round = r;
+    host.innerHTML = '<p class="block-note">Loading the results…</p>';
+    host.hidden = false;
+    Promise.all([api().roundSubmissions(r.id), api().people(), api().roundResults(r.id), api().roundVotes(r.id)]).then(function (res) {
+      if (state.round !== r) return;
+      state.rows = PFML.roundOrder(r.id, res[0] || []);
+      renderResults(r, res[2] || [], res[3] || [], namesOf(res[1]));
+    }).catch(function (err) {
+      console.error(err);
+      host.innerHTML = '<p class="sub-msg is-error">Couldn’t load the results: ' + esc(errText(err)) + "</p>";
+    });
+  }
 
   function renderResults(r, results, votes, names) {
     var host = state.host;
@@ -365,5 +378,5 @@
     return box;
   }
 
-  window.PFMLVoting = { on: on, render: render, adminFields: adminFields, readAdmin: readAdmin, adminPanel: adminPanel };
+  window.PFMLVoting = { on: on, ballot: ballot, render: render, adminFields: adminFields, readAdmin: readAdmin, adminPanel: adminPanel };
 })();

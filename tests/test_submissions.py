@@ -289,7 +289,7 @@ class RoundOrder(unittest.TestCase):
     def test_everyone_starts_from_the_rounds_one_shuffle(self):
         render = self.body(self.listen, "function render(host, r) {")
         self.assertIn("rows = PFML.roundOrder(r.id, rows || []);", render)
-        self.assertIn("var list = { original: rows, order: rows, player: null, built: built };", render)
+        self.assertIn("var list = { original: rows, order: rows, player: null, built: built, ballot: null };", render)
         # the old tag order is gone, and nothing else sorts the list
         self.assertNotIn("a.tag < b.tag", self.listen)
         self.assertIn("PFML.roundOrder = roundOrder;", self.account)

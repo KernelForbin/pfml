@@ -944,7 +944,7 @@
         '<div class="rp-meta"><span class="rp-chip">' + esc(where) + "</span></div>" +
       "</section>" +
       '<section class="shell block rp-listen" id="rpListen" hidden></section>' +
-      // the round demo's ballot (voting.js; README, Round demo)
+      // the results, once voting here has closed (voting.js)
       '<section class="shell block" id="rpVote" hidden></section>';
   }
 

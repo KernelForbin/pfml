@@ -137,10 +137,10 @@
     return found.filter(function (k) { return kinds.indexOf(k) !== -1; });
   }
 
-  // voting.js (voting on the site, off until the user switches it on); a
-  // stand-in that's always off if it didn't load
+  // voting.js, for whether a round votes on the site (its ballot is on the
+  // round's page); a stand-in that's always off if it didn't load
   function voting() {
-    return window.PFMLVoting || { on: function () { return false; }, render: function () {} };
+    return window.PFMLVoting || { on: function () { return false; } };
   }
 
   function seasonLabel(key) {
@@ -190,7 +190,7 @@
 
   function render() {
     var r = state.round;
-    ["subRound", "subMine", "subForm", "subWhoBox", "subListen", "subVote"].forEach(function (id) { $(id).hidden = true; });
+    ["subRound", "subMine", "subForm", "subWhoBox", "subListen"].forEach(function (id) { $(id).hidden = true; });
     // the round form is on the Commissioner page now
     $("subCommish").hidden = !PFML.member || (PFML.member.role !== "admin" && PFML.member.role !== "commissioner");
     renderNext();
@@ -205,7 +205,7 @@
     $("subLine").textContent = open
       ? "Submissions close " + PFML.closes(r.closes_at).at + " (" + PFML.closes(r.closes_at).left + ")."
       : phase === "voting" ? "Voting is open. It closes " + PFML.closes(r.voting_closes_at).at + " (" + PFML.closes(r.voting_closes_at).left + ")."
-      : phase === "finished" ? "Voting is over. The results are below."
+      : phase === "finished" ? "Voting is over. The results are on the round’s page."
       : "Submissions for this round are closed.";
     // a round voting here names its submitters once voting closes
     document.querySelector(".sub-anon").textContent = voting().on(r)
@@ -224,10 +224,16 @@
     if (state.mine.length) renderMine(open);
     if (open && (state.mine.length < songsOf(r) || state.changing)) renderForm();
     if (!open) {
-      // listening is on the round's own page (listen.js), for good
+      // listening, and voting for a round that votes here, are on the
+      // round's own page (listen.js, voting.js), for good
       $("subListenLink").href = "round?site=" + encodeURIComponent(r.id);
+      $("subListenTitle").textContent = phase === "voting" ? "Listen and vote" : "Listen to this round";
+      $("subListenNote").textContent = phase === "voting"
+        ? "Every track and a player for the whole round on the round’s own page, with your points and comments right on each track as it plays."
+        : phase === "finished" ? "Every track, a player for the whole round and the results, on the round’s own page."
+        : "Every track, the round's playlists and a player for the whole round, on the round's own page.";
+      $("subListenLink").textContent = phase === "voting" ? "Listen and vote" : phase === "finished" ? "See the results" : "Listen";
       $("subListen").hidden = false;
-      voting().render(r, state.mine);
     }
   }
 

@@ -9,7 +9,6 @@ import re
 import unittest
 
 from support import ROOT
-from test_reminders import js_body
 
 SITE = ROOT / "site"
 DEMO = (SITE / "round-demo.js").read_text(encoding="utf-8")
@@ -49,21 +48,6 @@ class ThePage(unittest.TestCase):
         self.assertLess(DEMO.index("window.PFMLDemo = { round: DEMO_ROUND };"), DEMO.index("PFML.ready.then("))
         app = (SITE / "app.js").read_text(encoding="utf-8")
         self.assertIn('var siteId = params.get("site") || (window.PFMLDemo && window.PFMLDemo.round) || "";', app)
-
-
-class TheBallot(unittest.TestCase):
-    def test_the_demo_alone_gets_a_ballot_under_the_listening(self):
-        init = js_body((SITE / "app.js").read_text(encoding="utf-8"), "function initRound() {")
-        self.assertIn('if (window.PFMLDemo && window.PFMLVoting && $("rpVote")) {', init)
-        self.assertIn('window.PFMLVoting.render(site, mine || [], $("rpVote"));', init)
-        self.assertLess(init.index('window.PFMLListen.render($("rpListen"), site);'), init.index("window.PFMLVoting.render("))
-        page = js_body((SITE / "rounds.js").read_text(encoding="utf-8"), "function renderSiteRoundPage(r, label) {")
-        self.assertLess(page.index('id="rpListen"'), page.index("'<section class=\"shell block\" id=\"rpVote\" hidden></section>'"))
-
-    def test_voting_draws_where_it_is_told_the_submit_page_by_default(self):
-        voting = (SITE / "voting.js").read_text(encoding="utf-8")
-        self.assertIn('host = state.host = host || $("subVote");', js_body(voting, "function render(r, mine, host) {"))
-        self.assertNotIn('$("subVote")', voting.replace('host = state.host = host || $("subVote");', ""))
 
 
 class TheRound(unittest.TestCase):

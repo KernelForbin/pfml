@@ -107,16 +107,21 @@
     var built = !!(r.spotify_playlist || r.youtube_playlist);
     var apps = r.spotify_playlist && r.youtube_playlist ? "the Spotify or YouTube app"
       : r.youtube_playlist ? "the YouTube app" : "the Spotify app";
-    host.innerHTML = "<h2>Listen</h2>" +
+    // While a round voting here is open, the ballot is in this list too
+    // (voting.js ballot): points and a comment in each track's row
+    var voting = !!(window.PFMLVoting && window.PFMLVoting.on(r) && phase === "voting");
+    host.innerHTML = (voting ? "<h2>Listen and vote</h2>" : "<h2>Listen</h2>") +
       '<p class="ln-total" id="lnTotal" hidden></p>' +
       '<p class="ln-lead">Play the round here: tap any track below and it plays on from there.</p>' +
       '<div class="rp" id="lnPlayer"></div>' +
+      (voting ? '<div class="ln-vote-head" id="lnVoteHead"></div>' : "") +
       '<div class="sub-order" id="lnOrder" hidden>' +
         '<button type="button" class="sub-btn sub-btn-quiet" id="lnShuffle">Shuffle</button>' +
         '<button type="button" class="sub-btn sub-btn-quiet" id="lnOriginal" hidden>Original order</button>' +
       "</div>" +
       '<p class="block-note" id="lnListNote"></p>' +
       '<ol class="sub-tracks" id="lnTracks"><li class="sub-empty">Loading…</li></ol>' +
+      (voting ? '<div class="ln-vote-bar" id="lnVoteBar" hidden></div>' : "") +
       (built
         ? '<div class="sub-playlists ln-apps"><p class="sub-play-note"><b>Prefer an app?</b> The whole round as a playlist in ' +
           apps + ", in the same order as the list.</p>" +
@@ -133,7 +138,7 @@
       // the round player (player.js) plays them top to bottom; the list
       // marks the one playing, a tap on another starts the round from that
       // track, and a tap on the one playing pauses or resumes it
-      var list = { original: rows, order: rows, player: null, built: built };
+      var list = { original: rows, order: rows, player: null, built: built, ballot: null };
       list.player = window.PFMLPlayer.mount($("lnPlayer"), rows, function (playing, paused) { markPlaying(playing, paused); });
       $("lnTracks").onclick = function (ev) {
         var b = ev.target.closest(".sub-track-btn");
@@ -146,6 +151,16 @@
       $("lnOriginal").onclick = function () { reorder(list, list.original); };
       $("lnOrder").hidden = rows.length < 2;
       drawTracks(list);
+      if (!voting) return;
+      // then the ballot, drawn into the same rows once it has loaded
+      window.PFMLVoting.ballot(r, rows, { head: $("lnVoteHead"), list: $("lnTracks"), bar: $("lnVoteBar") }).then(function (ballot) {
+        if (!ballot) return;
+        list.ballot = ballot;
+        drawTracks(list);
+      }).catch(function (err) {
+        console.error(err);
+        $("lnVoteHead").innerHTML = '<p class="sub-msg is-error">Couldn’t load your ballot: ' + esc(errText(err)) + "</p>";
+      });
     }).catch(function (err) {
       $("lnTracks").innerHTML = '<li class="sub-empty">Couldn’t load the tracks: ' + esc(errText(err)) + "</li>";
     });
@@ -169,14 +184,20 @@
           (details ? '<small class="sub-track-meta">' + esc(details) + "</small>" : "") + "</span>"
         : '<span class="sub-track-where">' + NAMES[s.platform] + "</span>";
       var label = s.title ? s.title + (s.artist ? " – " + s.artist : "") : "track " + (i + 1) + " on " + NAMES[s.platform];
-      return '<li class="sub-track">' +
+      // with a ballot, the track's points beside it and its comment under
+      // it, in the same row it plays from
+      var b = list.ballot;
+      return '<li class="sub-track' + (b ? " has-ballot" : "") + '" data-id="' + esc(s.id) + '">' +
         '<button type="button" class="sub-track-btn" data-i="' + i + '" data-label="' + esc(label) + '" ' +
           'aria-label="Play ' + esc(label) + '" aria-current="false">' +
           '<span class="sub-pos">' + (i + 1) + "</span>" +
           '<span class="sub-track-play" aria-hidden="true">' + PLAY_ICON + "</span>" + name + "</button>" +
+        (b ? b.controls(s) : "") +
         gapNote(s) +
-        (s.note ? '<p class="sub-track-note">' + esc(s.note) + "</p>" : "") + "</li>";
+        (s.note ? '<p class="sub-track-note">' + esc(s.note) + "</p>" : "") +
+        (b ? b.comment(s) : "") + "</li>";
     }).join("");
+    if (list.ballot) list.ballot.refresh();
     var playing = list.player.playing();
     markPlaying(playing ? list.order.indexOf(playing) : -1, list.player.paused());
   }

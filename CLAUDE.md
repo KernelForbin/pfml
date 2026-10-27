@@ -216,7 +216,11 @@ there updates them too (a test compares both).
 Built 2026-10-25 so the league can eventually leave the Music League app,
 and switched on the same day with seasons set up on the site
 (`SITE_VOTING` in `account.js`, pinned by a test with the pages that say
-so). Only a round in such a season votes here. Never let it reach Round 7,
+so). Only a round in such a season votes here, on its round page, inside
+the round's own track list: play, points and comment in one row, as it
+plays (the user's call, 2026-10-26; README, Voting in the round's list).
+Try changes there on pfml.fun/round?demo=1, since no round votes here
+yet. Never let it reach Round 7,
 Season 3 or any round already open: the database refuses a round opened by
 hand that asks to, and refuses to change it later. README, Voting on the
 site.

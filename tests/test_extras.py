@@ -193,7 +193,8 @@ class ThePages(unittest.TestCase):
         self.assertIn("(s.note ? '<p class=\"sub-track-note\">' + esc(s.note) + \"</p>\" : \"\")",
                       js_body(read(SITE / "listen.js"), "function drawTracks(list) {"))
         voting = read(SITE / "voting.js")
-        self.assertIn("(s.note ? '<p class=\"vt-track-note\">' + esc(s.note) + \"</p>\" : \"\")", js_body(voting, "function ballotRow(s, i) {"))
+        self.assertIn("(item.s.note ? '<p class=\"vt-track-note\">' + esc(item.s.note) + \"</p>\" : \"\")",
+                      js_body(voting, "function resultRow(r, item, rank, votes, names) {"))
 
     def test_the_season_and_round_forms_set_them(self):
         rules = js_body(self.seasons, "function readRules(form) {")

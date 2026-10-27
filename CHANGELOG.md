@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-10-26 (follow-up 13): voting in the round's list, on the round page
+
+- **The user's call:** real voting happens on the round page, and the
+  ballot is the round's own track list. Each row plays the track, takes
+  its points and its comment, so a member votes on the track as it plays.
+  Shuffle and Original order move the ballot with the play order. Points,
+  comments and an open comment box are kept by track, so they survive a
+  reshuffle. The points left and Save stay pinned below the list.
+- **Results** go under the list once voting closes, until the round is in
+  the stats.
+- **The way there:** the Submit page now says "Listen and vote" and links
+  to the round page, and so does Home's voting banner. The voting and
+  playlist-ready reminders link there too, but only once the user
+  redeploys `send-reminders`.
+- **The separate ballot list is gone** (the Submit page's, and the demo's
+  second list). Nothing changes for members until a season on the site
+  reaches voting; the round demo shows it now.
+- **Verified:**
+  - the suite passes (814), with 16 breaks in a scratch clone, all caught;
+  - in a browser, on the demo with a stand-in sign-in: points on the
+    playing track left the player alone, a comment survived Shuffle and
+    Original order, a full ballot saved with real clicks and reached
+    nothing; 375 and 884 wide, light and dark, with no sideways scroll;
+    a finished site round showed its results under the list.
+
 ## 2026-10-26 (follow-up 12): the round demo, with Round 7's tracks and a ballot
 
 - **pfml.fun/round?demo=1** is now the round page for the newest closed

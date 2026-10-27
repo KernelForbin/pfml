@@ -384,7 +384,8 @@
     var r = rounds.filter(function (x) { return PFML.roundPhase(x) === "voting"; })[0];
     if (!r) return false;
     var closes = PFML.closes(r.voting_closes_at);
-    $("submitBanner").innerHTML = '<a class="sub-banner-link" href="submit"><span class="sub-banner-kicker">Voting is open</span>' +
+    // straight to the round's page, where the ballot is in its track list
+    $("submitBanner").innerHTML = '<a class="sub-banner-link" href="round?site=' + encodeURIComponent(r.id) + '"><span class="sub-banner-kicker">Voting is open</span>' +
       "<b>" + esc(r.name) + "</b>" +
       '<span class="sub-banner-when">Voting closes ' + esc(closes.at) + " · " + esc(closes.left) + "</span>" +
       '<span class="sub-banner-mine" id="submitBannerMine"></span>' +
@@ -2515,12 +2516,10 @@
           if (i >= 0) window.PFMLRounds.renderRoundPage(d, d.rounds[i].id);
           else window.PFMLRounds.renderSiteRoundPage(site, listed ? listed.label : "Season " + String(site.season_key).replace(/^season/, ""));
           window.PFMLListen.render($("rpListen"), site);
-          // the round demo's ballot, under the listening (round-demo.js;
-          // README, Round demo); a real round still votes on the Submit page
-          if (window.PFMLDemo && window.PFMLVoting && $("rpVote")) {
-            PFML.api.mySubmissions(site.id).then(function (mine) { window.PFMLVoting.render(site, mine || [], $("rpVote")); })
-              .catch(function (err) { console.error(err); });
-          }
+          // A round voting here votes in its listening list (listen.js); once
+          // its voting has closed, the results go under it until the round
+          // is in the stats (voting.js render)
+          if (i < 0 && window.PFMLVoting && $("rpVote")) window.PFMLVoting.render(site, $("rpVote"));
         });
       }).catch(failed);
       return;

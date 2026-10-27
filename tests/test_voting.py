@@ -188,7 +188,10 @@ class TheSwitch(unittest.TestCase):
     def test_everything_voting_shows_waits_for_the_switch(self):
         voting = read(SITE / "voting.js")
         self.assertIn("function on(r) { return !!(PFML.siteVoting && r && r.votes_on_site); }", voting)
-        self.assertIn('var phase = on(r) ? PFML.roundPhase(r) : "";', js_body(voting, "function render(r, mine, host) {"))
+        self.assertIn('if (!on(r) || PFML.roundPhase(r) !== "finished") { host.hidden = true; host.innerHTML = ""; return; }',
+                      js_body(voting, "function render(r, host) {"))
+        self.assertIn('var voting = !!(window.PFMLVoting && window.PFMLVoting.on(r) && phase === "voting");',
+                      js_body(read(SITE / "listen.js"), "function render(host, r) {"))
         self.assertIn("if (!PFML.siteVoting || !r || !r.votes_on_site) return \"\";", js_body(voting, "function adminFields(r) {"))
         self.assertIn("if (!on(r) || PFML.roundPhase(r) !== \"voting\") return null;", js_body(voting, "function adminPanel(r, done, fail) {"))
         banner = js_body(read(SITE / "app.js"), "function votingBanner(rounds) {")
@@ -219,18 +222,23 @@ class TheSwitch(unittest.TestCase):
 
 
 class ThePage(unittest.TestCase):
-    def test_submit_page_loads_voting_before_submit(self):
-        html = read(SITE / "submit.html")
-        self.assertIn('<section class="shell block" id="subVote" hidden></section>', html)
-        srcs = re.findall(r'<script src="([^"]+)"', html)
-        self.assertLess(srcs.index("voting.js"), srcs.index("submit.js"))
+    def test_pages_load_voting_before_what_uses_it(self):
+        # the ballot is on the round page since 2026-10-26; the Submit page
+        # only asks whether a round votes here
+        for page, user in (("round.html", "listen.js"), ("submit.html", "submit.js")):
+            with self.subTest(page):
+                srcs = re.findall(r'<script src="([^"]+)"', read(SITE / page))
+                self.assertLess(srcs.index("voting.js"), srcs.index(user))
+        self.assertNotIn('id="subVote"', read(SITE / "submit.html"))
 
     def test_the_ballot_lists_tracks_in_the_rounds_one_shuffle(self):
         # the same order the track list above starts in (PFML.roundOrder)
         voting = read(SITE / "voting.js")
         self.assertIn("state.rows = PFML.roundOrder(r.id, res[0] || []);", voting)
         self.assertNotIn("a.tag < b.tag", voting)
-        self.assertIn("'<span class=\"sub-pos\">' + (i + 1) + \"</span>\"", js_body(voting, "function ballotRow(s, i) {"))
+        # the ballot is the listening list itself, so it has the list's order
+        self.assertIn("window.PFMLVoting.ballot(r, rows, { head: $(\"lnVoteHead\"), list: $(\"lnTracks\"), bar: $(\"lnVoteBar\") })",
+                      js_body(read(SITE / "listen.js"), "function render(host, r) {"))
 
     def test_submit_js_works_without_it(self):
         fallback = js_body(read(SITE / "submit.js"), "function voting() {")

@@ -1651,11 +1651,7 @@ button.cm-person { cursor: pointer; }
 .vt-count b { color: var(--ink); font: 800 1.05rem/1 "Archivo", sans-serif; }
 .vt-waiting { display: block; margin-top: 4px; font-size: 0.84rem; }
 .vt-rule { margin-top: 4px; color: var(--deep); }
-.vt-list, .vt-results { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-width: 640px; }
-.vt-row { padding: 10px 12px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r-sm); }
-.vt-row.has-points { border-color: var(--magenta); box-shadow: 0 0 0 1px var(--magenta); }
-.vt-row.is-own { background: var(--wash); }
-.vt-main { display: flex; align-items: center; gap: 10px; }
+.vt-results { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-width: 640px; }
 .vt-name { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .vt-name b { font-weight: 600; overflow-wrap: anywhere; }
 .vt-name small { color: var(--muted); font-size: 0.84rem; overflow-wrap: anywhere; }
@@ -1667,12 +1663,30 @@ button.cm-person { cursor: pointer; }
 }
 .vt-step-btn:disabled { opacity: 0.35; cursor: default; }
 .vt-pts { min-width: 1.6em; text-align: center; font: 800 1.2rem/1 "Archivo", sans-serif; }
-.vt-row.has-points .vt-pts { color: var(--magenta-text); }
+.sub-track.has-points .vt-pts { color: var(--magenta-text); }
 /* a downvote (seasons that allow them) */
-.vt-row.has-down { border-color: var(--neg); box-shadow: 0 0 0 1px var(--neg); }
-.vt-row.has-down .vt-pts { color: var(--neg); }
-.vt-comment-btn { margin-top: 6px; padding: 0; border: 0; background: none; color: var(--magenta-text); font: 600 0.86rem/1.4 "Inter", sans-serif; cursor: pointer; }
+.sub-track.has-down .vt-pts { color: var(--neg); }
+.vt-comment-btn { padding: 0; border: 0; background: none; color: var(--magenta-text); font: 600 0.86rem/1.4 "Inter", sans-serif; cursor: pointer; }
 .vt-comment { margin-top: 6px; resize: vertical; }
+/* a track with its ballot (voting.js, in listen.js's list): the points
+   beside the track, the comment under it, all in the row it plays from */
+/* on a phone the points go under the title, lined up with it, so the title
+   keeps the row's width; beside it from 560px */
+.sub-track.has-ballot { --ballot-indent: calc(1.6 * 0.95rem + 60px); }
+.sub-track.has-ballot .vt-step, .sub-track.has-ballot .vt-own, .sub-track.has-ballot .sub-gap { margin-left: var(--ballot-indent); }
+.vt-comment-box, .sub-track.has-ballot .sub-track-note { flex: 1 1 100%; min-width: 0; margin-left: var(--ballot-indent); }
+@media (min-width: 560px) {
+  .sub-track.has-ballot .sub-track-btn { flex: 1 1 0; min-width: 0; }
+  .sub-track.has-ballot .vt-step, .sub-track.has-ballot .vt-own, .sub-track.has-ballot .sub-gap { margin-left: 0; }
+}
+.ln-vote-head { margin: 0 0 12px; }
+.ln-vote-head .vt-count { margin-top: 8px; }
+/* the points left and Save stay in view while scrolling the list */
+.ln-vote-bar { position: sticky; bottom: 10px; z-index: 3; max-width: 640px; }
+.ln-vote-bar[hidden] { display: none; }
+.ln-vote-bar .vt-bar { position: static; }
+.vt-bar-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.vt-bar-text .sub-msg { margin: 0; font-size: 0.84rem; }
 .vt-comment[hidden] { display: none; }
 /* stays in view while scrolling a long ballot, so the total is always there */
 .vt-bar {

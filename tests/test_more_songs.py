@@ -196,7 +196,9 @@ class ThePages(unittest.TestCase):
         self.assertIn("swapping = n === 1 && have > 0;", form)
 
     def test_no_points_on_any_of_your_tracks(self):
-        self.assertIn("var own = state.mineTags.indexOf(s.tag) !== -1;", js_body(self.voting, "function ballotRow(s, i) {"))
+        self.assertIn("function own(s) { return state.mineTags.indexOf(s.tag) !== -1; }", self.voting)
+        self.assertTrue(js_body(self.voting, "function controls(s) {").lstrip().startswith(
+            "if (own(s)) return '<span class=\"vt-own\">Your track</span>';"))
         save = js_body(self.voting, "function save() {")
         self.assertIn("points: state.mineTags.indexOf(s.tag) !== -1 ? 0 : (state.points[s.id] || 0),", save)
         self.assertIn("}).filter(function (v) { return v.points !== 0 || v.comment; });", save)
