@@ -1392,8 +1392,33 @@ What it does: saves the round's one shuffle, the order its page has shown
 since the close (later runs keep it; The order, above); looks
 each track up on its own service; searches the other service for the same
 recording and compares title, artist and length; fills both playlists in
-order, skipping a track with no copy; and saves the order, titles, matches
-and playlist ids, which the Submit page then shows.
+order, skipping a track with no copy; and saves the order, titles, matches,
+each track's length, album and year, and the playlist ids, which the round
+page then shows.
+
+**YouTube is waited out on two answers** (measured 2026-10-26): a playlist
+it has just made is "not found" for a moment when its items are asked for,
+and adding an item is sometimes "409 The operation was aborted". A build
+that stopped there would leave playlists the database doesn't know about,
+and a rerun would make them again. So those two are retried, up to 5 times
+with a growing pause (`YouTube.TRIES`), and any other error still stops the
+build at once.
+
+**A hand-picked copy is pinned, not accepted.** `--accept` takes the
+candidate that run's search offers, and YouTube's search can come back
+different on the next run. Round 7's "unsure" Jacksons copy, accepted after
+the dry run, wasn't offered at all on the build's dry run. So a match chosen
+after a dry run goes into `data/playlist_overrides.json` by its link, which
+holds whatever the search says.
+
+**Round 7 (2026-10-26)** was the first round built this way. It had 19
+tracks:
+- **YouTube playlist:** all 19.
+- **Spotify playlist:** 16. The YouTube-submitted live recordings had no
+  Spotify copy, so their copies were found by hand and approved by the
+  user. One is the same recording, one probably the same concert, and four
+  are the nearest version (the studio take, or another show). Three have
+  nothing on Spotify.
 
 **Matching never guesses.** A candidate is "sure" when the cleaned titles
 agree, the artist matches, and the lengths are within 3 seconds; "unsure"

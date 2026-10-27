@@ -267,6 +267,37 @@ class ServiceCalls(unittest.TestCase):
         inserts = [c["body"]["snippet"] for c in fake.calls if c["method"] == "POST" and "playlistItems" in c["url"]]
         self.assertEqual([(s["position"], s["resourceId"]["videoId"]) for s in inserts], [(0, vid(1)), (1, vid(2))])
 
+    def test_youtube_waits_out_a_new_playlist_and_an_aborted_add(self):
+        # both measured 2026-10-26: a just-made playlist is "not found" for a
+        # moment, and an add is sometimes "409 The operation was aborted"
+        token = (200, {"access_token": "t"}, {})
+        listing = (200, {"items": []}, {})
+        fake = FakeHttp([("POST", "oauth2.googleapis.com/token", token),
+                         ("GET", "/youtube/v3/playlistItems", (404, {"error": {"message": "playlistNotFound"}}, {})),
+                         ("GET", "/youtube/v3/playlistItems", listing),
+                         ("POST", "/youtube/v3/playlistItems", (409, {"error": {"message": "The operation was aborted."}}, {})),
+                         ("POST", "/youtube/v3/playlistItems", (200, {}, {}))])
+        with fake_env(), mock.patch.object(rp, "http", fake), mock.patch.object(rp.time, "sleep") as slept:
+            rp.YouTube().set_items("PLabc123xyz", [vid(1)])
+        self.assertEqual(slept.call_count, 2)
+        self.assertEqual(len([c for c in fake.calls if c["method"] == "POST" and "playlistItems" in c["url"]]), 2)
+
+    def test_youtube_gives_up_on_a_lasting_refusal_and_never_waits_on_other_404s(self):
+        token = (200, {"access_token": "t"}, {})
+        aborted = (409, {"error": {"message": "The operation was aborted."}}, {})
+        fake = FakeHttp([("POST", "oauth2.googleapis.com/token", token)] +
+                        [("POST", "/youtube/v3/playlistItems", aborted)] * rp.YouTube.TRIES)
+        with fake_env(), mock.patch.object(rp, "http", fake), mock.patch.object(rp.time, "sleep"):
+            # the real refusal, not a misleading "not signed in"
+            with self.assertRaisesRegex(rp.ApiError, "409"):
+                rp.YouTube().call("POST", "/playlistItems", {"part": "snippet"}, body={})
+        missing = FakeHttp([("POST", "oauth2.googleapis.com/token", token),
+                            ("GET", "/youtube/v3/videos", (404, {"error": {"message": "nope"}}, {}))])
+        with fake_env(), mock.patch.object(rp, "http", missing), mock.patch.object(rp.time, "sleep") as slept:
+            with self.assertRaises(rp.ApiError):
+                rp.YouTube().call("GET", "/videos", {"id": vid(1)})
+        self.assertEqual(slept.call_count, 0)
+
     def test_soundcloud_title_drops_the_by_artist_tail(self):
         fake = FakeHttp([("GET", "soundcloud.com/oembed", (200, {"title": "Flickermood by Forss", "author_name": "Forss"}, {}))])
         with mock.patch.object(rp, "http", fake):

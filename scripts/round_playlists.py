@@ -359,14 +359,28 @@ class YouTube:
                              "7 days, the Google app is still in Testing (README has the fix).")
         self.token = data["access_token"]
 
+    # YouTube answers some calls wrongly for a moment: a playlist it has just
+    # made is "not found" when its items are asked for, and adding an item is
+    # sometimes "409 The operation was aborted" (both measured 2026-10-26,
+    # making the demo's playlist). A build that stopped there would leave new
+    # playlists the database doesn't know about, and a rerun would make them
+    # again, so those two wait and try again before giving up.
+    TRIES = 5
+
     def call(self, method, path, params=None, body=None):
         if not self.token:
             self._auth()
         url = self.API + path + "?" + urllib.parse.urlencode(params or {})
-        for attempt in range(2):
+        signed_in_again = False
+        for attempt in range(self.TRIES):
             status, data, _ = http(method, url, headers={"Authorization": "Bearer " + self.token}, body=body)
-            if status == 401 and attempt == 0:
+            if status == 401 and not signed_in_again:
                 self._auth()
+                signed_in_again = True
+                continue
+            passing = status == 409 or (status == 404 and path == "/playlistItems")
+            if passing and attempt < self.TRIES - 1:
+                time.sleep(2 * (attempt + 1))
                 continue
             if status >= 400:
                 raise ApiError(f"YouTube {method} {path}: {status} {describe(data)}")

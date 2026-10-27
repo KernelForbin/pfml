@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-10-26 (follow-up 9): Round 7's playlists, and YouTube's momentary errors waited out
+
+- **Round 7's playlists are built:** YouTube 19 of 19, Spotify 16 of 19,
+  in the round's order, with each track's length, album and year saved.
+  The user approved three unsure matches and six copies found by hand;
+  the three gaps have nothing on Spotify.
+- **`round_playlists.py` retries two of YouTube's momentary answers:** a
+  new playlist "not found", and "409 The operation was aborted", up to 5
+  times each. Any other error still stops the build. A stop partway would
+  have left playlists the database didn't know about.
+- **A copy chosen after a dry run is pinned in the overrides file,** since
+  YouTube's search changed between two runs, and `--accept` then had
+  nothing to take.
+- **Verified:**
+  - the suite passes (802), with 4 breaks in a scratch clone, all caught
+    (one got through first; the test was tightened);
+  - after the build: the round saved with both playlists, all 19 lengths,
+    16 albums, and the YouTube playlist's 19 items in the round's order.
+
 ## 2026-10-26 (follow-up 8): Home points to a closed round's listening
 
 - **Once a round closes,** Home's banner shows it, "Submissions closed",
