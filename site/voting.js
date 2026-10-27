@@ -58,14 +58,16 @@
       "<span>" + esc(names[id] || "Member") + "</span></a>";
   }
 
-  var state = { round: null, rows: [], mineTags: [], points: {}, comments: {}, dirty: false };
+  var state = { round: null, host: null, rows: [], mineTags: [], points: {}, comments: {}, dirty: false };
 
-  /* ---- the Submit page's voting section ---- */
+  /* ---- the voting section ---- */
 
   // r: the round; mine: the reader's own tracks ([{tag, ...}], [] for none;
-  // a round can take more than one from each player).
-  function render(r, mine) {
-    var host = $("subVote");
+  // a round can take more than one from each player); host: the section to
+  // draw in, the Submit page's unless given (the round demo's is on the
+  // round page; README, Round demo).
+  function render(r, mine, host) {
+    host = state.host = host || $("subVote");
     var phase = on(r) ? PFML.roundPhase(r) : "";
     if (phase !== "voting" && phase !== "finished") { host.hidden = true; host.innerHTML = ""; return; }
     state.round = r;
@@ -104,7 +106,7 @@
   }
 
   function renderBallot(r, saved, voters, submitters, names) {
-    var host = $("subVote");
+    var host = state.host;
     var closes = PFML.closes(r.voting_closes_at);
     if (!state.mineTags.length) {
       host.innerHTML = "<h2>Voting</h2>" +
@@ -177,7 +179,7 @@
       : left === 0 ? "All " + r.point_budget + " points given" : "<b>" + (-left) + "</b> too many") +
       (r.downvotes ? '<span class="vt-down-left">' + down + " of " + r.downvotes + " downvotes</span>" : "");
     $("vtLeft").classList.toggle("is-done", left === 0);
-    $("subVote").querySelectorAll(".vt-row").forEach(function (li) {
+    state.host.querySelectorAll(".vt-row").forEach(function (li) {
       var id = li.getAttribute("data-id"), pts = state.points[id] || 0;
       var out = li.querySelector(".vt-pts");
       if (!out) return;
@@ -239,7 +241,7 @@
       $("vtSave").textContent = "Update ballot";
       message("Ballot saved. You can change it until voting closes.", "good");
       return Promise.all([api().roundVoters(r.id), api().roundSubmitters(r.id), api().people()]).then(function (res) {
-        var line = $("subVote").querySelector(".vt-count");
+        var line = state.host.querySelector(".vt-count");
         if (line) line.outerHTML = votedLine(res[0] || [], res[1] || [], namesOf(res[2]));
       });
     }).catch(function (err) {
@@ -250,7 +252,7 @@
   /* ---- results, once voting has closed ---- */
 
   function renderResults(r, results, votes, names) {
-    var host = $("subVote");
+    var host = state.host;
     if (!results.length) {
       host.innerHTML = '<h2>Results</h2><p class="block-note">The results show here once voting has closed.</p>';
       return;

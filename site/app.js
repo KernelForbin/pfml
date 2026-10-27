@@ -2515,6 +2515,12 @@
           if (i >= 0) window.PFMLRounds.renderRoundPage(d, d.rounds[i].id);
           else window.PFMLRounds.renderSiteRoundPage(site, listed ? listed.label : "Season " + String(site.season_key).replace(/^season/, ""));
           window.PFMLListen.render($("rpListen"), site);
+          // the round demo's ballot, under the listening (round-demo.js;
+          // README, Round demo); a real round still votes on the Submit page
+          if (window.PFMLDemo && window.PFMLVoting && $("rpVote")) {
+            PFML.api.mySubmissions(site.id).then(function (mine) { window.PFMLVoting.render(site, mine || [], $("rpVote")); })
+              .catch(function (err) { console.error(err); });
+          }
         });
       }).catch(failed);
       return;

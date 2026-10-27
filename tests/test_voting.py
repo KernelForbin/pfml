@@ -188,7 +188,7 @@ class TheSwitch(unittest.TestCase):
     def test_everything_voting_shows_waits_for_the_switch(self):
         voting = read(SITE / "voting.js")
         self.assertIn("function on(r) { return !!(PFML.siteVoting && r && r.votes_on_site); }", voting)
-        self.assertIn('var phase = on(r) ? PFML.roundPhase(r) : "";', js_body(voting, "function render(r, mine) {"))
+        self.assertIn('var phase = on(r) ? PFML.roundPhase(r) : "";', js_body(voting, "function render(r, mine, host) {"))
         self.assertIn("if (!PFML.siteVoting || !r || !r.votes_on_site) return \"\";", js_body(voting, "function adminFields(r) {"))
         self.assertIn("if (!on(r) || PFML.roundPhase(r) !== \"voting\") return null;", js_body(voting, "function adminPanel(r, done, fail) {"))
         banner = js_body(read(SITE / "app.js"), "function votingBanner(rounds) {")

@@ -2,8 +2,8 @@
 the Submit page until it moved there, 2026-10-26): no
 submission tags, and a play button on each track that turns to pause on
 the one playing (asked 2026-10-26). The browser code isn't run here (no
-Node); these hold its shape, and README, Listening demo, says how it was
-checked in a browser."""
+Node); these hold its shape, and README, Listening on the round page, says
+how it was checked in a browser."""
 import unittest
 
 from support import ROOT

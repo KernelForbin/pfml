@@ -1719,67 +1719,69 @@ clicks:
 
 Contrast is 6.5:1 in light and dark.
 
-### Listening demo (/round?demo=1)
+### Round demo (/round?demo=1)
 
-Asked for 2026-10-26, to try the round player on a phone without a real
-round to play. **pfml.fun/round?demo=1** is the real round page, signed in
-as usual, showing a stand-in closed round, "Listening demo", of 10 tracks.
-It was on the Submit page (`/submit?demo=1`) until listening moved to the
-round page the same day. The admin, and only the admin, has a Listening
-demo link in the initials menu (`acctDemo` in `account.js`), since the app
-installed on a phone's home screen has no address bar. The tracks are:
-- 5 sent from Spotify and 5 from YouTube;
-- each under 5 minutes;
-- each with its copy on the other service, as a round has once its
-  playlists are built, so the Play picker's copies work too.
+Asked for 2026-10-26, to try listening and voting on the site before a
+season votes here. **pfml.fun/round?demo=1** is the real round page,
+signed in as usual, showing the newest closed round that has its
+playlists built (Round 7 when it was made). It uses that round's real
+tracks, as if the round voted here with its voting open:
+- the listening section (`listen.js`, `player.js`): the round's order, its
+  real playlists, the player;
+- under it, the ballot (`voting.js`): 19 points, at most 5 on one track,
+  a comment on any, and the reader's own track marked "Your track".
 
-`site/listen-demo.js` does it, and only with `?demo=1` in the address. It
-loads after `account.js` and before `player.js`, `listen.js` and `app.js`.
-It names its round (`window.PFMLDemo.round`) for `app.js` to open as if
-the address said `?site=`. Once signed in, it wraps `PFML.api`:
-- `siteRounds` and `roundSubmissions` answer with the stand-in;
-- any other call naming the stand-in round's id is answered on the page,
-  so nothing about the demo reaches the database and nothing is saved;
-- every other call, such as the header's, goes to the database as normal.
+The admin, and only the admin, has a **Round demo** link in the initials
+menu (`acctDemo` in `account.js`), since the app installed on a phone's
+home screen has no address bar. A real round still votes on the Submit
+page; only the demo puts the ballot on the round page.
 
-**The tracks were picked at random from Spotify** (genre and year searches,
-2026-10-26) and checked against the league's catalog. None of them is a
-league submission, since league data never goes in this public repo. Their
-lengths are in comments beside them, and a test holds them under 5 minutes.
+**History, the same day:**
+- **First, a listening demo:** a stand-in round of 10 tracks picked at
+  random from Spotify, none a league submission, with a public YouTube
+  playlist, "PFML listening demo", made on the user's account. That
+  playlist is still on their account, unused.
+- **Then a voting demo on the Submit page.**
+- **Then this, at the user's call:** the demo became a round page,
+  replacing both.
 
-**Its rows are what a real round's would be** (asked the same day):
-- **The copies:** `round_playlists.py`'s own matcher found each track's
-  copy on the other service. Spotify was looked up with an app-only token,
-  so `.env` was never rewritten. All 5 YouTube copies came back "sure".
-  The one "unsure", the Spotify copy of a YouTube track, was the very
-  Spotify track that video had been found from, so it was accepted. One
-  YouTube copy changed from the first, hand-picked list.
-- **The order:** the round's one shuffle set the positions.
-- **The playlist:** the stand-in has a real YouTube playlist, "PFML listening
-  demo". It's **public** (the user's call: to share and play off the site),
-  on the user's account, and holds all 10 in the round's order.
-  - Making it, YouTube answered "not found" for a moment straight after
-    creating it, then refused an add with "409 The operation was aborted".
-    Adding one at a time with a pause got all 10 in, with no duplicate
-    playlist.
-  - Checked from outside without signing in: the public page lists all 10,
-    in order.
+`site/round-demo.js` does it, and only with `?demo=1` in the address. It
+loads after `account.js` and before `voting.js`, `player.js`, `listen.js`
+and `app.js`. It names a stand-in round id (`window.PFMLDemo.round`) for
+`app.js` to open as if the address said `?site=`, and `app.js` draws the
+ballot into the page's `rpVote` section only when `PFMLDemo` is set. Once
+signed in, it wraps `PFML.api`:
+- **`siteRounds`** answers with a copy of the real round under the
+  stand-in's id. It's renamed "Demo: Round 7…", marked as voting here,
+  with voting closing two days from when the page loads. Its prompt says
+  nothing is saved or counted.
+- **Three reads go to the database,** with the real round's id in place
+  of the stand-in's: the round's tracks, the reader's own track and who's
+  in (`READS`).
+- **Answered on the page, kept only until it reloads:** the ballot (Save
+  ballot, then Update ballot) and who has voted, so the count goes up by
+  one once the reader saves.
+- **Any other call naming the stand-in** is answered on the page too.
 
-The listening section now words its playlist note for the playlists a
-round actually has. With only YouTube's it says "same order as the list
-below" rather than "in both apps".
+So no vote reaches the database. The database would refuse one anyway:
+Round 7 votes in Music League, and `cast_ballot` refuses any round whose
+phase isn't "voting". The tracks come from the database when the page
+loads, never from the file, since league data never goes in this public
+repo. A reader with no track in the round sees "Only players with a track
+in this round vote", as they would in a real round.
 
 **Checked:**
 - **In a browser,** with a stand-in sign-in that logged every database
   call:
-  - without `?demo=1` the page showed the real round;
-  - with it, the 10-track demo, and Play started track 1 in Spotify's
-    player at 375 wide;
-  - no call naming the demo round got through.
-- **Tests:** `tests/test_listen_demo.py`, break-checked in a scratch clone
-  (12 breaks, all caught).
-- **Not measured here:** an iPhone with its screen locked, which is what
-  the demo is for.
+  - with `?demo=1`: the listening section, then the ballot;
+  - 19 points given with real clicks, then Save: "1/6 voted";
+  - no `castBallot`, `myBallot`, `roundVoters` or stand-in id got
+    through, only the three reads with the real round's id;
+  - 375 wide with no sideways scroll, in light and dark;
+  - `round?site=<the real id>` showed the real round with no ballot.
+- **Tests:** `tests/test_round_demo.py`, break-checked in a scratch clone
+  (13 breaks, all caught).
+- **Not measured here:** the real page signed in, on a phone.
 
 ## Commissioners
 

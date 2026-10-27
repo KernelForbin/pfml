@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-10-26 (follow-up 12): the round demo, with Round 7's tracks and a ballot
+
+- **pfml.fun/round?demo=1** is now the round page for the newest closed
+  round (Round 7), using its real tracks, as if it voted on the site:
+  listening, then a practice ballot. The user's call: a round page, not
+  the Submit page. It replaces the listening demo's 10 stand-in tracks,
+  and the admin's menu link is now "Round demo".
+- **Nothing is saved:** the ballot and who has voted live on the page
+  until it reloads. Only the round's tracks, the reader's own track and
+  who's in are read from the database. The tracks load at runtime, so no
+  league data is in the repo.
+- **A real round still votes on the Submit page;** `voting.js` can now
+  draw into any section, and only the demo gives it the round page's.
+- **The old demo's public YouTube playlist** is still on the user's
+  account, unused.
+- **Verified:**
+  - the suite passes (804), with 13 breaks in a scratch clone, all caught;
+  - in a browser, with a stand-in sign-in logging every call: a full
+    ballot saved with real clicks, the count went up by one, and no
+    ballot call or stand-in id reached the stand-in database;
+  - 375 wide in light and dark with no sideways scroll, and the real
+    round's page showed no ballot.
+
 ## 2026-10-26 (follow-up 11): the round's total length
 
 - **The listening section opens with the round's length,** e.g. "19

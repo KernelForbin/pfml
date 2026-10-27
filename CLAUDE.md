@@ -118,9 +118,11 @@ round's own page, `round?site=<id>`, for good, not on the Submit page
 (README, Listening on the round page). On an iPhone the page can't play
 track to track and Spotify only previews (measured 2026-10-26), so a phone
 plays the YouTube copies in one ready-made player; the apps' playlists sit
-below the list, marked as leaving the site. To try it without a real round, use
-pfml.fun/round?demo=1 (`site/listen-demo.js`; README, Listening demo). If
-its tracks change, never pick league submissions: the repo is public.
+below the list, marked as leaving the site. To try it, and the ballot,
+use pfml.fun/round?demo=1 (`site/round-demo.js`; README, Round demo): the
+newest closed round's real tracks, read from the database when the page
+loads, as if that round voted here. Never put track data in the file
+(the repo is public), and never let it send a ballot anywhere.
 
 ## Season 3: review every new export for Daily Double requests
 
