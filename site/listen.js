@@ -34,6 +34,19 @@
     var pad = function (n) { return (n < 10 ? "0" : "") + n; };
     return h ? h + ":" + pad(m) + ":" + pad(s) : m + ":" + pad(s);
   }
+  // The whole round's length, at the top: "19 tracks · 1 hr 42 min" (asked
+  // 2026-10-26). "At least" when some tracks have no length yet; just the
+  // count before the playlists are built, when none has.
+  function totalText(rows) {
+    var known = rows.filter(function (s) { return s.seconds > 0; });
+    var count = rows.length + " " + (rows.length === 1 ? "track" : "tracks");
+    if (!known.length) return count;
+    var total = known.reduce(function (sum, s) { return sum + s.seconds; }, 0);
+    var mins = Math.round(total / 60), h = Math.floor(mins / 60), m = mins % 60;
+    var length = h ? h + " hr" + (m ? " " + m + " min" : "") : mins + " min";
+    return count + " · " + (known.length < rows.length ? "at least " : "") + length;
+  }
+
   function detailsText(s) {
     var out = [];
     if (s.seconds > 0) out.push(lengthText(s.seconds));
@@ -95,6 +108,7 @@
     var apps = r.spotify_playlist && r.youtube_playlist ? "the Spotify or YouTube app"
       : r.youtube_playlist ? "the YouTube app" : "the Spotify app";
     host.innerHTML = "<h2>Listen</h2>" +
+      '<p class="ln-total" id="lnTotal" hidden></p>' +
       '<p class="ln-lead">Play the round here: tap any track below and it plays on from there.</p>' +
       '<div class="rp" id="lnPlayer"></div>' +
       '<div class="sub-order" id="lnOrder" hidden>' +
@@ -114,6 +128,8 @@
       // the order the playlists keep (PFML.roundOrder, account.js)
       rows = PFML.roundOrder(r.id, rows || []);
       if (!rows.length) { $("lnTracks").innerHTML = '<li class="sub-empty">No tracks were submitted.</li>'; return; }
+      $("lnTotal").textContent = totalText(rows);
+      $("lnTotal").hidden = false;
       // the round player (player.js) plays them top to bottom; the list
       // marks the one playing, a tap on another starts the round from that
       // track, and a tap on the one playing pauses or resumes it

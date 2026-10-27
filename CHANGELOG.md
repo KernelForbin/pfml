@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-26 (follow-up 11): the round's total length
+
+- **The listening section opens with the round's length,** e.g. "19
+  tracks · 1 hr 42 min". It says "at least" when some tracks have no
+  length, and shows the count alone before the playlists are built.
+- **Verified:**
+  - the suite passes (803), with 5 breaks in a scratch clone, all caught;
+  - on the demo: "10 tracks · 36 min", matching a total worked out
+    separately;
+  - the function itself on the hour, "at least" and count-only cases;
+  - contrast 5.6:1 or better at 375.
+
 ## 2026-10-26 (follow-up 10): Round 7 in Music League's order
 
 - **At the user's request,** Round 7's listening page and both playlists

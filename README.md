@@ -1574,6 +1574,11 @@ good (`site/listen.js`, drawn into the round page's `rpListen` section):
   for a round voted on the site the ballot and the results. It no longer
   loads `player.js`.
 
+**The round's total length** (asked 2026-10-26) heads the listening
+section, as "19 tracks · 1 hr 42 min" (`totalText`). It adds up the
+lengths saved with the playlists. When some tracks have none it says
+"at least", and before the playlists are built it shows only the count.
+
 **Home's banner** (asked 2026-10-26). A Music League round never votes on
 the site, so once it closed, Home's banner used to go blank, and the only
 way to its listening page was the Submit page.

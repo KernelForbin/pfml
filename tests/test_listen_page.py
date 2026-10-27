@@ -90,6 +90,18 @@ class TrackDetails(unittest.TestCase):
         self.assertIn("(details ? '<small class=\"sub-track-meta\">' + esc(details) + \"</small>\" : \"\")", draw)
         self.assertIn('return h ? h + ":" + pad(m) + ":" + pad(s) : m + ":" + pad(s);', js_body(LISTEN, "function lengthText(seconds) {"))
 
+    def test_the_round_s_total_length_is_at_the_top(self):
+        render = js_body(LISTEN, "function render(host, r) {")
+        self.assertLess(render.index('<p class="ln-total" id="lnTotal" hidden></p>'), render.index('<p class="ln-lead">'))
+        self.assertIn('$("lnTotal").textContent = totalText(rows);', render)
+        total = js_body(LISTEN, "function totalText(rows) {")
+        for line in ("var known = rows.filter(function (s) { return s.seconds > 0; });",
+                     "if (!known.length) return count;",
+                     "var mins = Math.round(total / 60), h = Math.floor(mins / 60), m = mins % 60;",
+                     'var length = h ? h + " hr" + (m ? " " + m + " min" : "") : mins + " min";',
+                     'return count + " · " + (known.length < rows.length ? "at least " : "") + length;'):
+            self.assertIn(line, total)
+
     def test_the_page_asks_for_them_and_the_database_has_them(self):
         auth = (SITE / "auth.js").read_text(encoding="utf-8")
         self.assertIn("youtube_match, seconds, album, year\").eq(\"round_id\", roundId)", auth)
