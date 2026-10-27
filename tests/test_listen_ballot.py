@@ -26,7 +26,7 @@ class TheList(unittest.TestCase):
         self.assertIn('var voting = !!(window.PFMLVoting && window.PFMLVoting.on(r) && phase === "voting");', render)
         # the plain list first, then redrawn with the ballot once it loads
         order = [render.index(s) for s in ("drawTracks(list);\n      if (!voting) return;",
-                                           "window.PFMLVoting.ballot(r, rows, { head: $(\"lnVoteHead\"), list: $(\"lnTracks\"), bar: $(\"lnVoteBar\") })",
+                                           "window.PFMLVoting.ballot(r, rows, { head: $(\"lnVoteHead\"), list: $(\"lnTracks\"), bar: $(\"lnVoteBar\"),",
                                            "list.ballot = ballot;\n        drawTracks(list);")]
         self.assertEqual(order, sorted(order))
         # the rules above the list, the points left and Save below it
@@ -71,15 +71,27 @@ class TheBallot(unittest.TestCase):
         # keyed by track, never by place in the list
         self.assertIn("(state.points[s.id] || 0)", js_body(VOTING, "function controls(s) {"))
         comment = js_body(VOTING, "function commentHtml(s) {")
-        self.assertIn('var comment = state.comments[s.id] || "", open = !!comment || !!state.open[s.id];', comment)
-        self.assertIn("state.open[id] = !box.hidden;", js_body(VOTING, "function onBallotClick(ev) {"))
+        self.assertIn('esc(state.comments[s.id] || "") + "</textarea></div>";', comment)
+        # and listen.js redraws it when another device's draft comes in
+        self.assertIn("redraw: function () { drawTracks(list); }", js_body(LISTEN, "function render(host, r) {"))
+
+    def test_the_comment_box_is_open_from_the_start(self):
+        # the user's call, 2026-10-27: no "Add a comment" to press first
+        comment = js_body(VOTING, "function commentHtml(s) {")
+        self.assertNotIn("hidden", comment)
+        self.assertNotIn("data-act", comment)
+        self.assertIn('placeholder="Add a comment (optional)"', comment)
+        self.assertNotIn("vt-comment-btn", VOTING)
 
     def test_the_save_bar_stays_in_view_with_its_message(self):
+        # the points left, Save and Submit, then the status on its own row
+        # (two rows fit a phone; one squeezed the text to a sliver)
         ballot = js_body(VOTING, "function ballot(r, rows, parts) {")
-        self.assertLess(ballot.index('id="vtLeft"'), ballot.index('id="vtMsg"'))
-        self.assertLess(ballot.index('id="vtMsg"'), ballot.index('id="vtSave"'))
+        order = [ballot.index(s) for s in ('id="vtLeft"', 'id="vtSave"', 'id="vtSubmit"', 'id="vtMsg"')]
+        self.assertEqual(order, sorted(order))
         css = read(SITE / "style.css")
         self.assertIn(".ln-vote-bar { position: sticky; bottom: 10px;", css)
+        self.assertIn(".ln-vote-bar .vt-bar > .sub-msg { flex: 1 1 100%;", css)
 
     def test_no_ballot_left_anywhere_else(self):
         for gone in ("function renderBallot(", "function ballotRow(", "vt-list", "vt-row"):

@@ -199,16 +199,16 @@ class ThePages(unittest.TestCase):
         self.assertIn("function own(s) { return state.mineTags.indexOf(s.tag) !== -1; }", self.voting)
         self.assertTrue(js_body(self.voting, "function controls(s) {").lstrip().startswith(
             "if (own(s)) return '<span class=\"vt-own\">Your track</span>';"))
-        save = js_body(self.voting, "function save() {")
-        self.assertIn("points: state.mineTags.indexOf(s.tag) !== -1 ? 0 : (state.points[s.id] || 0),", save)
-        self.assertIn("}).filter(function (v) { return v.points !== 0 || v.comment; });", save)
+        entries = js_body(self.voting, "function entries() {")
+        self.assertIn("points: own(s) ? 0 : (state.points[s.id] || 0)", entries)
+        self.assertIn("}).filter(function (v) { return v.points !== 0 || v.comment; });", entries)
 
     def test_downvotes_on_the_ballot(self):
         click = js_body(self.voting, "function onBallotClick(ev) {")
         self.assertIn("state.points[id] = Math.max(-(r.max_down_per_track || 0), Math.min(r.max_per_track, pts + (act === \"plus\" ? 1 : -1)));", click)
         refresh = js_body(self.voting, "function refreshBallot() {")
         self.assertIn('li.querySelector(\'[data-act="minus"]\').disabled = pts <= 0 && (pts <= -(r.max_down_per_track || 0) || downLeft <= 0);', refresh)
-        self.assertIn("$(\"vtSave\").disabled = left !== 0 || downLeft < 0;", refresh)
+        self.assertIn("$(\"vtSubmit\").disabled = left !== 0 || downLeft < 0 || unchanged;", refresh)
         self.assertIn("return sum + Math.max(state.points[id] || 0, 0);", js_body(self.voting, "function spent() {"))
 
     def test_a_voter_is_counted_once(self):

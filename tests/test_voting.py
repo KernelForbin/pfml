@@ -237,7 +237,7 @@ class ThePage(unittest.TestCase):
         self.assertIn("state.rows = PFML.roundOrder(r.id, res[0] || []);", voting)
         self.assertNotIn("a.tag < b.tag", voting)
         # the ballot is the listening list itself, so it has the list's order
-        self.assertIn("window.PFMLVoting.ballot(r, rows, { head: $(\"lnVoteHead\"), list: $(\"lnTracks\"), bar: $(\"lnVoteBar\") })",
+        self.assertIn("window.PFMLVoting.ballot(r, rows, { head: $(\"lnVoteHead\"), list: $(\"lnTracks\"), bar: $(\"lnVoteBar\"),",
                       js_body(read(SITE / "listen.js"), "function render(host, r) {"))
 
     def test_submit_js_works_without_it(self):
@@ -256,7 +256,7 @@ class ThePage(unittest.TestCase):
         self.assertIn("esc(v.comment)", voting)
         self.assertIn('esc(names[id] || "Member")', voting)
         self.assertIn("esc(s.title)", voting)
-        self.assertIn(">\" + esc(comment) + \"</textarea>", voting)
+        self.assertIn('esc(state.comments[s.id] || "") + "</textarea></div>";', voting)
 
 
 if __name__ == "__main__":

@@ -1666,8 +1666,9 @@ button.cm-person { cursor: pointer; }
 .sub-track.has-points .vt-pts { color: var(--magenta-text); }
 /* a downvote (seasons that allow them) */
 .sub-track.has-down .vt-pts { color: var(--neg); }
-.vt-comment-btn { padding: 0; border: 0; background: none; color: var(--magenta-text); font: 600 0.86rem/1.4 "Inter", sans-serif; cursor: pointer; }
-.vt-comment { margin-top: 6px; resize: vertical; }
+.vt-comment { resize: vertical; min-height: 0; padding: 8px 11px; }
+/* the browser's own grey measured 3.8:1 on a dark card */
+.vt-comment::placeholder { color: var(--muted); opacity: 1; }
 /* a track with its ballot (voting.js, in listen.js's list): the points
    beside the track, the comment under it, all in the row it plays from */
 /* on a phone the points go under the title, lined up with it, so the title
@@ -1685,9 +1686,13 @@ button.cm-person { cursor: pointer; }
 .ln-vote-bar { position: sticky; bottom: 10px; z-index: 3; max-width: 640px; }
 .ln-vote-bar[hidden] { display: none; }
 .ln-vote-bar .vt-bar { position: static; }
-.vt-bar-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.vt-bar-text .sub-msg { margin: 0; font-size: 0.84rem; }
-.vt-comment[hidden] { display: none; }
+/* the points left and the buttons, then where the ballot stands under them */
+.ln-vote-bar .vt-bar { flex-wrap: wrap; row-gap: 6px; }
+.ln-vote-bar .vt-left { flex: 1 1 auto; min-width: 0; }
+.ln-vote-bar .vt-bar > .sub-msg { flex: 1 1 100%; margin: 0; font-size: 0.84rem; }
+/* Save keeps your place; Submit, once every point is given, counts */
+.vt-bar-btns { flex: none; display: flex; gap: 8px; }
+.vt-bar-btns .sub-btn { padding: 11px 16px; }
 /* stays in view while scrolling a long ballot, so the total is always there */
 .vt-bar {
   position: sticky; bottom: 10px; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px;

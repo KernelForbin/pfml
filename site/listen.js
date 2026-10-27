@@ -153,7 +153,8 @@
       drawTracks(list);
       if (!voting) return;
       // then the ballot, drawn into the same rows once it has loaded
-      window.PFMLVoting.ballot(r, rows, { head: $("lnVoteHead"), list: $("lnTracks"), bar: $("lnVoteBar") }).then(function (ballot) {
+      window.PFMLVoting.ballot(r, rows, { head: $("lnVoteHead"), list: $("lnTracks"), bar: $("lnVoteBar"),
+                                         redraw: function () { drawTracks(list); } }).then(function (ballot) {
         if (!ballot) return;
         list.ballot = ballot;
         drawTracks(list);

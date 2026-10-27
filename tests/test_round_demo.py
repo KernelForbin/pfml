@@ -58,7 +58,7 @@ class TheRound(unittest.TestCase):
         for line in ("round.id = DEMO_ROUND;", "round.votes_on_site = true;",
                      "round.voting_closes_at = new Date(Date.now() + 2 * 864e5).toISOString();",
                      "round.voting_closed_at = null;", 'round.name = "Demo: " + src.name;',
-                     "Nothing here is saved or counted."):
+                     "Nothing here counts, "):
             self.assertIn(line, rounds)
 
     def test_no_league_data_in_the_file(self):
@@ -70,10 +70,10 @@ class TheRound(unittest.TestCase):
 
 
 class NothingReachesTheDatabase(unittest.TestCase):
-    def test_the_ballot_and_who_voted_stay_on_the_page(self):
+    def test_the_ballot_its_draft_and_who_voted_stay_in_this_browser(self):
         demo = demo_block()
         self.assertEqual(re.findall(r"^      (\w+): function", demo, re.M),
-                         ["siteRounds", "castBallot", "myBallot", "roundVoters"])
+                         ["siteRounds", "castBallot", "myBallot", "roundVoters", "saveBallotDraft", "myBallotDraft"])
         # the one call to the real database is the round list
         self.assertEqual(re.findall(r"real\.(\w+)", demo), ["siteRounds"])
 

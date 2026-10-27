@@ -1,5 +1,34 @@
 # Changelog
 
+## 2026-10-27: ballots save as you go
+
+- **Asked for:** points and comments save on their own, before every
+  point is given, so leaving the page loses nothing, and they follow a
+  member between phone and computer. Save keeps their place; Submit,
+  only with every point given, is what counts.
+- **A draft per voter and round** in the database (migration
+  `2026-10-27_ballot_drafts.sql`, which the user runs, then its
+  rehearsal). It saves 0.8 seconds after the last change, at least every
+  4 seconds while typing, and at once on leaving the page. Each change
+  goes into the browser's own storage first, until the database has it.
+  Coming back to the page picks up what another device saved.
+- **Comment boxes are open from the start,** no "Add a comment" to press
+  (the user's call).
+- **The bar:** points left, Save and Submit, then where the ballot stands
+  ("Saved. It counts once you Submit…", "Submitted", "Submit again for
+  these changes to count").
+- **The demo** keeps its draft in the browser, so leaving and coming back
+  works there; two devices only show on a real round.
+- **Verified:**
+  - the suite passes (832), with 21 breaks in a scratch clone, all caught;
+  - in a browser on the demo: saving on its own, back after a reload, a
+    newer unsaved copy winning, another device's draft coming in, Submit
+    off until all 19 points, "Submit changes" after an edit, and nothing
+    reaching the stand-in database; the bar fits 375 wide in two rows;
+    comment placeholders 6.8:1 in dark, 5.9:1 in light.
+  - Not run here: the SQL. The rehearsal and
+    `tests/test_live_ballot_drafts.py` run it once the migration is in.
+
 ## 2026-10-26 (follow-up 13): voting in the round's list, on the round page
 
 - **The user's call:** real voting happens on the round page, and the

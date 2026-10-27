@@ -1759,9 +1759,10 @@ page's code. Once signed in, it wraps `PFML.api`:
 - **Three reads go to the database,** with the real round's id in place
   of the stand-in's: the round's tracks, the reader's own track and who's
   in (`READS`).
-- **Answered on the page, kept only until it reloads:** the ballot (Save
-  ballot, then Update ballot) and who has voted, so the count goes up by
-  one once the reader saves.
+- **Answered on the page, kept in this browser's storage:** the ballot,
+  its draft (Voting on the site, Drafts) and who has voted, so the count
+  goes up by one once the reader submits. Leaving and coming back keeps
+  them; another device doesn't see them, as it would on a real round.
 - **Any other call naming the stand-in** is answered on the page too.
 
 So no vote reaches the database. The database would refuse one anyway:
@@ -2287,10 +2288,12 @@ vote", gives each submitter a ballot inside its track list (Voting in the
 round's list, below; on the Submit page until 2026-10-26):
 
 - **The ballot:** − and + on every other track, in the row it plays from,
-  a running "7 of 19 points left" bar that stays in view, and an optional
-  comment on any track.
-- **Saving:** Save works once every point is placed. They can change the
-  ballot until voting closes.
+  a running "7 points left" bar that stays in view, and a comment box,
+  open and optional, on every track.
+- **Saving:** points and comments save on their own as a draft (Drafts,
+  below); Save saves at once. Submit works once every point is placed, and
+  only a submitted ballot counts. They can change it and Submit again until
+  voting closes.
 - **Others:** anyone without a track sees "Only players with a track in this
   round vote". Everyone sees "8/12 voted" and who still hasn't: who, never
   how.
@@ -2317,11 +2320,14 @@ place, on the track as it plays. Built and tried on the round demo
   its comment, under it. On a phone the points sit under the title, lined
   up with it; beside it from 560px.
 - **Shuffle and Original order** move the ballot with the play order,
-  since points, comments and whether a comment is open are kept by track,
-  not by place. The track playing stays on top after a Shuffle.
+  since points and comments are kept by track, not by place. The track
+  playing stays on top after a Shuffle.
+- **Comment boxes are open from the start** (the user's call, 2026-10-27),
+  with "Add a comment (optional)" in them: nothing to press before typing.
 - **Above the list:** the rules and "8/12 voted". **Below it:** the points
-  left, the save message and Save, in a bar that stays in view while
-  scrolling the list.
+  left, Save and Submit, then where the ballot stands on its own row, in a
+  bar that stays in view while scrolling the list. Two rows, because one
+  squeezed the text to a sliver at 375 wide (134px tall; 88 now).
 - **Without a track in the round** there's no ballot: the line says only
   players with one vote, with who has voted.
 - **The way there:** the Submit page's closed-round box says "Listen and
@@ -2339,6 +2345,67 @@ place, on the track as it plays. Built and tried on the round demo
   console showed YouTube's player script failing to load (connection
   closed), not the page.
 - **Not measured here:** a real phone.
+
+### Drafts
+
+Asked for 2026-10-27: points and comments save on their own as a member
+gives them, even before the ballot is whole, so leaving the page loses
+nothing, and they follow the member between their phone and computer.
+Save keeps their place; Submit, only with every point given, counts.
+
+- **Two things are kept:** the draft, and the submitted ballot
+  (`site_votes`, through `cast_ballot`, as before). Only the submitted one
+  counts: a draft isn't in the voted count, the results, the reminders or
+  the stats. After Submit the draft is saved to match, so every device
+  opens on what was submitted.
+- **How often:** 0.8 seconds after the last point or keystroke, and at
+  least every 4 seconds while someone keeps typing (measured on the demo:
+  10 seconds of steady typing saved at 4.0s, 8.0s and 0.8s after it
+  stopped). At once when the page is hidden or left (switching apps,
+  locking the phone, closing the tab), and on Save. One save at a time; a
+  change made during one is saved straight after. Nothing is sent when
+  nothing changed. Each save is one small request, so even every member
+  typing at once is light work for the database.
+- **This browser's copy:** every change is written to the browser's own
+  storage first (`pfml.ballot.<round>.<player>`), and removed once the
+  database has it. If the page closes before a save lands, the next visit
+  opens on that copy, since it's newer, and saves it. A copy older than the
+  database's is dropped.
+- **Between devices:** the page opens on the database's draft. Coming back
+  to the page (it becomes visible again) fetches the draft and ballot, and
+  takes the draft if another device saved one since, unless this device
+  has changes of its own still to save. Last save wins; there's no merging
+  of two devices typing at the same moment.
+- **The status line** under the buttons: "Saving…", "Saved. It counts once
+  you Submit, with every point given.", "Submitted. You can change it until
+  voting closes.", "Saved. Submit again for these changes to count.", or
+  "Not saved: …" with the reason. A failed save tries again every 10
+  seconds unless the database refused it (a rule, or voting closed). Submit
+  reads "Submit", "Submitted" (nothing new to submit) or "Submit changes".
+- **Database** (`supabase/migrations/2026-10-27_ballot_drafts.sql`, the
+  same block in `schema.sql`): `site_ballot_drafts`, one row per voter and
+  round, with RLS on, no policies and no API grants. `save_ballot_draft`
+  takes the same checks as `cast_ballot` but lets the total fall short
+  (`draft_problem`, pure), only while voting is open and only from a player
+  with a track. `my_ballot_draft` returns the caller's own, only while
+  voting is open. The rehearsal is
+  `supabase/checks/2026-10-27_ballot_drafts_rehearsal.sql` (11 checks,
+  Round 7 refused among them), and `tests/test_live_ballot_drafts.py` runs
+  `draft_problem` against the real database.
+- **The demo** keeps its draft and ballot in the browser's storage instead,
+  so leaving and coming back works there, but a second device doesn't see
+  them; that part only shows on a real round.
+- **Checked** in a browser on the demo with a stand-in sign-in
+  (2026-10-27): points and a comment saved on their own and came back
+  after a reload; a newer copy left in the browser won over the saved
+  draft, was saved, and then cleared; a newer draft from "another device"
+  came in when the page became visible; Submit stayed off until all 19
+  points were given, then read "Submitted", and a change after it read
+  "Submit changes" with "Saved. Submit again…"; nothing about the ballot
+  reached the stand-in database. Comment placeholders measured 6.8:1 in
+  dark and 5.9:1 in light (the browser's own grey was 3.8:1).
+- **Not measured here:** two real devices on a real round, and the SQL,
+  which only the user's rehearsal runs.
 
 **Database** (`supabase/migrations/2026-10-25_site_voting.sql`, the same
 block in `schema.sql`):

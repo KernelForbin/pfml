@@ -488,6 +488,17 @@
     myBallot: function (roundId) {
       return client.rpc("my_ballot", { p_round: roundId }).then(must);
     },
+    // The caller's ballot as it stands, saved as they give points and
+    // comments, before it's whole; it never counts until castBallot. The
+    // same draft on every device they sign in on. Resolves to when it was
+    // saved. myBallotDraft: {ballot, saved_at}, or null for none.
+    saveBallotDraft: function (roundId, ballot) {
+      return client.rpc("save_ballot_draft", { p_round: roundId, p_ballot: ballot }).then(must);
+    },
+    myBallotDraft: function (roundId) {
+      return client.rpc("my_ballot_draft", { p_round: roundId }).then(must)
+        .then(function (rows) { return (rows && rows[0]) || null; });
+    },
     // Player ids of everyone who has voted: who, never how.
     roundVoters: function (roundId) {
       return client.rpc("site_round_voters", { p_round: roundId }).then(must);

@@ -3,8 +3,9 @@
 
    A round's page with the newest closed round's real tracks (Round 7 when
    it was asked for, 2026-10-26) as if that round voted here with its
-   voting open: the listening section (listen.js, player.js) and, below it,
-   the ballot (voting.js), so both can be tried before a season votes here.
+   voting open: the listening section (listen.js, player.js) with the
+   ballot in its track list (voting.js), so it can be tried before a
+   season votes here.
    It replaced the listening demo's 10 stand-in tracks the same day (the
    user's call). Without ?demo=1 in the address this does nothing.
 
@@ -15,8 +16,8 @@
    - siteRounds answers with the stand-in, a copy of the real round;
    - the reads in READS go to the database with the real round's id in
      place of the stand-in's: its tracks, the reader's own track, who's in;
-   - the ballot and who has voted are answered here and kept only until
-     the page reloads;
+   - the ballot, its draft and who has voted are answered here and kept
+     in this browser's storage, never the database;
    - any other call naming the stand-in is answered here too.
    So no vote reaches the database, which refuses one for a round voted
    in Music League anyway. The tracks come from the database when the
@@ -40,7 +41,7 @@
   // registered after this, so it runs after this.
   PFML.ready.then(function (member) {
     var real = PFML.api;
-    var src = null, ballot = null;
+    var src = null;
     var demo = {
       // The newest closed round with its playlists built, as a round voting
       // here with two days of voting left
@@ -57,7 +58,8 @@
           Object.keys(src).forEach(function (k) { round[k] = src[k]; });
           round.id = DEMO_ROUND;
           round.name = "Demo: " + src.name;
-          round.prompt = "A practice round with this round’s tracks: listen, then try the ballot. Nothing here is saved or counted." +
+          round.prompt = "A practice round with this round’s tracks: listen, then try the ballot. Nothing here counts, " +
+            "and it stays in this browser: the real thing saves to your account, on every device." +
             (src.prompt ? " The prompt: " + src.prompt : "");
           round.votes_on_site = true;
           round.voting_closes_at = new Date(Date.now() + 2 * 864e5).toISOString();
@@ -65,20 +67,40 @@
           return [round];
         });
       },
-      // the ballot, on this page only: [{submission, points, comment}] in,
-      // [{submission_id, points, comment}] out, as the database has it
+      // The ballot and its draft, kept in this browser only, never the
+      // database: [{submission, points, comment}] in, as the database has
+      // them out. Leaving the page and coming back keeps them, as the real
+      // thing does; another device doesn't see them, which the real thing
+      // does.
       castBallot: function (id, votes) {
         if (id !== DEMO_ROUND) return Promise.reject(new Error("The demo only votes on its own round."));
-        ballot = votes.map(function (v) { return { submission_id: v.submission, points: v.points, comment: v.comment }; });
+        keep("ballot", votes.map(function (v) { return { submission_id: v.submission, points: v.points, comment: v.comment }; }));
         return Promise.resolve(null);
       },
       myBallot: function (id) {
-        return Promise.resolve(id === DEMO_ROUND && ballot ? ballot : []);
+        return Promise.resolve(id === DEMO_ROUND ? kept("ballot") || [] : []);
       },
       roundVoters: function (id) {
-        return Promise.resolve(id === DEMO_ROUND && ballot && member ? [member.competitorId] : []);
+        return Promise.resolve(id === DEMO_ROUND && kept("ballot") && member ? [member.competitorId] : []);
+      },
+      saveBallotDraft: function (id, votes) {
+        if (id !== DEMO_ROUND) return Promise.reject(new Error("The demo only votes on its own round."));
+        var at = new Date().toISOString();
+        keep("draft", { ballot: votes, saved_at: at });
+        return Promise.resolve(at);
+      },
+      myBallotDraft: function (id) {
+        return Promise.resolve(id === DEMO_ROUND ? kept("draft") : null);
       }
     };
+    // this browser's storage, under the real round's id, so the next
+    // round's demo starts afresh
+    function kept(name) {
+      try { return JSON.parse(localStorage.getItem("pfml.demo." + name + "." + (src && src.id)) || "null"); } catch (e) { return null; }
+    }
+    function keep(name, value) {
+      try { localStorage.setItem("pfml.demo." + name + "." + (src && src.id), JSON.stringify(value)); } catch (e) { /* private mode */ }
+    }
     PFML.api = new Proxy(real, {
       get: function (target, name) {
         if (Object.prototype.hasOwnProperty.call(demo, name)) return demo[name];

@@ -61,27 +61,41 @@
       "<span>" + esc(names[id] || "Member") + "</span></a>";
   }
 
-  var state = { round: null, host: null, parts: null, rows: [], mineTags: [], names: {}, points: {}, comments: {}, open: {}, dirty: false };
+  var state = { round: null, host: null, parts: null, rows: [], mineTags: [], names: {}, points: {}, comments: {},
+                savedJson: "[]", savedAt: 0, submittedJson: null, timer: 0, firstChange: 0, saving: null, again: false, failed: "" };
+
+  // Drafts save on their own (asked 2026-10-27): DRAFT_MS after the last
+  // point or keystroke, and at least every DRAFT_MAX_MS while someone keeps
+  // typing, so a save is never far behind; at once when the page is hidden
+  // or left. Each change also goes into this browser's storage first, so
+  // even a save that never reached the database isn't lost. A failed save
+  // tries again after RETRY_MS.
+  var DRAFT_MS = 800, DRAFT_MAX_MS = 4000, RETRY_MS = 10000;
 
   /* ---- the ballot, in the round's track list (listen.js) ---- */
 
   // Voting happens in the round's own list on its round page (the user's
   // call, 2026-10-26): each track plays, takes points and takes a comment in
   // the same row, and Shuffle reorders the ballot with the play order.
-  // rows: the round's tracks; parts: the elements listen.js keeps for it,
-  // {head, list, bar}: the rules and who has voted above the list, the list,
-  // and the points left and Save below it. Resolves to what listen.js draws
-  // into each track's row (controls beside the track, comment under it) and
-  // refresh, to call after each draw; or to null when the reader has no
-  // track in the round and so no ballot.
+  // rows: the round's tracks; parts: what listen.js keeps for it, {head,
+  // list, bar, redraw}: the rules and who has voted above the list, the
+  // list, the points left with Save and Submit below it, and a way to
+  // redraw the list. Resolves to what listen.js draws into each track's row
+  // (controls beside the track, comment under it) and refresh, to call after
+  // each draw; or to null when the reader has no track in the round and so
+  // no ballot.
+  //
+  // Two things are kept: the draft, saved as the reader goes (Save, or on
+  // its own), and the ballot they Submit once every point is given, which
+  // is the one that counts (cast_ballot). The page opens on the draft, the
+  // same on every device; on this browser's own copy instead when that's
+  // newer, since it never reached the database.
   function ballot(r, rows, parts) {
     state.round = r;
     state.rows = rows;
     state.parts = parts;
     state.points = {};
     state.comments = {};
-    state.open = {};
-    state.dirty = false;
     return Promise.all([api().mySubmissions(r.id), api().people(), api().roundVoters(r.id), api().roundSubmitters(r.id)]).then(function (res) {
       var mine = res[0] || [], voters = res[2] || [], submitters = res[3] || [];
       var closes = PFML.closes(r.voting_closes_at);
@@ -92,35 +106,163 @@
           " (" + esc(closes.left) + "); the results show here after.</p>" + votedLine(voters, submitters, state.names);
         return null;
       }
-      return api().myBallot(r.id).then(function (saved) {
-        saved = saved || [];
-        saved.forEach(function (v) {
-          state.points[v.submission_id] = v.points;
-          state.comments[v.submission_id] = v.comment || "";
-        });
+      return Promise.all([api().myBallot(r.id), api().myBallotDraft(r.id)]).then(function (saved) {
+        var submitted = saved[0] || [], draft = saved[1];
+        apply(submitted);
+        state.submittedJson = submitted.length ? json() : null;
+        if (draft) apply(draft.ballot || []);
+        // what the database has: the draft, or else the submitted ballot
+        state.savedJson = json();
+        state.savedAt = draft ? Date.parse(draft.saved_at) || 0 : 0;
+        var local = readLocal();
+        if (local && local.at > state.savedAt) apply(local.ballot || []);
+        else if (local) clearLocal();
         parts.head.innerHTML = '<p class="block-note">Give ' + r.point_budget + " points across the other tracks, at most " + r.max_per_track +
           " on one, right in the list as they play." + (r.downvotes ? " You can also give up to " + r.downvotes +
             (r.downvotes === 1 ? " downvote" : " downvotes") + ", at most " + r.max_down_per_track +
             " on one: they’re optional, and press − below 0 to give them." : "") +
-          " Add a comment on any track, yours too. You can change your ballot until voting closes, " +
+          " Comment on any track, yours too. Everything saves as you go, on every device you sign in on; " +
+          "it counts once you Submit, with every point given. You can change it until voting closes, " +
           esc(closes.at) + " (" + esc(closes.left) + ").</p>" +
-          (r.nonvoters_keep_points ? "" : '<p class="block-note vt-rule">Players who don’t vote score ' +
+          (r.nonvoters_keep_points ? "" : '<p class="block-note vt-rule">Players who don’t submit a ballot score ' +
             (r.downvotes ? "only the downvotes they got" : "0") + " for this round.</p>") +
           votedLine(voters, submitters, state.names);
-        // the message in the bar, since the bar stays over the list
-        parts.bar.innerHTML = '<div class="vt-bar"><span class="vt-bar-text"><span class="vt-left" id="vtLeft" aria-live="polite"></span>' +
-            '<span class="sub-msg" id="vtMsg" role="status" hidden></span></span>' +
-            '<button type="button" class="sub-btn" id="vtSave">' + (saved.length ? "Update ballot" : "Save ballot") + "</button></div>";
+        // the status in the bar, since the bar stays over the list
+        parts.bar.innerHTML = '<div class="vt-bar"><span class="vt-left" id="vtLeft" aria-live="polite"></span>' +
+            '<span class="vt-bar-btns"><button type="button" class="sub-btn sub-btn-quiet" id="vtSave">Save</button>' +
+            '<button type="button" class="sub-btn" id="vtSubmit">Submit</button></span>' +
+            '<span class="sub-msg" id="vtMsg" role="status"></span></div>';
         parts.bar.hidden = false;
         parts.list.addEventListener("click", onBallotClick);
         parts.list.addEventListener("input", onBallotInput);
-        $("vtSave").addEventListener("click", save);
+        $("vtSave").addEventListener("click", function () { saveDraft(); });
+        $("vtSubmit").addEventListener("click", submit);
+        // leaving or hiding the page saves at once; coming back picks up
+        // what another device saved meanwhile
+        document.addEventListener("visibilitychange", function () {
+          if (document.visibilityState === "hidden") flush();
+          else sync();
+        });
+        window.addEventListener("pagehide", flush);
+        if (json() !== state.savedJson) schedule();
         return { controls: controls, comment: commentHtml, refresh: refreshBallot };
       });
     });
   }
 
   function own(s) { return state.mineTags.indexOf(s.tag) !== -1; }
+
+  // The ballot as it stands, as cast_ballot and save_ballot_draft take it:
+  // in the round's order, only the tracks with points or a comment.
+  function entries() {
+    return state.rows.map(function (s) {
+      return { submission: s.id, points: own(s) ? 0 : (state.points[s.id] || 0), comment: (state.comments[s.id] || "").trim() };
+    }).filter(function (v) { return v.points !== 0 || v.comment; });
+  }
+  function json() { return JSON.stringify(entries()); }
+
+  // A ballot or draft from the database (submission or submission_id) into
+  // the page's points and comments, replacing what was there.
+  function apply(list) {
+    state.points = {};
+    state.comments = {};
+    list.forEach(function (v) {
+      var id = v.submission || v.submission_id;
+      state.points[id] = v.points || 0;
+      state.comments[id] = v.comment || "";
+    });
+  }
+
+  // This browser's copy of changes not yet saved, for this round and reader.
+  function localKey() {
+    return "pfml.ballot." + state.round.id + "." + ((PFML.member && PFML.member.competitorId) || "");
+  }
+  function readLocal() {
+    try { return JSON.parse(localStorage.getItem(localKey()) || "null"); } catch (e) { return null; }
+  }
+  function writeLocal() {
+    try { localStorage.setItem(localKey(), JSON.stringify({ ballot: entries(), at: Date.now() })); } catch (e) { /* private mode: the database save still runs */ }
+  }
+  function clearLocal() {
+    try { localStorage.removeItem(localKey()); } catch (e) { /* nothing kept */ }
+  }
+
+  // A save soon: DRAFT_MS after this change, but no later than DRAFT_MAX_MS
+  // after the first change not yet saved.
+  function schedule() {
+    var now = Date.now();
+    if (!state.firstChange) state.firstChange = now;
+    clearTimeout(state.timer);
+    state.timer = setTimeout(saveDraft, Math.max(0, Math.min(DRAFT_MS, state.firstChange + DRAFT_MAX_MS - now)));
+  }
+
+  function flush() { if (json() !== state.savedJson || state.timer) saveDraft(); }
+
+  // Saves the draft now, unless the database already has it. One save at a
+  // time; a change made during one is saved right after it.
+  function saveDraft() {
+    clearTimeout(state.timer);
+    state.timer = 0;
+    state.firstChange = 0;
+    if (state.saving) { state.again = true; return state.saving; }
+    var body = entries(), text = JSON.stringify(body);
+    if (text === state.savedJson) { status(); return Promise.resolve(); }
+    status("Saving…");
+    state.saving = api().saveBallotDraft(state.round.id, body).then(function (at) {
+      state.savedJson = text;
+      state.savedAt = Date.parse(at) || Date.now();
+      state.failed = "";
+      if (json() === text) clearLocal();
+    }, function (err) {
+      console.error(err);
+      state.failed = errText(err);
+      // the database refusing it (a rule, or voting closed) won't change by
+      // waiting; anything else, such as no connection, gets another try
+      if (!(err && err.code === "P0001")) state.timer = setTimeout(saveDraft, RETRY_MS);
+    }).then(function () {
+      state.saving = null;
+      if (state.again) { state.again = false; return saveDraft(); }
+      refreshBallot();
+    });
+    return state.saving;
+  }
+
+  // What another device saved since this one last did, when this one has
+  // nothing of its own waiting.
+  function sync() {
+    if (state.saving || state.timer || json() !== state.savedJson) return;
+    Promise.all([api().myBallot(state.round.id), api().myBallotDraft(state.round.id)]).then(function (saved) {
+      var draft = saved[1];
+      if (state.saving || state.timer || json() !== state.savedJson) return;
+      apply(saved[0] || []);
+      state.submittedJson = (saved[0] || []).length ? json() : null;
+      if (draft && (Date.parse(draft.saved_at) || 0) > state.savedAt) {
+        apply(draft.ballot || []);
+        state.savedJson = json();
+        state.savedAt = Date.parse(draft.saved_at) || 0;
+      } else {
+        apply(JSON.parse(state.savedJson));
+      }
+      state.parts.redraw();
+    }).catch(function (err) { console.error(err); });
+  }
+
+  // The bar's line: where the ballot stands.
+  function status(text) {
+    var kind = "";
+    if (!text) {
+      var current = json();
+      if (state.failed) { text = "Not saved: " + state.failed; kind = "error"; }
+      else if (current !== state.savedJson || state.timer) text = "Saving…";
+      else if (state.submittedJson === null && current === "[]") text = "Your points and comments save as you go.";
+      else if (state.submittedJson === null) text = "Saved. It counts once you Submit, with every point given.";
+      else if (current === state.submittedJson) { text = "Submitted. You can change it until voting closes."; kind = "good"; }
+      else text = "Saved. Submit again for these changes to count.";
+    }
+    var m = $("vtMsg");
+    m.textContent = text;
+    m.className = "sub-msg" + (kind ? " is-" + kind : "");
+  }
 
   // Beside the track: the points, or "Your track" on the reader's own.
   function controls(s) {
@@ -133,15 +275,13 @@
       "</span>";
   }
 
-  // Under it: the comment, open when it has one or the reader opened it,
-  // so a redraw (Shuffle) keeps it as it was.
+  // Under it: the comment box, open and ready to type in (the user's call,
+  // 2026-10-27), holding what's kept for the track, so a redraw keeps it.
   function commentHtml(s) {
-    var comment = state.comments[s.id] || "", open = !!comment || !!state.open[s.id];
     var title = s.title || ((NAMES[s.platform] || "") + " track");
-    return '<div class="vt-comment-box"><button type="button" class="vt-comment-btn" data-act="comment" aria-expanded="' + open + '">' +
-        (comment ? "Comment" : "Add a comment") + "</button>" +
-      '<textarea class="sub-input vt-comment" maxlength="2000" rows="2" aria-label="Your comment on ' + esc(title) + '"' +
-        (open ? "" : " hidden") + ">" + esc(comment) + "</textarea></div>";
+    return '<div class="vt-comment-box"><textarea class="sub-input vt-comment" maxlength="2000" rows="2" ' +
+      'placeholder="Add a comment (optional)" aria-label="Your comment on ' + esc(title) + '">' +
+      esc(state.comments[s.id] || "") + "</textarea></div>";
   }
 
   // "8/12 voted", and who hasn't yet: who, never how.
@@ -164,12 +304,13 @@
     return Object.keys(state.points).reduce(function (sum, id) { return sum - Math.min(state.points[id] || 0, 0); }, 0);
   }
 
-  // The running total, the +/- buttons each allow, and Save only once every
-  // upvote is placed, with downvotes optional up to their limit (the same
-  // rules cast_ballot holds).
+  // The running total, the +/- buttons each allow, the status, and Submit
+  // only once every upvote is placed, with downvotes optional up to their
+  // limit (the same rules cast_ballot holds), and something new to submit.
   function refreshBallot() {
     var r = state.round, left = r.point_budget - spent(), down = downs(), downLeft = (r.downvotes || 0) - down;
-    $("vtLeft").innerHTML = (left > 0 ? "<b>" + left + "</b> of " + r.point_budget + " points left"
+    // short, to fit beside Save and Submit on a phone
+    $("vtLeft").innerHTML = (left > 0 ? "<b>" + left + "</b> " + (left === 1 ? "point" : "points") + " left"
       : left === 0 ? "All " + r.point_budget + " points given" : "<b>" + (-left) + "</b> too many") +
       (r.downvotes ? '<span class="vt-down-left">' + down + " of " + r.downvotes + " downvotes</span>" : "");
     $("vtLeft").classList.toggle("is-done", left === 0);
@@ -183,27 +324,20 @@
       li.querySelector('[data-act="minus"]').disabled = pts <= 0 && (pts <= -(r.max_down_per_track || 0) || downLeft <= 0);
       li.querySelector('[data-act="plus"]').disabled = pts >= r.max_per_track || (pts >= 0 && left <= 0);
     });
-    $("vtSave").disabled = left !== 0 || downLeft < 0;
+    var unchanged = state.submittedJson !== null && json() === state.submittedJson;
+    $("vtSubmit").disabled = left !== 0 || downLeft < 0 || unchanged;
+    $("vtSubmit").textContent = state.submittedJson === null ? "Submit" : unchanged ? "Submitted" : "Submit changes";
+    status();
   }
 
   function onBallotClick(ev) {
     var b = ev.target.closest("button[data-act]");
     if (!b) return;
-    var li = b.closest(".sub-track"), id = li.getAttribute("data-id"), act = b.getAttribute("data-act");
-    if (act === "comment") {
-      var box = li.querySelector(".vt-comment");
-      box.hidden = !box.hidden;
-      state.open[id] = !box.hidden;
-      b.setAttribute("aria-expanded", String(!box.hidden));
-      b.textContent = box.hidden && !box.value.trim() ? "Add a comment" : "Comment";
-      if (!box.hidden) box.focus();
-      return;
-    }
+    var id = b.closest(".sub-track").getAttribute("data-id"), act = b.getAttribute("data-act");
     var pts = state.points[id] || 0, r = state.round;
     // below 0 only in a round with downvotes
     state.points[id] = Math.max(-(r.max_down_per_track || 0), Math.min(r.max_per_track, pts + (act === "plus" ? 1 : -1)));
     changed();
-    refreshBallot();
   }
 
   function onBallotInput(ev) {
@@ -212,36 +346,33 @@
     changed();
   }
 
+  // Every point and keystroke: kept in this browser at once, saved soon.
   function changed() {
-    state.dirty = true;
-    $("vtMsg").hidden = true;
+    state.failed = "";
+    writeLocal();
+    schedule();
+    refreshBallot();
   }
 
-  function message(text, kind) {
-    var m = $("vtMsg");
-    m.textContent = text;
-    m.className = "sub-msg" + (kind ? " is-" + kind : "");
-    m.hidden = !text;
-  }
-
-  function save() {
-    var r = state.round;
-    var ballot = state.rows.map(function (s) {
-      return { submission: s.id, points: state.mineTags.indexOf(s.tag) !== -1 ? 0 : (state.points[s.id] || 0),
-               comment: (state.comments[s.id] || "").trim() };
-    }).filter(function (v) { return v.points !== 0 || v.comment; });
-    $("vtSave").disabled = true;
-    api().castBallot(r.id, ballot).then(function () {
-      state.dirty = false;
-      $("vtSave").textContent = "Update ballot";
-      message("Ballot saved. You can change it until voting closes.", "good");
+  // The ballot that counts: every point given (Submit is off until then).
+  // The draft follows it, so every device opens on what was submitted.
+  function submit() {
+    var r = state.round, body = entries(), text = JSON.stringify(body);
+    $("vtSubmit").disabled = true;
+    status("Submitting…");
+    api().castBallot(r.id, body).then(function () {
+      state.submittedJson = text;
+      return saveDraft();
+    }).then(function () {
       return Promise.all([api().roundVoters(r.id), api().roundSubmitters(r.id), api().people()]).then(function (res) {
         var line = state.parts.head.querySelector(".vt-count");
         if (line) line.outerHTML = votedLine(res[0] || [], res[1] || [], namesOf(res[2]));
       });
-    }).catch(function (err) {
-      message(errText(err), "error");
-    }).then(refreshBallot);
+    }).then(refreshBallot, function (err) {
+      refreshBallot();
+      status("Not submitted: " + errText(err));
+      $("vtMsg").className = "sub-msg is-error";
+    });
   }
 
   /* ---- results, once voting has closed ---- */
