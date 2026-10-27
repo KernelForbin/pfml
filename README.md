@@ -1419,6 +1419,16 @@ tracks:
   user. One is the same recording, one probably the same concert, and four
   are the nearest version (the studio take, or another show). Three have
   nothing on Spotify.
+- **Reordered the same night to Music League's order,** at the user's
+  request. Music League made its own Spotify playlist of the round. Its
+  order was written into the tracks' `position`s, then
+  `round_playlists.py --round <id>` refilled the same two playlists in it
+  (a rebuild keeps saved positions). The listening page sorts by
+  position. One slot was matched by elimination: Music League's #9,
+  Onision's "I'm a Banana", matches no site track, so it took the one
+  site track left over, the Motown 25 performance. The Spotify copies
+  stayed the site's own; Music League used different picks for five,
+  and the user wasn't asked to switch.
 
 **Matching never guesses.** A candidate is "sure" when the cleaned titles
 agree, the artist matches, and the lengths are within 3 seconds; "unsure"

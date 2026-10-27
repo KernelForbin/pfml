@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-26 (follow-up 10): Round 7 in Music League's order
+
+- **At the user's request,** Round 7's listening page and both playlists
+  now follow the order of Music League's own Round 7 playlist. The
+  positions were rewritten in the database, and the same two playlists
+  were refilled in place. Both were checked against the saved order.
+- **Music League's #9** (Onision, "I'm a Banana") matches no site track.
+  It took the leftover site track's slot, the Motown 25 performance.
+- **No code change.**
+
 ## 2026-10-26 (follow-up 9): Round 7's playlists, and YouTube's momentary errors waited out
 
 - **Round 7's playlists are built:** YouTube 19 of 19, Spotify 16 of 19,
