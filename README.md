@@ -1803,7 +1803,9 @@ in this round vote", as they would in a real round.
   - `round?site=<the real id>` showed the real round with no ballot.
 - **Tests:** `tests/test_round_demo.py`, break-checked in a scratch clone
   (13 breaks, all caught).
-- **Not measured here:** the real page signed in, on a phone.
+- **On real devices** (the user, 2026-10-27): the demo signed in on their
+  phone and their computer, with points and comments syncing between the
+  two once the practice ballot moved to the database.
 
 ## Commissioners
 
@@ -2366,7 +2368,9 @@ place, on the track as it plays. Built and tried on the round demo
   the list. One run in the browser pane skipped through every track: its
   console showed YouTube's player script failing to load (connection
   closed), not the page.
-- **Not measured here:** a real phone.
+- **On a real phone** (the user, 2026-10-27): voting in the list on the
+  demo, signed in, syncing with their computer. Not yet seen: a real round
+  in voting.
 
 ### Drafts
 
@@ -2436,8 +2440,15 @@ Save keeps their place; Submit, only with every point given, counts.
   "Submit changes" with "Saved. Submit again…"; nothing about the ballot
   reached the stand-in database. Comment placeholders measured 6.8:1 in
   dark and 5.9:1 in light (the browser's own grey was 3.8:1).
-- **Not measured here:** two real devices on a real round, and the SQL,
-  which only the user's rehearsal runs.
+- **On real devices** (the user, 2026-10-27): on the demo, comments and
+  points made on the phone showed on the computer, and the other way, once
+  the demo's practice ballot moved to the database (Round demo).
+- **The SQL** ran in the user's rehearsals (drafts: 11 checks; the demo's
+  practice ballot: 9) and in `tests/test_live_ballot_drafts.py` and
+  `tests/test_live_demo_ballots.py`, all passing (2026-10-27).
+- **Not yet seen:** a real round in voting, whose drafts go to
+  `site_ballot_drafts` rather than the demo's table; the page code is the
+  same.
 
 **Database** (`supabase/migrations/2026-10-25_site_voting.sql`, the same
 block in `schema.sql`):

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-27 (follow-up): syncing confirmed on real devices
+
+- **The user confirmed** the round demo syncing between their phone and
+  computer, signed in. The README's "not measured" lines now say so; a
+  real round in voting is the one thing not yet seen. Docs only.
+
 ## 2026-10-27: the demo's practice ballot syncs between devices
 
 - **Found by the user:** a comment made on the demo on a phone didn't show
