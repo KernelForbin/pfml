@@ -37,7 +37,7 @@ class TheList(unittest.TestCase):
         draw = js_body(LISTEN, "function drawTracks(list) {")
         row = draw[draw.index("return '<li class=\"sub-track'"):draw.index('}).join("");')]
         order = [row.index(s) for s in ('class="sub-track-btn"', "(b ? b.controls(s) : \"\")", "gapNote(s)",
-                                        "'<p class=\"sub-track-note\">'", "(b ? b.comment(s) : \"\")")]
+                                        "'<p class=\"sub-track-note\"><span class=\"sub-note-from\">From the submitter</span>'", "(b ? b.comment(s) : \"\")")]
         self.assertEqual(order, sorted(order))
         self.assertIn("'\" data-id=\"' + esc(s.id) + '\">'", row)
         # after every draw, Shuffle and Original order included

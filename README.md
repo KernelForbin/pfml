@@ -1755,10 +1755,14 @@ page's code. Once signed in, it wraps `PFML.api`:
 - **`siteRounds`** answers with a copy of the real round under the
   stand-in's id. It's renamed "Demo: Round 7…", marked as voting here,
   with voting closing two days from when the page loads. Its prompt says
-  nothing is saved or counted.
+  nothing there counts, and it stays in the browser.
 - **Three reads go to the database,** with the real round's id in place
   of the stand-in's: the round's tracks, the reader's own track and who's
   in (`READS`).
+- **A sample note:** a round voted in Music League has no notes to show
+  while voting, so when none of its tracks has one, the demo puts one on
+  its first track, saying it's a sample, to show where a submitter's note
+  goes (asked 2026-10-27). It exists only on the page.
 - **Answered on the page, kept in this browser's storage:** the ballot,
   its draft (Voting on the site, Drafts) and who has voted, so the count
   goes up by one once the reader submits. Leaving and coming back keeps
@@ -2131,7 +2135,9 @@ has a switch, "Show it to voters while they vote", **off by default**:
 - **Off:** the note shows once voting has closed, in the results, with the
   submitter's name.
 - **On:** voters also see it with the track on the ballot while they vote,
-  without the name.
+  without the name. On the round page it sits in the track's row, under
+  the title, labelled "From the submitter" (asked 2026-10-27; checked in a
+  browser: 7.6:1 or better in light and dark).
 - **Your tracks:** each says which ("Voters see it while they vote." or "It
   shows once the results are posted."), and the switch is in the edit box.
 

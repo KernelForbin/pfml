@@ -29,6 +29,21 @@
   - Not run here: the SQL. The rehearsal and
     `tests/test_live_ballot_drafts.py` run it once the migration is in.
 
+## 2026-10-27: the submitter's note, labelled, and on the demo
+
+- **Asked to make sure** the round page shows a note the submitter chose
+  to show while people vote. It did already: the database hands it out
+  during voting only when its switch is on, and the round's list prints
+  it in the track's row. Now it's labelled "From the submitter", never
+  with their name.
+- **The demo shows one:** Round 7 has no notes (it was voted in Music
+  League), so the demo puts a sample on its first track, saying it's a
+  sample.
+- **Verified:** the suite passes (816), with 6 breaks in a scratch
+  clone, all caught; in a browser, a voting site round's note showed with its
+  label at 375 wide, 7.6:1 or better in light and dark, and the demo
+  showed its sample.
+
 ## 2026-10-26 (follow-up 13): voting in the round's list, on the round page
 
 - **The user's call:** real voting happens on the round page, and the

@@ -33,6 +33,8 @@
   var DEMO_ROUND = "00000000-0000-4000-8000-00000000de30";
   // read from the database for the real round
   var READS = ["roundSubmissions", "mySubmissions", "roundSubmitters"];
+  var SAMPLE_NOTE = "Sample note, for the demo: when a submitter chooses to show their note while people vote, " +
+    "it shows here with their track, without their name.";
 
   // the round app.js opens (initRound), as if the address said ?site=
   window.PFMLDemo = { round: DEMO_ROUND };
@@ -101,20 +103,37 @@
     function keep(name, value) {
       try { localStorage.setItem("pfml.demo." + name + "." + (src && src.id), JSON.stringify(value)); } catch (e) { /* private mode */ }
     }
+    // A round voted in Music League has no notes to show while voting, so
+    // the demo puts a sample, saying so, on the round's first track, to show
+    // where a submitter's note goes (asked 2026-10-27). Only on the page.
+    function sampleNote(rows) {
+      rows = rows || [];
+      if (!rows.length || rows.some(function (s) { return s.note; })) return rows;
+      var first = rows.reduce(function (a, b) { return (b.position || 1e9) < (a.position || 1e9) ? b : a; });
+      return rows.map(function (s) {
+        if (s !== first) return s;
+        var copy = {};
+        Object.keys(s).forEach(function (k) { copy[k] = s[k]; });
+        copy.note = SAMPLE_NOTE;
+        return copy;
+      });
+    }
     PFML.api = new Proxy(real, {
       get: function (target, name) {
         if (Object.prototype.hasOwnProperty.call(demo, name)) return demo[name];
         var fn = target[name];
         if (typeof fn !== "function") return fn;
         return function () {
-          var args = Array.prototype.slice.call(arguments);
+          var args = Array.prototype.slice.call(arguments), demoCall = false;
           for (var i = 0; i < args.length; i++) {
             if (args[i] !== DEMO_ROUND) continue;
             // anything else about the stand-in round stays on this page
             if (READS.indexOf(name) === -1 || !src) return Promise.resolve([]);
             args[i] = src.id;
+            demoCall = true;
           }
-          return fn.apply(target, args);
+          var out = fn.apply(target, args);
+          return demoCall && name === "roundSubmissions" ? out.then(sampleNote) : out;
         };
       }
     });
