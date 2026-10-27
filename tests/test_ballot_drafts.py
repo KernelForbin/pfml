@@ -75,7 +75,7 @@ class ThePage(unittest.TestCase):
     def test_every_change_is_kept_here_at_once_and_saved_soon(self):
         changed = js_body(VOTING, "function changed() {")
         self.assertLess(changed.index("writeLocal();"), changed.index("schedule();"))
-        self.assertIn("var DRAFT_MS = 800, DRAFT_MAX_MS = 4000, RETRY_MS = 10000;", VOTING)
+        self.assertIn("var DRAFT_MS = 800, DRAFT_MAX_MS = 4000, RETRY_MS = 10000,", VOTING)
         schedule = js_body(VOTING, "function schedule() {")
         self.assertIn("Math.min(DRAFT_MS, state.firstChange + DRAFT_MAX_MS - now)", schedule)
         for fn in ("function onBallotClick(ev) {", "function onBallotInput(ev) {"):
@@ -97,8 +97,23 @@ class ThePage(unittest.TestCase):
         self.assertIn('window.addEventListener("pagehide", flush);', ballot)
         sync = js_body(VOTING, "function sync() {")
         self.assertTrue(sync.lstrip().startswith("if (state.saving || state.timer || json() !== state.savedJson) return;"))
-        self.assertIn("if (draft && (Date.parse(draft.saved_at) || 0) > state.savedAt) {", sync)
-        self.assertIn("state.parts.redraw();", sync)
+        self.assertIn("var newer = draft && (Date.parse(draft.saved_at) || 0) > state.savedAt;", sync)
+
+    def test_an_open_page_checks_in_too(self):
+        # found 2026-10-27: neither visibility nor pageshow fires for a page
+        # left open on screen, or a window only moved behind another
+        ballot = js_body(VOTING, "function ballot(r, rows, parts) {")
+        self.assertIn('window.addEventListener("focus", sync);', ballot)
+        self.assertIn('setInterval(function () { if (document.visibilityState === "visible") sync(); }, SYNC_MS);', ballot)
+        self.assertIn("SYNC_MS = 15000;", VOTING)
+
+    def test_a_check_redraws_only_for_something_new_and_keeps_the_cursor(self):
+        sync = js_body(VOTING, "function sync() {")
+        self.assertIn("if (json() !== before) redrawKeepingFocus();", sync)
+        self.assertNotIn("state.parts.redraw();", sync)
+        keep = js_body(VOTING, "function redrawKeepingFocus() {")
+        self.assertLess(keep.index("var id = li && li.getAttribute(\"data-id\");"), keep.index("state.parts.redraw();"))
+        self.assertIn("if (box) { box.focus(); box.setSelectionRange(box.value.length, box.value.length); }", keep)
 
     def test_it_opens_on_the_draft_or_this_browser_s_newer_copy(self):
         ballot = js_body(VOTING, "function ballot(r, rows, parts) {")

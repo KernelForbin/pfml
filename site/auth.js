@@ -499,6 +499,16 @@
       return client.rpc("my_ballot_draft", { p_round: roundId }).then(must)
         .then(function (rows) { return (rows && rows[0]) || null; });
     },
+    // The round demo's practice ballot (round-demo.js), apart from every
+    // real vote: its draft, or the ballot itself when submit, for the round
+    // the demo copies. myDemoBallot: {draft, draft_saved_at, ballot}, or null.
+    saveDemoBallot: function (roundId, ballot, submit) {
+      return client.rpc("save_demo_ballot", { p_round: roundId, p_ballot: ballot, p_submit: !!submit }).then(must);
+    },
+    myDemoBallot: function (roundId) {
+      return client.rpc("my_demo_ballot", { p_round: roundId }).then(must)
+        .then(function (rows) { return (rows && rows[0]) || null; });
+    },
     // Player ids of everyone who has voted: who, never how.
     roundVoters: function (roundId) {
       return client.rpc("site_round_voters", { p_round: roundId }).then(must);

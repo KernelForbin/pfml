@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-10-27: the demo's practice ballot syncs between devices
+
+- **Found by the user:** a comment made on the demo on a phone didn't show
+  on the computer. The demo kept its practice ballot in the browser (Round
+  7 can't take a real draft), so each device had its own.
+- **Now it's in the database,** in a table of its own,
+  `site_demo_ballots` (migration `2026-10-27_demo_ballots.sql`, which the
+  user runs, then its rehearsal), apart from every real vote and draft.
+- **Open pages check in:** a page left open never saw another device's
+  changes, since "page shown again" doesn't fire for it. It now checks on
+  focus and every 15 seconds, redrawing only when something came in, with
+  the cursor kept where it was. This is the real voting page's code, so
+  real rounds get it too.
+- **Verified:**
+  - the suite passes (847), with 16 breaks in a scratch clone, all caught;
+  - in a browser, two tabs as phone and computer sharing a stand-in
+    database: the phone's comment showed on the computer, and the
+    computer's reached the open phone within 11 seconds without moving its
+    cursor.
+  - Not run here: the SQL, which the rehearsal and
+    `tests/test_live_demo_ballots.py` run once the migration is in.
+
 ## 2026-10-27: ballots save as you go
 
 - **Asked for:** points and comments save on their own, before every

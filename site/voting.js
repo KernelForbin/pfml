@@ -69,8 +69,12 @@
   // typing, so a save is never far behind; at once when the page is hidden
   // or left. Each change also goes into this browser's storage first, so
   // even a save that never reached the database isn't lost. A failed save
-  // tries again after RETRY_MS.
-  var DRAFT_MS = 800, DRAFT_MAX_MS = 4000, RETRY_MS = 10000;
+  // tries again after RETRY_MS. What another device saved comes in when
+  // the page is shown or focused again, and every SYNC_MS while it's open,
+  // since neither event fires for a page left open on screen, or a window
+  // that's only moved behind another (found 2026-10-27: a comment typed on
+  // the computer didn't reach the phone's open page).
+  var DRAFT_MS = 800, DRAFT_MAX_MS = 4000, RETRY_MS = 10000, SYNC_MS = 15000;
 
   /* ---- the ballot, in the round's track list (listen.js) ---- */
 
@@ -144,6 +148,8 @@
           else sync();
         });
         window.addEventListener("pagehide", flush);
+        window.addEventListener("focus", sync);
+        setInterval(function () { if (document.visibilityState === "visible") sync(); }, SYNC_MS);
         if (json() !== state.savedJson) schedule();
         return { controls: controls, comment: commentHtml, refresh: refreshBallot };
       });
@@ -232,19 +238,31 @@
   function sync() {
     if (state.saving || state.timer || json() !== state.savedJson) return;
     Promise.all([api().myBallot(state.round.id), api().myBallotDraft(state.round.id)]).then(function (saved) {
-      var draft = saved[1];
-      if (state.saving || state.timer || json() !== state.savedJson) return;
+      var draft = saved[1], before = json(), submittedBefore = state.submittedJson;
+      if (state.saving || state.timer || before !== state.savedJson) return;
       apply(saved[0] || []);
       state.submittedJson = (saved[0] || []).length ? json() : null;
-      if (draft && (Date.parse(draft.saved_at) || 0) > state.savedAt) {
-        apply(draft.ballot || []);
+      var newer = draft && (Date.parse(draft.saved_at) || 0) > state.savedAt;
+      apply(newer ? draft.ballot || [] : JSON.parse(state.savedJson));
+      if (newer) {
         state.savedJson = json();
         state.savedAt = Date.parse(draft.saved_at) || 0;
-      } else {
-        apply(JSON.parse(state.savedJson));
       }
-      state.parts.redraw();
+      // a redraw only when the ballot changed, so a check that finds
+      // nothing new never takes the reader out of a comment box
+      if (json() !== before) redrawKeepingFocus();
+      else if (state.submittedJson !== submittedBefore) refreshBallot();
     }).catch(function (err) { console.error(err); });
+  }
+
+  // The list drawn again with what came in, and the cursor back in the
+  // comment box it was in.
+  function redrawKeepingFocus() {
+    var el = document.activeElement, li = el && el.classList && el.classList.contains("vt-comment") && el.closest(".sub-track");
+    var id = li && li.getAttribute("data-id");
+    state.parts.redraw();
+    var box = id && state.parts.list.querySelector('.sub-track[data-id="' + id + '"] .vt-comment');
+    if (box) { box.focus(); box.setSelectionRange(box.value.length, box.value.length); }
   }
 
   // The bar's line: where the ballot stands.

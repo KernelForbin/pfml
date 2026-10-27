@@ -58,7 +58,7 @@ class TheRound(unittest.TestCase):
         for line in ("round.id = DEMO_ROUND;", "round.votes_on_site = true;",
                      "round.voting_closes_at = new Date(Date.now() + 2 * 864e5).toISOString();",
                      "round.voting_closed_at = null;", 'round.name = "Demo: " + src.name;',
-                     "Nothing here counts, "):
+                     "Nothing here counts: "):
             self.assertIn(line, rounds)
 
     def test_no_league_data_in_the_file(self):
@@ -85,12 +85,22 @@ class TheSampleNote(unittest.TestCase):
 
 
 class NothingReachesTheDatabase(unittest.TestCase):
-    def test_the_ballot_its_draft_and_who_voted_stay_in_this_browser(self):
+    def test_the_ballot_its_draft_and_who_voted_go_to_the_practice_ballot(self):
+        # asked 2026-10-27: a comment made on a phone should show on the
+        # computer, so the practice ballot is kept in the database, but in
+        # its own table, never through a real vote's calls
         demo = demo_block()
         self.assertEqual(re.findall(r"^      (\w+): function", demo, re.M),
                          ["siteRounds", "castBallot", "myBallot", "roundVoters", "saveBallotDraft", "myBallotDraft"])
-        # the one call to the real database is the round list
-        self.assertEqual(re.findall(r"real\.(\w+)", demo), ["siteRounds"])
+        self.assertEqual(sorted(set(re.findall(r"real\.(\w+)", demo))), ["myDemoBallot", "saveDemoBallot", "siteRounds"])
+        self.assertIn("return real.saveDemoBallot(src.id, votes, true)", demo)
+        self.assertIn("return real.saveDemoBallot(src.id, votes, false);", demo)
+        self.assertNotIn("localStorage", DEMO)
+
+    def test_the_page_asks_for_the_practice_ballot(self):
+        auth = (SITE / "auth.js").read_text(encoding="utf-8")
+        self.assertIn('client.rpc("save_demo_ballot", { p_round: roundId, p_ballot: ballot, p_submit: !!submit })', auth)
+        self.assertIn('client.rpc("my_demo_ballot", { p_round: roundId })', auth)
 
     def test_only_the_reads_reach_the_database_and_with_the_real_round(self):
         self.assertIn('var READS = ["roundSubmissions", "mySubmissions", "roundSubmitters"];', DEMO)

@@ -16,8 +16,8 @@
    - siteRounds answers with the stand-in, a copy of the real round;
    - the reads in READS go to the database with the real round's id in
      place of the stand-in's: its tracks, the reader's own track, who's in;
-   - the ballot, its draft and who has voted are answered here and kept
-     in this browser's storage, never the database;
+   - the ballot, its draft and who has voted go to the reader's practice
+     ballot (site_demo_ballots), apart from every real vote;
    - any other call naming the stand-in is answered here too.
    So no vote reaches the database, which refuses one for a round voted
    in Music League anyway. The tracks come from the database when the
@@ -60,8 +60,8 @@
           Object.keys(src).forEach(function (k) { round[k] = src[k]; });
           round.id = DEMO_ROUND;
           round.name = "Demo: " + src.name;
-          round.prompt = "A practice round with this round’s tracks: listen, then try the ballot. Nothing here counts, " +
-            "and it stays in this browser: the real thing saves to your account, on every device." +
+          round.prompt = "A practice round with this round’s tracks: listen, then try the ballot. Nothing here counts: " +
+            "your practice ballot saves to your account, apart from real votes, on every device." +
             (src.prompt ? " The prompt: " + src.prompt : "");
           round.votes_on_site = true;
           round.voting_closes_at = new Date(Date.now() + 2 * 864e5).toISOString();
@@ -69,40 +69,38 @@
           return [round];
         });
       },
-      // The ballot and its draft, kept in this browser only, never the
-      // database: [{submission, points, comment}] in, as the database has
-      // them out. Leaving the page and coming back keeps them, as the real
-      // thing does; another device doesn't see them, which the real thing
-      // does.
+      // The practice ballot and its draft, in the database but apart from
+      // every real vote (site_demo_ballots), so they follow the reader
+      // between devices as a real round's do (asked 2026-10-27, when a
+      // comment made on a phone didn't show on the computer):
+      // [{submission, points, comment}] in, as the real calls give them out.
       castBallot: function (id, votes) {
-        if (id !== DEMO_ROUND) return Promise.reject(new Error("The demo only votes on its own round."));
-        keep("ballot", votes.map(function (v) { return { submission_id: v.submission, points: v.points, comment: v.comment }; }));
-        return Promise.resolve(null);
+        if (id !== DEMO_ROUND || !src) return Promise.reject(new Error("The demo only votes on its own round."));
+        return real.saveDemoBallot(src.id, votes, true).then(function () { return null; });
       },
       myBallot: function (id) {
-        return Promise.resolve(id === DEMO_ROUND ? kept("ballot") || [] : []);
+        if (id !== DEMO_ROUND || !src) return Promise.resolve([]);
+        return real.myDemoBallot(src.id).then(function (row) {
+          return ((row && row.ballot) || []).map(function (v) { return { submission_id: v.submission, points: v.points, comment: v.comment }; });
+        });
       },
       roundVoters: function (id) {
-        return Promise.resolve(id === DEMO_ROUND && kept("ballot") && member ? [member.competitorId] : []);
+        if (id !== DEMO_ROUND || !src) return Promise.resolve([]);
+        return real.myDemoBallot(src.id).then(function (row) {
+          return row && row.ballot && row.ballot.length && member ? [member.competitorId] : [];
+        });
       },
       saveBallotDraft: function (id, votes) {
-        if (id !== DEMO_ROUND) return Promise.reject(new Error("The demo only votes on its own round."));
-        var at = new Date().toISOString();
-        keep("draft", { ballot: votes, saved_at: at });
-        return Promise.resolve(at);
+        if (id !== DEMO_ROUND || !src) return Promise.reject(new Error("The demo only votes on its own round."));
+        return real.saveDemoBallot(src.id, votes, false);
       },
       myBallotDraft: function (id) {
-        return Promise.resolve(id === DEMO_ROUND ? kept("draft") : null);
+        if (id !== DEMO_ROUND || !src) return Promise.resolve(null);
+        return real.myDemoBallot(src.id).then(function (row) {
+          return row && row.draft_saved_at ? { ballot: row.draft, saved_at: row.draft_saved_at } : null;
+        });
       }
     };
-    // this browser's storage, under the real round's id, so the next
-    // round's demo starts afresh
-    function kept(name) {
-      try { return JSON.parse(localStorage.getItem("pfml.demo." + name + "." + (src && src.id)) || "null"); } catch (e) { return null; }
-    }
-    function keep(name, value) {
-      try { localStorage.setItem("pfml.demo." + name + "." + (src && src.id), JSON.stringify(value)); } catch (e) { /* private mode */ }
-    }
     // A round voted in Music League has no notes to show while voting, so
     // the demo puts a sample, saying so, on the round's first track, to show
     // where a submitter's note goes (asked 2026-10-27). Only on the page.

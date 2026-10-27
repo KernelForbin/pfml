@@ -1755,7 +1755,8 @@ page's code. Once signed in, it wraps `PFML.api`:
 - **`siteRounds`** answers with a copy of the real round under the
   stand-in's id. It's renamed "Demo: Round 7…", marked as voting here,
   with voting closing two days from when the page loads. Its prompt says
-  nothing there counts, and it stays in the browser.
+  nothing there counts, and the practice ballot saves to the reader's
+  account, apart from real votes.
 - **Three reads go to the database,** with the real round's id in place
   of the stand-in's: the round's tracks, the reader's own track and who's
   in (`READS`).
@@ -1763,10 +1764,25 @@ page's code. Once signed in, it wraps `PFML.api`:
   while voting, so when none of its tracks has one, the demo puts one on
   its first track, saying it's a sample, to show where a submitter's note
   goes (asked 2026-10-27). It exists only on the page.
-- **Answered on the page, kept in this browser's storage:** the ballot,
-  its draft (Voting on the site, Drafts) and who has voted, so the count
-  goes up by one once the reader submits. Leaving and coming back keeps
-  them; another device doesn't see them, as it would on a real round.
+- **The practice ballot:** the ballot, its draft (Voting on the site,
+  Drafts) and who has voted go to the reader's practice ballot in the
+  database, so they follow the reader between phone and computer as a
+  real round's do. At first they stayed in the browser, and the user
+  found a comment made on the phone missing on the computer
+  (2026-10-27). A round voted in Music League can't take a real draft
+  or ballot, so the practice ballot has its own table,
+  `site_demo_ballots` (`supabase/migrations/2026-10-27_demo_ballots.sql`):
+  - one row per member, for the round the demo copies, holding a draft
+    and a "submitted" ballot; a demo of a newer round starts afresh;
+  - row-level security on, no policies, no API grants;
+  - `save_demo_ballot` and `my_demo_ballot` read and write the caller's
+    own row only, and never touch `site_votes` or `site_ballot_drafts`;
+  - `demo_ballot_problem` takes only what the demo can make (tracks of
+    the round, each once, whole points, comments up to 2000 characters);
+    the page holds the voting rules.
+  The rehearsal is `supabase/checks/2026-10-27_demo_ballots_rehearsal.sql`
+  (9 checks), and `tests/test_live_demo_ballots.py` runs the rules against
+  the real database.
 - **Any other call naming the stand-in** is answered on the page too.
 
 So no vote reaches the database. The database would refuse one anyway:
@@ -2377,11 +2393,17 @@ Save keeps their place; Submit, only with every point given, counts.
   database has it. If the page closes before a save lands, the next visit
   opens on that copy, since it's newer, and saves it. A copy older than the
   database's is dropped.
-- **Between devices:** the page opens on the database's draft. Coming back
-  to the page (it becomes visible again) fetches the draft and ballot, and
-  takes the draft if another device saved one since, unless this device
-  has changes of its own still to save. Last save wins; there's no merging
-  of two devices typing at the same moment.
+- **Between devices:** the page opens on the database's draft. It checks
+  for another device's draft when the page becomes visible or focused
+  again, and every 15 seconds while it's open, since neither event fires
+  for a page left open on screen, or a window only moved behind another
+  (found 2026-10-27, when a comment typed on the computer didn't reach the
+  phone's open page). It takes the draft if another device saved one
+  since, unless this device has changes of its own still to save. A check
+  that finds nothing new changes nothing on screen; one that does redraws
+  the list and puts the cursor back in the comment box it was in. Last
+  save wins; there's no merging of two devices typing at the same moment.
+  Each check is two small reads.
 - **The status line** under the buttons: "Saving…", "Saved. It counts once
   you Submit, with every point given.", "Submitted. You can change it until
   voting closes.", "Saved. Submit again for these changes to count.", or
@@ -2398,9 +2420,13 @@ Save keeps their place; Submit, only with every point given, counts.
   `supabase/checks/2026-10-27_ballot_drafts_rehearsal.sql` (11 checks,
   Round 7 refused among them), and `tests/test_live_ballot_drafts.py` runs
   `draft_problem` against the real database.
-- **The demo** keeps its draft and ballot in the browser's storage instead,
-  so leaving and coming back works there, but a second device doesn't see
-  them; that part only shows on a real round.
+- **The demo** keeps its draft and ballot in the reader's practice ballot
+  (Round demo), so it syncs between devices the same way.
+- **Checked** between two tabs as phone and computer, with a stand-in
+  database they shared (2026-10-27): a comment typed on the phone showed
+  when the computer opened the page; one typed on the computer reached the
+  phone's open page within 11 seconds, with its cursor still in the box it
+  was in; a check that found nothing new redrew nothing.
 - **Checked** in a browser on the demo with a stand-in sign-in
   (2026-10-27): points and a comment saved on their own and came back
   after a reload; a newer copy left in the browser won over the saved

@@ -122,7 +122,8 @@ below the list, marked as leaving the site. To try it, and the ballot,
 use pfml.fun/round?demo=1 (`site/round-demo.js`; README, Round demo): the
 newest closed round's real tracks, read from the database when the page
 loads, as if that round voted here. Never put track data in the file
-(the repo is public), and never let it send a ballot anywhere.
+(the repo is public), and never let it send a real ballot or draft: its
+practice ballot goes to `site_demo_ballots` only (README, Round demo).
 
 ## Season 3: review every new export for Daily Double requests
 
@@ -360,6 +361,9 @@ verified" has to be both.
   changes (needs `GH_TOKEN=$(gh auth token)` too, for GitHub's rate limit),
   and `-p test_live_reminders.py` whenever the reminder functions or
   `send-reminders` change (read-only),
+  and `-p test_live_demo_ballots.py` whenever the demo's practice-ballot
+  functions change (read-only; the full flow is
+  `supabase/checks/2026-10-27_demo_ballots_rehearsal.sql`),
   and `-p test_live_ballot_drafts.py` whenever the draft functions change
   (read-only; the full flow is `supabase/checks/2026-10-27_ballot_drafts_rehearsal.sql`),
   and `-p test_live_voting.py` whenever the voting functions change
