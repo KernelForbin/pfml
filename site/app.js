@@ -476,7 +476,7 @@
   // The newest line in the features page's "New in the last 30 days" box (a test
   // keeps the two equal). The features page records the newest date it
   // showed in this browser; Home's button says New until that catches up.
-  var FEATURES_UPDATED = "2026-10-27";
+  var FEATURES_UPDATED = "2026-10-28";
   var FEATURES_SEEN_KEY = "pfml.featuresSeen";
 
   function renderFeaturesButton() {
@@ -2520,6 +2520,7 @@
           // its voting has closed, the results go under it until the round
           // is in the stats (voting.js render)
           if (i < 0 && window.PFMLVoting && $("rpVote")) window.PFMLVoting.render(site, $("rpVote"));
+          if (window.PFMLLounge && $("rpLounge") && (site.votes_on_site || site.practice)) window.PFMLLounge.render($("rpLounge"), site);
         });
       }).catch(failed);
       return;
@@ -2536,6 +2537,8 @@
           return x.season_key === key && window.PFMLListen.statsIndex(d.rounds, x) === i;
         })[0];
         if (site && $("rpListen")) window.PFMLListen.render($("rpListen"), site);
+        // a round voted here keeps its lounge under its results in the stats
+        if (site && site.votes_on_site && window.PFMLLounge && $("rpLounge")) window.PFMLLounge.render($("rpLounge"), site);
       })
       .catch(failed);
   }

@@ -656,6 +656,8 @@
       // listening (listen.js), when the round was also run on the site
       '<section class="shell block rp-listen" id="rpListen" hidden></section>' +
       '<section class="shell rp-body"><div id="rpTracks"></div></section>' +
+      // the voters' lounge, read-only, when the round voted on the site (lounge.js)
+      '<section class="shell block lg" id="rpLounge" hidden></section>' +
       '<section class="shell rp-foot">' + navHtml(d, i, "bottom") + "</section>";
 
     var jump = document.getElementById("rpJump");
@@ -945,7 +947,9 @@
       "</section>" +
       '<section class="shell block rp-listen" id="rpListen" hidden></section>' +
       // the results, once voting here has closed (voting.js)
-      '<section class="shell block" id="rpVote" hidden></section>';
+      '<section class="shell block" id="rpVote" hidden></section>' +
+      // the voters' lounge: live while voting, read-only under the results after (lounge.js)
+      '<section class="shell block lg" id="rpLounge" hidden></section>';
   }
 
   window.PFMLRounds = { renderList: renderList, renderRoundPage: renderRoundPage, renderSiteRoundPage: renderSiteRoundPage };

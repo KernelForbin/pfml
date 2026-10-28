@@ -1037,8 +1037,12 @@ class ReactionsSchema(unittest.TestCase):
         return m.group(0)
 
     def test_schema_no_longer_hardcodes_six_names(self):
+        # comment_reactions only: the voters' lounge keeps to the six quick
+        # reactions on purpose (site_lounge_reactions; README, Voters' lounge)
         sql = read_root("supabase/schema.sql")
-        self.assertNotIn("check (reaction in (", sql)
+        start = sql.index("create table if not exists public.comment_reactions (")
+        table = sql[start:sql.index(");", start)]
+        self.assertNotIn("check (reaction in (", table)
         self.constraint_of(sql)
 
     def test_migration_widens_the_same_column_the_same_way(self):

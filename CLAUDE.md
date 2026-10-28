@@ -223,7 +223,9 @@ plays (the user's call, 2026-10-26; README, Voting in the round's list).
 Points and comments save on their own as a draft, to the member's account
 (`site_ballot_drafts`), and only Submit, with every point given, counts
 (README, Drafts). A draft must never reach `site_votes` or anything that
-counts votes.
+counts votes. The voters' lounge (README, Voters' lounge) is anonymous for
+good: no lounge function may ever give out who wrote a message, the admin
+included, and it never opens below 3 voters.
 Try changes there on pfml.fun/round?demo=1, since no round votes here
 yet. Never let it reach Round 7,
 Season 3 or any round already open: the database refuses a round opened by
@@ -361,6 +363,8 @@ verified" has to be both.
   changes (needs `GH_TOKEN=$(gh auth token)` too, for GitHub's rate limit),
   and `-p test_live_reminders.py` whenever the reminder functions or
   `send-reminders` change (read-only),
+  and `-p test_live_voters_lounge.py` whenever the lounge functions change
+  (read-only; the full flow is `supabase/checks/2026-10-28_voters_lounge_rehearsal.sql`),
   and `-p test_live_demo_ballots.py` whenever the demo's practice-ballot
   functions change (read-only; the full flow is
   `supabase/checks/2026-10-27_demo_ballots_rehearsal.sql`),

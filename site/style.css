@@ -1818,6 +1818,57 @@ button.cm-person { cursor: pointer; }
 .rc-pick[hidden] { display: none; }
 .rc-pick h2 { margin: 0 0 2px; font-size: 1.05rem; }
 .rc-pick .block-note { margin-bottom: 8px; }
+/* ---- the voters' lounge (lounge.js): a door until you're in, then the room ---- */
+.lg-head { display: flex; align-items: center; gap: 10px; }
+.lg-head h2 { margin: 0; }
+.lg-practice {
+  font: 700 0.7rem/1 "Archivo", sans-serif; text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 4px 8px; border-radius: 999px; background: var(--wash); color: var(--deep);
+}
+.lg-door {
+  display: flex; align-items: center; gap: 12px; max-width: 640px; margin-top: 12px; padding: 14px 16px;
+  border-radius: var(--r-sm); background: var(--inverse); color: var(--on-inverse);
+}
+.lg-door p { margin: 0; font-size: 0.95rem; }
+.lg-door-icon { flex: none; display: inline-flex; color: var(--acid); }
+.lg-intro { margin-top: 8px; }
+/* the messages scroll inside the room, so a busy lounge doesn't push the page */
+.lg-list {
+  list-style: none; margin: 12px 0 0; padding: 10px; max-width: 640px; max-height: min(60vh, 520px); overflow-y: auto;
+  overscroll-behavior: contain; display: flex; flex-direction: column; gap: 10px; border-radius: var(--r-sm); background: var(--wash);
+}
+.lg-empty { color: var(--muted); padding: 6px; }
+.lg-msg { display: flex; gap: 10px; align-items: flex-start; }
+.lg-msg .av { width: 32px; height: 32px; font-size: 0.7rem; }
+.lg-msg-body {
+  flex: 1; min-width: 0; padding: 8px 12px; background: var(--card); border: 1px solid var(--border);
+  border-radius: 4px 12px 12px 12px;
+}
+.lg-msg.is-mine .lg-msg-body { border-color: var(--magenta); }
+.lg-who { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font-size: 0.86rem; }
+.lg-you { font: 700 0.66rem/1 "Archivo", sans-serif; text-transform: uppercase; letter-spacing: 0.06em; color: var(--magenta-text); }
+.lg-when { color: var(--muted); font-size: 0.78rem; }
+.lg-remove { margin-left: auto; padding: 0; border: 0; background: none; color: var(--neg); font: 600 0.78rem/1.4 "Inter", sans-serif; cursor: pointer; }
+.lg-text { margin: 4px 0 0; white-space: pre-line; overflow-wrap: anywhere; }
+.lg-removed { color: var(--muted); font-style: italic; }
+.lg-reacts { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.lg-react {
+  display: inline-flex; align-items: center; gap: 3px; min-height: 30px; padding: 2px 8px; border: 1px solid var(--border);
+  border-radius: 999px; background: var(--card); color: var(--ink); font: 600 0.8rem/1 "Inter", sans-serif; cursor: pointer;
+  touch-action: manipulation;
+}
+.lg-react.is-zero span { opacity: 0.55; }
+.lg-react.is-on { border-color: var(--magenta); background: var(--wash); }
+.lg-react:disabled { cursor: default; }
+.lg-compose { max-width: 640px; margin-top: 10px; }
+.lg-compose:empty { display: none; }
+.lg-text-in { resize: vertical; min-height: 0; }
+.lg-text-in::placeholder { color: var(--muted); opacity: 1; }
+.lg-send-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 6px; }
+.lg-count { color: var(--muted); font-size: 0.84rem; }
+.lg-wait { margin: 0; padding: 10px 12px; border-radius: var(--r-sm); background: var(--wash); font-size: 0.92rem; }
+@media (hover: hover) { .lg-react:not(:disabled):hover { border-color: var(--magenta); } }
+
 
 /* Dark mode, a choice: the Dark mode switch in the account menu
    (account.js) sets <html data-theme="dark"> and remembers it in this

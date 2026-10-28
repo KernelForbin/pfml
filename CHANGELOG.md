@@ -1,5 +1,35 @@
 # Changelog
 
+## 2026-10-28: the voters' lounge
+
+- **Asked for:** a room where only people who have submitted their ballot
+  can chat while voting is open, anonymously, limited so it doesn't take
+  over the talk after the round. The user's calls: one message every 24
+  hours, 280 characters, never named, and readable under the results
+  once voting closes.
+- **Built:** on the round page, under the list. Everyone's an instrument
+  for the round (Kazoo, Theremin...). It opens once 3 people have voted,
+  so nobody's obviously the only one in it. Reactions are unlimited. The
+  admin can remove a message without learning who wrote it. It updates
+  live every few seconds without disturbing what you're typing. Migration
+  `2026-10-28_voters_lounge.sql`, which the user runs, then its rehearsal.
+- **The demo** has a practice lounge: a message every 10 minutes, open
+  with 1 voter, apart from any real one.
+- **Privacy page:** now covers the lounge, and the ballot drafts from
+  2026-10-27, which it had missed.
+- **A test narrowed:** the reactions test that forbade a six-name check
+  anywhere in the schema now looks at `comment_reactions`, the table it
+  was written for; the lounge keeps to the six on purpose.
+- **Verified:**
+  - the suite passes (869), with 25 breaks in a scratch clone, all caught;
+  - in a browser with a stand-in database following the lounge's rules:
+    the door, the room opening as a ballot is submitted, sending,
+    reacting, a message arriving live, the countdown, typing undisturbed
+    by live checks, the read-only transcript, no lounge on Round 7; 375
+    wide, light and dark.
+  - Not run here: the SQL, which the rehearsal and
+    `tests/test_live_voters_lounge.py` run once the migration is in.
+
 ## 2026-10-27 (follow-up): syncing confirmed on real devices
 
 - **The user confirmed** the round demo syncing between their phone and

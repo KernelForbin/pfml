@@ -505,6 +505,24 @@
     saveDemoBallot: function (roundId, ballot, submit) {
       return client.rpc("save_demo_ballot", { p_round: roundId, p_ballot: ballot, p_submit: !!submit }).then(must);
     },
+    // The voters' lounge (lounge.js): where the caller stands, the
+    // messages (aliases only, never who), sending one, reacting, and the
+    // admin taking one down. practice: the round demo's practice lounge.
+    loungeStatus: function (roundId, practice) {
+      return client.rpc("lounge_status", { p_round: roundId, p_practice: !!practice }).then(must);
+    },
+    loungeMessages: function (roundId, practice) {
+      return client.rpc("lounge_messages", { p_round: roundId, p_practice: !!practice }).then(must);
+    },
+    loungePost: function (roundId, practice, body) {
+      return client.rpc("lounge_post", { p_round: roundId, p_practice: !!practice, p_body: body }).then(must);
+    },
+    loungeReact: function (messageId, reaction, on) {
+      return client.rpc("lounge_react", { p_message: messageId, p_reaction: reaction, p_on: !!on }).then(must);
+    },
+    loungeRemove: function (messageId) {
+      return client.rpc("lounge_remove", { p_message: messageId }).then(must);
+    },
     myDemoBallot: function (roundId) {
       return client.rpc("my_demo_ballot", { p_round: roundId }).then(must)
         .then(function (rows) { return (rows && rows[0]) || null; });

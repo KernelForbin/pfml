@@ -380,6 +380,8 @@
     status("Submitting…");
     api().castBallot(r.id, body).then(function () {
       state.submittedJson = text;
+      // the voters' lounge opens to a voter (lounge.js)
+      document.dispatchEvent(new CustomEvent("pfml:ballot-submitted"));
       return saveDraft();
     }).then(function () {
       return Promise.all([api().roundVoters(r.id), api().roundSubmitters(r.id), api().people()]).then(function (res) {

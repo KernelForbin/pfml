@@ -33,6 +33,8 @@
   var DEMO_ROUND = "00000000-0000-4000-8000-00000000de30";
   // read from the database for the real round
   var READS = ["roundSubmissions", "mySubmissions", "roundSubmitters"];
+  // the lounge's calls go to the practice lounge of the real round, always
+  var LOUNGE = ["loungeStatus", "loungeMessages", "loungePost"];
   var SAMPLE_NOTE = "Sample note, for the demo: when a submitter chooses to show their note while people vote, " +
     "it shows here with their track, without their name.";
 
@@ -64,6 +66,8 @@
             "your practice ballot saves to your account, apart from real votes, on every device." +
             (src.prompt ? " The prompt: " + src.prompt : "");
           round.votes_on_site = true;
+          // its lounge is the practice one (lounge.js)
+          round.practice = true;
           round.voting_closes_at = new Date(Date.now() + 2 * 864e5).toISOString();
           round.voting_closed_at = null;
           return [round];
@@ -125,6 +129,11 @@
           var args = Array.prototype.slice.call(arguments), demoCall = false;
           for (var i = 0; i < args.length; i++) {
             if (args[i] !== DEMO_ROUND) continue;
+            if (LOUNGE.indexOf(name) !== -1 && src && i === 0) {
+              args[0] = src.id;
+              args[1] = true;
+              continue;
+            }
             // anything else about the stand-in round stays on this page
             if (READS.indexOf(name) === -1 || !src) return Promise.resolve([]);
             args[i] = src.id;
