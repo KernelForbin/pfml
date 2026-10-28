@@ -2535,6 +2535,16 @@ The rehearsal is `supabase/checks/2026-10-28_voters_lounge_rehearsal.sql`
 (13 checks), and `tests/test_live_voters_lounge.py` checks the names and
 that a stranger gets nothing.
 
+**Live** since 2026-10-28 (b3777fc): the user ran the migration and the
+rehearsal (13 checks held), and `tests/test_live_voters_lounge.py` passed
+against the real database: the 48 instruments then "Kazoo 2", a 401 from
+all six functions to a stranger, and none of the three tables readable.
+The deployed `lounge.js`, `auth.js`, `app.js`, `rounds.js`, `voting.js`,
+`round-demo.js` and `style.css` matched the commit, stamped
+`?v=b3777fcac94a`. **Not yet seen:** a real round's lounge with real
+members, since no round votes on the site yet; the demo's practice lounge
+is the place to try it.
+
 **Database** (`supabase/migrations/2026-10-25_site_voting.sql`, the same
 block in `schema.sql`):
 

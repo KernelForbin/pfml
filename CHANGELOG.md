@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-28 (follow-up): the voters' lounge is live
+
+- **The database is in:** the user ran `2026-10-28_voters_lounge.sql` and
+  its rehearsal (13 checks held), and `tests/test_live_voters_lounge.py`
+  passed against it: the instrument names, and nothing for a stranger
+  from any lounge function or table.
+- **Deployed** as b3777fc; the live scripts and stylesheet matched the
+  commit. A real round's lounge with real members is the one thing not
+  yet seen, since no round votes on the site yet. Docs only.
+
 ## 2026-10-28: the voters' lounge
 
 - **Asked for:** a room where only people who have submitted their ballot
