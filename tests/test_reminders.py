@@ -74,9 +74,11 @@ class TheDatabase(unittest.TestCase):
         # made (seasons on the site, 2026-10-25)
         self.assertIn("where r.phase = 'submitting' and r.opens_at > now() - interval '6 hours'", self.claim)
         self.assertIn("r.playlists_built_at > now() - interval '12 hours'", self.claim)
-        # voting: only players with a track who haven't voted (the user's call, 2026-10-25)
-        self.assertIn("join public.site_submission_owners o on o.round_id = r.id", self.claim)
-        self.assertIn("and not exists (select 1 from public.site_votes v where v.round_id = r.id and v.user_id = o.user_id)", self.claim)
+        # voting: only players with a track who haven't voted (the user's call,
+        # 2026-10-25), and the round's Spectators who haven't (2026-10-29)
+        self.assertIn("join (select o.round_id, o.user_id from public.site_submission_owners o\n            union\n", self.claim)
+        self.assertIn("where public.site_round_role(x.id, p.competitor_id) = 'spectator') w on w.round_id = r.id", self.claim)
+        self.assertIn("and not exists (select 1 from public.site_votes v where v.round_id = r.id and v.user_id = w.user_id)", self.claim)
         self.assertIn("where r.phase = 'voting'", self.claim)
         # only the latest reminder that's passed, and none from before voting opened
         self.assertIn("where t.due <= now() and t.due >= r.voting_opened\n         order by t.due desc limit 1", self.claim)

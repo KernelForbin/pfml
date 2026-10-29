@@ -118,7 +118,7 @@
 
   /* ---- the round ---- */
 
-  var state = { rounds: [], round: null, mine: null, index: null, pasted: null, changing: false, timer: 0,
+  var state = { rounds: [], round: null, mine: null, role: "dj", index: null, pasted: null, changing: false, timer: 0,
                 service: "spotify", pickFrom: null, results: null, asked: null };
 
   function isOpen(r) { return PFML.roundPhase(r) === "submitting"; }
@@ -176,9 +176,12 @@
         var ms = Date.parse(until) - Date.now() + 1500;
         if (ms < 2147483647) state.timer = setTimeout(load, ms);
       }
-      return r ? api().mySubmissions(r.id) : [];
-    }).then(function (mine) {
+      // a Spectator votes but never sends a track (README, DJs and Spectators)
+      return r ? Promise.all([api().mySubmissions(r.id), PFML.myRole(r)]) : [[], "dj"];
+    }).then(function (res) {
+      var mine = res[0];
       state.mine = mine || [];
+      state.role = res[1];
       state.changing = false;
       render();
       describeIfMissing(state.round, mine);
@@ -217,12 +220,20 @@
       '<p class="sub-season">' + esc(seasonLabel(r.season_key)) + "</p>" +
       "<h2>" + esc(r.name) + "</h2>" +
       (r.prompt ? '<p class="sub-prompt">' + esc(r.prompt) + "</p>" : "") +
+      '<p class="sub-prompter" id="subPrompter" hidden></p>' +
+      (state.role === "spectator" ? '<p class="sub-role"><b>You’re a Spectator this round.</b> You don’t send a track: ' +
+        "once submissions close, you vote and comment on every track.</p>" : "") +
       '<p class="sub-count" id="subCount"></p></div>';
     box.hidden = false;
+    PFML.promptBy(r).then(function (line) {
+      if (state.round !== r || !line) return;
+      $("subPrompter").textContent = line;
+      $("subPrompter").hidden = false;
+    }).catch(function (err) { console.error(err); });
     renderWho(r, open);
 
     if (state.mine.length) renderMine(open);
-    if (open && (state.mine.length < songsOf(r) || state.changing)) renderForm();
+    if (open && state.role !== "spectator" && (state.mine.length < songsOf(r) || state.changing)) renderForm();
     if (!open) {
       // listening, and voting for a round that votes here, are on the
       // round's own page (listen.js, voting.js), for good
@@ -254,14 +265,19 @@
   // the user's call, 2026-10-23). A player who hasn't joined the site can't
   // submit there, so they're marked as such. Without the player list, or
   // before the database has the function, it falls back to a track count.
-  // The players are PFML.seasonPlayers': who was picked for a season set up
-  // on the site, else everyone with a track in the season's latest finished
-  // round.
+  // The players are PFML.roundDJs': who was picked for a season set up on
+  // the site, less its Spectators this round (listed on their own), else
+  // everyone with a track in the season's latest finished round.
   function renderWho(r, open) {
     if (typeof api().roundSubmitters !== "function") { trackCount(r, open); return; }
-    Promise.all([api().roundSubmitters(r.id), api().people(), PFML.seasonPlayers(r.season_key)]).then(function (res) {
+    Promise.all([api().roundSubmitters(r.id), api().people(), PFML.roundDJs(r), PFML.roundRoster(r), PFML.seasonPlayers(r.season_key)]).then(function (res) {
       if (state.round !== r) return;
       var players = res[2];
+      var nameOf = {};
+      (res[4] || []).forEach(function (p) { nameOf[p.id] = p.name; });
+      var spectators = (res[3] || []).filter(function (x) { return x.role === "spectator"; })
+        .map(function (x) { return { id: x.id, name: nameOf[x.id] || "Player" }; })
+        .sort(function (a, b) { return a.name.localeCompare(b.name); });
       if (!players) { trackCount(r, open); return; }
       // one id per track: a player is in once all of the round's songs
       // from them are, and pending with how many so far until then
@@ -283,7 +299,8 @@
       // form off a phone screen
       $("subWho").innerHTML =
         whoGroup("sent", "Submitted", done.concat(extra), linked, "Nobody yet.") +
-        whoGroup("pending", open ? "Pending" : "Didn’t submit", pending, linked, open ? "Everyone’s in!" : "");
+        whoGroup("pending", open ? "Pending" : "Didn’t submit", pending, linked, open ? "Everyone’s in!" : "") +
+        whoGroup("spectators", "Spectators, voting only", spectators, linked, "");
       $("subWhoBox").hidden = false;
     }).catch(function (err) { console.error(err); trackCount(r, open); });
   }

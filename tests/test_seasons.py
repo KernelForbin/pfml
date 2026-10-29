@@ -69,7 +69,8 @@ class TheRules(unittest.TestCase):
         self.assertIn("      closes := first_close;\n      opens := greatest(now(), public.site_add_days(closes, -s.submit_days));", create)
         self.assertIn("      opens := public.site_add_days(closes, s.vote_days);\n      closes := public.site_add_days(opens, s.submit_days);", create)
         self.assertIn("public.site_add_days(closes, s.vote_days), s.point_budget, s.max_per_track, s.nonvoters_keep_points,\n"
-                      "            s.songs_per_round, s.downvotes, s.max_down_per_track, s.services, s.repeat_rule);", create)
+                      "            s.songs_per_round, s.downvotes, s.max_down_per_track, s.services, s.repeat_rule)\n"
+                      "    returning id into rid;", create)
         self.assertIn("values (k, btrim(coalesce(item->>'name', '')), btrim(coalesce(item->>'prompt', '')), opens, closes, true,", create)
         again = function(self.sql, "site_season_reschedule")
         # from the latest round that has opened: its scheduled end, not an
@@ -81,7 +82,7 @@ class TheRules(unittest.TestCase):
         create = function(self.sql, "create_site_season")
         first_write = create.index("insert into public.site_seasons")
         for check in ("if not public.is_commissioner() then", "That season already exists.", "A season needs between 1 and 40 rounds.",
-                      "A season needs at least 2 players.", "Give the season a name.", "Every round needs a name.",
+                      "A season needs at least 2 DJs.", "Give the season a name.", "Every round needs a name.",
                       "if first_close is null or first_close <= now() then"):
             with self.subTest(check):
                 self.assertLess(create.index(check), first_write)
@@ -122,7 +123,10 @@ class Timing(unittest.TestCase):
         self.assertIn("update public.site_rounds set closed_at = now() where id = p_round;", self.early)
 
     def test_voting_closes_when_everyone_with_a_track_has_voted(self):
-        self.assertIn("and not exists (select 1 from public.site_votes v where v.round_id = p_round and v.user_id = o.user_id)) then", self.early)
+        self.assertIn("and not exists (select 1 from public.site_votes v where v.round_id = p_round and v.user_id = o.user_id))", self.early)
+        # and every Spectator who has joined (2026-10-29)
+        self.assertIn("where p.season_key = s.key and public.site_round_role(p_round, p.competitor_id) = 'spectator'\n"
+                      "                     and not exists (select 1 from public.site_votes v where v.round_id = p_round and v.user_id = m.user_id)) then", self.early)
         self.assertIn("update public.site_rounds set voting_closed_at = now() where id = p_round;", self.early)
 
     def test_speedy_moves_the_rest_up(self):
@@ -175,9 +179,9 @@ class ReachingPeople(unittest.TestCase):
     def test_a_round_is_announced_when_it_opens_to_its_players(self):
         claim = function(self.sql, "reminders_claim")
         self.assertIn("where r.phase = 'submitting' and r.opens_at > now() - interval '6 hours'", claim)
-        self.assertIn("and (not exists (select 1 from public.site_seasons s where s.key = r.season_key)\n"
-                      "            or exists (select 1 from public.site_season_players p\n"
-                      "                        where p.season_key = r.season_key and p.competitor_id = m.competitor_id))", claim)
+        # to its DJs: a Spectator sends no track (2026-10-29); every member
+        # for a round outside a season set up on the site (site_round_role)
+        self.assertIn("and public.site_round_role(r.id, m.competitor_id) = 'dj'", claim)
 
     def test_the_export_dates_rounds_by_opening_and_names_seasons(self):
         ex = function(self.sql, "site_rounds_export")
@@ -245,7 +249,10 @@ class ThePages(unittest.TestCase):
         self.assertIn('return "season" + Math.max(4, Math.max.apply(null, nums.concat([0])) + 1);', js_body(self.seasons, "function nextKey() {"))
 
     def test_the_five_steps(self):
-        self.assertIn('var STEPS = ["Details", "Songs + Votes", "Timing", "Rounds", "Players"];', self.seasons)
+        # Players before Rounds since 2026-10-29, so each round starts from
+        # everyone's season role
+        self.assertIn('var STEPS = ["Details", "Songs + Votes", "Timing", "Players", "Rounds"];', self.seasons)
+        self.assertIn("var PLAYERS_STEP = 3, ROUNDS_STEP = 4;", self.seasons)
         for mode in ("steady", "accelerated", "speedy"):
             self.assertIn(f"    {mode}: {{ name: ", self.seasons)
 

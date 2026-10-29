@@ -8,8 +8,9 @@
      (listen.js asks ballot() for it): points on other players' tracks, at
      most max_per_track on one and every point of point_budget spent, and a
      comment on any track, your own included, each in the track's own row.
-     Only players with a track in the round vote, and they can change their
-     ballot until voting closes.
+     Players with a track in the round vote, and its Spectators, who have
+     none (README, DJs and Spectators); they can change their ballot until
+     voting closes.
    - After, the results (render(), below the list): every track's submitter
      and score, and every vote and comment with who gave it. A submitter who
      didn't vote scores 0 unless the round says otherwise (the user's call,
@@ -61,7 +62,7 @@
       "<span>" + esc(names[id] || "Member") + "</span></a>";
   }
 
-  var state = { round: null, host: null, parts: null, rows: [], mineTags: [], names: {}, points: {}, comments: {},
+  var state = { round: null, host: null, parts: null, rows: [], mineTags: [], names: {}, spectators: [], points: {}, comments: {},
                 savedJson: "[]", savedAt: 0, submittedJson: null, timer: 0, firstChange: 0, saving: null, again: false, failed: "" };
 
   // Drafts save on their own (asked 2026-10-27): DRAFT_MS after the last
@@ -100,13 +101,20 @@
     state.parts = parts;
     state.points = {};
     state.comments = {};
-    return Promise.all([api().mySubmissions(r.id), api().people(), api().roundVoters(r.id), api().roundSubmitters(r.id)]).then(function (res) {
+    return Promise.all([api().mySubmissions(r.id), api().people(), api().roundVoters(r.id), api().roundSubmitters(r.id),
+                        PFML.roundRoster(r)]).then(function (res) {
       var mine = res[0] || [], voters = res[2] || [], submitters = res[3] || [];
       var closes = PFML.closes(r.voting_closes_at);
       state.mineTags = mine.map(function (m) { return m.tag; });
       state.names = namesOf(res[1]);
-      if (!mine.length) {
-        parts.head.innerHTML = '<p class="block-note">Only players with a track in this round vote. Voting closes ' + esc(closes.at) +
+      // the Spectators who've joined vote too, with no track of their own
+      var roster = res[4] || [];
+      state.spectators = roster.filter(function (x) { return x.role === "spectator" && x.joined; }).map(function (x) { return x.id; });
+      submitters = submitters.concat(state.spectators);
+      var spectator = !!PFML.member && state.spectators.indexOf(PFML.member.competitorId) !== -1;
+      if (!mine.length && !spectator) {
+        parts.head.innerHTML = '<p class="block-note">Only players with a track in this round' + (roster.length ? ", and its Spectators," : "") +
+          " vote. Voting closes " + esc(closes.at) +
           " (" + esc(closes.left) + "); the results show here after.</p>" + votedLine(voters, submitters, state.names);
         return null;
       }
@@ -121,14 +129,17 @@
         var local = readLocal();
         if (local && local.at > state.savedAt) apply(local.ballot || []);
         else if (local) clearLocal();
-        parts.head.innerHTML = '<p class="block-note">Give ' + r.point_budget + " points across the other tracks, at most " + r.max_per_track +
+        parts.head.innerHTML = (spectator && !mine.length ? '<p class="block-note vt-rule"><b>You’re a Spectator this round:</b> ' +
+            "no track of your own, so every track is yours to vote on.</p>" : "") +
+          '<p class="block-note">Give ' + r.point_budget + " points across the " + (mine.length ? "other " : "") + "tracks, at most " + r.max_per_track +
           " on one, right in the list as they play." + (r.downvotes ? " You can also give up to " + r.downvotes +
             (r.downvotes === 1 ? " downvote" : " downvotes") + ", at most " + r.max_down_per_track +
             " on one: they’re optional, and press − below 0 to give them." : "") +
-          " Comment on any track, yours too. Everything saves as you go, on every device you sign in on; " +
+          " Comment on any track" + (mine.length ? ", yours too" : "") + ". Everything saves as you go, on every device you sign in on; " +
           "it counts once you Submit, with every point given. You can change it until voting closes, " +
           esc(closes.at) + " (" + esc(closes.left) + ").</p>" +
-          (r.nonvoters_keep_points ? "" : '<p class="block-note vt-rule">Players who don’t submit a ballot score ' +
+          // the penalty is on a track, so it's nothing to a Spectator
+          (r.nonvoters_keep_points || !mine.length ? "" : '<p class="block-note vt-rule">Players who don’t submit a ballot score ' +
             (r.downvotes ? "only the downvotes they got" : "0") + " for this round.</p>") +
           votedLine(voters, submitters, state.names);
         // the status in the bar, since the bar stays over the list
@@ -386,7 +397,7 @@
     }).then(function () {
       return Promise.all([api().roundVoters(r.id), api().roundSubmitters(r.id), api().people()]).then(function (res) {
         var line = state.parts.head.querySelector(".vt-count");
-        if (line) line.outerHTML = votedLine(res[0] || [], res[1] || [], namesOf(res[2]));
+        if (line) line.outerHTML = votedLine(res[0] || [], (res[1] || []).concat(state.spectators), namesOf(res[2]));
       });
     }).then(refreshBallot, function (err) {
       refreshBallot();

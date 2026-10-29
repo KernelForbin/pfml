@@ -226,6 +226,11 @@ Points and comments save on their own as a draft, to the member's account
 counts votes. The voters' lounge (README, Voters' lounge) is anonymous for
 good: no lounge function may ever give out who wrote a message, the admin
 included, and it never opens below 3 voters.
+Players in a season set up on the site are DJs or Spectators (2026-10-29;
+README, DJs and Spectators): a Spectator votes and comments but never
+sends a track, and a round outside such a season (Round 7 and before)
+has no roles, everyone a DJ. Hiding the prompt from Spectators, guessing
+it and Spectator points were asked about and not built, the user's call.
 Try changes there on pfml.fun/round?demo=1, since no round votes here
 yet. Never let it reach Round 7,
 Season 3 or any round already open: the database refuses a round opened by
@@ -365,6 +370,8 @@ verified" has to be both.
   `send-reminders` change (read-only),
   and `-p test_live_voters_lounge.py` whenever the lounge functions change
   (read-only; the full flow is `supabase/checks/2026-10-28_voters_lounge_rehearsal.sql`),
+  and `-p test_live_season_roles.py` whenever the DJ and Spectator functions
+  change (read-only; the full flow is `supabase/checks/2026-10-29_season_roles_rehearsal.sql`),
   and `-p test_live_demo_ballots.py` whenever the demo's practice-ballot
   functions change (read-only; the full flow is
   `supabase/checks/2026-10-27_demo_ballots_rehearsal.sql`),

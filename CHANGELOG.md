@@ -1,5 +1,46 @@
 # Changelog
 
+## 2026-10-29: DJs and Spectators, and who wrote the prompt
+
+- **Asked for:** room for people who only vote. Everyone playing a season
+  set up on the site is a DJ (sends tracks and votes) or a Spectator
+  (votes and comments on every track, never sends one), set for the
+  season and changeable for any round as it's made. And each round can
+  name who wrote its prompt, one member or several.
+- **Not built, the user's call:** hiding the prompt from Spectators,
+  guessing it, and Spectator points.
+- **The database** (migration `2026-10-29_season_roles.sql`, which the user
+  runs, then its rehearsal):
+  - a role on each season player, and a round's own roles where they
+    differ;
+  - a trigger refusing a Spectator's track;
+  - ballots, drafts, the voting reminders and the lounge open to
+    Spectators;
+  - Accelerated and Speedy wait on the DJs to submit and on the
+    Spectators to vote;
+  - roles fixed once submissions close, a DJ with a track staying one, and
+    2 DJs a round.
+  - Round 7 and every round outside a season set up on the site are
+    untouched: everyone is a DJ there.
+- **The setup** puts Players before Rounds, so each round starts from
+  everyone's season role; Manage season edits roles and prompters per
+  round. The Submit page, Home and the ballot know a Spectator.
+- **A Spectator in the stats:** their points count; with no track they're
+  never in the standings. A test builds one.
+- **Docs:** the README's new DJs and Spectators section and the setup
+  table; the features page.
+- **Verified:**
+  - the suite passes (898), with the 11 tests that pinned the old rules
+    updated, and the new ones caught all 29 breaks in a scratch clone;
+  - in a browser at 375 and desktop, light and dark, against a stand-in
+    database following the new rules. Four bugs found there and fixed:
+    - a class name clash that squeezed the pickers;
+    - a summary that read a `<details>` like a form;
+    - the setup's summary not following the date;
+    - the non-voting penalty line shown to a Spectator.
+  - Not run here: the SQL, which the rehearsal (12 checks) and
+    `tests/test_live_season_roles.py` run once the migration is in.
+
 ## 2026-10-28 (follow-up): the voters' lounge is live
 
 - **The database is in:** the user ran `2026-10-28_voters_lounge.sql` and

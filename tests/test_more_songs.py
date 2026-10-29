@@ -176,7 +176,8 @@ class ThePages(unittest.TestCase):
         self.assertIn("$(\"subMineEmbed\").innerHTML = list.map(function (m) {", mine)
         self.assertIn("(n > 1 && open ? '<button type=\"button\" class=\"sub-btn sub-btn-quiet sub-remove\" data-tag=\"' + esc(m.tag) + '\">Remove</button>' : \"\")", mine)
         self.assertIn('$("subMineActions").hidden = n > 1 || !open || state.changing;', mine)
-        self.assertIn("if (open && (state.mine.length < songsOf(r) || state.changing)) renderForm();", js_body(self.submit, "function render() {"))
+        self.assertIn('if (open && state.role !== "spectator" && (state.mine.length < songsOf(r) || state.changing)) renderForm();',
+                      js_body(self.submit, "function render() {"))
         remove = js_body(self.submit, "function removeTrack(ev) {")
         self.assertIn("api().withdrawTrack(state.round.id, tag)", remove)
         self.assertLess(remove.index("window.confirm("), remove.index("api().withdrawTrack("))

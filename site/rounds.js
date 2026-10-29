@@ -644,6 +644,8 @@
         '<p class="rp-kicker">Round ' + (i + 1) + " of " + d.rounds.length + (r.created ? " &middot; " + esc(dateOf(r.created)) : "") + "</p>" +
         "<h1>" + esc(r.name) + "</h1>" +
         (r.description ? '<p class="rp-prompt">' + esc(r.description) + "</p>" : "") +
+        // who wrote the prompt, for a round set up on the site (app.js)
+        '<p class="rp-prompter" id="rpPrompter" hidden></p>' +
         (winLine ? '<p class="rp-winner">' + winLine + "</p>" : "") +
         '<div class="rp-meta">' +
           (status ? '<span class="rp-chip">' + esc(status) + "</span>"
@@ -943,6 +945,7 @@
         '<p class="rp-kicker">' + esc(label) + "</p>" +
         "<h1>" + esc(r.name) + "</h1>" +
         (r.prompt ? '<p class="rp-prompt">' + esc(r.prompt) + "</p>" : "") +
+        '<p class="rp-prompter" id="rpPrompter" hidden></p>' +
         '<div class="rp-meta"><span class="rp-chip">' + esc(where) + "</span></div>" +
       "</section>" +
       '<section class="shell block rp-listen" id="rpListen" hidden></section>' +

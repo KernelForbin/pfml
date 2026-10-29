@@ -220,7 +220,8 @@ class WhoIsIn(unittest.TestCase):
 
     def test_the_submit_page_counts_out_of_the_players_taking_part(self):
         who = self.body(self.js, "function renderWho(r, open) {")
-        self.assertIn("api().roundSubmitters(r.id), api().people(), PFML.seasonPlayers(r.season_key)", who)
+        # out of the round's DJs; its Spectators are listed apart (2026-10-29)
+        self.assertIn("api().roundSubmitters(r.id), api().people(), PFML.roundDJs(r), PFML.roundRoster(r)", who)
         self.assertIn("var players = res[2];", who)
         self.assertIn('$("subCount").innerHTML = "<b>" + done.length + "/" + players.length + "</b> submitted"', who)
         # in once all of the round's songs from them are; until then pending,
@@ -262,7 +263,8 @@ class WhoIsIn(unittest.TestCase):
         app = read(SITE / "app.js")
         self.assertIn("bannerCount(open);", self.body(app, "function renderSubmitBanner() {"))
         count = self.body(app, "function bannerCount(round) {")
-        self.assertIn("Promise.all([PFML.seasonPlayers(round.season_key), PFML.api.roundSubmitters(round.id)])", count)
+        # out of the round's DJs: a Spectator sends no track (2026-10-29)
+        self.assertIn("Promise.all([PFML.roundDJs(round), PFML.api.roundSubmitters(round.id)])", count)
         self.assertIn('$("submitBannerCount").textContent = done + "/" + players.length + " submitted";', count)
 
     def test_empty_boxes_take_no_room(self):

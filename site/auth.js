@@ -387,8 +387,16 @@
       // out ahead, so there can be many not opened yet
       return client.from("site_rounds").select("id, season_key, name, prompt, opens_at, closes_at, closed_at, created_at, spotify_playlist, youtube_playlist, " +
           "votes_on_site, voting_closes_at, voting_closed_at, point_budget, max_per_track, nonvoters_keep_points, " +
-          "songs_per_round, downvotes, max_down_per_track, services, repeat_rule")
+          "songs_per_round, downvotes, max_down_per_track, services, repeat_rule, " +
+          "site_round_prompters(competitor_id), site_round_roles(competitor_id, role)")
         .order("opens_at", { ascending: false }).limit(100).then(must);
+    },
+    // Everyone playing a round and their role in it, DJ or Spectator
+    // ([{competitor_id, role, joined}]); [] for a round outside a season set
+    // up on the site, where everyone is a DJ (README, DJs and Spectators).
+    roundRoster: function (roundId) {
+      return client.rpc("site_round_roster", { p_round: roundId }).then(must)
+        .then(function (rows) { return rows || []; });
     },
     // The caller's own tracks for a round ([] for none; a round can take
     // more than one from each player). Nothing else on the site can tell
@@ -592,14 +600,15 @@
     siteSeasons: function () {
       return client.from("site_seasons").select("key, name, description, point_budget, max_per_track, nonvoters_keep_points, " +
           "timing, submit_days, vote_days, songs_per_round, downvotes, max_down_per_track, services, repeat_rule, created_at, " +
-          "site_season_players(competitor_id)")
+          "site_season_players(competitor_id, role)")
         .order("key").then(must);
     },
-    // Who's playing a season set up on the site, by name; [] for any other.
+    // Who's playing a season set up on the site, by name, with their role
+    // for the season; [] for any other.
     seasonRoster: function (seasonKey) {
-      return client.from("site_season_players").select("competitor_id, players(name)").eq("season_key", seasonKey).then(must)
+      return client.from("site_season_players").select("competitor_id, role, players(name)").eq("season_key", seasonKey).then(must)
         .then(function (rows) {
-          return (rows || []).map(function (r) { return { id: r.competitor_id, name: r.players ? r.players.name : "Player" }; })
+          return (rows || []).map(function (r) { return { id: r.competitor_id, name: r.players ? r.players.name : "Player", role: r.role }; })
             .sort(function (a, b) { return a.name.localeCompare(b.name); });
         });
     },
@@ -622,8 +631,15 @@
     removeSiteSeasonRound: function (roundId) {
       return client.rpc("remove_site_season_round", { p_round: roundId }).then(must);
     },
-    setSiteSeasonPlayers: function (key, ids) {
-      return client.rpc("set_site_season_players", { p_key: key, p_players: ids }).then(must);
+    // Who's playing a season and as what: [{id, role}], role "dj" or
+    // "spectator".
+    setSiteSeasonRoster: function (key, players) {
+      return client.rpc("set_site_season_roster", { p_key: key, p_players: players }).then(must);
+    },
+    // A round's own roles ({competitor id: role}, every player) and who
+    // wrote its prompt ([competitor id]); null leaves either as it is.
+    setSiteRoundPeople: function (roundId, roles, prompters) {
+      return client.rpc("set_site_round_people", { p_round: roundId, p_roles: roles, p_prompters: prompters }).then(must);
     },
     // Each member's role, for the admin's Commissioners list.
     memberRoles: function () {

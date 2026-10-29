@@ -1,12 +1,18 @@
 /* ==========================================================
    PFML - seasons set up on the site, on the Commissioner page
 
-   Setting one up, in the steps Music League uses (Details, Songs + Votes,
-   Timing, Rounds, Players), and then running it: its details, rules and
-   timing, its rounds (add, rename, reorder or remove one that hasn't
-   opened), and who's playing. Every season set up here votes on pfml.fun
-   (the user's call, 2026-10-25). commissioner.js loads the rounds and the
-   seasons and hands them over (PFMLSeasons.render).
+   Setting one up, in steps (Details, Songs + Votes, Timing, Players,
+   Rounds), and then running it: its details, rules and timing, its rounds
+   (add, rename, reorder or remove one that hasn't opened), and who's
+   playing. Every season set up here votes on pfml.fun (the user's call,
+   2026-10-25). commissioner.js loads the rounds and the seasons and hands
+   them over (PFMLSeasons.render).
+
+   Everyone playing is a DJ (sends tracks and votes) or a Spectator (votes
+   only), for the season, and any round can change that while it still
+   takes tracks; a round can also name who wrote its prompt (asked
+   2026-10-29; README, DJs and Spectators). Players comes before Rounds so
+   each round starts from everyone's season role.
 
    The database lays the rounds out and holds every rule (supabase/schema.sql,
    seasons on the site); the schedule shown before a season is created is a
@@ -27,7 +33,9 @@
   function errText(err) { return (err && err.message) || String(err); }
   function when(iso) { return PFML.closes(iso).at; }
 
-  var STEPS = ["Details", "Songs + Votes", "Timing", "Rounds", "Players"];
+  var STEPS = ["Details", "Songs + Votes", "Timing", "Players", "Rounds"];
+  var PLAYERS_STEP = 3, ROUNDS_STEP = 4;
+  var ROLES = [["dj", "DJ"], ["spectator", "Spectator"]];
   var TIMING = {
     steady: { name: "Steady", lines: ["Every deadline holds, even when everyone's done early.", "Rounds open and close on schedule."],
               useful: "you want the same rhythm every week." },
@@ -140,13 +148,103 @@
     return out;
   }
 
-  function checklist(name, chosen) {
+  // seasonRole, in a round's roles: the role it starts from
+  function roleSelect(name, role, label, seasonRole) {
+    return '<select class="sub-input cm-role" name="' + name + '" aria-label="' + esc(label) + '"' +
+      (seasonRole ? ' data-season="' + seasonRole + '"' : "") + ">" +
+      ROLES.map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === role ? " selected" : "") + ">" + x[1] + "</option>"; }).join("") +
+      "</select>";
+  }
+
+  // Who's playing, ticked, each with their role for the season (roles:
+  // {id: "spectator"}; DJ otherwise).
+  function checklist(chosen, roles) {
     return people.players.map(function (p) {
-      return '<label class="cm-check"><input type="checkbox" name="' + name + '" value="' + esc(p.id) + '"' +
+      return '<div class="cm-player"><label class="cm-check"><input type="checkbox" name="player" value="' + esc(p.id) + '"' +
         (chosen.indexOf(p.id) !== -1 ? " checked" : "") + "><span>" + esc(p.name) + "</span>" +
-        (p.joined ? "" : "<small>not on the site yet</small>") + "</label>";
+        (p.joined ? "" : "<small>not on the site yet</small>") + "</label>" +
+        roleSelect("role-" + p.id, roles[p.id] || "dj", p.name + "’s role") + "</div>";
     }).join("");
   }
+
+  // [{id, role}] for every ticked player in a form
+  function readRoster(form) {
+    return Array.prototype.filter.call(form.querySelectorAll('input[name="player"]'), function (b) { return b.checked; })
+      .map(function (b) { return { id: b.value, role: form.elements["role-" + b.value].value }; });
+  }
+  function rosterLine(list) {
+    var dj = list.filter(function (p) { return p.role === "dj"; }).length, sp = list.length - dj;
+    return list.length + " playing: " + dj + (dj === 1 ? " DJ" : " DJs") + ", " + sp + (sp === 1 ? " Spectator" : " Spectators");
+  }
+  function nameOf(id) {
+    var p = people.players.filter(function (x) { return x.id === id; })[0];
+    return p ? p.name : "a player";
+  }
+  function names(ids) {
+    var list = ids.map(nameOf).sort();
+    return list.length < 2 ? list.join("") : list.slice(0, -1).join(", ") + " and " + list[list.length - 1];
+  }
+
+  // Who wrote a round's prompt: any members who've joined the site, more
+  // than one when they wrote it together.
+  function promptersField(chosen) {
+    return '<details class="cm-people-pick"><summary>Prompt by: <span data-sum="prompters">' + esc(chosen.length ? names(chosen) : "nobody named") + "</span></summary>" +
+      '<div class="cm-checks">' + people.players.filter(function (p) { return p.joined; }).map(function (p) {
+        return '<label class="cm-check"><input type="checkbox" name="prompter" value="' + esc(p.id) + '"' +
+          (chosen.indexOf(p.id) !== -1 ? " checked" : "") + "><span>" + esc(p.name) + "</span></label>";
+      }).join("") + "</div></details>";
+  }
+  function readPrompters(form) {
+    return Array.prototype.filter.call(form.querySelectorAll('input[name="prompter"]'), function (b) { return b.checked; })
+      .map(function (b) { return b.value; });
+  }
+
+  // A round's roles: everyone playing, starting from their season role
+  // (season: [{id, role}]; own: {id: role} where the round differs).
+  function rolesField(season, own) {
+    var changed = changedRoles(season, own);
+    return '<details class="cm-people-pick"><summary>Roles this round: <span data-sum="roles">' + esc(rolesSummary(changed)) + "</span></summary>" +
+      '<p class="block-note">Everyone starts with their season role. A DJ who has sent a track stays a DJ.</p>' +
+      '<div class="cm-checks">' + season.slice().sort(function (a, b) { return nameOf(a.id).localeCompare(nameOf(b.id)); }).map(function (p) {
+        return '<div class="cm-player cm-player-role"><span>' + esc(nameOf(p.id)) + "</span>" +
+          roleSelect("rrole-" + p.id, own[p.id] || p.role, nameOf(p.id) + "’s role this round", p.role) + "</div>";
+      }).join("") + "</div></details>";
+  }
+  // {id: role} for the players whose role this round isn't their season's
+  function changedRoles(season, own) {
+    var out = {};
+    season.forEach(function (p) { if (own[p.id] && own[p.id] !== p.role) out[p.id] = own[p.id]; });
+    return out;
+  }
+  function rolesSummary(changed) {
+    var ids = Object.keys(changed);
+    if (!ids.length) return "everyone’s season role";
+    var sp = ids.filter(function (id) { return changed[id] === "spectator"; }), dj = ids.filter(function (id) { return changed[id] === "dj"; });
+    return (sp.length ? names(sp) + (sp.length === 1 ? " a Spectator" : " Spectators") : "") + (sp.length && dj.length ? "; " : "") +
+      (dj.length ? names(dj) + (dj.length === 1 ? " a DJ" : " DJs") : "");
+  }
+  // {id: role} from a round's roles field, only where it isn't the season's
+  // (form: a form, or the roles' own <details>, which has no .elements)
+  function readRoundRoles(form, season) {
+    var own = {};
+    season.forEach(function (p) { var el = form.querySelector('select[name="rrole-' + p.id + '"]'); if (el) own[p.id] = el.value; });
+    return changedRoles(season, own);
+  }
+  // Every player's role for the round, as the database takes it
+  function fullRoles(season, changed) {
+    var out = {};
+    season.forEach(function (p) { out[p.id] = changed[p.id] || p.role; });
+    return out;
+  }
+  function seasonRoster(s) {
+    return (s.site_season_players || []).map(function (p) { return { id: p.competitor_id, role: p.role || "dj" }; });
+  }
+  function ownRoles(r) {
+    var own = {};
+    (r.site_round_roles || []).forEach(function (x) { own[x.competitor_id] = x.role; });
+    return own;
+  }
+  function prompterIds(r) { return (r.site_round_prompters || []).map(function (x) { return x.competitor_id; }); }
 
   /* ---- render ---- */
 
@@ -188,10 +286,9 @@
 
   function seasonPanel(s) {
     var rounds = seasonRounds(s.key);
-    var players = (s.site_season_players || []).map(function (p) { return p.competitor_id; });
     return '<details class="cm-season" data-season="' + esc(s.key) + '">' +
       '<summary><span class="cm-round-name">' + esc(s.name) + "</span><small>" + esc(statusLine(s, rounds)) + " · " +
-        players.length + " playing · " + esc(TIMING[s.timing].name) + "</small></summary>" +
+        esc(rosterLine(seasonRoster(s))) + " · " + esc(TIMING[s.timing].name) + "</small></summary>" +
       '<div class="cm-season-body">' +
         "<h3>Rounds</h3>" +
         '<ol class="cm-season-rounds">' + rounds.map(function (r, i) { return roundRow(r, i, rounds); }).join("") + "</ol>" +
@@ -199,6 +296,7 @@
           '<label class="sub-label" for="cmAdd-' + esc(s.key) + '">Add a round at the end</label>' +
           '<input class="sub-input" id="cmAdd-' + esc(s.key) + '" name="name" maxlength="120" placeholder="Theme name">' +
           '<textarea class="sub-input sub-textarea" name="prompt" maxlength="2000" rows="2" placeholder="Theme description" aria-label="Theme description"></textarea>' +
+          '<div data-fill="new-round"></div>' +
           '<div class="sub-actions"><button type="submit" class="sub-btn sub-btn-quiet">Add round</button></div>' +
         "</form>" +
         "<h3>Settings</h3>" +
@@ -207,6 +305,8 @@
           '<div class="sub-actions"><button type="submit" class="sub-btn">Save settings</button></div>' +
         "</form>" +
         "<h3>Players</h3>" +
+        '<p class="block-note">DJs send tracks and vote; Spectators vote and comment on every track, and never send one. ' +
+          "A change reaches the rounds still taking tracks, and the ones to come; a DJ with a track in a round stays a DJ in it.</p>" +
         '<form class="sub-admin-form" data-act="players"><div class="cm-checks" data-players="' + esc(s.key) + '">' +
           '<p class="block-note">Loading the players.</p></div>' +
           '<div class="sub-actions"><button type="submit" class="sub-btn sub-btn-quiet">Save players</button></div></form>' +
@@ -223,7 +323,8 @@
     var canUp = upcoming && i > 0 && PFML.roundPhase(rounds[i - 1]) === "upcoming";
     var canDown = upcoming && i < rounds.length - 1;
     return '<li class="cm-season-round" data-round="' + esc(r.id) + '">' +
-      '<div class="cm-season-round-head"><span><b>' + (i + 1) + ". " + esc(r.name) + "</b><small>" + esc(dates) + "</small></span>" +
+      '<div class="cm-season-round-head"><span><b>' + (i + 1) + ". " + esc(r.name) + "</b><small>" + esc(dates) + "</small>" +
+        '<small data-people-round="' + esc(r.id) + '"></small></span>' +
         (upcoming ? '<span class="cm-move">' +
           '<button type="button" class="cm-icon" data-act="up" aria-label="Move ' + esc(r.name) + ' earlier"' + (canUp ? "" : " disabled") + ">↑</button>" +
           '<button type="button" class="cm-icon" data-act="down" aria-label="Move ' + esc(r.name) + ' later"' + (canDown ? "" : " disabled") + ">↓</button>" +
@@ -234,6 +335,8 @@
           '<input class="sub-input" name="name" maxlength="120" value="' + esc(r.name) + '" aria-label="Round name">' +
           '<textarea class="sub-input sub-textarea" name="prompt" maxlength="2000" rows="2" aria-label="Description">' + esc(r.prompt) + "</textarea>" +
           (upcoming || phase === "submitting" ? ruleFields(r, "cmR-" + r.id) : "") +
+          // who wrote the prompt, any time; roles while it takes tracks
+          '<div data-fill="round" data-roles="' + (upcoming || phase === "submitting" ? "1" : "") + '"></div>' +
           '<div class="sub-actions"><button type="submit" class="sub-btn sub-btn-quiet">Save</button></div>' +
         "</form></details></li>";
   }
@@ -303,14 +406,37 @@
     m.hidden = !text;
   }
 
-  // the Players box of each open season, once the players are in
+  // The parts of each open season that need names, once the players are
+  // in: its Players box, and each round's prompters and roles.
   function fillPlayers() {
-    var boxes = document.querySelectorAll("[data-players]");
-    if (!boxes.length) return;
+    var seasons = document.querySelectorAll(".cm-season[open]");
+    if (!seasons.length) return;
     loadPeople().then(function () {
-      Array.prototype.forEach.call(boxes, function (box) {
-        var s = ctx.seasons.filter(function (x) { return x.key === box.getAttribute("data-players"); })[0];
-        box.innerHTML = checklist("player", (s.site_season_players || []).map(function (p) { return p.competitor_id; }));
+      Array.prototype.forEach.call(seasons, function (panel) {
+        var s = ctx.seasons.filter(function (x) { return x.key === panel.getAttribute("data-season"); })[0];
+        if (!s) return;
+        var roster = seasonRoster(s), roles = {};
+        roster.forEach(function (p) { if (p.role !== "dj") roles[p.id] = p.role; });
+        var box = panel.querySelector("[data-players]");
+        if (box && !box.querySelector("input")) {
+          box.innerHTML = checklist(roster.map(function (p) { return p.id; }), roles);
+          box.insertAdjacentHTML("afterend", '<p class="block-note" data-sum="roster">' + esc(rosterLine(roster)) + "</p>");
+        }
+        var add = panel.querySelector('[data-fill="new-round"]');
+        if (add && !add.innerHTML) add.innerHTML = promptersField([]) + rolesField(roster, {});
+        Array.prototype.forEach.call(panel.querySelectorAll("[data-round]"), function (li) {
+          var r = ctx.rounds.filter(function (x) { return x.id === li.getAttribute("data-round"); })[0];
+          if (!r) return;
+          var line = [];
+          if (prompterIds(r).length) line.push("Prompt by " + names(prompterIds(r)));
+          var changed = changedRoles(roster, ownRoles(r));
+          if (Object.keys(changed).length) line.push(rolesSummary(changed));
+          li.querySelector("[data-people-round]").textContent = line.join(" · ");
+          var fill = li.querySelector('[data-fill="round"]');
+          if (fill && !fill.innerHTML) {
+            fill.innerHTML = promptersField(prompterIds(r)) + (fill.getAttribute("data-roles") ? rolesField(roster, ownRoles(r)) : "");
+          }
+        });
       });
     }).catch(function (err) { console.error(err); });
   }
@@ -325,7 +451,9 @@
                              songs_per_round: 1, downvotes: 0, max_down_per_track: 0,
                              services: ["spotify", "youtube", "soundcloud"], repeat_rule: "warn",
                              first_date: "", first_time: "20:00", rounds: [],
-                             players: (current && current.activePlayers || []).map(function (p) { return p.id; }) } };
+                             players: (current && current.activePlayers || []).map(function (p) { return p.id; }),
+                             // {id: "spectator"} for the season's Spectators; DJ otherwise
+                             roles: {} } };
     loadPeople().then(function () { render(ctx); showWizard(); },
                       function (err) { wizard = null; say("Couldn’t load the players: " + errText(err)); });
   }
@@ -350,29 +478,38 @@
       body = votesFields(d, id);
     } else if (step === 2) {
       body = timingFields(d, id);
-    } else if (step === 3) {
+    } else if (step === PLAYERS_STEP) {
+      body = '<p class="block-note">Tick who’s playing. <b>DJs</b> send tracks and vote; <b>Spectators</b> vote and comment on every track, ' +
+          "and never send one. Each round can change anyone’s role, in the next step.</p>" +
+        '<p class="block-note" id="cmNewCount">' + esc(rosterLine(wizardRoster(d))) + ". Only DJs submit, and Accelerated and Speedy wait on the ones who’ve joined the site.</p>" +
+        '<div class="sub-actions"><button type="button" class="sub-btn sub-btn-quiet" data-act="w-all">Everyone</button>' +
+          '<button type="button" class="sub-btn sub-btn-quiet" data-act="w-none">No one</button></div>' +
+        '<div class="cm-checks">' + checklist(d.players, d.roles) + "</div>";
+    } else {
+      var roster = wizardRoster(d);
       body = '<ol class="cm-new-rounds">' + d.rounds.map(function (r, i) {
+          var about = [];
+          if (r.prompters.length) about.push("Prompt by " + names(r.prompters));
+          var changed = changedRoles(roster, r.roles);
+          if (Object.keys(changed).length) about.push(rolesSummary(changed));
           return '<li data-i="' + i + '"><div class="cm-season-round-head"><b>' + (i + 1) + ". " + esc(r.name) + "</b>" +
             '<span class="cm-move"><button type="button" class="cm-icon" data-act="w-up" aria-label="Move ' + esc(r.name) + ' earlier"' + (i ? "" : " disabled") + ">↑</button>" +
             '<button type="button" class="cm-icon" data-act="w-down" aria-label="Move ' + esc(r.name) + ' later"' + (i < d.rounds.length - 1 ? "" : " disabled") + ">↓</button>" +
             '<button type="button" class="cm-icon" data-act="w-remove" aria-label="Remove ' + esc(r.name) + '">✕</button></span></div>' +
-            (r.prompt ? "<p>" + esc(r.prompt) + "</p>" : "") + "</li>";
+            (r.prompt ? "<p>" + esc(r.prompt) + "</p>" : "") +
+            (about.length ? "<p>" + esc(about.join(" · ")) + "</p>" : "") + "</li>";
         }).join("") + "</ol>" +
         '<label class="sub-label" for="cmNew-rname">Add round</label>' +
         '<input class="sub-input" id="cmNew-rname" maxlength="120" placeholder="Theme name">' +
         '<textarea class="sub-input sub-textarea" id="cmNew-rprompt" maxlength="2000" rows="2" placeholder="Theme description" aria-label="Theme description"></textarea>' +
+        '<div id="cmNew-rpeople">' + promptersField([]) + rolesField(roster, {}) + "</div>" +
         '<div class="sub-actions"><button type="button" class="sub-btn sub-btn-quiet" data-act="w-add">Add round</button></div>' +
         '<p class="block-note">Round 1’s submissions close at the first playlist. Each round after it opens when the one before closes voting.</p>' +
         '<div class="cm-pair"><span><label class="sub-label" for="cmNew-date">Date of the first playlist</label>' +
           '<input class="sub-input" id="cmNew-date" name="first_date" type="date" value="' + esc(d.first_date) + '"></span>' +
         '<span><label class="sub-label" for="cmNew-time">Time (your time)</label>' +
           '<input class="sub-input" id="cmNew-time" name="first_time" type="time" value="' + esc(d.first_time) + '"></span></div>' +
-        previewHtml(d);
-    } else {
-      body = '<p class="block-note"><span id="cmNewCount">' + d.players.length + "</span> playing. Only they can submit, and Accelerated and Speedy wait on the ones who’ve joined the site.</p>" +
-        '<div class="sub-actions"><button type="button" class="sub-btn sub-btn-quiet" data-act="w-all">Everyone</button>' +
-          '<button type="button" class="sub-btn sub-btn-quiet" data-act="w-none">No one</button></div>' +
-        '<div class="cm-checks">' + checklist("player", d.players) + "</div>" + summaryHtml(d);
+        previewHtml(d) + summaryHtml(d);
     }
     $("cmWizard").innerHTML = "<h3>Set up " + esc(d.name || "a new season") + "</h3>" +
       '<ol class="cm-steps">' + STEPS.map(function (s, i) {
@@ -405,7 +542,7 @@
 
   function summaryHtml(d) {
     var first = firstClose(d);
-    return '<div class="cm-sched"><h4>Ready to create</h4><ul>' +
+    return '<div class="cm-sched" id="cmSum"><h4>Ready to create</h4><ul>' +
       "<li>" + esc(d.name) + ", " + d.rounds.length + (d.rounds.length === 1 ? " round" : " rounds") + "</li>" +
       "<li>" + d.songs_per_round + (d.songs_per_round === 1 ? " song" : " songs") + " from each player a round</li>" +
       "<li>" + d.point_budget + " points to give, " + (d.max_per_track >= d.point_budget ? "no limit on one song" : "at most " + d.max_per_track + " on one song") +
@@ -415,6 +552,7 @@
       "<li>" + d.services.map(function (x) { return SERVICES.filter(function (y) { return y[0] === x; })[0][1]; }).join(", ") +
         "; repeats within a round: " + RULES.filter(function (x) { return x[0] === d.repeat_rule; })[0][1].toLowerCase() + "</li>" +
       "<li>" + esc(TIMING[d.timing].name) + ": " + days(d.submit_days) + " to submit, " + days(d.vote_days) + " to vote</li>" +
+      "<li>" + esc(rosterLine(wizardRoster(d))) + "</li>" +
       "<li>" + (first ? "First playlist " + esc(when(first.toISOString())) : "No first playlist yet") + "</li>" +
       "<li>Voting on pfml.fun, results shown when voting closes</li></ul></div>";
   }
@@ -442,19 +580,41 @@
         d.submit_days = +f.submit_days.value;
         d.vote_days = +f.vote_days.value;
       }
-    } else if (wizard.step === 3) {
+    } else if (wizard.step === PLAYERS_STEP) {
+      // every row's role is kept, ticked or not, so ticking someone again
+      // brings their choice back
+      people.players.forEach(function (p) {
+        var el = f["role-" + p.id];
+        if (el && el.value === "spectator") d.roles[p.id] = "spectator"; else delete d.roles[p.id];
+      });
+      d.players = readRoster(form).map(function (p) { return p.id; });
+      return rosterProblem(wizardRoster(d));
+    } else {
       d.first_date = f.first_date.value;
       d.first_time = f.first_time.value;
       if (!d.rounds.length) return "Add at least one round.";
       var first = firstClose(d);
       if (!first) return "Pick the date and time of the first playlist.";
       if (first.getTime() <= Date.now()) return "The first playlist has to be in the future.";
-    } else {
-      d.players = Array.prototype.filter.call(form.querySelectorAll('input[name="player"]'), function (b) { return b.checked; })
-        .map(function (b) { return b.value; });
-      if (d.players.length < 2) return "Pick at least 2 players.";
     }
     return null;
+  }
+
+  // [{id, role}] for the players picked so far
+  function wizardRoster(d) {
+    return d.players.map(function (id) { return { id: id, role: d.roles[id] || "dj" }; });
+  }
+  // what the database would refuse about a roster, or null
+  function rosterProblem(list) {
+    return list.filter(function (p) { return p.role === "dj"; }).length < 2 ? "Pick at least 2 DJs: they send the tracks." : null;
+  }
+  // a round's own roles, as the database takes them: only for the players
+  // still picked, and only when any differ from their season role
+  function roundForCreate(r, roster) {
+    var out = { name: r.name, prompt: r.prompt, prompters: r.prompters };
+    var changed = changedRoles(roster, r.roles);
+    if (Object.keys(changed).length) out.roles = fullRoles(roster, changed);
+    return out;
   }
 
   function wizardMsg(text) { var m = $("cmWizardMsg"); m.textContent = text || ""; m.hidden = !text; }
@@ -474,15 +634,17 @@
     var d = wizard.d;
     // every step has to be complete, whichever order they were visited in
     if (!d.name) { wizard.step = 0; drawWizard(); wizardMsg("Give the season a name."); return; }
+    var roster = wizardRoster(d);
+    if (rosterProblem(roster)) { wizard.step = PLAYERS_STEP; drawWizard(); wizardMsg(rosterProblem(roster)); return; }
     var first = firstClose(d);
     if (!d.rounds.length || !first || first.getTime() <= Date.now()) {
-      wizard.step = 3; drawWizard(); wizardMsg(d.rounds.length ? "Pick a first playlist in the future." : "Add at least one round."); return;
+      wizard.step = ROUNDS_STEP; drawWizard(); wizardMsg(d.rounds.length ? "Pick a first playlist in the future." : "Add at least one round."); return;
     }
     var p = { key: d.key, name: d.name, description: d.description, point_budget: d.point_budget, max_per_track: d.max_per_track,
               nonvoters_keep_points: d.nonvoters_keep_points, timing: d.timing, submit_days: d.submit_days, vote_days: d.vote_days,
               songs_per_round: d.songs_per_round, downvotes: d.downvotes, max_down_per_track: d.max_down_per_track,
-              services: d.services, repeat_rule: d.repeat_rule,
-              first_playlist_at: first.toISOString(), rounds: d.rounds, players: d.players };
+              services: d.services, repeat_rule: d.repeat_rule, first_playlist_at: first.toISOString(),
+              rounds: d.rounds.map(function (r) { return roundForCreate(r, roster); }), players: roster };
     if (!window.confirm("Create " + d.name + " with " + d.rounds.length + (d.rounds.length === 1 ? " round" : " rounds") +
                         "? Its first round opens " + (schedule(first, 1, d.submit_days, d.vote_days)[0].opens.getTime() <= Date.now() + 60000 ? "straight away" : "on schedule") + ".")) return;
     api().createSiteSeason(p).then(function () {
@@ -543,7 +705,12 @@
     if (act === "w-add") {
       var name = $("cmNew-rname").value.trim();
       if (!name) { wizardMsg("Give the round a name."); return; }
-      d.rounds.push({ name: name, prompt: $("cmNew-rprompt").value.trim() });
+      var form = $("cmWizardForm"), roster = wizardRoster(d), roles = readRoundRoles(form, roster);
+      if (rosterProblem(roster.map(function (p) { return { id: p.id, role: roles[p.id] || p.role }; }))) {
+        wizardMsg("A round needs at least 2 DJs: they send the tracks.");
+        return;
+      }
+      d.rounds.push({ name: name, prompt: $("cmNew-rprompt").value.trim(), prompters: readPrompters(form), roles: roles });
     } else {
       var i = +b.closest("[data-i]").getAttribute("data-i");
       if (act === "w-remove") d.rounds.splice(i, 1);
@@ -557,11 +724,27 @@
   }
 
   // live parts of a form: the timing explanation, the "most on one song"
-  // choices (they depend on the points), the schedule preview, the count
+  // choices (they depend on the points), the schedule preview, the count,
+  // and what a round's prompters and roles say when folded
   function onWizardInput(ev) {
     var t = ev && ev.target;
     var form = t ? t.closest("form") : $("cmWizardForm");
     if (!form) return;
+    var pick = t && t.closest(".cm-people-pick");
+    if (pick && t.name === "prompter") {
+      var chosen = readPrompters(pick);
+      pick.querySelector('[data-sum="prompters"]').textContent = chosen.length ? names(chosen) : "nobody named";
+    }
+    if (pick && /^rrole-/.test(t.name || "")) {
+      var season = Array.prototype.map.call(pick.querySelectorAll("select.cm-role"), function (el) {
+        return { id: el.name.slice(6), role: el.getAttribute("data-season") || "dj" };
+      });
+      pick.querySelector('[data-sum="roles"]').textContent = rolesSummary(readRoundRoles(pick, season));
+    }
+    if (form.getAttribute("data-act") === "players") {
+      var sum = form.querySelector('[data-sum="roster"]');
+      if (sum) sum.textContent = rosterLine(readRoster(form));
+    }
     if (t && t.name === "timing") {
       var about = form.querySelector('[data-about="timing"]'), k = TIMING[t.value];
       about.innerHTML = "<b>" + esc(k.name) + "</b><ul>" + k.lines.map(function (l) { return "<li>" + esc(l) + "</li>"; }).join("") +
@@ -576,13 +759,15 @@
       dmax.innerHTML = downMaxOptions(down, dmax.value === "none" || dmax.value === "0" ? down : Math.min(+dmax.value, down));
     }
     if (form.id !== "cmWizardForm") return;
-    if (wizard.step === 3 && t && (t.name === "first_date" || t.name === "first_time")) {
+    if (wizard.step === ROUNDS_STEP && t && (t.name === "first_date" || t.name === "first_time")) {
       readStep();
       $("cmSched").outerHTML = previewHtml(wizard.d);
+      // the summary shares this step, so its first playlist follows too
+      $("cmSum").outerHTML = summaryHtml(wizard.d);
     }
-    if (wizard.step === 4) {
+    if (wizard.step === PLAYERS_STEP) {
       readStep();
-      $("cmNewCount").textContent = wizard.d.players.length;
+      $("cmNewCount").textContent = rosterLine(wizardRoster(wizard.d)) + ". Only DJs submit, and Accelerated and Speedy wait on the ones who’ve joined the site.";
     }
   }
 
@@ -591,7 +776,7 @@
     // the page and lose the setup); Enter in a round's name adds the round
     if (ev.target.id === "cmWizardForm") {
       ev.preventDefault();
-      if (wizard && wizard.step === 3 && document.activeElement && document.activeElement.id === "cmNew-rname") onWizardClick("w-add", null);
+      if (wizard && wizard.step === ROUNDS_STEP && document.activeElement && document.activeElement.id === "cmNew-rname") onWizardClick("w-add", null);
       return;
     }
     var form = ev.target.closest("form[data-act]");
@@ -599,6 +784,8 @@
     ev.preventDefault();
     var act = form.getAttribute("data-act");
     var key = form.closest(".cm-season").getAttribute("data-season");
+    var season = ctx.seasons.filter(function (x) { return x.key === key; })[0];
+    var roster = season ? seasonRoster(season) : [];
     var done;
     if (act === "settings") {
       var s = readSettings(form);
@@ -609,7 +796,16 @@
     } else if (act === "add-round") {
       var name = form.elements.name.value.trim();
       if (!name) { panelMsg(form, "Give the round a name."); return; }
-      done = api().addSiteSeasonRound(key, name, form.elements.prompt.value.trim());
+      // its prompters and roles go in once the round exists; the names are
+      // in the form only once the players have loaded
+      var named = form.querySelector('[data-fill="new-round"] .cm-people-pick');
+      var prompters = named ? readPrompters(form) : [];
+      var changed = named ? readRoundRoles(form, roster) : {};
+      done = api().addSiteSeasonRound(key, name, form.elements.prompt.value.trim()).then(function (rid) {
+        if (!prompters.length && !Object.keys(changed).length) return;
+        return api().setSiteRoundPeople(rid, Object.keys(changed).length ? fullRoles(roster, changed) : null, prompters.length ? prompters : null)
+          .catch(function (err) { throw new Error("The round was added, but its prompters and roles weren’t: " + errText(err)); });
+      });
     } else if (act === "rename") {
       var id = form.closest("[data-round]").getAttribute("data-round");
       var n = form.elements.name.value.trim();
@@ -622,14 +818,18 @@
         fields.services = rules.services;
         fields.repeat_rule = rules.repeat_rule;
       }
+      // who wrote the prompt, and the round's roles while it takes tracks
+      var hasPeople = !!form.querySelector('[data-fill="round"] .cm-people-pick');
+      var roles = hasPeople && form.querySelector("select.cm-role") ? fullRoles(roster, readRoundRoles(form, roster)) : null;
+      var who = hasPeople ? readPrompters(form) : null;
       done = api().updateSiteRound(id, fields).then(function (rows) {
         if (!rows || !rows.length) throw new Error("Only the admin or a commissioner can do that.");
+        if (hasPeople) return api().setSiteRoundPeople(id, roles, who);
       });
     } else if (act === "players") {
-      var ids = Array.prototype.filter.call(form.querySelectorAll('input[name="player"]'), function (b) { return b.checked; })
-        .map(function (b) { return b.value; });
-      if (ids.length < 2) { panelMsg(form, "Pick at least 2 players."); return; }
-      done = api().setSiteSeasonPlayers(key, ids);
+      var list = readRoster(form);
+      if (rosterProblem(list)) { panelMsg(form, rosterProblem(list)); return; }
+      done = api().setSiteSeasonRoster(key, list);
     } else return;
     var panel = form.closest(".cm-season");
     done.then(function () { return ctx.reload(); }).then(function () { reopen(key, "Saved."); })

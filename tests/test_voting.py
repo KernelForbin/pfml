@@ -97,7 +97,9 @@ class Ballots(unittest.TestCase):
         order = [self.cast.index(s) for s in (
             "if not public.is_member() then",
             "if public.site_round_phase(p_round) <> 'voting' then",
-            "if mine is null then\n    raise exception 'Only players with a track in this round can vote.';",
+            # a Spectator, with no track, votes too (2026-10-29)
+            "if mine is null and public.site_user_role(p_round, uid) is distinct from 'spectator' then\n"
+            "    raise exception 'Only players with a track in this round, and its Spectators, can vote.';",
             "problem := public.ballot_problem(r.point_budget, r.max_per_track, r.downvotes, r.max_down_per_track, pts,",
             "delete from public.site_votes where round_id = p_round and user_id = uid;",
             "insert into public.site_votes")]

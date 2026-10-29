@@ -1869,6 +1869,24 @@ button.cm-person { cursor: pointer; }
 .lg-wait { margin: 0; padding: 10px 12px; border-radius: var(--r-sm); background: var(--wash); font-size: 0.92rem; }
 @media (hover: hover) { .lg-react:not(:disabled):hover { border-color: var(--magenta); } }
 
+/* DJs and Spectators, and who wrote a round's prompt (seasons.js,
+   submit.js, the round page) */
+.cm-player { display: flex; align-items: stretch; gap: 6px; min-width: 0; }
+.cm-player > .cm-check { flex: 1; min-width: 0; }
+.cm-player > .cm-check span { overflow-wrap: anywhere; }
+.cm-role { flex: none; width: auto; margin: 0; padding: 6px 8px; font-size: 0.86rem; }
+.cm-player-role { align-items: center; justify-content: space-between; padding: 4px 4px 4px 10px; border: 1px solid var(--border-soft); border-radius: 8px; }
+.cm-player-role > span { min-width: 0; overflow-wrap: anywhere; }
+.cm-people-pick { margin-top: 8px; }
+.cm-people-pick > summary { color: var(--magenta-text); font-size: 0.88rem; cursor: pointer; overflow-wrap: anywhere; }
+.cm-people-pick > summary span { color: var(--ink); }
+.cm-people-pick > .cm-checks, .cm-people-pick > .block-note { margin-top: 6px; }
+.cm-season-round-head small[data-people-round]:empty { display: none; }
+.sub-prompter, .rp-prompter { margin: 6px 0 0; color: var(--muted); font-size: 0.9rem; }
+.rp-prompter { margin-top: 10px; }
+.sub-role { margin: 10px 0 0; padding: 8px 12px; border-left: 3px solid var(--magenta); border-radius: 0 8px 8px 0; background: var(--wash); font-size: 0.92rem; }
+.sub-who-spectators a { background: transparent; border: 1px solid var(--border-soft); padding: 2px 9px 2px 2px; }
+
 
 /* Dark mode, a choice: the Dark mode switch in the account menu
    (account.js) sets <html data-theme="dark"> and remembers it in this

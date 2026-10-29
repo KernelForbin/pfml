@@ -146,6 +146,46 @@
     });
   }
 
+  // DJs and Spectators (README, DJs and Spectators): everyone playing a
+  // round, [{id, role, joined}], or null for a round outside a season set up
+  // on the site, where everyone is a DJ as before.
+  function roundRoster(r) {
+    if (!r || typeof PFML.api.roundRoster !== "function") return Promise.resolve(null);
+    return PFML.api.roundRoster(r.id).then(function (rows) {
+      return rows && rows.length ? rows.map(function (x) { return { id: x.competitor_id, role: x.role, joined: x.joined }; }) : null;
+    });
+  }
+  // The reader's role in a round: "dj", "spectator", or null when they
+  // aren't playing its season.
+  function myRole(r) {
+    return roundRoster(r).then(function (list) {
+      if (!list) return "dj";
+      var me = PFML.member && list.filter(function (x) { return x.id === PFML.member.competitorId; })[0];
+      return me ? me.role : null;
+    });
+  }
+  // Who sends tracks to a round: seasonPlayers', less the round's
+  // Spectators.
+  function roundDJs(r) {
+    return Promise.all([roundRoster(r), seasonPlayers(r.season_key)]).then(function (res) {
+      if (!res[0] || !res[1]) return res[1];
+      var dj = {};
+      res[0].forEach(function (x) { if (x.role === "dj") dj[x.id] = true; });
+      return res[1].filter(function (p) { return dj[p.id]; });
+    });
+  }
+  // "Prompt by Ann and Ben", or "" when the round names nobody.
+  function promptBy(r) {
+    var ids = ((r && r.site_round_prompters) || []).map(function (p) { return p.competitor_id; });
+    if (!ids.length) return Promise.resolve("");
+    return PFML.api.people().then(function (people) {
+      var names = {};
+      Object.keys(people || {}).forEach(function (u) { names[people[u].competitorId] = people[u].name; });
+      var list = ids.map(function (id) { return names[id] || "a member"; }).sort();
+      return "Prompt by " + (list.length < 2 ? list[0] : list.slice(0, -1).join(", ") + " and " + list[list.length - 1]);
+    });
+  }
+
   // Where a track lives, to link it: where it was submitted (a round voted
   // on the site carries `link` for a YouTube or SoundCloud pick; README,
   // Site rounds in the stats), else Spotify. Null when there's neither.
@@ -194,6 +234,10 @@
   PFML.siteVoting = SITE_VOTING;
   PFML.roundPhase = roundPhase;
   PFML.seasonPlayers = seasonPlayers;
+  PFML.roundRoster = roundRoster;
+  PFML.myRole = myRole;
+  PFML.roundDJs = roundDJs;
+  PFML.promptBy = promptBy;
 
   // A tray with a notch: an inbox, drawn rather than an emoji character,
   // so it's the same flat icon on every device (see ADD_REACTION_ICON).

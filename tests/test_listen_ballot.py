@@ -62,9 +62,10 @@ class TheBallot(unittest.TestCase):
         self.assertIn("ballot: ballot", VOTING)
 
     def test_only_a_player_with_a_track_gets_one(self):
+        # or a Spectator, who has none (2026-10-29)
         ballot = js_body(VOTING, "function ballot(r, rows, parts) {")
-        self.assertLess(ballot.index("if (!mine.length) {"), ballot.index("api().myBallot(r.id)"))
-        self.assertIn("Only players with a track in this round vote.", ballot)
+        self.assertLess(ballot.index("if (!mine.length && !spectator) {"), ballot.index("api().myBallot(r.id)"))
+        self.assertIn("'<p class=\"block-note\">Only players with a track in this round'", ballot)
         self.assertIn("return null;", ballot)
 
     def test_points_and_comments_survive_a_reshuffle(self):

@@ -377,8 +377,8 @@
 
   // A round voting on the site (README, Voting on the site), only while the
   // switch in account.js is on: when voting closes, and whether the reader's
-  // ballot is in. Only players with a track in the round vote.
-  // Says whether it showed.
+  // ballot is in. Players with a track in the round vote, and its
+  // Spectators (README, DJs and Spectators). Says whether it showed.
   function votingBanner(rounds) {
     if (!PFML.siteVoting) return false;
     var r = rounds.filter(function (x) { return PFML.roundPhase(x) === "voting"; })[0];
@@ -391,8 +391,8 @@
       '<span class="sub-banner-mine" id="submitBannerMine"></span>' +
       '<span class="sub-banner-go" id="submitBannerGo">Listen and vote →</span></a>';
     $("submitBanner").hidden = false;
-    Promise.all([PFML.api.mySubmissions(r.id), PFML.api.myBallot(r.id)]).then(function (res) {
-      if (!res[0].length) { $("submitBannerGo").textContent = "Listen to the round →"; return; }
+    Promise.all([PFML.api.mySubmissions(r.id), PFML.api.myBallot(r.id), PFML.myRole(r)]).then(function (res) {
+      if (!res[0].length && res[2] !== "spectator") { $("submitBannerGo").textContent = "Listen to the round →"; return; }
       var voted = res[1] && res[1].length;
       $("submitBannerMine").textContent = voted ? "✓ Your ballot is in" : "You haven't voted yet";
       $("submitBannerMine").classList.toggle("is-in", !!voted);
@@ -424,7 +424,14 @@
     // a round can take more than one song from each player: in once all
     // of theirs are
     var n = round.songs_per_round || 1;
-    PFML.api.mySubmissions(round.id).then(function (mine) {
+    Promise.all([PFML.api.mySubmissions(round.id), PFML.myRole(round)]).then(function (res) {
+      var mine = res[0];
+      // a Spectator sends nothing: they vote once submissions close
+      if (res[1] === "spectator") {
+        $("submitBannerMine").textContent = "You’re a Spectator this round";
+        $("submitBannerGo").textContent = "See who’s in →";
+        return;
+      }
       var all = mine.length >= n;
       $("submitBannerMine").textContent = all ? "\u2713 You're in"
         : mine.length ? mine.length + " of your " + n + " tracks in" : "You haven't submitted yet";
@@ -433,12 +440,13 @@
     }).catch(function (err) { console.error(err); });
   }
 
-  // "7/20 submitted": players with a track in, out of the players taking
-  // part this season (index.json activePlayers, built from the latest
-  // finished round). Who, never which track; the Submit page shows names.
+  // "7/20 submitted": players with a track in, out of the round's DJs
+  // (PFML.roundDJs: who's playing a season set up on the site, else
+  // index.json activePlayers, built from the latest finished round). Who,
+  // never which track; the Submit page shows names.
   function bannerCount(round) {
     if (typeof PFML.api.roundSubmitters !== "function") return;
-    Promise.all([PFML.seasonPlayers(round.season_key), PFML.api.roundSubmitters(round.id)]).then(function (res) {
+    Promise.all([PFML.roundDJs(round), PFML.api.roundSubmitters(round.id)]).then(function (res) {
       var players = res[0];
       if (!players || !players.length) return;
       // a player is in once all of the round's songs from them are
@@ -476,7 +484,7 @@
   // The newest line in the features page's "New in the last 30 days" box (a test
   // keeps the two equal). The features page records the newest date it
   // showed in this browser; Home's button says New until that catches up.
-  var FEATURES_UPDATED = "2026-10-28";
+  var FEATURES_UPDATED = "2026-10-29";
   var FEATURES_SEEN_KEY = "pfml.featuresSeen";
 
   function renderFeaturesButton() {
@@ -2521,6 +2529,7 @@
           // is in the stats (voting.js render)
           if (i < 0 && window.PFMLVoting && $("rpVote")) window.PFMLVoting.render(site, $("rpVote"));
           if (window.PFMLLounge && $("rpLounge") && (site.votes_on_site || site.practice)) window.PFMLLounge.render($("rpLounge"), site);
+          showPrompter(site);
         });
       }).catch(failed);
       return;
@@ -2539,8 +2548,20 @@
         if (site && $("rpListen")) window.PFMLListen.render($("rpListen"), site);
         // a round voted here keeps its lounge under its results in the stats
         if (site && site.votes_on_site && window.PFMLLounge && $("rpLounge")) window.PFMLLounge.render($("rpLounge"), site);
+        if (site) showPrompter(site);
       })
       .catch(failed);
+  }
+
+  // "Prompt by ...", under the round's prompt, when the round names who
+  // wrote it (README, DJs and Spectators).
+  function showPrompter(site) {
+    PFML.promptBy(site).then(function (line) {
+      var el = $("rpPrompter");
+      if (!el || !line) return;
+      el.textContent = line;
+      el.hidden = false;
+    }).catch(function (err) { console.error(err); });
   }
 
   /* ---- boot ---- */

@@ -1889,15 +1889,16 @@ pfml.fun; playlists stay manual (`round_playlists.py`, with the user's
 go-ahead each time); more songs a round and downvotes came in stage 3
 (More songs and downvotes, below).
 
-**Setting one up** (`seasons.js`), in Music League's steps:
+**Setting one up** (`seasons.js`), in Music League's steps, with Players
+before Rounds since 2026-10-29 (DJs and Spectators, below):
 
 | Step | Settings | Defaults |
 | --- | --- | --- |
 | Details | name, description | "Season N", the next number, never below 4 |
 | Songs + Votes | songs a round (1–5), points to give (5–30), most on one song (no limit, 1–10), a penalty for not voting, downvotes (none, 1–10) and most on one song (no limit, 1–5) | 1, 19, 5, yes, none: Season 3's, measured from the exports |
 | Timing | Steady, Accelerated or Speedy; days to submit and to vote (1–7 each) | Steady, 2, 5 |
-| Rounds | each round's theme and description, in order; the date and time of the first playlist | — |
-| Players | who's playing, ticked from every player the league has had | the current season's players |
+| Players | who's playing, ticked from every player the league has had, each a DJ or a Spectator | the current season's players, all DJs |
+| Rounds | each round's theme and description, in order, who wrote its prompt and any roles it changes; the date and time of the first playlist | everyone's season role, nobody named |
 
 - **Fixed rules:** every upvote spent, downvotes optional up to their
   limit, and nobody votes for their own song.
@@ -2271,6 +2272,96 @@ same block at the end of `schema.sql`):
   - the database's refusal shows in place;
   - a commissioner sees no Delete, and the list isn't even asked for.
 
+## DJs and Spectators
+
+Asked for 2026-10-29: room for people who only vote. Everyone playing a
+season set up on the site is a **DJ** (sends tracks and votes, as before)
+or a **Spectator** (votes and comments on every track, with every voter's
+powers, and never sends one). The user's calls:
+
+- **The role is set for the season,** in the setup's Players step and on
+  the Manage season page's Players form, and **any round can change it**
+  when it's made or edited ("Roles this round"). Everyone starts each
+  round with their season role.
+- **Each round can name who wrote its prompt** ("Prompt by"): any members
+  who have joined the site, several when they wrote it together. It shows
+  under the prompt on the Submit page and the round page.
+- **Not built** (the user's call, the same day): hiding the prompt from
+  Spectators, guessing it, and Spectator points. Hiding it would mean
+  hiding the round's name too (it's the theme), from the rounds table,
+  notifications, the playlists' titles and the Coming up list, not just
+  the page.
+
+**The rules** (`supabase/migrations/2026-10-29_season_roles.sql`, the same
+block in `schema.sql`):
+- A round outside a season set up on the site, Round 7 and every one
+  before it, has no roles: everyone is a DJ there (`site_round_role`).
+- A Spectator can't send a track: a trigger on `site_submission_owners`
+  refuses it, so no way of submitting gets round it.
+- A Spectator votes and saves drafts with no track of their own
+  (`cast_ballot`, `save_ballot_draft`), gets the voting reminders, and can
+  get into the voters' lounge once they've voted. "A new round is open,
+  send your track" goes to DJs only.
+- Accelerated and Speedy close submissions once the DJs who've joined are
+  in, and voting once everyone with a track and every Spectator who's
+  joined has voted.
+- A round's roles can change while it still takes tracks, never after; a
+  DJ who has sent a track to a round stays a DJ in it; a round needs at
+  least 2 DJs, or nobody could vote. A round keeps only the roles that
+  differ from the season's (`site_round_roles`), so a later change to the
+  season still reaches the rest.
+- A change to the season's roles (`set_site_season_roster`) reaches the
+  rounds still taking tracks and the ones to come. A round whose
+  submissions have closed keeps the roles it had, written into it before
+  the change.
+- Roles and prompters are readable by every member (`site_round_roster`,
+  and the two tables); only the admin and commissioners change them
+  (`set_site_round_people`). The old `set_site_season_players` is still in
+  the database, unused by the pages; it keeps a kept player's role.
+
+**On the pages:**
+- **The setup:** Players comes before Rounds now, so each round starts
+  from everyone's season role. Each player has a DJ / Spectator choice;
+  each new round has "Prompt by" and "Roles this round", folded, saying
+  what they hold ("Prompt by: Ben and Cat", "Roles this round: Cat a
+  Spectator").
+- **Manage season:** the same on the Players form, on "Add a round at the
+  end" and on each round's Edit (roles only while it takes tracks). Each
+  round's line says who wrote it and which roles it changes.
+- **Submit page:** a Spectator gets "You're a Spectator this round"
+  instead of the form. "Who's in" counts the DJs, and lists the
+  Spectators apart. Home's banner says the same.
+- **Round page:** a Spectator's ballot covers every track, with no "your
+  track"; "8/12 voted" counts the Spectators who've joined.
+- **The stats:** a Spectator's points count like anyone's; with no track
+  they're never in the standings or on the career page
+  (`tests/test_season_roles.py` builds one).
+
+**Checked** (2026-10-29), in a browser at 375 and desktop, light and dark,
+against a stand-in database following these rules:
+- the setup: Players before Rounds, the roster count as roles change, a
+  round with one DJ refused, the summary following the first playlist,
+  and the season sent with every player's role and only the rounds that
+  differ;
+- Manage season: a round's prompter and roles saved with real clicks, a
+  season with one DJ refused before saving;
+- as a Spectator: no submit form, the banner, a ballot over every track
+  submitted with real clicks, and "2/4 voted" counting them;
+- a member outside the season saw no ballot;
+- contrast 5.3:1 or better.
+
+Found and fixed there: `.cm-pick` was already the comment emoji picker's
+class, which squeezed the new pickers to 38px (now `.cm-people-pick`);
+the folded roles summary read its fields through `.elements`, which a
+`<details>` doesn't have; the setup's summary, now on the same step as
+the date, didn't follow it; and the "players who don't vote score 0"
+line showed to a Spectator.
+
+The rehearsal is `supabase/checks/2026-10-29_season_roles_rehearsal.sql`
+(12 checks), and `tests/test_live_season_roles.py` checks the new parts
+are there and that a stranger gets nothing. **Not yet seen:** a real
+season with Spectators.
+
 ## Voting on the site
 
 The league means to run everything on pfml.fun eventually, with no
@@ -2293,7 +2384,8 @@ season votes here. The user's calls when it was built:
   points. No single vote went above 5 in any season. Negatives stopped
   after Season 1. Only players who submitted ever voted. So the defaults
   are 19 points, at most 5 on a track, all of them spent, no negatives,
-  only submitters vote, and nobody votes for themselves. A comment can go
+  only submitters vote (and, since 2026-10-29, a round's Spectators), and
+  nobody votes for themselves. A comment can go
   on any track, your own included, with or without points; 0-point
   comments are common in the exports. **A submitter who doesn't vote
   scores 0.** That's the user's call: Music League let the 10 who skipped
@@ -2321,9 +2413,10 @@ round's list, below; on the Submit page until 2026-10-26):
   below); Save saves at once. Submit works once every point is placed, and
   only a submitted ballot counts. They can change it and Submit again until
   voting closes.
-- **Others:** anyone without a track sees "Only players with a track in this
-  round vote". Everyone sees "8/12 voted" and who still hasn't: who, never
-  how.
+- **Others:** the round's Spectators vote too (DJs and Spectators, below);
+  anyone else without a track sees "Only players with a track in this
+  round, and its Spectators, vote". Everyone sees "8/12 voted" and who
+  still hasn't: who, never how.
 - **The banner:** Home's says "Voting is open", with the deadline, and
   whether the reader's ballot is in.
 - **The admin:** can move the deadline or close voting early.
