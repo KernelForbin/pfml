@@ -229,8 +229,10 @@ included, and it never opens below 3 voters.
 Players in a season set up on the site are DJs or Spectators (2026-10-29;
 README, DJs and Spectators): a Spectator votes and comments but never
 sends a track, and a round outside such a season (Round 7 and before)
-has no roles, everyone a DJ. Hiding the prompt from Spectators, guessing
-it and Spectator points were asked about and not built, the user's call.
+has no roles, everyone a DJ. Spectators earn podium points (3/2/1 per
+point given to a round's 1st/2nd/3rd; `PODIUM_POINTS` in `build.py` and
+`account.js` must match). Hiding the prompt from Spectators and guessing
+it were asked about and not built, the user's call.
 Try changes there on pfml.fun/round?demo=1, since no round votes here
 yet. Never let it reach Round 7,
 Season 3 or any round already open: the database refuses a round opened by

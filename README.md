@@ -2287,7 +2287,9 @@ powers, and never sends one). The user's calls:
   who have joined the site, several when they wrote it together. It shows
   under the prompt on the Submit page and the round page.
 - **Not built** (the user's call, the same day): hiding the prompt from
-  Spectators, guessing it, and Spectator points. Hiding it would mean
+  Spectators, guessing it, and points for guessing it. Points for backing
+  the podium came later that day (Spectators' podium points, below).
+  Hiding it would mean
   hiding the round's name too (it's the theme), from the rounds table,
   notifications, the playlists' titles and the Coming up list, not just
   the page.
@@ -2359,8 +2361,57 @@ line showed to a Spectator.
 
 The rehearsal is `supabase/checks/2026-10-29_season_roles_rehearsal.sql`
 (12 checks), and `tests/test_live_season_roles.py` checks the new parts
-are there and that a stranger gets nothing. **Not yet seen:** a real
-season with Spectators.
+are there and that a stranger gets nothing.
+
+**Live** since 2026-10-29 (ff5c38d): the user ran the migration and the
+rehearsal (12 checks held), `tests/test_live_season_roles.py` passed
+against the real database, and the deployed scripts and stylesheet
+matched the commit. **Not yet seen:** a real season with Spectators.
+
+### Spectators' podium points
+
+Asked for 2026-10-29, like Tastemaker: a Spectator earns points for
+backing the round's podium. **Each point they gave a track that finished
+1st earns 3, 2nd 2, 3rd 1**, places shared on a tie as the results share
+them (two tracks tied for 2nd are both worth 2). A Spectator who didn't
+vote earns 0. Only people who were Spectators in that round earn them, so
+the DJs' standings and the Spectators' stay apart.
+
+**Why per point**, not "3/2/1 for where your biggest vote finished" (the
+first idea), measured on the 743 real ballots in Seasons 1–3 on
+2026-10-29: 48% split their biggest vote across two or more tracks
+(5-5-5-4 is common on 19 points), so "your biggest vote" was often three
+tracks, and any tie rule either rewarded hedging, made fractions or scored
+nothing. That rule also left 35% of ballots on 0, at 1.5 a round on
+average. Per point there are no ties to settle, nothing to game (the
+budget is fixed), and rounds separate people: 10.2 a round on average,
+spread 4.2 against 1.3.
+
+**Where it's worked out:**
+- **The stats:** `build.py` (`PODIUM_POINTS`, `podium_points`,
+  `spectator_standings`) scores each site round from its places and
+  votes. The export names each round's Spectators
+  (`site_rounds_export`, migration `2026-10-29_spectator_points.sql`);
+  `publish.py` keeps the name of a Spectator who didn't vote.
+- **The round's results**, before the round is in the stats: `voting.js`
+  scores it from the same places as the list above it
+  (`PFML.podiumScores` in `account.js`, the same 3/2/1, which a test holds
+  to the build's).
+
+**Where it shows:** "Spectators' podium points" under the round's results,
+on the round page while it waits for the stats and from the stats after;
+and "Spectator Standings" under the season's standings, each Spectator's
+points across the rounds and how many rounds they were one in. It's drawn
+by `app.js`, not the season template, so the generated season pages
+didn't change. The career page can come later.
+
+**Checked** (2026-10-29): `tests/test_spectator_points.py` builds a round
+with two Spectators, one tie for 2nd and one Spectator who didn't vote;
+in a browser at 375 and desktop, light and dark (contrast 5.9:1 or
+better), against a stand-in with the same round: the live results, the
+stats round page and the season table all gave the same 12 points. The
+rehearsal is `supabase/checks/2026-10-29_spectator_points_rehearsal.sql`
+(3 checks).
 
 ## Voting on the site
 

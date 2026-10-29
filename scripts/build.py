@@ -82,6 +82,13 @@ TREND_GROUP_SIZE = 3
 # Only players with MIN_SCORED_ROUNDS rounds or more get a score.
 PER_ROUND_SCALE = 20
 ROUND_BONUS = {1: 3, 2: 2, 3: 1}
+
+# Spectators' podium points (chosen 2026-10-29; README, Spectators' podium
+# points): each point a Spectator gave a track that finished 1st, 2nd or
+# 3rd in its round earns this many, places shared on a tie. Per point, not
+# per pick: measured on 743 real ballots, half split their biggest vote
+# across tracks, so a "your biggest vote" rule had no clear pick to score.
+PODIUM_POINTS = {1: 3, 2: 2, 3: 1}
 SEASON_BONUS = {1: 6, 2: 4, 3: 2}
 MIN_SCORED_ROUNDS = 10
 
@@ -511,6 +518,42 @@ def with_link(out, track):
     return out
 
 
+def podium_points(songs, spectators):
+    """A round's Spectators and the podium points each earned
+    (PODIUM_POINTS for every point they gave a track that placed 1st, 2nd
+    or 3rd), biggest first. songs carry their place and every scoring vote
+    as [voter id, points]; spectators are [{id, name}]. A Spectator who
+    didn't vote is listed with 0."""
+    out = []
+    for p in spectators:
+        score = sum(pts * PODIUM_POINTS[s["place"]]
+                    for s in songs if s.get("place") in PODIUM_POINTS
+                    for vid, pts in s["votes"] if vid == p["id"] and pts > 0)
+        out.append({"id": p["id"], "name": p["name"], "score": score})
+    out.sort(key=lambda x: (-x["score"], x["name"]))
+    return out
+
+
+def spectator_standings(rounds):
+    """The season's Spectators by podium points across its rounds, places
+    shared on equal points, as the standings do."""
+    table = {}
+    for r in rounds:
+        for x in r.get("spectators") or []:
+            t = table.setdefault(x["id"], {"id": x["id"], "name": x["name"], "points": 0, "rounds": 0})
+            t["points"] += x["score"]
+            t["rounds"] += 1
+    rows = sorted(table.values(), key=lambda t: (-t["points"], t["name"]))
+    prev, place = None, 0
+    for i, t in enumerate(rows):
+        if t["points"] != prev:
+            place, prev = i + 1, t["points"]
+        t["rank"] = place
+    for t in rows:
+        t["tied"] = sum(1 for u in rows if u["rank"] == t["rank"]) > 1
+    return rows
+
+
 def site_uri(platform, track):
     """The key a site track goes by here, in place of Music League's Spotify
     URI: Spotify's own for a Spotify pick, so it lines up with everything
@@ -549,7 +592,9 @@ def site_season_rows(folder):
         playlist = r.get("spotify_playlist")
         rounds.append({"ID": r["id"], "Created": r["created_at"], "Name": r["name"],
                        "Description": r.get("prompt") or "",
-                       "Playlist URL": f"https://open.spotify.com/playlist/{playlist}" if playlist else ""})
+                       "Playlist URL": f"https://open.spotify.com/playlist/{playlist}" if playlist else "",
+                       # who voted without a track (README, DJs and Spectators)
+                       "Spectators": [{"id": pid, "name": players.get(pid, "Unknown")} for pid in r.get("spectators") or []]})
         voted = {v["voter"] for v in r.get("votes") or []}
         uri_of = {}
         for s in r.get("submissions") or []:
@@ -1058,6 +1103,7 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
                     pair_comments[(vid, submitter)] = pair_comments.get((vid, submitter), 0) + 1
 
         margin = (songs[0]["points"] - songs[1]["points"]) if len(songs) > 1 else None
+        spectators = podium_points(songs, rnd.get("Spectators") or [])
         rounds_out.append({
             "id": rid,
             "name": rnd["Name"],
@@ -1074,6 +1120,8 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
             # empty result.
             "hasVotingActivity": len(electorate) > 0,
         })
+        if spectators:
+            rounds_out[-1]["spectators"] = spectators
 
     # ---- standings ----
     standings = [p for p in player.values() if p["submissions"] > 0]
@@ -1374,6 +1422,9 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
         "startedAt": started_at,
         "liveRound": live_round,
     }
+    spectator_table = spectator_standings(rounds_out)
+    if spectator_table:
+        data["spectatorStandings"] = spectator_table
 
     # Side channel for build_career, deliberately NOT part of the season
     # JSON the site downloads. A career median or vocabulary richness can't

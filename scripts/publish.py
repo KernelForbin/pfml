@@ -90,7 +90,10 @@ def fetch_site_rounds():
     for key, rounds in sorted(by_season.items()):
         folder = build.DATA_DIR / key
         folder.mkdir(exist_ok=True)
-        ids = {s.get("submitter") for r in rounds for s in r["submissions"]} | {v["voter"] for r in rounds for v in r["votes"]}
+        # a Spectator who didn't vote still has a line with their name
+        # (README, Spectators' podium points)
+        ids = ({s.get("submitter") for r in rounds for s in r["submissions"]} | {v["voter"] for r in rounds for v in r["votes"]}
+               | {pid for r in rounds for pid in r.get("spectators") or []})
         out = {"rounds": rounds, "players": {pid: players[pid] for pid in sorted(ids) if pid in players}}
         if season_names.get(key):
             out["season_name"] = season_names[key]

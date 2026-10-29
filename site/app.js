@@ -661,6 +661,26 @@
     });
   }
 
+  // A season with Spectators (README, Spectators' podium points): their own
+  // table under the standings, from the podium points they earned each
+  // round. Drawn here rather than in the template, so the generated season
+  // pages stay as they are.
+  function renderSpectatorStandings(d) {
+    var list = d.spectatorStandings || [];
+    var after = $("block-standings");
+    if (!list.length || !after || $("block-spectators")) return;
+    var section = el("section", "shell block");
+    section.id = "block-spectators";
+    section.innerHTML = "<h2>Spectator Standings</h2>" +
+      '<p class="block-note">Spectators vote without sending tracks. Each point they gave a round’s winner earned 3, 2nd place 2 and 3rd place 1.</p>' +
+      '<ol class="pod-list pod-standings">' + list.map(function (p) {
+        return '<li><span class="pod-rank">' + placeLabel(p) + "</span>" + PFML.avatar(p.id, p.name) +
+          '<span class="pod-name">' + esc(p.name) + "<small>" + p.rounds + " " + plural(p.rounds, "round") + "</small></span><b>" + p.points +
+          "</b><small>" + plural(p.points, "pt") + "</small></li>";
+      }).join("") + "</ol>";
+    after.parentNode.insertBefore(section, after.nextSibling);
+  }
+
   function renderStandings(d) {
     renderStandingsSummary(d);
     renderStandingsFilters(d);
@@ -1899,6 +1919,7 @@
         document.title = "PFML - " + d.label;
         initStandingsFold();
         renderHero(d);
+        renderSpectatorStandings(d);
         // nobody selected yet, so this draws every section for the whole
         // field, with every player on the trend chart
         rerenderFiltered();

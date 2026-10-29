@@ -174,6 +174,33 @@
       return res[1].filter(function (p) { return dj[p.id]; });
     });
   }
+  // Spectators' podium points (README, Spectators' podium points): each
+  // point a Spectator gave a track that finished 1st earns 3, 2nd 2, 3rd 1,
+  // places shared on a tie. The same rule as build.py's PODIUM_POINTS.
+  var PODIUM_POINTS = { 1: 3, 2: 2, 3: 1 };
+  // [{id, score}] for a round's Spectators, from each track's place
+  // ({submission id: place}) and every vote ([{submission_id, voter_id,
+  // points}]); 0 for a Spectator who didn't vote.
+  function podiumScores(places, votes, spectatorIds) {
+    return spectatorIds.map(function (id) {
+      var score = 0;
+      votes.forEach(function (v) {
+        if (v.voter_id === id && v.points > 0) score += v.points * (PODIUM_POINTS[places[v.submission_id]] || 0);
+      });
+      return { id: id, score: score };
+    });
+  }
+  // The list, biggest first: [{id, name, score}], and the rule under it.
+  function podiumHtml(list, note) {
+    var rows = list.slice().sort(function (a, b) { return b.score - a.score || a.name.localeCompare(b.name); });
+    return '<div class="pod-box"><h3>Spectators’ podium points</h3>' +
+      '<p class="block-note">' + (note || "Each point a Spectator gave the winner earned 3, 2nd place 2 and 3rd place 1.") + "</p>" +
+      '<ol class="pod-list">' + rows.map(function (x) {
+        return "<li>" + avatar(x.id, x.name) + '<span class="pod-name">' + esc(x.name) + "</span><b>" + x.score +
+          '</b><small>' + (x.score === 1 ? "pt" : "pts") + "</small></li>";
+      }).join("") + "</ol></div>";
+  }
+
   // "Prompt by Ann and Ben", or "" when the round names nobody.
   function promptBy(r) {
     var ids = ((r && r.site_round_prompters) || []).map(function (p) { return p.competitor_id; });
@@ -238,6 +265,8 @@
   PFML.myRole = myRole;
   PFML.roundDJs = roundDJs;
   PFML.promptBy = promptBy;
+  PFML.podiumScores = podiumScores;
+  PFML.podiumHtml = podiumHtml;
 
   // A tray with a notch: an inbox, drawn rather than an emoji character,
   // so it's the same flat icon on every device (see ADD_REACTION_ICON).

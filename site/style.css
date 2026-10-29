@@ -1886,6 +1886,18 @@ button.cm-person { cursor: pointer; }
 .rp-prompter { margin-top: 10px; }
 .sub-role { margin: 10px 0 0; padding: 8px 12px; border-left: 3px solid var(--magenta); border-radius: 0 8px 8px 0; background: var(--wash); font-size: 0.92rem; }
 .sub-who-spectators a { background: transparent; border: 1px solid var(--border-soft); padding: 2px 9px 2px 2px; }
+/* Spectators' podium points: under a round's results, and the season's
+   Spectator Standings (account.js podiumHtml, app.js) */
+.pod-box { margin-top: 22px; }
+.pod-box h3 { margin: 0 0 4px; font-size: 1.1rem; }
+.pod-list { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; max-width: 520px; }
+.pod-list li { display: flex; align-items: center; gap: 10px; padding: 6px 12px 6px 6px; border: 1px solid var(--border-soft); border-radius: 999px; background: var(--card); }
+.pod-list .av { width: 30px; height: 30px; font-size: 0.66rem; flex: none; }
+.pod-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.pod-name small { display: block; color: var(--muted); font-size: 0.78rem; }
+.pod-list b { font: 800 1.05rem/1 "Archivo", sans-serif; color: var(--ink); }
+.pod-list li > small { color: var(--muted); font-size: 0.8rem; margin-left: -6px; }
+.pod-rank { flex: none; min-width: 28px; text-align: center; font: 800 0.9rem/1 "Archivo", sans-serif; color: var(--muted); }
 
 
 /* Dark mode, a choice: the Dark mode switch in the account menu

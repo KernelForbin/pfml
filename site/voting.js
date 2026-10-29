@@ -416,17 +416,19 @@
     state.round = r;
     host.innerHTML = '<p class="block-note">Loading the results…</p>';
     host.hidden = false;
-    Promise.all([api().roundSubmissions(r.id), api().people(), api().roundResults(r.id), api().roundVotes(r.id)]).then(function (res) {
+    Promise.all([api().roundSubmissions(r.id), api().people(), api().roundResults(r.id), api().roundVotes(r.id),
+                 PFML.roundRoster(r)]).then(function (res) {
       if (state.round !== r) return;
       state.rows = PFML.roundOrder(r.id, res[0] || []);
-      renderResults(r, res[2] || [], res[3] || [], namesOf(res[1]));
+      var spectators = (res[4] || []).filter(function (x) { return x.role === "spectator"; }).map(function (x) { return x.id; });
+      renderResults(r, res[2] || [], res[3] || [], namesOf(res[1]), spectators);
     }).catch(function (err) {
       console.error(err);
       host.innerHTML = '<p class="sub-msg is-error">Couldn’t load the results: ' + esc(errText(err)) + "</p>";
     });
   }
 
-  function renderResults(r, results, votes, names) {
+  function renderResults(r, results, votes, names, spectators) {
     var host = state.host;
     if (!results.length) {
       host.innerHTML = '<h2>Results</h2><p class="block-note">The results show here once voting has closed.</p>';
@@ -446,7 +448,20 @@
       '<ol class="vt-results">' + list.map(function (item) {
         var rank = 1 + list.filter(function (o) { return o.res.points > item.res.points; }).length;
         return resultRow(r, item, rank, votesBy[item.s.id] || [], names);
-      }).join("") + "</ol>";
+      }).join("") + "</ol>" + podium(results, votes, names, spectators || []);
+  }
+
+  // The round's Spectators and the podium points they earned, by the same
+  // places as the list above (README, Spectators' podium points).
+  function podium(results, votes, names, spectators) {
+    if (!spectators.length) return "";
+    var places = {};
+    results.forEach(function (x) {
+      places[x.submission_id] = 1 + results.filter(function (o) { return o.points > x.points; }).length;
+    });
+    return PFML.podiumHtml(PFML.podiumScores(places, votes, spectators).map(function (x) {
+      return { id: x.id, name: names[x.id] || "A member", score: x.score };
+    }));
   }
 
   function resultRow(r, item, rank, votes, names) {

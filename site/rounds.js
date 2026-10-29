@@ -658,6 +658,8 @@
       // listening (listen.js), when the round was also run on the site
       '<section class="shell block rp-listen" id="rpListen" hidden></section>' +
       '<section class="shell rp-body"><div id="rpTracks"></div></section>' +
+      // a round with Spectators: the podium points they earned (build.py)
+      (r.spectators && r.spectators.length ? '<section class="shell block">' + PFML.podiumHtml(r.spectators) + "</section>" : "") +
       // the voters' lounge, read-only, when the round voted on the site (lounge.js)
       '<section class="shell block lg" id="rpLounge" hidden></section>' +
       '<section class="shell rp-foot">' + navHtml(d, i, "bottom") + "</section>";

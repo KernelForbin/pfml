@@ -1,5 +1,42 @@
 # Changelog
 
+## 2026-10-29 (later): Spectators' podium points
+
+- **Asked for:** points for Spectators who back the podium, like
+  Tastemaker. The first idea was 3/2/1 for where your biggest vote
+  finished.
+- **Chosen instead, with the user:** 3 for each point a Spectator gave the
+  round's winner, 2 for 2nd place, 1 for 3rd, ties sharing places.
+  - **Measured on the 743 real ballots of Seasons 1–3:** 48% split their
+    biggest vote, which left "your biggest vote" without a clear pick.
+  - **Per point** has no ties to settle and separates people more (spread
+    4.2 a round against 1.3).
+  - **Only people who were Spectators in that round earn them.**
+- **Shown:**
+  - under a round's results, on the round page, both while it waits for
+    the stats and from the stats after;
+  - "Spectator Standings" under the season's standings.
+- **Changed:**
+  - the export now names each round's Spectators (migration
+    `2026-10-29_spectator_points.sql`, which the user runs, then its
+    rehearsal);
+  - `build.py` scores them;
+  - `publish.py` keeps the name of a Spectator who didn't vote.
+- **Docs:**
+  - the README records the DJs and Spectators work as live;
+  - the features page.
+- **Verified:**
+  - the suite passes, and `tests/test_spectator_points.py` builds a round
+    with a tie for 2nd and a Spectator who didn't vote;
+  - in a browser at 375 and desktop, light and dark: the live results, the
+    stats round page and the season table gave the same score.
+
+## 2026-10-29 (follow-up): DJs and Spectators are live
+
+- **The database is in:** the user ran `2026-10-29_season_roles.sql` and its
+  rehearsal (12 checks held), and `tests/test_live_season_roles.py` passed.
+- **Deployed** as ff5c38d; the live files matched the commit.
+
 ## 2026-10-29: DJs and Spectators, and who wrote the prompt
 
 - **Asked for:** room for people who only vote. Everyone playing a season
