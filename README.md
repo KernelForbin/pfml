@@ -352,7 +352,12 @@ removes, unless it's made again with the same arguments, and probes each
 one once. The privacy page's "last passed" sat at 2026-10-25 meanwhile,
 since a failed run deploys nothing. Measured 2026-10-30 with the fix:
 `tests/test_live_security_check.py` ran the whole check against the live
-project and it passed.
+project and it passed. After the push (a388df0), a run started by hand
+on GitHub passed too ("Passed.", Storage 1.80.2, Auth v2.197.0), its
+redeploy succeeded, and the live privacy page read "Daily check passed
+October 30, 2026, 16:54 UTC". A first fetch right after still showed
+2026-10-25: a copy from before the redeploy, so check the page more than
+once before calling a stamp stale.
 
 ### Build stats
 

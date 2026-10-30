@@ -22,6 +22,9 @@
   - `tests/test_live_security_check.py` ran the whole check against the
     live project (every function and Edge Function, this week's included),
     and it passed.
+  - after the push, a run started by hand on GitHub passed, its redeploy
+    succeeded, and the privacy page read "Daily check passed October 30,
+    2026, 16:54 UTC".
 
 ## 2026-10-29 (follow-up): Spectator points, hidden prompts and someone new are live
 
