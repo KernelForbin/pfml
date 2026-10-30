@@ -2286,13 +2286,9 @@ powers, and never sends one). The user's calls:
 - **Each round can name who wrote its prompt** ("Prompt by"): any members
   who have joined the site, several when they wrote it together. It shows
   under the prompt on the Submit page and the round page.
-- **Not built** (the user's call, the same day): hiding the prompt from
-  Spectators, guessing it, and points for guessing it. Points for backing
-  the podium came later that day (Spectators' podium points, below).
-  Hiding it would mean
-  hiding the round's name too (it's the theme), from the rounds table,
-  notifications, the playlists' titles and the Coming up list, not just
-  the page.
+- **Later the same day:** points for backing the podium (Spectators'
+  podium points, below), then hiding the prompt from Spectators and
+  guessing it (Hidden prompts and guesses, below).
 
 **The rules** (`supabase/migrations/2026-10-29_season_roles.sql`, the same
 block in `schema.sql`):
@@ -2412,6 +2408,83 @@ better), against a stand-in with the same round: the live results, the
 stats round page and the season table all gave the same 12 points. The
 rehearsal is `supabase/checks/2026-10-29_spectator_points_rehearsal.sql`
 (3 checks).
+
+### Hidden prompts and guesses
+
+Asked for 2026-10-29: a round can hide its prompt, and who wrote it, from
+its Spectators until voting closes. They guess the prompt from the
+playlist, and pick its writer from the round's DJs. The user's calls:
+
+- **Claude grades each prompt guess, 0 to 5,** when voting closes, and a
+  commissioner can change a score. 0 is for a guess nowhere near (or
+  blank); 1 means something in it was right.
+- **Picking one of the writers is worth 3** (`PROMPTER_POINTS`), so a
+  perfect round of guessing (5 + 3) sits near an average round of podium
+  points (about 10 on real ballots) and neither swamps the other.
+- **A guess locks when its Spectator first submits their ballot.** The
+  voters' lounge opens to them then, and DJs there know the prompt.
+
+**Hiding means hiding the name too,** since a round's name is its theme.
+For a Spectator in such a round (not the admin or a commissioner, who set
+it up), until voting closes:
+- the round is "Round 3" with no prompt, on every page (`site_rounds_list()`,
+  the only way members read names and prompts now: the table grants every
+  other column, and `tests/test_prompt_guesses.py` checks a new column gets
+  granted too);
+- who wrote it is left out, in the list and in its own table;
+- notifications call it "Season 4, Round 3";
+- a submitter's note shown while voting is kept back until the close;
+- the playlists are titled "PFML · Season 4, Round 3"
+  (`round_playlists.py`), since Spectators see them too.
+
+**On the pages:**
+- **The setup and Manage season:** "Hide from Spectators until voting
+  closes", the prompt (and name) and who wrote it, per round, changeable
+  until its submissions close (a trigger holds that).
+- **The round page:** a Spectator gets "Guess the prompt" above the list
+  while voting is open (`guess.js`): the prompt as they'd guess it (280
+  characters) and "Who wrote it?" from the DJs, saved with Save guess,
+  shown locked once their ballot is in. Everyone else sees that the
+  Spectators are guessing.
+- **The results:** "Spectators' points": each Spectator's total, split into
+  podium, guess and prompter points, with their guess, who they picked and
+  Claude's reason; a commissioner gets a 0-5 control on each guess. The
+  stats round page and the season's Spectator Standings add them up the
+  same way (`build.py`).
+
+**The grading** is the `grade-guesses` Edge Function
+(`supabase/functions/grade-guesses/`). Opening a finished round's page
+that has a guess with no score asks it to grade: it checks the caller is a
+member, claims the round's unscored guesses with the secret key
+(`prompt_guesses_claim`, which hands them out only after voting closes and
+holds them 10 minutes against a second call), sends the round's name and
+prompt and the guesses' words, never names, to `claude-opus-5-5` in one
+request with a fixed rubric and a JSON schema for the answer, and saves the
+scores (`prompt_guesses_grade`). A guess is treated as text to score, never
+instructions. A declined request falls back to Anthropic's recommended
+model (`fallbacks: "default"`). It costs a few cents a round. A guess
+still unscored at a publish counts 0, and the build says so.
+
+**Setting it up:** the user deploys `grade-guesses` from the Supabase
+dashboard (Edge Functions, name "grade-guesses") and adds the Edge
+Function secret `ANTHROPIC_API_KEY`. The daily security check probes every
+Edge Function in the repo as a stranger, so the code ships only once it's
+deployed.
+
+**Checked** (2026-10-29), in a browser at 375 and desktop, light and dark
+(contrast 5.6:1 or better), against a stand-in following these rules:
+- as a Spectator: "Round 1" and the hidden note; a guess typed and a writer
+  picked, then saved; submitting a ballot with real clicks locked it;
+- as the admin, once voting had closed: grading asked for once, the total
+  6 + 4 + 3 = 13, and a changed score redrawing it as 11;
+- the setup and Manage season sending what each round hides.
+
+Found and fixed there: Claude's reason still showed under a score a
+commissioner had replaced. The rehearsal is
+`supabase/checks/2026-10-29_hidden_prompts_rehearsal.sql` (13 checks), and
+`tests/test_live_hidden_prompts.py` checks the parts are there and that a
+stranger gets nothing, the Edge Function included. **Not yet seen:** a real
+grading by Claude, and a real season with a hidden prompt.
 
 ## Voting on the site
 

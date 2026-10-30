@@ -28,11 +28,14 @@ class TheDatabase(unittest.TestCase):
         self.assertIn("in_voting     boolean not null default false", self.tail)
 
     def test_who_reads_a_note_and_when(self):
+        # the last one written stands (schema.sql runs top to bottom); since
+        # 2026-10-29 a round that hides its prompt keeps notes from its
+        # Spectators until voting closes
         policies = re.findall(r"create policy[^;]*on public\.site_submission_notes[^;]*;", self.sql)
-        self.assertEqual(len(policies), 1)
         self.assertIn("for select to authenticated using (\n    public.is_member() and (\n"
                       "      public.site_round_phase(round_id) = 'finished'\n"
-                      "      or (in_voting and public.site_round_phase(round_id) = 'voting')));", policies[0])
+                      "      or (in_voting and public.site_round_phase(round_id) = 'voting'\n"
+                      "          and not public.site_hides_from(round_id, auth.uid(), 'prompt'))));", policies[-1])
         self.assertIn("alter table public.site_submission_notes enable row level security;", self.tail)
         self.assertIn("revoke all on table public.site_submission_notes from anon, authenticated;\n"
                       "grant select on table public.site_submission_notes to authenticated;", self.tail)

@@ -645,8 +645,21 @@ def save_round(r, rows, spotify_id, youtube_id, db=None):
         headers={"Prefer": "return=minimal"})
 
 
-def playlist_text(r, rows):
-    name = f"PFML · {r['name']}"[:150]
+def public_label(r, db=None):
+    """"Season 4, Round 3": what a round that hides its prompt from its
+    Spectators is called where they could see it (README, Hidden prompts and
+    guesses), numbered as the database's site_round_public_name() does."""
+    db = db or supa.request
+    key = urllib.parse.quote(r["season_key"])
+    rounds = db("GET", f"/rest/v1/site_rounds?season_key=eq.{key}&select=id,opens_at&order=opens_at,id") or []
+    n = next(i for i, x in enumerate(rounds, 1) if x["id"] == r["id"])
+    seasons = db("GET", f"/rest/v1/site_seasons?key=eq.{key}&select=name") or []
+    return f"{seasons[0]['name'] if seasons else 'Season ' + r['season_key'][6:]}, Round {n}"
+
+
+def playlist_text(r, rows, label=None):
+    # a hidden prompt: the round's name is its theme, so the title leaves it out
+    name = f"PFML · {label or r['name']}"[:150]
     gaps = describe_gaps(rows)
 
     def desc(svc):
@@ -670,7 +683,7 @@ def build(round_id=None, dry_run=False, accept=(), rematch=False, spotify=None, 
     if dry_run:
         log("\nDry run: nothing written, no playlists touched.")
         return r, rows, None, None
-    name, sdesc, ydesc = playlist_text(r, rows)
+    name, sdesc, ydesc = playlist_text(r, rows, public_label(r, db) if r.get("hide_prompt") else None)
     sp_id, yt_id = r.get("spotify_playlist"), r.get("youtube_playlist")
     if sp_id:
         spotify.update_playlist(sp_id, name, sdesc)

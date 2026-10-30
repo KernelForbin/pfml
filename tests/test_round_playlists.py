@@ -498,8 +498,12 @@ class Database(unittest.TestCase):
         auth = (ROOT / "site" / "auth.js").read_text(encoding="utf-8")
         for col in ("position", "title", "artist", "spotify_match", "youtube_match"):
             self.assertRegex(auth, r'site_submissions"\)\.select\("[^"]*\b' + col + r'\b')
+        # the rounds come through site_rounds_list() since 2026-10-29
+        self.assertIn('client.rpc("site_rounds_list")', auth)
+        sql = (ROOT / "supabase" / "schema.sql").read_text(encoding="utf-8")
+        listed = sql[sql.rindex("create or replace function public.site_rounds_list("):]
         for col in ("spotify_playlist", "youtube_playlist"):
-            self.assertRegex(auth, r'site_rounds"\)\.select\("[^"]*\b' + col + r'\b')
+            self.assertIn(f"'{col}', r.{col}", listed)
         js = (ROOT / "site" / "listen.js").read_text(encoding="utf-8")
         self.assertIn("https://open.spotify.com/playlist/", js)
         self.assertIn("https://www.youtube.com/playlist?list=", js)

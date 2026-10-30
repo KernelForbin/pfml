@@ -231,8 +231,15 @@ README, DJs and Spectators): a Spectator votes and comments but never
 sends a track, and a round outside such a season (Round 7 and before)
 has no roles, everyone a DJ. Spectators earn podium points (3/2/1 per
 point given to a round's 1st/2nd/3rd; `PODIUM_POINTS` in `build.py` and
-`account.js` must match). Hiding the prompt from Spectators and guessing
-it were asked about and not built, the user's call.
+`account.js` must match). A round can hide its prompt and writer from its
+Spectators until voting closes; they guess (README, Hidden prompts and
+guesses). Members read round names and prompts only through
+`site_rounds_list()`, so a new `site_rounds` column needs its select grant
+(a test holds it). The `grade-guesses` Edge Function scores guesses with
+Claude: the user deploys it from the dashboard with the
+`ANTHROPIC_API_KEY` secret, which never goes anywhere else (never print it,
+never in the repo or a message), and code that adds an Edge Function ships
+only after it's deployed (the security check probes them all).
 Try changes there on pfml.fun/round?demo=1, since no round votes here
 yet. Never let it reach Round 7,
 Season 3 or any round already open: the database refuses a round opened by
@@ -372,6 +379,9 @@ verified" has to be both.
   `send-reminders` change (read-only),
   and `-p test_live_voters_lounge.py` whenever the lounge functions change
   (read-only; the full flow is `supabase/checks/2026-10-28_voters_lounge_rehearsal.sql`),
+  and `-p test_live_hidden_prompts.py` whenever the hidden-prompt functions or
+  `grade-guesses` change (read-only, never calls Claude; the full flow is
+  `supabase/checks/2026-10-29_hidden_prompts_rehearsal.sql`),
   and `-p test_live_season_roles.py` whenever the DJ and Spectator functions
   change (read-only; the full flow is `supabase/checks/2026-10-29_season_roles_rehearsal.sql`),
   and `-p test_live_demo_ballots.py` whenever the demo's practice-ballot

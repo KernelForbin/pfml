@@ -383,13 +383,36 @@
     // ---- submitting on the site (README, Submissions on the site) ----
     // Rounds opened on the site, newest first.
     siteRounds: function () {
-      // newest opening first; a season set up on the site lays its rounds
-      // out ahead, so there can be many not opened yet
-      return client.from("site_rounds").select("id, season_key, name, prompt, opens_at, closes_at, closed_at, created_at, spotify_playlist, youtube_playlist, " +
-          "votes_on_site, voting_closes_at, voting_closed_at, point_budget, max_per_track, nonvoters_keep_points, " +
-          "songs_per_round, downvotes, max_down_per_track, services, repeat_rule, " +
-          "site_round_prompters(competitor_id), site_round_roles(competitor_id, role)")
-        .order("opens_at", { ascending: false }).limit(100).then(must);
+      // newest opening first, the latest 100; a season set up on the site
+      // lays its rounds out ahead, so there can be many not opened yet.
+      // Through the database's own list, which leaves out a hidden prompt
+      // and its writer for a Spectator (README, Hidden prompts and guesses).
+      return client.rpc("site_rounds_list").then(must).then(function (rows) { return rows || []; });
+    },
+    // A Spectator's guess at a hidden prompt and who wrote it (a DJ's
+    // competitor id, or null), while voting is open and until their ballot
+    // goes in; their own guess; and everyone's, with scores, once voting
+    // has closed.
+    savePromptGuess: function (roundId, guess, prompter) {
+      return client.rpc("save_prompt_guess", { p_round: roundId, p_guess: guess, p_prompter: prompter || null }).then(must);
+    },
+    myPromptGuess: function (roundId) {
+      return client.rpc("my_prompt_guess", { p_round: roundId }).then(must)
+        .then(function (rows) { return (rows && rows[0]) || null; });
+    },
+    roundGuesses: function (roundId) {
+      return client.rpc("site_round_guesses", { p_round: roundId }).then(must).then(function (rows) { return rows || []; });
+    },
+    setPromptGuessScore: function (guessId, score) {
+      return client.rpc("set_prompt_guess_score", { p_guess: guessId, p_score: score }).then(must);
+    },
+    // Asks the grade-guesses Edge Function to score a finished round's
+    // guesses that have none yet. Resolves to {graded: n} or {error}.
+    gradeGuesses: function (roundId) {
+      return client.functions.invoke("grade-guesses", { body: { round: roundId } }).then(function (res) {
+        if (res.error) throw res.error;
+        return res.data;
+      });
     },
     // Everyone playing a round and their role in it, DJ or Spectator
     // ([{competitor_id, role, joined}]); [] for a round outside a season set

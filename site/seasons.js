@@ -246,6 +246,23 @@
   }
   function prompterIds(r) { return (r.site_round_prompters || []).map(function (x) { return x.competitor_id; }); }
 
+  // What a round hides from its Spectators until voting closes, for them to
+  // guess (README, Hidden prompts and guesses).
+  function hideFields(r) {
+    return '<fieldset class="cm-checks-box"><legend class="sub-label">Hide from Spectators until voting closes</legend><div class="cm-services">' +
+      '<label class="cm-check"><input type="checkbox" name="hide_prompt"' + (r.hide_prompt ? " checked" : "") + "><span>The prompt, and the round’s name</span></label>" +
+      '<label class="cm-check"><input type="checkbox" name="hide_prompter"' + (r.hide_prompter ? " checked" : "") + "><span>Who wrote it</span></label></div>" +
+      '<p class="block-note">Spectators then guess: 0 to 5 points for the prompt, scored by Claude, and 3 for its writer.</p></fieldset>';
+  }
+  function readHide(form) {
+    var p = form.querySelector('input[name="hide_prompt"]'), w = form.querySelector('input[name="hide_prompter"]');
+    return { hide_prompt: !!(p && p.checked), hide_prompter: !!(w && w.checked) };
+  }
+  function hideSummary(r) {
+    return r.hide_prompt && r.hide_prompter ? "prompt and writer hidden from Spectators" : r.hide_prompt ? "prompt hidden from Spectators"
+      : r.hide_prompter ? "writer hidden from Spectators" : "";
+  }
+
   /* ---- render ---- */
 
   function render(c) {
@@ -296,7 +313,7 @@
           '<label class="sub-label" for="cmAdd-' + esc(s.key) + '">Add a round at the end</label>' +
           '<input class="sub-input" id="cmAdd-' + esc(s.key) + '" name="name" maxlength="120" placeholder="Theme name">' +
           '<textarea class="sub-input sub-textarea" name="prompt" maxlength="2000" rows="2" placeholder="Theme description" aria-label="Theme description"></textarea>' +
-          '<div data-fill="new-round"></div>' +
+          '<div data-fill="new-round"></div>' + hideFields({}) +
           '<div class="sub-actions"><button type="submit" class="sub-btn sub-btn-quiet">Add round</button></div>' +
         "</form>" +
         "<h3>Settings</h3>" +
@@ -334,7 +351,7 @@
         '<form class="sub-admin-form" data-act="rename">' +
           '<input class="sub-input" name="name" maxlength="120" value="' + esc(r.name) + '" aria-label="Round name">' +
           '<textarea class="sub-input sub-textarea" name="prompt" maxlength="2000" rows="2" aria-label="Description">' + esc(r.prompt) + "</textarea>" +
-          (upcoming || phase === "submitting" ? ruleFields(r, "cmR-" + r.id) : "") +
+          (upcoming || phase === "submitting" ? ruleFields(r, "cmR-" + r.id) + hideFields(r) : "") +
           // who wrote the prompt, any time; roles while it takes tracks
           '<div data-fill="round" data-roles="' + (upcoming || phase === "submitting" ? "1" : "") + '"></div>' +
           '<div class="sub-actions"><button type="submit" class="sub-btn sub-btn-quiet">Save</button></div>' +
@@ -431,6 +448,7 @@
           if (prompterIds(r).length) line.push("Prompt by " + names(prompterIds(r)));
           var changed = changedRoles(roster, ownRoles(r));
           if (Object.keys(changed).length) line.push(rolesSummary(changed));
+          if (hideSummary(r)) line.push(hideSummary(r));
           li.querySelector("[data-people-round]").textContent = line.join(" · ");
           var fill = li.querySelector('[data-fill="round"]');
           if (fill && !fill.innerHTML) {
@@ -492,6 +510,7 @@
           if (r.prompters.length) about.push("Prompt by " + names(r.prompters));
           var changed = changedRoles(roster, r.roles);
           if (Object.keys(changed).length) about.push(rolesSummary(changed));
+          if (hideSummary(r)) about.push(hideSummary(r));
           return '<li data-i="' + i + '"><div class="cm-season-round-head"><b>' + (i + 1) + ". " + esc(r.name) + "</b>" +
             '<span class="cm-move"><button type="button" class="cm-icon" data-act="w-up" aria-label="Move ' + esc(r.name) + ' earlier"' + (i ? "" : " disabled") + ">↑</button>" +
             '<button type="button" class="cm-icon" data-act="w-down" aria-label="Move ' + esc(r.name) + ' later"' + (i < d.rounds.length - 1 ? "" : " disabled") + ">↓</button>" +
@@ -502,7 +521,7 @@
         '<label class="sub-label" for="cmNew-rname">Add round</label>' +
         '<input class="sub-input" id="cmNew-rname" maxlength="120" placeholder="Theme name">' +
         '<textarea class="sub-input sub-textarea" id="cmNew-rprompt" maxlength="2000" rows="2" placeholder="Theme description" aria-label="Theme description"></textarea>' +
-        '<div id="cmNew-rpeople">' + promptersField([]) + rolesField(roster, {}) + "</div>" +
+        '<div id="cmNew-rpeople">' + promptersField([]) + rolesField(roster, {}) + "</div>" + hideFields({}) +
         '<div class="sub-actions"><button type="button" class="sub-btn sub-btn-quiet" data-act="w-add">Add round</button></div>' +
         '<p class="block-note">Round 1’s submissions close at the first playlist. Each round after it opens when the one before closes voting.</p>' +
         '<div class="cm-pair"><span><label class="sub-label" for="cmNew-date">Date of the first playlist</label>' +
@@ -611,7 +630,7 @@
   // a round's own roles, as the database takes them: only for the players
   // still picked, and only when any differ from their season role
   function roundForCreate(r, roster) {
-    var out = { name: r.name, prompt: r.prompt, prompters: r.prompters };
+    var out = { name: r.name, prompt: r.prompt, prompters: r.prompters, hide_prompt: !!r.hide_prompt, hide_prompter: !!r.hide_prompter };
     var changed = changedRoles(roster, r.roles);
     if (Object.keys(changed).length) out.roles = fullRoles(roster, changed);
     return out;
@@ -710,7 +729,9 @@
         wizardMsg("A round needs at least 2 DJs: they send the tracks.");
         return;
       }
-      d.rounds.push({ name: name, prompt: $("cmNew-rprompt").value.trim(), prompters: readPrompters(form), roles: roles });
+      var hidden = readHide(form);
+      d.rounds.push({ name: name, prompt: $("cmNew-rprompt").value.trim(), prompters: readPrompters(form), roles: roles,
+                      hide_prompt: hidden.hide_prompt, hide_prompter: hidden.hide_prompter });
     } else {
       var i = +b.closest("[data-i]").getAttribute("data-i");
       if (act === "w-remove") d.rounds.splice(i, 1);
@@ -801,10 +822,14 @@
       var named = form.querySelector('[data-fill="new-round"] .cm-people-pick');
       var prompters = named ? readPrompters(form) : [];
       var changed = named ? readRoundRoles(form, roster) : {};
+      var hidden = readHide(form);
       done = api().addSiteSeasonRound(key, name, form.elements.prompt.value.trim()).then(function (rid) {
-        if (!prompters.length && !Object.keys(changed).length) return;
-        return api().setSiteRoundPeople(rid, Object.keys(changed).length ? fullRoles(roster, changed) : null, prompters.length ? prompters : null)
-          .catch(function (err) { throw new Error("The round was added, but its prompters and roles weren’t: " + errText(err)); });
+        var people = prompters.length || Object.keys(changed).length
+          ? api().setSiteRoundPeople(rid, Object.keys(changed).length ? fullRoles(roster, changed) : null, prompters.length ? prompters : null)
+          : null;
+        return Promise.resolve(people).then(function () {
+          if (hidden.hide_prompt || hidden.hide_prompter) return api().updateSiteRound(rid, hidden);
+        }).catch(function (err) { throw new Error("The round was added, but its prompters, roles or hiding weren’t: " + errText(err)); });
       });
     } else if (act === "rename") {
       var id = form.closest("[data-round]").getAttribute("data-round");
@@ -817,6 +842,9 @@
         if (rules.error) { panelMsg(form, rules.error); return; }
         fields.services = rules.services;
         fields.repeat_rule = rules.repeat_rule;
+        var hide = readHide(form);
+        fields.hide_prompt = hide.hide_prompt;
+        fields.hide_prompter = hide.hide_prompter;
       }
       // who wrote the prompt, and the round's roles while it takes tracks
       var hasPeople = !!form.querySelector('[data-fill="round"] .cm-people-pick');

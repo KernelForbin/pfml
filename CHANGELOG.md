@@ -1,5 +1,41 @@
 # Changelog
 
+## 2026-10-29 (evening): hidden prompts and guesses
+
+- **Asked for:** a round can hide its prompt and who wrote it from its
+  Spectators; they guess both, and earn points.
+- **The user's calls:**
+  - Claude scores each prompt guess 0–5 when voting closes, and a
+    commissioner can change it;
+  - the right writer is worth 3;
+  - a guess locks when its Spectator first submits their ballot.
+- **Hiding means the name too:** a Spectator sees "Round 3" until voting
+  closes.
+  - Members now read names and prompts only through `site_rounds_list()`.
+  - It also covers notifications, notes shown while voting, who wrote it,
+    and the playlists' titles.
+  - The admin and commissioners always see everything.
+- **Built:**
+  - migration `2026-10-29_hidden_prompts.sql`, which the user runs, then
+    its rehearsal (13 checks);
+  - the `grade-guesses` Edge Function, which the user deploys with the
+    `ANTHROPIC_API_KEY` secret;
+  - the guess box on the round page (`guess.js`);
+  - the switches in the setup and Manage season;
+  - the points in the results, the stats and the Spectator Standings.
+- **Privacy page:** the guesses' words go to Anthropic's API for scoring,
+  without names.
+- **Verified:**
+  - the suite passes, with 9 tests that pinned the old round reads
+    updated;
+  - in a browser at 375 and desktop, light and dark, against a stand-in:
+    - a Spectator's guess saved, then locked by a ballot submitted with
+      real clicks;
+    - grading asked for once after the close, the total adding up;
+    - a commissioner's changed score redrawing it.
+  - Not yet run: the SQL (its rehearsal and the live test) and a real
+    grading by Claude.
+
 ## 2026-10-29 (later): Spectators' podium points
 
 - **Asked for:** points for Spectators who back the podium, like

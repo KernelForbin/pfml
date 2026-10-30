@@ -2550,6 +2550,7 @@
           // is in the stats (voting.js render)
           if (i < 0 && window.PFMLVoting && $("rpVote")) window.PFMLVoting.render(site, $("rpVote"));
           if (window.PFMLLounge && $("rpLounge") && (site.votes_on_site || site.practice)) window.PFMLLounge.render($("rpLounge"), site);
+          if (window.PFMLGuess && $("rpGuess")) window.PFMLGuess.render($("rpGuess"), site);
           showPrompter(site);
         });
       }).catch(failed);

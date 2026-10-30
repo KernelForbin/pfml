@@ -1898,6 +1898,21 @@ button.cm-person { cursor: pointer; }
 .pod-list b { font: 800 1.05rem/1 "Archivo", sans-serif; color: var(--ink); }
 .pod-list li > small { color: var(--muted); font-size: 0.8rem; margin-left: -6px; }
 .pod-rank { flex: none; min-width: 28px; text-align: center; font: 800 0.9rem/1 "Archivo", sans-serif; color: var(--muted); }
+/* hidden prompts and guesses (guess.js; the points list in account.js) */
+.rp-hidden { color: var(--muted); font-style: italic; }
+.gs h2 { margin: 0 0 4px; }
+.gs-form { margin-top: 8px; }
+.gs-count { align-self: flex-end; color: var(--muted); font-size: 0.82rem; }
+.gs-locked { margin-top: 8px; padding: 10px 14px; border-left: 3px solid var(--magenta); border-radius: 0 8px 8px 0; background: var(--wash); }
+.gs-locked p { margin: 4px 0 0; overflow-wrap: anywhere; }
+.gs-note { margin: 0; }
+.pod-guesses li { align-items: flex-start; border-radius: var(--r-sm); padding: 8px 12px 8px 8px; }
+.pod-guesses li > b, .pod-guesses li > small { margin-top: 6px; }
+.pod-parts { margin-top: 2px; }
+.pod-guess { display: block; margin-top: 4px; font-size: 0.9rem; overflow-wrap: anywhere; }
+.pod-guess small { display: block; color: var(--muted); font-size: 0.8rem; }
+.pod-adjust { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; color: var(--muted); font-size: 0.8rem; }
+.pod-adjust select { width: auto; padding: 4px 8px; font-size: 0.85rem; }
 
 
 /* Dark mode, a choice: the Dark mode switch in the account menu

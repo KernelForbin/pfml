@@ -134,7 +134,6 @@ class ThePages(unittest.TestCase):
         for call in ('client.rpc("site_round_roster", { p_round: roundId })',
                      'client.rpc("set_site_season_roster", { p_key: key, p_players: players })',
                      'client.rpc("set_site_round_people", { p_round: roundId, p_roles: roles, p_prompters: prompters })',
-                     '"site_round_prompters(competitor_id), site_round_roles(competitor_id, role)"',
                      '"site_season_players(competitor_id, role)"'):
             self.assertIn(call, auth)
         # the old call, which knew nothing of roles, is gone from the pages

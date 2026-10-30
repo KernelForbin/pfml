@@ -412,15 +412,19 @@
   // track by score, with who sent it and every vote.
   function render(r, host) {
     state.host = host;
+    if (state.scoreHost !== host) { host.addEventListener("change", onScoreChange); state.scoreHost = host; }
     if (!on(r) || PFML.roundPhase(r) !== "finished") { host.hidden = true; host.innerHTML = ""; return; }
     state.round = r;
     host.innerHTML = '<p class="block-note">Loading the results…</p>';
     host.hidden = false;
+    // a round that hid its prompt or prompter: the Spectators' guesses too
+    var guessing = r.hide_prompt || r.hide_prompter;
     Promise.all([api().roundSubmissions(r.id), api().people(), api().roundResults(r.id), api().roundVotes(r.id),
-                 PFML.roundRoster(r)]).then(function (res) {
+                 PFML.roundRoster(r), guessing ? api().roundGuesses(r.id) : null]).then(function (res) {
       if (state.round !== r) return;
       state.rows = PFML.roundOrder(r.id, res[0] || []);
       var spectators = (res[4] || []).filter(function (x) { return x.role === "spectator"; }).map(function (x) { return x.id; });
+      state.guesses = res[5];
       renderResults(r, res[2] || [], res[3] || [], namesOf(res[1]), spectators);
     }).catch(function (err) {
       console.error(err);
@@ -459,9 +463,45 @@
     results.forEach(function (x) {
       places[x.submission_id] = 1 + results.filter(function (o) { return o.points > x.points; }).length;
     });
+    var r = state.round, guesses = {};
+    (state.guesses || []).forEach(function (g) { guesses[g.competitor_id] = g; });
+    var admin = PFML.member && (PFML.member.role === "admin" || PFML.member.role === "commissioner");
     return PFML.podiumHtml(PFML.podiumScores(places, votes, spectators).map(function (x) {
-      return { id: x.id, name: names[x.id] || "A member", score: x.score };
-    }));
+      var row = { id: x.id, name: names[x.id] || "A member", score: x.score };
+      if (!state.guesses) return row;
+      // in a round that hid something: the guesses, and the total of all three
+      var g = guesses[x.id] || {};
+      row.podium = x.score;
+      row.guessScore = r.hide_prompt ? (g.guess_id ? g.score : 0) : null;
+      row.prompterPoints = r.hide_prompter ? (g.prompter_correct ? PFML.PROMPTER_POINTS : 0) : null;
+      row.guess = g.guess || "";
+      row.prompterName = g.prompter ? names[g.prompter] || "a DJ" : "";
+      // Claude's reason, while its score stands
+      row.reason = g.graded_by === "claude" ? g.reason || "" : "";
+      row.guessId = g.guess_id || null;
+      row.score = x.score + (row.guessScore || 0) + (row.prompterPoints || 0);
+      return row;
+    }), { scoreSelect: admin && r.hide_prompt ? scoreSelect : null });
+  }
+
+  function onScoreChange(ev) {
+    var sel = ev.target.closest && ev.target.closest("select[data-guess]");
+    if (!sel) return;
+    sel.disabled = true;
+    api().setPromptGuessScore(sel.getAttribute("data-guess"), +sel.value).then(function () {
+      render(state.round, state.host);
+    }).catch(function (err) {
+      sel.disabled = false;
+      window.alert("That score didn’t save: " + errText(err));
+    });
+  }
+
+  // A commissioner's control on a scored guess: a different 0-5 replaces it.
+  function scoreSelect(x) {
+    if (!x.guessId || !x.guess) return "";
+    var opts = "";
+    for (var n = 0; n <= 5; n++) opts += '<option value="' + n + '"' + (n === x.guessScore ? " selected" : "") + ">" + n + "</option>";
+    return '<label class="pod-adjust">Guess score <select class="sub-input" data-guess="' + esc(x.guessId) + '">' + opts + "</select></label>";
   }
 
   function resultRow(r, item, rank, votes, names) {

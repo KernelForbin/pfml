@@ -89,6 +89,12 @@ ROUND_BONUS = {1: 3, 2: 2, 3: 1}
 # per pick: measured on 743 real ballots, half split their biggest vote
 # across tracks, so a "your biggest vote" rule had no clear pick to score.
 PODIUM_POINTS = {1: 3, 2: 2, 3: 1}
+
+# A round can hide its prompt and who wrote it from its Spectators, who
+# guess them (chosen 2026-10-29; README, Hidden prompts and guesses): the
+# prompt guess scores 0-5 (Claude, or a commissioner), and picking one of
+# its writers this many.
+PROMPTER_POINTS = 3
 SEASON_BONUS = {1: 6, 2: 4, 3: 2}
 MIN_SCORED_ROUNDS = 10
 
@@ -518,18 +524,32 @@ def with_link(out, track):
     return out
 
 
-def podium_points(songs, spectators):
+def podium_points(songs, spectators, guessing=None):
     """A round's Spectators and the podium points each earned
     (PODIUM_POINTS for every point they gave a track that placed 1st, 2nd
     or 3rd), biggest first. songs carry their place and every scoring vote
     as [voter id, points]; spectators are [{id, name}]. A Spectator who
-    didn't vote is listed with 0."""
+    didn't vote is listed with 0.
+
+    guessing, for a round that hid its prompt or prompter, is {prompt,
+    prompter, guesses}: each then also carries podium, guessScore (0-5;
+    None for a guess not scored yet, which counts 0), prompterPoints and
+    what they guessed, and score is the total."""
     out = []
     for p in spectators:
         score = sum(pts * PODIUM_POINTS[s["place"]]
                     for s in songs if s.get("place") in PODIUM_POINTS
                     for vid, pts in s["votes"] if vid == p["id"] and pts > 0)
-        out.append({"id": p["id"], "name": p["name"], "score": score})
+        row = {"id": p["id"], "name": p["name"], "score": score}
+        if guessing:
+            g = guessing["guesses"].get(p["id"]) or {}
+            row["podium"] = score
+            row["guessScore"] = (g.get("score") if g else 0) if guessing["prompt"] else None
+            row["prompterPoints"] = (PROMPTER_POINTS if g.get("prompter_correct") else 0) if guessing["prompter"] else None
+            row["guess"] = g.get("guess") or ""
+            row["prompterName"] = g.get("prompterName") or ""
+            row["score"] = score + (row["guessScore"] or 0) + (row["prompterPoints"] or 0)
+        out.append(row)
     out.sort(key=lambda x: (-x["score"], x["name"]))
     return out
 
@@ -594,7 +614,12 @@ def site_season_rows(folder):
                        "Description": r.get("prompt") or "",
                        "Playlist URL": f"https://open.spotify.com/playlist/{playlist}" if playlist else "",
                        # who voted without a track (README, DJs and Spectators)
-                       "Spectators": [{"id": pid, "name": players.get(pid, "Unknown")} for pid in r.get("spectators") or []]})
+                       "Spectators": [{"id": pid, "name": players.get(pid, "Unknown")} for pid in r.get("spectators") or []],
+                       # what it hid from them, and their guesses
+                       "Guessing": {"prompt": bool(r.get("hide_prompt")), "prompter": bool(r.get("hide_prompter")),
+                                    "guesses": {g["spectator"]: dict(g, prompterName=players.get(g.get("prompter"), ""))
+                                                for g in r.get("guesses") or []}}
+                       if r.get("hide_prompt") or r.get("hide_prompter") else None})
         voted = {v["voter"] for v in r.get("votes") or []}
         uri_of = {}
         for s in r.get("submissions") or []:
@@ -1103,7 +1128,10 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
                     pair_comments[(vid, submitter)] = pair_comments.get((vid, submitter), 0) + 1
 
         margin = (songs[0]["points"] - songs[1]["points"]) if len(songs) > 1 else None
-        spectators = podium_points(songs, rnd.get("Spectators") or [])
+        spectators = podium_points(songs, rnd.get("Spectators") or [], rnd.get("Guessing"))
+        if any(x.get("guessScore") is None and x.get("guess") for x in spectators):
+            print(f"  ! {rnd['Name']}: a prompt guess has no score yet (it counts 0); "
+                  "opening the round's page scores it, then publish again")
         rounds_out.append({
             "id": rid,
             "name": rnd["Name"],

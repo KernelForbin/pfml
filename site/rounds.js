@@ -947,9 +947,13 @@
         '<p class="rp-kicker">' + esc(label) + "</p>" +
         "<h1>" + esc(r.name) + "</h1>" +
         (r.prompt ? '<p class="rp-prompt">' + esc(r.prompt) + "</p>" : "") +
+        // a hidden prompt (README, Hidden prompts and guesses)
+        (r.prompt_hidden ? '<p class="rp-prompt rp-hidden">The prompt is hidden from Spectators until voting closes.</p>' : "") +
         '<p class="rp-prompter" id="rpPrompter" hidden></p>' +
         '<div class="rp-meta"><span class="rp-chip">' + esc(where) + "</span></div>" +
       "</section>" +
+      // a Spectator's guess at what's hidden, while voting is open (guess.js)
+      '<section class="shell block gs" id="rpGuess" hidden></section>' +
       '<section class="shell block rp-listen" id="rpListen" hidden></section>' +
       // the results, once voting here has closed (voting.js)
       '<section class="shell block" id="rpVote" hidden></section>' +

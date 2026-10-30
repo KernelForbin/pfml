@@ -190,13 +190,31 @@
       return { id: id, score: score };
     });
   }
-  // The list, biggest first: [{id, name, score}], and the rule under it.
-  function podiumHtml(list, note) {
+  // Picking who wrote a hidden prompt (README, Hidden prompts and guesses);
+  // build.py's PROMPTER_POINTS.
+  var PROMPTER_POINTS = 3;
+
+  // The list, biggest first: [{id, name, score}], and the rule under it. In
+  // a round that hid its prompt or prompter, each also carries podium,
+  // guessScore (0-5, null until graded), prompterPoints, and what they
+  // guessed (guess, prompterName, reason); score is then the total.
+  // scoreSelect(x) can add a commissioner's control to a guess.
+  function podiumHtml(list, opts) {
+    opts = opts || {};
+    var guessing = list.some(function (x) { return x.podium != null; });
     var rows = list.slice().sort(function (a, b) { return b.score - a.score || a.name.localeCompare(b.name); });
-    return '<div class="pod-box"><h3>Spectators’ podium points</h3>' +
-      '<p class="block-note">' + (note || "Each point a Spectator gave the winner earned 3, 2nd place 2 and 3rd place 1.") + "</p>" +
-      '<ol class="pod-list">' + rows.map(function (x) {
-        return "<li>" + avatar(x.id, x.name) + '<span class="pod-name">' + esc(x.name) + "</span><b>" + x.score +
+    return '<div class="pod-box"><h3>' + (guessing ? "Spectators’ points" : "Spectators’ podium points") + "</h3>" +
+      '<p class="block-note">Each point a Spectator gave the winner earned 3, 2nd place 2 and 3rd place 1.' +
+        (guessing ? " A guess at the hidden prompt earned 0 to 5, scored by Claude, and picking who wrote it " + PROMPTER_POINTS + "." : "") + "</p>" +
+      '<ol class="pod-list' + (guessing ? " pod-guesses" : "") + '">' + rows.map(function (x) {
+        var parts = guessing ? '<small class="pod-parts">' + x.podium + " podium" +
+          (x.guessScore != null || x.guess ? " · " + (x.guessScore == null ? "guess not scored yet" : x.guessScore + " guess") : "") +
+          (x.prompterPoints != null ? " · " + x.prompterPoints + " prompter" : "") + "</small>" : "";
+        var said = guessing && (x.guess || x.prompterName) ? '<span class="pod-guess">' +
+          (x.guess ? "“" + esc(x.guess) + "”" : "") + (x.prompterName ? (x.guess ? " · " : "") + "picked " + esc(x.prompterName) : "") +
+          (x.reason ? '<small>' + esc(x.reason) + "</small>" : "") + "</span>" : "";
+        return "<li>" + avatar(x.id, x.name) + '<span class="pod-name">' + esc(x.name) + parts + said +
+          (opts.scoreSelect ? opts.scoreSelect(x) : "") + "</span><b>" + x.score +
           '</b><small>' + (x.score === 1 ? "pt" : "pts") + "</small></li>";
       }).join("") + "</ol></div>";
   }
@@ -267,6 +285,7 @@
   PFML.promptBy = promptBy;
   PFML.podiumScores = podiumScores;
   PFML.podiumHtml = podiumHtml;
+  PFML.PROMPTER_POINTS = PROMPTER_POINTS;
 
   // A tray with a notch: an inbox, drawn rather than an emoji character,
   // so it's the same flat icon on every device (see ADD_REACTION_ICON).

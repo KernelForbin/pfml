@@ -220,6 +220,8 @@
       '<p class="sub-season">' + esc(seasonLabel(r.season_key)) + "</p>" +
       "<h2>" + esc(r.name) + "</h2>" +
       (r.prompt ? '<p class="sub-prompt">' + esc(r.prompt) + "</p>" : "") +
+      // a hidden prompt (README, Hidden prompts and guesses)
+      (r.prompt_hidden ? '<p class="sub-prompt rp-hidden">The prompt is hidden from Spectators until voting closes.</p>' : "") +
       '<p class="sub-prompter" id="subPrompter" hidden></p>' +
       (state.role === "spectator" ? '<p class="sub-role"><b>You’re a Spectator this round.</b> You don’t send a track: ' +
         "once submissions close, you vote and comment on every track.</p>" : "") +

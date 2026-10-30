@@ -91,7 +91,8 @@ class TheDatabase(unittest.TestCase):
                       function(self.sql, "update_site_season"))
         for name in ("create_site_season", "add_site_season_round"):
             with self.subTest(name):
-                self.assertIn("s.songs_per_round, s.downvotes, s.max_down_per_track, s.services, s.repeat_rule)", function(self.sql, name))
+                # what a round hides from Spectators follows them in create_site_season (2026-10-29)
+                self.assertRegex(function(self.sql, name), r"s\.songs_per_round, s\.downvotes, s\.max_down_per_track, s\.services, s\.repeat_rule[,)]")
 
     def test_grants(self):
         for sig in ("my_submission(uuid)", "submit_described(uuid, text, text, text, text[], text)", "set_submission_note(uuid, text, text)",
@@ -205,7 +206,8 @@ class ThePages(unittest.TestCase):
         save = js_body(cm, "function saveRound(r) {")
         self.assertIn("var rules = window.PFMLSeasons.readRules($(\"subAdminForm\"));", save)
         self.assertLess(save.index("if (rules.error) return adminMsg(rules.error);"), save.index("api().updateSiteRound(r.id, fields)"))
-        self.assertIn("(upcoming || phase === \"submitting\" ? ruleFields(r, \"cmR-\" + r.id) : \"\")", js_body(self.seasons, "function roundRow(r, i, rounds) {"))
+        # with what it hides from Spectators since 2026-10-29
+        self.assertIn("(upcoming || phase === \"submitting\" ? ruleFields(r, \"cmR-\" + r.id) + hideFields(r) : \"\")", js_body(self.seasons, "function roundRow(r, i, rounds) {"))
 
     def test_announcements_on_the_pages(self):
         cm = read(SITE / "commissioner.js")

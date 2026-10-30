@@ -248,9 +248,11 @@ class ThePage(unittest.TestCase):
 
     def test_the_round_list_asks_for_what_voting_needs(self):
         auth = read(SITE / "auth.js")
-        rounds = auth.split("siteRounds: function () {", 1)[1].split("},", 1)[0]
+        # through site_rounds_list() since 2026-10-29
+        self.assertIn('client.rpc("site_rounds_list")', auth.split("siteRounds: function () {", 1)[1].split("},", 1)[0])
+        listed = function(schema(), "site_rounds_list")
         for col in ("votes_on_site", "voting_closes_at", "voting_closed_at", "point_budget", "max_per_track", "nonvoters_keep_points"):
-            self.assertIn(col, rounds)
+            self.assertIn(f"'{col}', r.{col}", listed)
         self.assertIn('select("id, tag, platform, track,', auth)
 
     def test_names_votes_and_comments_are_escaped(self):

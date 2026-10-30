@@ -69,7 +69,8 @@ class TheRules(unittest.TestCase):
         self.assertIn("      closes := first_close;\n      opens := greatest(now(), public.site_add_days(closes, -s.submit_days));", create)
         self.assertIn("      opens := public.site_add_days(closes, s.vote_days);\n      closes := public.site_add_days(opens, s.submit_days);", create)
         self.assertIn("public.site_add_days(closes, s.vote_days), s.point_budget, s.max_per_track, s.nonvoters_keep_points,\n"
-                      "            s.songs_per_round, s.downvotes, s.max_down_per_track, s.services, s.repeat_rule)\n"
+                      "            s.songs_per_round, s.downvotes, s.max_down_per_track, s.services, s.repeat_rule,\n"
+                      "            coalesce((item->>'hide_prompt')::boolean, false), coalesce((item->>'hide_prompter')::boolean, false))\n"
                       "    returning id into rid;", create)
         self.assertIn("values (k, btrim(coalesce(item->>'name', '')), btrim(coalesce(item->>'prompt', '')), opens, closes, true,", create)
         again = function(self.sql, "site_season_reschedule")
@@ -307,9 +308,12 @@ class ThePages(unittest.TestCase):
         self.assertRegex(css, r"\.cm-sched:empty\s*\{\s*display:\s*none")
 
     def test_rounds_come_newest_opening_first(self):
+        # through site_rounds_list() since 2026-10-29
         rounds = read(SITE / "auth.js").split("siteRounds: function () {", 1)[1].split("\n    },", 1)[0]
-        self.assertIn('.order("opens_at", { ascending: false }).limit(100)', rounds)
-        self.assertIn("opens_at", rounds.split(".select(", 1)[1].split(")", 1)[0])
+        self.assertIn('client.rpc("site_rounds_list")', rounds)
+        listed = function(schema(), "site_rounds_list")
+        self.assertIn("select coalesce(jsonb_agg(x.row order by x.opens_at desc), '[]'::jsonb)", listed)
+        self.assertIn("from (select * from public.site_rounds order by opens_at desc limit 100) r", listed)
 
 
 if __name__ == "__main__":
