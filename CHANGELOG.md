@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-29 (follow-up): Spectator points, hidden prompts and someone new are live
+
+- **Spectators' podium points** (d660e81): the migration and its rehearsal
+  (3 checks) ran, and the deploy matched the commit.
+- **Hidden prompts and guesses** (7513c5e):
+  - set up in order: the migration, its hotfix, `grade-guesses` deployed
+    with its key, the push, then the names migration;
+  - the rehearsal held 13 checks and the live test passed 5 of 5;
+  - the member pages loaded, checked in the user's own Chrome.
+- **Someone new** (c4ca833): the migration and its rehearsal (5 checks)
+  ran, the live test passed, and the deploy matched the commit.
+- **Not yet seen:** a real season with Spectators, a real grading by
+  Claude, and a real newcomer invited. Docs only.
+
 ## 2026-10-29 (late): someone new
 
 - **Asked for:** a way to add someone who never played in Music League, so

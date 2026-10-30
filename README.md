@@ -2394,6 +2394,12 @@ counted one the same way. The rehearsal is
 `tests/test_live_add_person.py` checks the function is there and wants a
 commissioner. Not on the features page: it's a commissioner's power.
 
+**Live** since 2026-10-29 (c4ca833): the user ran the migration and the
+rehearsal (5 checks held), `tests/test_live_add_person.py` passed against
+the real database, and the deployed `seasons.js`, `auth.js` and
+`style.css` matched the commit. **Not yet seen:** a real newcomer added
+and invited.
+
 ### Spectators' podium points
 
 Asked for 2026-10-29, like Tastemaker: a Spectator earns points for
@@ -2438,6 +2444,10 @@ better), against a stand-in with the same round: the live results, the
 stats round page and the season table all gave the same 12 points. The
 rehearsal is `supabase/checks/2026-10-29_spectator_points_rehearsal.sql`
 (3 checks).
+
+**Live** since 2026-10-29 (d660e81): the user ran the migration and the
+rehearsal (3 checks held), and the deployed scripts and stylesheet
+matched the commit. **Not yet seen:** a real round with Spectators.
 
 ### Hidden prompts and guesses
 
@@ -2524,8 +2534,17 @@ Found and fixed there: Claude's reason still showed under a score a
 commissioner had replaced. The rehearsal is
 `supabase/checks/2026-10-29_hidden_prompts_rehearsal.sql` (13 checks), and
 `tests/test_live_hidden_prompts.py` checks the parts are there and that a
-stranger gets nothing, the Edge Function included. **Not yet seen:** a real
-grading by Claude, and a real season with a hidden prompt.
+stranger gets nothing, the Edge Function included.
+
+**Live** since 2026-10-29 (7513c5e), set up in the order above: the
+migration, the hotfix, `grade-guesses` deployed with its key, the push,
+the names migration once browsers' 10-minute copies of the old pages had
+expired, then the rehearsal (13 checks held) and
+`tests/test_live_hidden_prompts.py` (5 of 5). Signed in as the user, in
+their own Chrome, Home and Round 7's page loaded, and the rounds came
+through `site_rounds_list()`, before and after the names migration.
+**Not yet seen:** a real grading by Claude, and a real season with a
+hidden prompt.
 
 ## Voting on the site
 
