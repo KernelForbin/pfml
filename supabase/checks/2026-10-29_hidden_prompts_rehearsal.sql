@@ -1,7 +1,7 @@
 -- A rehearsal of hidden prompts and guesses, run by the real database and
 -- then undone: nothing it does is kept. Run it in the Supabase SQL Editor
--- after supabase/migrations/2026-10-29_hidden_prompts.sql (README, Hidden
--- prompts and guesses). It always ends in an error, on purpose, because an
+-- after supabase/migrations/2026-10-29_hidden_prompts.sql, its hotfix and
+-- 2026-10-29_hidden_prompts_names.sql (README, Hidden prompts and guesses). It always ends in an error, on purpose, because an
 -- error rolls everything back:
 --
 --   "Rehearsal passed: 13 checks held. Nothing was kept."  every rule held

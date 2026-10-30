@@ -4821,7 +4821,10 @@ returns jsonb language sql stable security definer set search_path = public as $
 $$;
 
 revoke all on function public.site_rounds_hiding_fixed() from public, anon, authenticated;
-revoke all on function public.site_hides_from(uuid, uuid, text) from public, anon, authenticated;
+-- the policies above call it, and a policy runs with the reader's own
+-- rights, so members must be able to run it (found 2026-10-29)
+revoke all on function public.site_hides_from(uuid, uuid, text) from public, anon;
+grant execute on function public.site_hides_from(uuid, uuid, text) to authenticated;
 revoke all on function public.site_round_public_name(uuid) from public, anon, authenticated;
 revoke all on function public.site_rounds_list() from public, anon;
 grant execute on function public.site_rounds_list() to authenticated;

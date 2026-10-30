@@ -2465,11 +2465,22 @@ instructions. A declined request falls back to Anthropic's recommended
 model (`fallbacks: "default"`). It costs a few cents a round. A guess
 still unscored at a publish counts 0, and the build says so.
 
-**Setting it up:** the user deploys `grade-guesses` from the Supabase
-dashboard (Edge Functions, name "grade-guesses") and adds the Edge
-Function secret `ANTHROPIC_API_KEY`. The daily security check probes every
-Edge Function in the repo as a stranger, so the code ships only once it's
-deployed.
+**Setting it up, in order:**
+1. `2026-10-29_hidden_prompts.sql`, then `2026-10-29_hidden_prompts_hotfix.sql`
+   at once. The first, run alone (2026-10-29), broke every member's reads:
+   a row-level security policy runs with the reader's own rights, and two
+   called `site_hides_from()`, which members couldn't run. And the pages
+   then on pfml.fun read names and prompts from the table. The hotfix lets
+   members run it and gives the two columns back for now. A test now
+   checks every function a policy calls is one members can run.
+2. The user deploys `grade-guesses` from the Supabase dashboard (Edge
+   Functions, name exactly "grade-guesses") and adds the Edge Function
+   secret `ANTHROPIC_API_KEY`. The daily security check probes every Edge
+   Function in the repo as a stranger, so the code ships only once it's
+   deployed.
+3. Push the pages, which read rounds through `site_rounds_list()`.
+4. `2026-10-29_hidden_prompts_names.sql` takes names and prompts away
+   from the table again; then the rehearsal and the live test.
 
 **Checked** (2026-10-29), in a browser at 375 and desktop, light and dark
 (contrast 5.6:1 or better), against a stand-in following these rules:

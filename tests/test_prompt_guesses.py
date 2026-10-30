@@ -45,6 +45,21 @@ class TheDatabase(unittest.TestCase):
         # a column added later must be granted too, or the pages lose it
         self.assertEqual(granted, site_round_columns(self.sql) - {"name", "prompt"})
 
+    def test_a_function_a_policy_calls_is_one_members_can_run(self):
+        # a policy runs with the reader's own rights: site_hides_from was
+        # once kept from members, and every read of the tables whose policies
+        # call it failed (found 2026-10-29 by the rehearsal)
+        policies = re.findall(r"create policy[^;]*?to authenticated using \((.*?)\);\n", self.sql, re.S)
+        called = {name for p in policies for name in re.findall(r"public\.(\w+)\(", p)}
+        self.assertIn("site_hides_from", called)
+        for name in sorted(called):
+            with self.subTest(name):
+                revoked = [m.start() for m in re.finditer(rf"revoke all on function public\.{name}\([^)]*\) from [^;]*\bauthenticated;", self.sql)]
+                granted = [m.start() for m in re.finditer(rf"grant execute on function public\.{name}\([^)]*\) to [^;]*\bauthenticated;", self.sql)]
+                # whatever came last stands: never a revoke from members
+                self.assertFalse(revoked and (not granted or max(revoked) > max(granted)),
+                                 f"{name} is called by a policy but members can't run it")
+
     def test_the_list_hides_them_from_a_spectator(self):
         listed = function(self.sql, "site_rounds_list")
         self.assertIn("'name', case when h.prompt then public.site_round_public_name(r.id) else r.name end,", listed)

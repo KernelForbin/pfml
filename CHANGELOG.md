@@ -35,6 +35,17 @@
     - a commissioner's changed score redrawing it.
   - Not yet run: the SQL (its rehearsal and the live test) and a real
     grading by Claude.
+- **A hotfix the same evening:** the migration, run on its own, broke
+  every member's reads.
+  - A row-level security policy runs with the reader's rights, and two
+    called `site_hides_from()`, which members couldn't run.
+  - The live pages still read names from the table.
+  - The rehearsal's error showed it, and
+    `2026-10-29_hidden_prompts_hotfix.sql` mends both until the pages
+    ship.
+  - `2026-10-29_hidden_prompts_names.sql` finishes the job after the push.
+  - A new test checks every function a policy calls is one members can
+    run.
 
 ## 2026-10-29 (later): Spectators' podium points
 
