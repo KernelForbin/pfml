@@ -340,6 +340,20 @@ page shows it in the reader's own time. A failed run deploys nothing, so
 the page keeps its last clean time, and GitHub emails the failure to the
 account that last changed the schedule.
 
+**A false alarm, 2026-10-26 to 2026-10-29.** Every run failed on "a
+stranger could call set_submission_note: HTTP 404". The check probes each
+function `schema.sql` creates, and `schema.sql` still creates the old
+three-argument `set_submission_note` before dropping it for the
+four-argument one (Commissioner extras, the note's switch). Probing a
+function that no longer exists gets 404, which the check read as "not
+refused". Nothing was exposed: the four-argument one refused a stranger
+every time. The check now skips a function a later `drop function`
+removes, unless it's made again with the same arguments, and probes each
+one once. The privacy page's "last passed" sat at 2026-10-25 meanwhile,
+since a failed run deploys nothing. Measured 2026-10-30 with the fix:
+`tests/test_live_security_check.py` ran the whole check against the live
+project and it passed.
+
 ### Build stats
 
 The features page ends with "How it's built" (asked 2026-10-25): built with

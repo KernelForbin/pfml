@@ -119,6 +119,23 @@ class WhatTheSiteRuns(unittest.TestCase):
         self.assertNotIn("site_rounds_voting_fixed", names)
         self.assertIn("cast_ballot", names)
 
+    def test_a_dropped_function_isnt_called(self):
+        # the three-argument set_submission_note was dropped for the
+        # four-argument one, and probing it 404'd, failing every run from
+        # 2026-10-26; a function dropped and made again with the same
+        # arguments (my_submission) is still there to call
+        funcs = sc.schema_functions(SCHEMA)
+        notes = [args for name, args in funcs if name == "set_submission_note"]
+        self.assertEqual(notes, [["p_round", "p_tag", "p_note", "p_in_voting"]])
+        self.assertIn(("my_submission", ["p_round"]), funcs)
+        self.assertEqual(len(funcs), len(set((n, tuple(a)) for n, a in funcs)))
+        sql = ("create or replace function public.f(p_a uuid) returns void as $$ $$;\n"
+               "drop function if exists public.f(uuid);\n"
+               "create or replace function public.g(p_a uuid) returns void as $$ $$;\n"
+               "drop function if exists public.g(uuid);\n"
+               "create or replace function public.g(p_a uuid) returns int as $$ $$;\n")
+        self.assertEqual(sc.schema_functions(sql), [("g", ["p_a"])])
+
     def test_every_table_function_bucket_and_edge_function_is_tried(self):
         world = World()
         self.assertTrue(run(world)[0])

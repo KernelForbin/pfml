@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-10-30: the daily security check's false alarm
+
+- **Found:** every run failed since 2026-10-26 on "a stranger could call
+  set_submission_note: HTTP 404".
+  - The check probes every function `schema.sql` creates, including the
+    old three-argument `set_submission_note`, which a later migration
+    dropped for the four-argument one.
+  - A function that no longer exists answers 404, and the check took that
+    as "not refused".
+  - Nothing was exposed.
+- **Fixed:**
+  - the check skips a function a later `drop function` removes, unless
+    it's made again with the same arguments;
+  - it now probes each function once.
+- **Effect:** the privacy page's "last passed" stayed at 2026-10-25, since a
+  failed run deploys nothing. The next clean run brings it up to date.
+- **Verified:**
+  - a new test fails on the old check and passes on the new;
+  - the suite passes;
+  - `tests/test_live_security_check.py` ran the whole check against the
+    live project (every function and Edge Function, this week's included),
+    and it passed.
+
 ## 2026-10-29 (follow-up): Spectator points, hidden prompts and someone new are live
 
 - **Spectators' podium points** (d660e81): the migration and its rehearsal

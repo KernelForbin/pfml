@@ -103,13 +103,25 @@ def insert_policy_tables(sql):
 
 def schema_functions(sql):
     """(name, [argument names]) for every function schema.sql creates that
-    can be called; a trigger function can't be, through the API or at all."""
-    out = []
-    for name, args, returns in re.findall(r"create or replace function public\.(\w+)\(([^)]*)\)\s*returns\s+(\w+)", sql):
+    can be called, once each; a trigger function can't be, through the API
+    or at all. A function a later "drop function" removes, and nothing
+    creates again with the same argument types, no longer exists to call:
+    the old three-argument set_submission_note was probed after its drop
+    and came back 404, failing every run from 2026-10-26."""
+    def types(args):
+        return tuple(a.split()[1].lower() for a in args.replace("\n", " ").split(",") if a.strip())
+
+    created = {}   # (name, argument types) -> (where it's last created, argument names)
+    for m in re.finditer(r"create or replace function public\.(\w+)\(([^)]*)\)\s*returns\s+(\w+)", sql):
+        name, args, returns = m.groups()
         if returns == "trigger":
             continue
-        out.append((name, [a.split()[0] for a in args.replace("\n", " ").split(",") if a.strip()]))
-    return out
+        created[(name, types(args))] = (m.start(), [a.split()[0] for a in args.replace("\n", " ").split(",") if a.strip()])
+    dropped = {}
+    for m in re.finditer(r"drop function if exists public\.(\w+)\(([^)]*)\)", sql):
+        dropped[(m.group(1), tuple(t.strip().lower() for t in m.group(2).split(",") if t.strip()))] = m.start()
+    return [(name, names) for (name, sig), (at, names) in sorted(created.items(), key=lambda kv: kv[1][0])
+            if dropped.get((name, sig), -1) < at]
 
 
 def edge_functions():
