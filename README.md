@@ -2364,6 +2364,36 @@ rehearsal (12 checks held), `tests/test_live_season_roles.py` passed
 against the real database, and the deployed scripts and stylesheet
 matched the commit. **Not yet seen:** a real season with Spectators.
 
+### Someone new
+
+Asked for 2026-10-29: room for people who never played in Music League,
+such as someone joining only to vote. The players table held only Music
+League's competitors (`publish.py` fills it from the exports), so a
+newcomer couldn't be picked for a season, or sent an invite.
+
+- **On the Commissioner page:** both player lists (the setup's Players step
+  and a season's Players form) end with "Someone new, who hasn't played in
+  the league": a name and Add, or Enter. They join the list ticked as a
+  Spectator, the usual reason, and changeable. A season's list still needs
+  Save players.
+- **The database** (`add_player`, migration `2026-10-29_add_person.sql`):
+  the admin or a commissioner only; 1 to 60 characters, spaces tidied; no
+  two players with one name, case aside, because `invites.py` finds people
+  by name. Their id is `site` and 32 hex characters, never mistaken for a
+  Music League one. `publish.py` only adds and updates Music League's
+  players, so a newcomer stays.
+- **Their invite:** `python scripts/invites.py --player "Their Name"`, as
+  for anyone; they show among the unlinked players without anything else.
+
+**Checked** (2026-10-29) in a browser at 375, against a stand-in following
+`add_player`'s rules: typed with real keys, Enter added the person rather
+than saving the season's list; a second "dee newcomer" was refused; Save
+players then sent them as a Spectator; the setup's Players step added and
+counted one the same way. The rehearsal is
+`supabase/checks/2026-10-29_add_person_rehearsal.sql` (5 checks), and
+`tests/test_live_add_person.py` checks the function is there and wants a
+commissioner. Not on the features page: it's a commissioner's power.
+
 ### Spectators' podium points
 
 Asked for 2026-10-29, like Tastemaker: a Spectator earns points for

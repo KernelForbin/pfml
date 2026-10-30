@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-10-29 (late): someone new
+
+- **Asked for:** a way to add someone who never played in Music League, so
+  a voting-only newcomer can be a Spectator.
+- **Built:**
+  - "Someone new" on both of the Commissioner page's player lists: a name
+    and Add, ticked as a Spectator;
+  - `add_player()` (migration `2026-10-29_add_person.sql`, which the user
+    runs, then its 5-check rehearsal): commissioners only, one player per
+    name, case aside, and a `site` id;
+  - their invite comes from `invites.py`, as anyone's.
+- **Verified:**
+  - the suite passes, with one Enter-key test widened: Enter in the new
+    name field adds the person, and still never reloads the page;
+  - in a browser at 375, against a stand-in following the rules: Enter
+    added someone rather than saving; a duplicate name was refused; saving
+    sent them as a Spectator; the setup's Players step did the same.
+
 ## 2026-10-29 (evening): hidden prompts and guesses
 
 - **Asked for:** a round can hide its prompt and who wrote it from its

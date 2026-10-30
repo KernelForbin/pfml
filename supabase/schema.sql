@@ -4841,6 +4841,36 @@ grant execute on function public.prompt_guesses_claim(uuid) to service_role;
 revoke all on function public.prompt_guesses_grade(jsonb) from public, anon, authenticated;
 grant execute on function public.prompt_guesses_grade(jsonb) to service_role;
 
+-- Someone new (README, Someone new). The same as
+-- supabase/migrations/2026-10-29_add_person.sql.
+
+-- ---------------------------------------------------------------- someone new
+
+create or replace function public.add_player(p_name text)
+returns text language plpgsql security definer set search_path = public as $$
+declare
+  body text := regexp_replace(btrim(coalesce(p_name, '')), '\s+', ' ', 'g');
+  cid text;
+begin
+  if not public.is_commissioner() then
+    raise exception 'Only the admin or a commissioner can add someone.';
+  end if;
+  if char_length(body) not between 1 and 60 then
+    raise exception 'A name is 1 to 60 characters.';
+  end if;
+  -- invites.py finds a player by name, so two can't share one
+  if exists (select 1 from public.players p where lower(p.name) = lower(body)) then
+    raise exception 'There''s already a player called %.', body;
+  end if;
+  cid := 'site' || replace(gen_random_uuid()::text, '-', '');
+  insert into public.players (competitor_id, name) values (cid, body);
+  return cid;
+end;
+$$;
+
+revoke all on function public.add_player(text) from public, anon;
+grant execute on function public.add_player(text) to authenticated;
+
 -- ---------------------------------------------------------------- storage
 
 insert into storage.buckets (id, name, public)

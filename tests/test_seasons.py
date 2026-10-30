@@ -287,7 +287,11 @@ class ThePages(unittest.TestCase):
         # found in the browser 2026-10-25: Enter in a field submitted the
         # setup's form, which reloaded the page and lost everything typed
         submit = js_body(self.seasons, "function onSubmit(ev) {")
-        self.assertTrue(submit.lstrip().split("\n", 2)[2].lstrip().startswith('if (ev.target.id === "cmWizardForm") {'))
+        # Enter in "someone new" adds them (2026-10-29), and doesn't reload
+        # either; after it, the setup's own guard comes first
+        before = submit.split('if (ev.target.id === "cmWizardForm") {', 1)[0]
+        self.assertEqual(before.count("return;"), 1)
+        self.assertLess(before.index("ev.preventDefault();"), before.index("return;"))
         self.assertIn("ev.preventDefault();", submit.split('if (ev.target.id === "cmWizardForm") {', 1)[1].split("return;", 1)[0])
         self.assertIn('document.activeElement.id === "cmNew-rname") onWizardClick("w-add", null);', submit)
 

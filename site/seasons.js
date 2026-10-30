@@ -176,6 +176,16 @@
     var dj = list.filter(function (p) { return p.role === "dj"; }).length, sp = list.length - dj;
     return list.length + " playing: " + dj + (dj === 1 ? " DJ" : " DJs") + ", " + sp + (sp === 1 ? " Spectator" : " Spectators");
   }
+  // Someone who never played in Music League (README, Someone new): added
+  // by name, then ticked as a Spectator, the usual reason to add someone.
+  function addPersonHtml() {
+    return '<div class="cm-add-person"><label class="sub-label">Someone new, who hasn’t played in the league</label>' +
+      '<div class="sub-searchrow"><input class="sub-input" data-new-person maxlength="60" placeholder="Their name" aria-label="Their name">' +
+      '<button type="button" class="sub-btn sub-btn-quiet" data-act="add-person">Add</button></div>' +
+      '<p class="block-note">They’re added as a Spectator; change it if they’ll send tracks. The admin then makes their invite link.</p>' +
+      '<p class="sub-msg" role="status" hidden></p></div>';
+  }
+
   function nameOf(id) {
     var p = people.players.filter(function (x) { return x.id === id; })[0];
     return p ? p.name : "a player";
@@ -437,7 +447,7 @@
         var box = panel.querySelector("[data-players]");
         if (box && !box.querySelector("input")) {
           box.innerHTML = checklist(roster.map(function (p) { return p.id; }), roles);
-          box.insertAdjacentHTML("afterend", '<p class="block-note" data-sum="roster">' + esc(rosterLine(roster)) + "</p>");
+          box.insertAdjacentHTML("afterend", '<p class="block-note" data-sum="roster">' + esc(rosterLine(roster)) + "</p>" + addPersonHtml());
         }
         var add = panel.querySelector('[data-fill="new-round"]');
         if (add && !add.innerHTML) add.innerHTML = promptersField([]) + rolesField(roster, {});
@@ -502,7 +512,7 @@
         '<p class="block-note" id="cmNewCount">' + esc(rosterLine(wizardRoster(d))) + ". Only DJs submit, and Accelerated and Speedy wait on the ones who’ve joined the site.</p>" +
         '<div class="sub-actions"><button type="button" class="sub-btn sub-btn-quiet" data-act="w-all">Everyone</button>' +
           '<button type="button" class="sub-btn sub-btn-quiet" data-act="w-none">No one</button></div>' +
-        '<div class="cm-checks">' + checklist(d.players, d.roles) + "</div>";
+        '<div class="cm-checks">' + checklist(d.players, d.roles) + "</div>" + addPersonHtml();
     } else {
       var roster = wizardRoster(d);
       body = '<ol class="cm-new-rounds">' + d.rounds.map(function (r, i) {
@@ -675,11 +685,50 @@
 
   /* ---- events ---- */
 
+  function personMsg(el, text, good) {
+    el.textContent = text;
+    el.className = "sub-msg" + (good ? " is-good" : " is-error");
+    el.hidden = !text;
+  }
+
+  // Adds someone new to the league's players, then ticks them in the list
+  // they were added from as a Spectator. They join a season only when the
+  // season is created, or its players saved.
+  function addPerson(b) {
+    var box = b.closest(".cm-add-person"), input = box.querySelector("[data-new-person]");
+    var name = input.value.trim();
+    if (!name) { personMsg(box.querySelector(".sub-msg"), "Type their name first."); return; }
+    var inWizard = !!box.closest("#cmWizardForm"), form = box.closest("form");
+    b.disabled = true;
+    api().addPlayer(name).then(function (id) {
+      people = null;
+      return loadPeople().then(function () {
+        if (inWizard) {
+          readStep();
+          wizard.d.players.push(id);
+          wizard.d.roles[id] = "spectator";
+          drawWizard();
+          personMsg($("cmWizardForm").querySelector(".cm-add-person .sub-msg"), name + " is added, ticked as a Spectator.", true);
+          return;
+        }
+        var list = readRoster(form).concat([{ id: id, role: "spectator" }]), roles = {};
+        list.forEach(function (x) { if (x.role !== "dj") roles[x.id] = x.role; });
+        form.querySelector("[data-players]").innerHTML = checklist(list.map(function (x) { return x.id; }), roles);
+        form.querySelector('[data-sum="roster"]').textContent = rosterLine(list);
+        input.value = "";
+        personMsg(box.querySelector(".sub-msg"), name + " is added, ticked as a Spectator. Save players to put them in the season.", true);
+      });
+    }).catch(function (err) {
+      personMsg(box.querySelector(".sub-msg"), errText(err));
+    }).then(function () { b.disabled = false; });
+  }
+
   function onClick(ev) {
     var b = ev.target.closest("[data-act]");
     if (!b || b.tagName === "FORM") return;
     var act = b.getAttribute("data-act");
     if (act === "new") { say(""); startWizard(); return; }
+    if (act === "add-person") { addPerson(b); return; }
     if (act.indexOf("w-") === 0) { onWizardClick(act, b); return; }
     var li = b.closest("[data-round]");
     if (!li) return;
@@ -793,6 +842,12 @@
   }
 
   function onSubmit(ev) {
+    var typing = document.activeElement;
+    if (typing && typing.hasAttribute && typing.hasAttribute("data-new-person")) {
+      ev.preventDefault();
+      addPerson(typing.closest(".cm-add-person").querySelector('[data-act="add-person"]'));
+      return;
+    }
     // the setup's form never submits itself (Enter in a field would reload
     // the page and lose the setup); Enter in a round's name adds the round
     if (ev.target.id === "cmWizardForm") {

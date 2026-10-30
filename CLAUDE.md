@@ -379,6 +379,8 @@ verified" has to be both.
   `send-reminders` change (read-only),
   and `-p test_live_voters_lounge.py` whenever the lounge functions change
   (read-only; the full flow is `supabase/checks/2026-10-28_voters_lounge_rehearsal.sql`),
+  and `-p test_live_add_person.py` whenever `add_player` changes (writes
+  nothing; the full flow is `supabase/checks/2026-10-29_add_person_rehearsal.sql`),
   and `-p test_live_hidden_prompts.py` whenever the hidden-prompt functions or
   `grade-guesses` change (read-only, never calls Claude; the full flow is
   `supabase/checks/2026-10-29_hidden_prompts_rehearsal.sql`),

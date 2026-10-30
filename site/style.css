@@ -1898,6 +1898,9 @@ button.cm-person { cursor: pointer; }
 .pod-list b { font: 800 1.05rem/1 "Archivo", sans-serif; color: var(--ink); }
 .pod-list li > small { color: var(--muted); font-size: 0.8rem; margin-left: -6px; }
 .pod-rank { flex: none; min-width: 28px; text-align: center; font: 800 0.9rem/1 "Archivo", sans-serif; color: var(--muted); }
+/* someone new, on the Commissioner page's player lists (seasons.js) */
+.cm-add-person { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border-soft); }
+.cm-add-person .block-note { margin: 6px 0 0; }
 /* hidden prompts and guesses (guess.js; the points list in account.js) */
 .rp-hidden { color: var(--muted); font-style: italic; }
 .gs h2 { margin: 0 0 4px; }

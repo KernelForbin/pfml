@@ -635,6 +635,11 @@
             .sort(function (a, b) { return a.name.localeCompare(b.name); });
         });
     },
+    // Someone who never played in Music League, by name (the admin or a
+    // commissioner; README, Someone new). Resolves to their new player id.
+    addPlayer: function (name) {
+      return client.rpc("add_player", { p_name: name }).then(must);
+    },
     // Every player the league has had, joined the site or not.
     allPlayers: function () {
       return client.from("players").select("competitor_id, name").then(must);
