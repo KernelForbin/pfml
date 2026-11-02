@@ -646,12 +646,10 @@ button.trend-chip.is-on .dot { opacity: 1; }
 
 /* ---------- a round prompt page (round-9-prompt) ---------- */
 
-.story-kicker {
-  margin: 0 0 10px; color: var(--magenta-text); font-size: 0.8rem; font-weight: 600;
-  letter-spacing: 0.08em; text-transform: uppercase;
-}
-.story { padding-top: 30px; }
+.story { padding-top: 34px; }
+.story h2 { margin: 0; font-size: clamp(1.7rem, 5vw, 2.2rem); font-weight: 700; letter-spacing: -0.025em; }
 .story p { max-width: 62ch; margin: 0 0 1.05em; font-size: 1.06rem; line-height: 1.75; }
+.story p.story-by { margin: 6px 0 26px; color: var(--muted); font-size: 0.98rem; line-height: 1.5; }
 
 /* ---------- footer ---------- */
 
