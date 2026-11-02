@@ -193,7 +193,7 @@ class TheSwitch(unittest.TestCase):
         self.assertIn('if (!on(r) || PFML.roundPhase(r) !== "finished") { host.hidden = true; host.innerHTML = ""; return; }',
                       js_body(voting, "function render(r, host) {"))
         self.assertIn('var voting = !!(window.PFMLVoting && window.PFMLVoting.on(r) && phase === "voting");',
-                      js_body(read(SITE / "listen.js"), "function render(host, r) {"))
+                      js_body(read(SITE / "listen.js"), "function render(host, r, opts) {"))
         self.assertIn("if (!PFML.siteVoting || !r || !r.votes_on_site) return \"\";", js_body(voting, "function adminFields(r) {"))
         self.assertIn("if (!on(r) || PFML.roundPhase(r) !== \"voting\") return null;", js_body(voting, "function adminPanel(r, done, fail) {"))
         banner = js_body(read(SITE / "app.js"), "function votingBanner(rounds) {")
@@ -240,7 +240,7 @@ class ThePage(unittest.TestCase):
         self.assertNotIn("a.tag < b.tag", voting)
         # the ballot is the listening list itself, so it has the list's order
         self.assertIn("window.PFMLVoting.ballot(r, rows, { head: $(\"lnVoteHead\"), list: $(\"lnTracks\"), bar: $(\"lnVoteBar\"),",
-                      js_body(read(SITE / "listen.js"), "function render(host, r) {"))
+                      js_body(read(SITE / "listen.js"), "function render(host, r, opts) {"))
 
     def test_submit_js_works_without_it(self):
         fallback = js_body(read(SITE / "submit.js"), "function voting() {")

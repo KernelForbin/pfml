@@ -26,7 +26,7 @@ class WhichRound(unittest.TestCase):
     def test_a_stats_page_finds_its_site_round_in_its_own_season(self):
         init = js_body(APP, "function initRound() {")
         self.assertIn("return x.season_key === key && window.PFMLListen.statsIndex(d.rounds, x) === i;", init)
-        self.assertIn('if (site && $("rpListen")) window.PFMLListen.render($("rpListen"), site);', init)
+        self.assertIn('if (site && $("rpListen")) window.PFMLListen.render($("rpListen"), site, { fold: true });', init)
 
     def test_a_site_link_shows_the_stats_once_the_round_is_in_them(self):
         init = js_body(APP, "function initRound() {")
@@ -48,12 +48,12 @@ class WhichRound(unittest.TestCase):
 
 class TheSection(unittest.TestCase):
     def test_nothing_is_asked_for_before_submissions_close(self):
-        render = js_body(LISTEN, "function render(host, r) {")
+        render = js_body(LISTEN, "function render(host, r, opts) {")
         self.assertLess(render.index('if (phase === "upcoming" || phase === "submitting") {'),
                         render.index("PFML.api.roundSubmissions(r.id)"))
 
     def test_the_app_note_names_the_apps_there_are_and_promises_nothing_locked(self):
-        render = js_body(LISTEN, "function render(host, r) {")
+        render = js_body(LISTEN, "function render(host, r, opts) {")
         self.assertIn('var apps = r.spotify_playlist && r.youtube_playlist ? "the Spotify or YouTube app"\n'
                       '      : r.youtube_playlist ? "the YouTube app" : "the Spotify app";', render)
         self.assertIn("<b>Prefer an app?</b> The whole round as a playlist in ' +\n          apps +", render)
@@ -63,7 +63,7 @@ class TheSection(unittest.TestCase):
     def test_playing_here_comes_first_and_the_apps_after_the_list(self):
         # the user's call, 2026-10-26: the app buttons at the top read as the
         # way to listen, and people left the page for YouTube
-        render = js_body(LISTEN, "function render(host, r) {")
+        render = js_body(LISTEN, "function render(host, r, opts) {")
         order = [render.index(s) for s in ('<p class="ln-lead">Play the round here: tap any track below',
                                             '<div class="rp" id="lnPlayer"></div>', 'id="lnTracks"', "playlistButtons(r)")]
         self.assertEqual(order, sorted(order))
@@ -91,8 +91,10 @@ class TrackDetails(unittest.TestCase):
         self.assertIn('return h ? h + ":" + pad(m) + ":" + pad(s) : m + ":" + pad(s);', js_body(LISTEN, "function lengthText(seconds) {"))
 
     def test_the_round_s_total_length_is_at_the_top(self):
-        render = js_body(LISTEN, "function render(host, r) {")
-        self.assertLess(render.index('<p class="ln-total" id="lnTotal" hidden></p>'), render.index('<p class="ln-lead">'))
+        render = js_body(LISTEN, "function render(host, r, opts) {")
+        # open, it heads the section; folded, it's in the bar
+        self.assertIn(": (voting ? \"<h2>Listen and vote</h2>\" : \"<h2>Listen</h2>\") + '<p class=\"ln-total\" id=\"lnTotal\" hidden></p>' + body;", render)
+        self.assertIn("'<span class=\"fold-sub\"><span class=\"fold-count\" id=\"lnTotal\" hidden></span>", render)
         self.assertIn('$("lnTotal").textContent = totalText(rows);', render)
         total = js_body(LISTEN, "function totalText(rows) {")
         for line in ("var known = rows.filter(function (s) { return s.seconds > 0; });",
@@ -111,6 +113,25 @@ class TrackDetails(unittest.TestCase):
         for col in ("seconds integer\n  check (seconds between 1 and 86400)", "album text\n  check (char_length(album) <= 300)",
                     "year smallint\n  check (year between 1000 and 2100)"):
             self.assertIn(col, mig)
+
+
+class Folded(unittest.TestCase):
+    """Asked 2026-11-01: on Round 7's page the listening pushed the results
+    down; with the results on the page it starts folded."""
+
+    def test_it_folds_with_the_results_and_never_with_a_ballot(self):
+        render = js_body(LISTEN, "function render(host, r, opts) {")
+        self.assertIn("var fold = !!(opts && opts.fold) && !voting;", render)
+        self.assertIn("host.innerHTML = fold\n      ? '<details class=\"fold ln-fold\"><summary class=\"fold-bar\">", render)
+        # closed: a <details> with no "open"
+        self.assertNotIn("<details class=\"fold ln-fold\" open", render)
+        self.assertIn("'</summary><div class=\"ln-fold-body\">' + body + \"</div></details>\"", render)
+
+    def test_the_stats_page_folds_it_and_the_site_page_only_once_in_the_stats(self):
+        init = js_body(APP, "function initRound() {")
+        self.assertIn('window.PFMLListen.render($("rpListen"), site, { fold: i >= 0 });', init)
+        self.assertIn('window.PFMLListen.render($("rpListen"), site, { fold: true });', init)
+        self.assertEqual(init.count("window.PFMLListen.render("), 2)
 
 
 class HomeBanner(unittest.TestCase):

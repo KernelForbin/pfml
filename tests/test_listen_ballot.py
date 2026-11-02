@@ -22,7 +22,7 @@ VOTING = read(SITE / "voting.js")
 
 class TheList(unittest.TestCase):
     def test_a_round_voting_here_gets_its_ballot_in_the_list(self):
-        render = js_body(LISTEN, "function render(host, r) {")
+        render = js_body(LISTEN, "function render(host, r, opts) {")
         self.assertIn('var voting = !!(window.PFMLVoting && window.PFMLVoting.on(r) && phase === "voting");', render)
         # the plain list first, then redrawn with the ballot once it loads
         order = [render.index(s) for s in ("drawTracks(list);\n      if (!voting) return;",
@@ -48,7 +48,7 @@ class TheList(unittest.TestCase):
         # the play button has no data-act, the ballot's buttons have one
         self.assertIn('var b = ev.target.closest("button[data-act]");', js_body(VOTING, "function onBallotClick(ev) {"))
         self.assertNotIn("data-act", js_body(LISTEN, "function drawTracks(list) {"))
-        self.assertIn('var b = ev.target.closest(".sub-track-btn");', js_body(LISTEN, "function render(host, r) {"))
+        self.assertIn('var b = ev.target.closest(".sub-track-btn");', js_body(LISTEN, "function render(host, r, opts) {"))
 
 
 class TheBallot(unittest.TestCase):
@@ -74,7 +74,7 @@ class TheBallot(unittest.TestCase):
         comment = js_body(VOTING, "function commentHtml(s) {")
         self.assertIn('esc(state.comments[s.id] || "") + "</textarea></div>";', comment)
         # and listen.js redraws it when another device's draft comes in
-        self.assertIn("redraw: function () { drawTracks(list); }", js_body(LISTEN, "function render(host, r) {"))
+        self.assertIn("redraw: function () { drawTracks(list); }", js_body(LISTEN, "function render(host, r, opts) {"))
 
     def test_the_comment_box_is_open_from_the_start(self):
         # the user's call, 2026-10-27: no "Add a comment" to press first
@@ -105,7 +105,7 @@ class TheResults(unittest.TestCase):
     def test_under_the_list_once_voting_closes_until_the_stats_have_it(self):
         init = js_body(read(SITE / "app.js"), "function initRound() {")
         self.assertIn('if (i < 0 && window.PFMLVoting && $("rpVote")) window.PFMLVoting.render(site, $("rpVote"));', init)
-        self.assertLess(init.index('window.PFMLListen.render($("rpListen"), site);'), init.index("window.PFMLVoting.render("))
+        self.assertLess(init.index('window.PFMLListen.render($("rpListen"), site, { fold: i >= 0 });'), init.index("window.PFMLVoting.render("))
         page = js_body(read(SITE / "rounds.js"), "function renderSiteRoundPage(r, label) {")
         self.assertLess(page.index('id="rpListen"'), page.index("'<section class=\"shell block\" id=\"rpVote\" hidden></section>'"))
 

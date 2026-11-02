@@ -91,8 +91,11 @@
     return missing.length ? '<span class="sub-gap">Not on ' + missing.join(" or ") + "</span>" : "";
   }
 
-  // Draws the listening section into `host` for the site round `r`.
-  function render(host, r) {
+  // Draws the listening section into `host` for the site round `r`. With
+  // `opts.fold` (the round's results are on the page too), it starts folded
+  // under a bar with the round's length, so the results come sooner (asked
+  // 2026-11-01). Never while it holds a ballot.
+  function render(host, r, opts) {
     var phase = PFML.roundPhase(r);
     if (phase === "upcoming" || phase === "submitting") {
       host.innerHTML = "<h2>Listen</h2>" +
@@ -110,8 +113,8 @@
     // While a round voting here is open, the ballot is in this list too
     // (voting.js ballot): points and a comment in each track's row
     var voting = !!(window.PFMLVoting && window.PFMLVoting.on(r) && phase === "voting");
-    host.innerHTML = (voting ? "<h2>Listen and vote</h2>" : "<h2>Listen</h2>") +
-      '<p class="ln-total" id="lnTotal" hidden></p>' +
+    var fold = !!(opts && opts.fold) && !voting;
+    var body =
       '<p class="ln-lead">Play the round here: tap any track below and it plays on from there.</p>' +
       '<div class="rp" id="lnPlayer"></div>' +
       (voting ? '<div class="ln-vote-head" id="lnVoteHead"></div>' : "") +
@@ -127,6 +130,14 @@
           apps + ", in the same order as the list.</p>" +
           '<div class="sub-actions">' + playlistButtons(r) + "</div></div>"
         : "");
+    // folded, the length goes in the bar (lnTotal either way)
+    host.innerHTML = fold
+      ? '<details class="fold ln-fold"><summary class="fold-bar"><span class="fold-text"><h2 class="fold-title">Listen</h2>' +
+          '<span class="fold-sub"><span class="fold-count" id="lnTotal" hidden></span><span>The round player, every track' +
+          (built ? " and the playlists" : "") + "</span></span></span>" +
+          '<span class="fold-cta" aria-hidden="true"><span class="fold-cta-show">Show</span><span class="fold-cta-hide">Hide</span></span>' +
+        '</summary><div class="ln-fold-body">' + body + "</div></details>"
+      : (voting ? "<h2>Listen and vote</h2>" : "<h2>Listen</h2>") + '<p class="ln-total" id="lnTotal" hidden></p>' + body;
     host.hidden = false;
     PFML.api.roundSubmissions(r.id).then(function (rows) {
       // the round's one shuffle, the same for everyone from the close, and

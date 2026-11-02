@@ -1589,6 +1589,17 @@ good (`site/listen.js`, drawn into the round page's `rpListen` section):
   came first until 2026-10-26, when the user saw their buttons read as the
   way to listen and send people off the site. The note no longer promises
   anything about a locked phone (the user's call).
+- **Folded under the results** (asked 2026-11-01). On Round 7's stats
+  page, the player and the 19-track list came before the results and
+  pushed them a long way down. Now, wherever the round's results are on
+  the same page, the section starts folded (`opts.fold` in `render`).
+  - **What shows when folded:** a bar like Results by round's, with "Listen", the
+    round's length, and Show / Hide.
+  - **When it stays open:** a round still voting, since the ballot is in the
+    list, and a `round?site=` page before the round is in the stats.
+  - **The player when folded:** a phone's ready-made YouTube player is already
+    hidden until something plays ("Measured on an iPhone", below), so folding
+    changes nothing for it.
 - **Before submissions close** it says the tracks show once they close,
   and asks the database for nothing.
 - **The Submit page** shows "Listen to this round", linking to

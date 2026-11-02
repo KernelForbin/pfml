@@ -47,7 +47,7 @@ class Wiring(unittest.TestCase):
 
     def test_the_list_starts_the_round_player_instead_of_its_own_embeds(self):
         js = read("listen.js")
-        listing = js.split("function render(host, r) {", 1)[1].split("\n  }\n", 1)[0]
+        listing = js.split("function render(host, r, opts) {", 1)[1].split("\n  }\n", 1)[0]
         self.assertIn("player.playAt(", listing)
         self.assertNotIn("embedHtml(", listing)
 

@@ -2565,7 +2565,8 @@
           var i = d ? window.PFMLListen.statsIndex(d.rounds, site) : -1;
           if (i >= 0) window.PFMLRounds.renderRoundPage(d, d.rounds[i].id);
           else window.PFMLRounds.renderSiteRoundPage(site, listed ? listed.label : "Season " + String(site.season_key).replace(/^season/, ""));
-          window.PFMLListen.render($("rpListen"), site);
+          // folded once the results are on the page with it
+          window.PFMLListen.render($("rpListen"), site, { fold: i >= 0 });
           // A round voting here votes in its listening list (listen.js); once
           // its voting has closed, the results go under it until the round
           // is in the stats (voting.js render)
@@ -2588,7 +2589,7 @@
         var site = i >= 0 && (res[2] || []).filter(function (x) {
           return x.season_key === key && window.PFMLListen.statsIndex(d.rounds, x) === i;
         })[0];
-        if (site && $("rpListen")) window.PFMLListen.render($("rpListen"), site);
+        if (site && $("rpListen")) window.PFMLListen.render($("rpListen"), site, { fold: true });
         // a round voted here keeps its lounge under its results in the stats
         if (site && site.votes_on_site && window.PFMLLounge && $("rpLounge")) window.PFMLLounge.render($("rpLounge"), site);
         if (site) showPrompter(site);

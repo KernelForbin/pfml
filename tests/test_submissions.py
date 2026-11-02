@@ -289,7 +289,7 @@ class RoundOrder(unittest.TestCase):
         return js.split(signature, 1)[1].split("\n  }\n", 1)[0]
 
     def test_everyone_starts_from_the_rounds_one_shuffle(self):
-        render = self.body(self.listen, "function render(host, r) {")
+        render = self.body(self.listen, "function render(host, r, opts) {")
         self.assertIn("rows = PFML.roundOrder(r.id, rows || []);", render)
         self.assertIn("var list = { original: rows, order: rows, player: null, built: built, ballot: null };", render)
         # the old tag order is gone, and nothing else sorts the list
@@ -310,7 +310,7 @@ class RoundOrder(unittest.TestCase):
             self.assertNotRegex(self.body(self.listen, name), r"api\b|localStorage|sessionStorage")
 
     def test_original_order_puts_back_what_everyone_first_saw(self):
-        render = self.body(self.listen, "function render(host, r) {")
+        render = self.body(self.listen, "function render(host, r, opts) {")
         self.assertIn('$("lnOriginal").onclick = function () { reorder(list, list.original); };', render)
         self.assertIn("list.player.setOrder(order);", self.body(self.listen, "function reorder(list, order) {"))
         self.assertIn('$("lnOriginal").hidden = !mixed;', self.body(self.listen, "function drawTracks(list) {"))

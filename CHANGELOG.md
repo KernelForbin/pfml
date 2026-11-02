@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-01: a round's listening folds under its results
+
+- **Asked:** on Round 7's page the player and the track list came first,
+  and the results were a long scroll down.
+- **Changed:**
+  - wherever a round's results are on its page, its listening section
+    starts folded, with "Listen", the round's length, and Show / Hide;
+  - a round still voting, or not yet in the stats, keeps it open.
+- **Verified:** new tests pin when it folds, and five breaks each fail
+  them; the suite passes; checked on the live site after the deploy.
+
 ## 2026-11-01: Home's banner lets a round go once its results are in
 
 - **Asked:** Round 7 (L4LM) still filled the banner at the top of Home
