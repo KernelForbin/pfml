@@ -644,6 +644,15 @@ button.trend-chip.is-on .dot { opacity: 1; }
   .cmt-table-box > .crow, .voters-box > .vrow { padding-left: 12px; padding-right: 12px; }
 }
 
+/* ---------- a round prompt page (round-9-prompt) ---------- */
+
+.story-kicker {
+  margin: 0 0 10px; color: var(--magenta-text); font-size: 0.8rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+.story { padding-top: 30px; }
+.story p { max-width: 62ch; margin: 0 0 1.05em; font-size: 1.06rem; line-height: 1.75; }
+
 /* ---------- footer ---------- */
 
 .site-footer {

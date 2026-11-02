@@ -2622,9 +2622,9 @@
       initRound();
     } else if (page === "profile") {
       initProfile();
-    } else if (page === "submit" || page === "repeats" || page === "commissioner") {
-      // the page itself is submit.js's, repeats.js's or commissioner.js's;
-      // this only fills the header
+    } else if (page === "submit" || page === "repeats" || page === "commissioner" || page === "prompt") {
+      // the page itself is submit.js's, repeats.js's or commissioner.js's,
+      // or plain text (a round prompt page); this only fills the header
       PFML.loadJSON("index.json")
         .then(function (index) { renderNav(index, page); })
         .catch(function (err) { console.error(err); });

@@ -1057,6 +1057,26 @@ and focus chips, trend legend) and cards that are links themselves. If `profiles
 been published yet, the page shows what `career.json` has and hides the
 rest.
 
+## Round prompt pages (/round-9-prompt)
+
+A round whose prompt is longer than Music League's description box gets a
+page of its own, linked from the round in Music League. Round 9's is a
+short story, Jean Rhys's "Mixing Cocktails" (1927), at
+pfml.fun/round-9-prompt.
+
+- **Members only**, like every page with league content: the usual sign-in
+  shell (`auth.js`, `account.js`, `app.js`, which only fills the header,
+  `data-page="prompt"`). It reads no data.
+- **The story's text is copied, not retyped**: it was filled in from the
+  user's upload by a script, one `<p>` per paragraph, with the upload's
+  italics as `<i>`/`<em>`. A test checks the whole story is there.
+- **Copyright:** published in 1927, so public domain in the US since 2023.
+  Rhys died in 1979, so it is still in copyright in the UK and the EU
+  until the end of 2049. The repo is public, so the text is too, whatever
+  the sign-in.
+- **Not on the features page**, on purpose: it's one round's prompt, not a
+  feature.
+
 ## Repeat checker (/repeats)
 
 Has an artist, song or album been submitted before? Members type into one

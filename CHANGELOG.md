@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-02: Round 9's prompt, /round-9-prompt
+
+- **Asked:** a page for Round 9's prompt, Jean Rhys's short story "Mixing
+  Cocktails" (1927), at /round-9-prompt.
+- **Changed:**
+  - a new members-only page with the whole story, copied from the user's
+    upload by a script rather than retyped;
+  - `app.js` fills its header, as for the Submit and Repeat checker pages.
+  - It isn't on the features page, on purpose: it's a prompt.
+- **Verified:** new tests check the whole story is there and the page
+  loads only the sign-in shell. Breaks in a scratch clone each fail them,
+  and the suite passes. Checked in a browser at 375px and desktop, in
+  light and dark.
+
 ## 2026-11-01: a round's listening folds under its results
 
 - **Asked:** on Round 7's page the player and the track list came first,

@@ -18,7 +18,7 @@ SITE = ROOT / "site"
 SUPABASE_JS_URL = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js"
 SUPABASE_JS_INTEGRITY = "sha384-iLddHTLokph6Omwoyid4XKxHaWa6w41BnoEj0q5oOrzmYPpHIKt1wyjReA7s//pP"
 MEMBER_PAGES = ["index.html", "career.html", "round.html", "season.template.html", "profile.html", "submit.html", "repeats.html",
-                "commissioner.html"]
+                "commissioner.html", "round-9-prompt.html"]
 FONT_HOSTS = {"fonts.googleapis.com", "fonts.gstatic.com"}
 
 
@@ -214,6 +214,30 @@ class Linking(unittest.TestCase):
         # GitHub Pages serves /features from features.html; keep the target real.
         for target in ("features", "privacy"):
             self.assertTrue((SITE / f"{target}.html").exists(), target)
+
+
+class RoundPromptPage(unittest.TestCase):
+    """Asked 2026-11-02: Round 9's prompt is a short story, on its own page at
+    pfml.fun/round-9-prompt, members-only (it's in MEMBER_PAGES, so the
+    sign-in checks above cover it). README, Round prompt pages."""
+
+    def setUp(self):
+        self.page = read("round-9-prompt.html")
+
+    def test_it_holds_the_whole_story(self):
+        story = self.page.split('<article class="shell story">', 1)[1].split("</article>", 1)[0]
+        paras = re.findall(r"<p>(.*?)</p>", story)
+        self.assertEqual(len(paras), 24)
+        self.assertTrue(paras[0].startswith("THE HOUSE in the hills was very new and very ugly"))
+        self.assertTrue(paras[-1].endswith("Action, they say, is more worthy than dreaming…"))
+        self.assertNotIn("*", story)   # the upload's markdown italics, all turned into tags
+
+    def test_it_loads_the_member_shell_and_no_page_code(self):
+        srcs = [a.get("src") for a in Page(self.page).find("script") if a.get("src")]
+        self.assertEqual(srcs, [SUPABASE_JS_URL, "config.js", "auth.js", "account.js", "app.js"])
+        self.assertIn('<body class="gated" data-page="prompt">', self.page)
+        # app.js fills its header, as for the other pages that bring their own content
+        self.assertIn('page === "commissioner" || page === "prompt") {', js_function(read("app.js"), "function boot()"))
 
 
 class GeneratedPages(unittest.TestCase):
