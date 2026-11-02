@@ -128,8 +128,25 @@ class HomeBanner(unittest.TestCase):
         listen = js_body(APP, "function listenBanner(rounds) {")
         self.assertIn('return p === "closed" || p === "finished";', listen)
         self.assertIn("Date.parse(b.closed_at || b.closes_at) - Date.parse(a.closed_at || a.closes_at)", listen)
-        self.assertIn("'<a class=\"sub-banner-link\" href=\"round?site=' + encodeURIComponent(done.id) + '\">'", listen)
-        self.assertIn('(built ? "Playlist ready" : "Submissions closed")', listen)
+        show = js_body(APP, "function showListenBanner(done) {")
+        self.assertIn("'<a class=\"sub-banner-link\" href=\"round?site=' + encodeURIComponent(done.id) + '\">'", show)
+        self.assertIn('(built ? "Playlist ready" : "Submissions closed")', show)
+
+    def test_it_goes_once_the_round_is_in_the_stats(self):
+        """Asked 2026-11-01: Round 7 stayed on Home after its results were
+        published, with Round 8 back in the Music League app."""
+        listen = js_body(APP, "function listenBanner(rounds) {")
+        self.assertIn('PFML.loadJSON("lookup.json").then(function (lookup) {', listen)
+        self.assertIn("if (!inStats(done, lookup)) showListenBanner(done);", listen)
+        self.assertNotIn("innerHTML", listen)
+        fn = js_body(APP, "function inStats(r, lookup) {")
+        # the same match as statsIndex: the same id first, then "Round N"
+        # of its season for a round voted in Music League
+        self.assertLess(fn.index("if (rounds[r.id]) return true;"), fn.index("/^Round (\\d+)\\b/"))
+        self.assertIn("var m = !r.votes_on_site && /^Round (\\d+)\\b/.exec(r.name || \"\");", fn)
+        self.assertIn("return !!m && Object.keys(rounds).some(function (id) {", fn)
+        self.assertIn("return rounds[id].season === r.season_key && rounds[id].number === +m[1];", fn)
+        # lookup.json's season and number: test_build.Lookup
 
 
 class TheSubmitPage(unittest.TestCase):

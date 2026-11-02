@@ -1608,6 +1608,16 @@ way to its listening page was the Submit page.
   round that has closed (`listenBanner` in `app.js`), until the next round
   opens. It says "Submissions closed", or "Playlist ready" once the
   playlists are built, and links to `round?site=<id>`.
+- **Until its results are in** (asked 2026-11-01). Round 7 took its
+  tracks on the site, but voted in Music League, and Round 8 went back to
+  the Music League app altogether. So Round 7 stayed on Home after its
+  results were published, with no site round coming to replace it. Now the
+  banner goes once the round is in the stats.
+  - **How it tells** (`inStats`): the same match as `PFMLListen.statsIndex`,
+    the same id first, then "Round N" of its season for a round voted in
+    Music League.
+  - **What it reads:** `lookup.json`, which every page loads anyway for the
+    inbox. The ~1MB season file would be too much for a banner.
 - **What wins the spot:** an open round first, then a round voting on the
   site, then this.
 - **Checked in a browser** in each state, at 375 too.

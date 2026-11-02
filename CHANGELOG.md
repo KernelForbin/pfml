@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-01: Home's banner lets a round go once its results are in
+
+- **Asked:** Round 7 (L4LM) still filled the banner at the top of Home
+  after its results were published. Round 8 is back in the Music League
+  app, so no site round was coming to replace it.
+- **Changed:**
+  - the banner for the latest closed round now goes once that round is in
+    the stats;
+  - it tells by `lookup.json`, with the same match the round page uses
+    (`statsIndex`);
+  - the features page says "until its results are in or the next round
+    opens".
+- **Verified:** a new test pins the check; the suite passes; checked in a
+  browser.
+
 ## 2026-10-30: the daily security check's false alarm
 
 - **Found:** every run failed since 2026-10-26 on "a stranger could call

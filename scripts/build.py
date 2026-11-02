@@ -1951,7 +1951,9 @@ def build_lookup(season_datas):
     """Round id -> where it lives and what's in it, for the header's inbox:
     an inbox item only has a comment id ("<round>|<spotify uri>|<voter>"),
     and the season files are ~1MB each, too much to fetch just to name the
-    round and track a reaction was on. This is a few tens of KB."""
+    round and track a reaction was on. This is a few tens of KB. Home's
+    banner reads it too, to tell when a closed site round's results are in
+    (inStats in app.js)."""
     rounds = {}
     for d in season_datas:
         for n, r in enumerate(d["rounds"], 1):

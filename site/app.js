@@ -404,10 +404,31 @@
   // The latest round that has closed, until the next one opens: straight
   // to its listening page (listen.js), so a closed round isn't left with
   // nothing on Home (asked 2026-10-26). Says when its playlist is ready.
+  // Once its results are in the stats it's over, and the banner goes
+  // (asked 2026-11-01, when Round 8 went back to the Music League app).
   function listenBanner(rounds) {
     var done = rounds.filter(function (r) { var p = PFML.roundPhase(r); return p === "closed" || p === "finished"; })
       .sort(function (a, b) { return Date.parse(b.closed_at || b.closes_at) - Date.parse(a.closed_at || a.closes_at); })[0];
     if (!done) return;
+    PFML.loadJSON("lookup.json").then(function (lookup) {
+      if (!inStats(done, lookup)) showListenBanner(done);
+    }).catch(function (err) { console.error(err); });
+  }
+
+  // Whether a site round's results are in the stats: the same match as
+  // PFMLListen.statsIndex, on lookup.json (every round, keyed by id), which
+  // every page loads anyway. A round voted here keeps its id; one voted in
+  // Music League is "Round N" of its season.
+  function inStats(r, lookup) {
+    var rounds = (lookup && lookup.rounds) || {};
+    if (rounds[r.id]) return true;
+    var m = !r.votes_on_site && /^Round (\d+)\b/.exec(r.name || "");
+    return !!m && Object.keys(rounds).some(function (id) {
+      return rounds[id].season === r.season_key && rounds[id].number === +m[1];
+    });
+  }
+
+  function showListenBanner(done) {
     var built = !!(done.spotify_playlist || done.youtube_playlist);
     var box = $("submitBanner");
     box.innerHTML = '<a class="sub-banner-link" href="round?site=' + encodeURIComponent(done.id) + '">' +
