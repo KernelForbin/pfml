@@ -1260,6 +1260,12 @@ body.auth-checking::before {
   background: var(--card); border: 1px solid var(--border); border-radius: var(--r);
   box-shadow: var(--shadow-md); overflow: hidden; overflow: clip;
 }
+/* ...except while a reaction picker is open in it: on the card's last
+   comment the picker hangs past the card's bottom, and the clip cut it off
+   (reported 2026-11-02). Nothing in the card reaches its rounded corners,
+   so they don't change; the pinned bar can overhang the card's end, but
+   only while the picker is open. */
+.rp-track:has(.cm-picker) { overflow: visible; }
 .rp-track-main { display: grid; grid-template-columns: 132px 1fr auto; gap: 18px; align-items: center; padding: 16px; }
 .rp-art { width: 132px; height: 132px; border-radius: 12px; object-fit: cover; display: block; box-shadow: var(--shadow-sm); }
 .rp-track-info { min-width: 0; }

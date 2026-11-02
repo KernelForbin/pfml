@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-11-02: the reaction picker on a track's last comment
+
+- **Reported:** reacting to the bottom comment on a track, the emoji
+  picker was cut off.
+- **Cause:** the track card's `overflow: clip` (it keeps the pinned song
+  bar inside the card) also clipped the picker, which opens below the
+  button and so hangs past the card's bottom on its last comment: 42px of
+  the quick row, 355px of More on a desktop. A tap on the hidden part hit
+  the next track.
+- **Changed:** the card drops its clip while a picker is open in it
+  (README, Results by round, and the comments on them). The README's
+  filters section moves to the end of that section; it had been dropped
+  into the middle, leaving the pinned bar and comments under its heading.
+- **Verified:** a new test, which fails with the rule removed in a scratch
+  clone; the suite passes. In a browser with a sign-in stub over Round 7's
+  real data, at 375px and desktop widths, light and dark: before, a point
+  inside the picker's bottom edge hit the next card; after, it hits the
+  picker, for the quick row and More, and the card clips again once the
+  picker closes.
+
 ## 2026-11-02: filter a round's results by submitter and commenter
 
 - **Asked:** on the round results pages, two multi-select filters with

@@ -433,48 +433,6 @@ it and their note, and every vote cast on it (voter and points, biggest
 first) with the comment that came with it in full. Rows that gave no points
 are the comment-only votes, listed last.
 
-### Filtering a round's results
-
-Asked 2026-11-02. Above a round's tracks, two filters, pill buttons that
-each open a checklist of names (`filtersFor` and `applyFilters` in
-`rounds.js`):
-
-- **Track submitted by:** everyone who sent a track to this round, with
-  how many they sent. It keeps only the tracks of the people ticked.
-- **Comments by:** everyone who commented in this round, with how many
-  comments. It keeps only the comments of the people ticked; points-only
-  votes and other people's comments go, and so does any track left with
-  none of their comments.
-- **They combine:** both on at once means those people's tracks, showing
-  only those people's comments.
-- **Every name starts ticked**, and every name ticked means no filter, so
-  a round opens whole. Each list has Select all and Clear all; with no
-  name ticked, nothing shows, and the page says so.
-- **What's showing:** a line under the buttons says how much shows, for
-  example "Showing 2 of 19 tracks, 2 comments", with a Show everything
-  button. It's empty when nothing is filtered.
-- **Not remembered:** filters last only while the page is open; another
-  round starts whole.
-- **One list open at a time:** a click outside a list or Escape closes it,
-  and Escape returns focus to its button.
-- **Hidden by a class,** `.is-filtered`, never the `hidden` attribute,
-  which `.rp-track`'s own display would beat.
-- **Reapplied after every redraw:** the member layer's arrival, a vote or
-  a reaction on a comment.
-- **Scope:** Music League rounds and finished site rounds, once they're
-  in the stats. A site round's results before then (`voting.js`) have no
-  filters.
-
-Checked 2026-11-02 in a browser, with a sign-in stub over a scratch copy
-of the site and Round 7's real data, using real clicks:
-
-- each filter alone, the two combined, and Select all, Clear all and Show
-  everything;
-- the counts in the lists add up to the round's tracks and comments;
-- at 375px the buttons stack full width and an open list fits the screen
-  with no sideways scroll;
-- in light and dark, every new text pair is at least 5.3:1.
-
 **Album art** comes from Spotify's public oEmbed endpoint (no key or
 account). `publish.py` looks up art only for tracks it hasn't seen before
 and caches the image URLs in `data/track_art.json` (git-ignored), so
@@ -517,7 +475,13 @@ current alongside the scroll padding. Two things it depends on: the card
 uses `overflow: clip`, since `overflow: hidden` makes the card a scroll
 container and nothing inside it can stick (Safari before 16 lacks clip, so
 there the bar just never appears); and the bar takes no taps and is hidden
-from screen readers, because it only repeats the header.
+from screen readers, because it only repeats the header. The clip lifts
+(`.rp-track:has(.cm-picker)`) while a reaction picker is open in the card:
+on the last comment the picker hangs past the card's bottom, 42px for the
+quick row and 355px for More on a desktop, and the clip cut it off, so a
+tap there hit the next track (reported 2026-11-02, measured on Round 7).
+Nothing in the card paints its rounded corners, so they look the same
+either way. While it's lifted, the pinned bar can hang past the card's end.
 
 Each voter's name and points row sits on a faint magenta gradient running
 the card's full width, so voters read as separate blocks.
@@ -559,6 +523,48 @@ page counts reactions by name, so those counters are made with
 a reaction found `Object`'s own property, threw, and blanked votes,
 reactions and replies on the round for everyone. Found in the 2026-10-24
 security check and reproduced in Chrome first.
+
+### Filtering a round's results
+
+Asked 2026-11-02. Above a round's tracks, two filters, pill buttons that
+each open a checklist of names (`filtersFor` and `applyFilters` in
+`rounds.js`):
+
+- **Track submitted by:** everyone who sent a track to this round, with
+  how many they sent. It keeps only the tracks of the people ticked.
+- **Comments by:** everyone who commented in this round, with how many
+  comments. It keeps only the comments of the people ticked; points-only
+  votes and other people's comments go, and so does any track left with
+  none of their comments.
+- **They combine:** both on at once means those people's tracks, showing
+  only those people's comments.
+- **Every name starts ticked**, and every name ticked means no filter, so
+  a round opens whole. Each list has Select all and Clear all; with no
+  name ticked, nothing shows, and the page says so.
+- **What's showing:** a line under the buttons says how much shows, for
+  example "Showing 2 of 19 tracks, 2 comments", with a Show everything
+  button. It's empty when nothing is filtered.
+- **Not remembered:** filters last only while the page is open; another
+  round starts whole.
+- **One list open at a time:** a click outside a list or Escape closes it,
+  and Escape returns focus to its button.
+- **Hidden by a class,** `.is-filtered`, never the `hidden` attribute,
+  which `.rp-track`'s own display would beat.
+- **Reapplied after every redraw:** the member layer's arrival, a vote or
+  a reaction on a comment.
+- **Scope:** Music League rounds and finished site rounds, once they're
+  in the stats. A site round's results before then (`voting.js`) have no
+  filters.
+
+Checked 2026-11-02 in a browser, with a sign-in stub over a scratch copy
+of the site and Round 7's real data, using real clicks:
+
+- each filter alone, the two combined, and Select all, Clear all and Show
+  everything;
+- the counts in the lists add up to the round's tracks and comments;
+- at 375px the buttons stack full width and an open list fits the screen
+  with no sideways scroll;
+- in light and dark, every new text pair is at least 5.3:1.
 
 ## Season page features
 

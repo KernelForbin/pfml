@@ -1418,6 +1418,14 @@ class PinnedTrackBar(unittest.TestCase):
         self.assertIn("overflow: clip", card)
         self.assertGreater(card.index("overflow: clip"), card.index("overflow: hidden"), "clip wins where supported")
 
+    def test_an_open_reaction_picker_isnt_clipped(self):
+        # on a track's last comment the picker hangs past the card's bottom
+        # (reported 2026-11-02), so the card lets go of its clip while one
+        # is open, in a rule after the card's own so it wins
+        css = read("style.css")
+        self.assertEqual(css_rules(css, ".rp-track:has(.cm-picker)"), [" overflow: visible; "])
+        self.assertGreater(css.index(".rp-track:has(.cm-picker)"), css.index(".rp-track {"))
+
     def test_it_sits_under_the_real_top_bar(self):
         sync = js_function(read("app.js"), "function syncScrollPadding()")
         self.assertIn('setProperty("--topbar-h", bar.offsetHeight + "px")', sync)
