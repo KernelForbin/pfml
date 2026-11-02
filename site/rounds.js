@@ -47,6 +47,7 @@
     pickerMore: false,     // that picker showing the full "More" panel, not just the quick row
     emojiGroup: 0,         // category the "More" panel shows when nothing's searched
     index: {},             // comment id -> vote row
+    filters: null,         // { by, from }: whose tracks and whose comments show (filtersFor)
     busy: false
   };
 
@@ -512,7 +513,8 @@
 
   function voteHtml(row) {
     var c = row.comment;
-    return '<div class="rp-vote' + (c ? " has-comment" : "") + '"' + (c ? ' data-id="' + esc(c.id) + '"' : "") + ">" +
+    return '<div class="rp-vote' + (c ? " has-comment" : "") + '" data-voter="' + esc(row.voterId) + '"' +
+      (c ? ' data-id="' + esc(c.id) + '"' : "") + ">" +
       '<div class="rp-vote-head">' + avatar(row.voterId, row.name) +
       '<span class="rp-voter">' + personLink(row.voterId, row.name) + "</span>" +
       '<span class="rp-pts' + (row.points === 0 ? " is-zero" : row.points < 0 ? " is-neg" : "") + '"' +
@@ -564,7 +566,7 @@
     var title = url
       ? '<a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(s.title) + "</a>"
       : esc(s.title);
-    return '<article class="rp-track" id="t-' + esc(s.spotifyId || s.title) + '">' +
+    return '<article class="rp-track" id="t-' + esc(s.spotifyId || s.title) + '" data-submitter="' + esc(s.submitterId) + '">' +
       '<div class="rp-track-main">' + artHtml(s.art, "rp-art") +
         '<div class="rp-track-info">' + placeBadge(s, tiedPlaces) +
           '<h2 class="rp-title">' + title + "</h2>" +
@@ -614,7 +616,151 @@
     songs.forEach(function (s) { if (s.place) tiedPlaces[s.place] = (tiedPlaces[s.place] || 0) + 1; });
     state.index = {};
     state.host.innerHTML = songs.map(function (s) { return trackHtml(s, tiedPlaces); }).join("");
+    applyFilters();
     updatePins();
+  }
+
+  /* ---- filters ---- */
+
+  // Asked 2026-11-02: two filters over a round's tracks, which combine.
+  // "Track submitted by" keeps the tracks those people sent; "Comments by"
+  // keeps only those people's comments, and the tracks that have one.
+  // Every name starts ticked, and every name ticked means no filter, so a
+  // round opens whole. Each lists only who's in this round.
+  var FILTERS = [{ key: "by", label: "Track submitted by", unit: ["track", "tracks"] },
+                 { key: "from", label: "Comments by", unit: ["comment", "comments"] }];
+
+  function filtersFor(r) {
+    var by = {}, from = {};
+    r.songs.forEach(function (s) {
+      var p = by[s.submitterId] || (by[s.submitterId] = { id: s.submitterId, name: s.submitterName || "Unknown", count: 0 });
+      p.count++;
+      (s.comments || []).forEach(function (c) {
+        var q = from[c.voterId] || (from[c.voterId] = { id: c.voterId, name: state.names[c.voterId] || c.voterName || "Unknown", count: 0 });
+        q.count++;
+      });
+    });
+    function filter(people) {
+      var list = Object.keys(people).map(function (id) { return people[id]; })
+        .sort(function (a, b) { return a.name.localeCompare(b.name); });
+      var picked = {};
+      list.forEach(function (p) { picked[p.id] = true; });
+      return { people: list, picked: picked };
+    }
+    return { by: filter(by), from: filter(from) };
+  }
+
+  function pickedCount(f) { return f.people.filter(function (p) { return f.picked[p.id]; }).length; }
+  function filterOn(f) { return pickedCount(f) < f.people.length; }
+
+  function filterValue(f) {
+    var n = pickedCount(f);
+    if (n === f.people.length) return "Everyone";
+    if (!n) return "No one";
+    if (n === 1) return f.people.filter(function (p) { return f.picked[p.id]; })[0].name;
+    return n + " of " + f.people.length;
+  }
+
+  function filterHtml(def) {
+    var f = state.filters[def.key];
+    return '<details class="rp-filter" data-filter="' + def.key + '">' +
+      '<summary class="rp-filter-btn"><span class="rp-filter-label">' + def.label + '</span>' +
+        '<span class="rp-filter-value">' + esc(filterValue(f)) + "</span></summary>" +
+      '<div class="rp-filter-panel">' +
+        '<div class="rp-filter-all"><button type="button" data-all="1">Select all</button>' +
+          '<button type="button" data-all="0">Clear all</button></div>' +
+        (f.people.length ? '<ul class="rp-filter-list">' + f.people.map(function (p) {
+          return '<li><label><input type="checkbox" value="' + esc(p.id) + '"' + (f.picked[p.id] ? " checked" : "") + ">" +
+            "<span>" + esc(p.name) + "</span><small>" + p.count + '<span class="cm-sr"> ' +
+            def.unit[p.count === 1 ? 0 : 1] + "</span></small></label></li>";
+        }).join("") + "</ul>" : '<p class="rp-filter-none">No ' + def.unit[1] + " in this round.</p>") +
+      "</div></details>";
+  }
+
+  function renderFilters() {
+    var box = document.getElementById("rpFilters");
+    if (!box) return;
+    box.innerHTML = FILTERS.map(filterHtml).join("") + '<p class="rp-filter-status" id="rpFilterStatus" role="status"></p>';
+    box.addEventListener("change", onFilterChange);
+    box.addEventListener("click", onFilterClick);
+    // one list open at a time; toggle doesn't bubble, so listen as it goes down
+    box.addEventListener("toggle", function (ev) {
+      if (!ev.target.open) return;
+      box.querySelectorAll("details.rp-filter[open]").forEach(function (d) { if (d !== ev.target) d.open = false; });
+    }, true);
+    document.addEventListener("click", function (ev) {
+      if (!ev.target.closest(".rp-filter")) closeFilters(false);
+    });
+    document.addEventListener("keydown", function (ev) { if (ev.key === "Escape") closeFilters(true); });
+  }
+
+  function closeFilters(refocus) {
+    document.querySelectorAll("#rpFilters details.rp-filter[open]").forEach(function (d) {
+      d.open = false;
+      if (refocus && d.contains(document.activeElement)) d.querySelector("summary").focus();
+    });
+  }
+
+  function onFilterChange(ev) {
+    var box = ev.target.closest("details.rp-filter");
+    if (!box || ev.target.type !== "checkbox") return;
+    var f = state.filters[box.getAttribute("data-filter")];
+    if (ev.target.checked) f.picked[ev.target.value] = true;
+    else delete f.picked[ev.target.value];
+    applyFilters();
+  }
+
+  function onFilterClick(ev) {
+    var all = ev.target.closest("button[data-all]");
+    if (all) {
+      var box = all.closest("details.rp-filter"), f = state.filters[box.getAttribute("data-filter")], on = all.getAttribute("data-all") === "1";
+      f.picked = {};
+      if (on) f.people.forEach(function (p) { f.picked[p.id] = true; });
+      box.querySelectorAll('input[type="checkbox"]').forEach(function (cb) { cb.checked = on; });
+      applyFilters();
+      return;
+    }
+    if (ev.target.closest("button[data-reset]")) {
+      FILTERS.forEach(function (def) {
+        var f = state.filters[def.key];
+        f.people.forEach(function (p) { f.picked[p.id] = true; });
+      });
+      document.querySelectorAll('#rpFilters input[type="checkbox"]').forEach(function (cb) { cb.checked = true; });
+      applyFilters();
+    }
+  }
+
+  // Hides what the filters leave out, with a class (never the hidden
+  // attribute, which .rp-track's own display would beat), and says how
+  // much is showing. Runs after every redraw of the tracks.
+  function applyFilters() {
+    var fs = state.filters;
+    if (!fs || !state.host) return;
+    var byOn = filterOn(fs.by), fromOn = filterOn(fs.from);
+    var tracks = state.host.querySelectorAll(".rp-track"), shown = 0, comments = 0;
+    tracks.forEach(function (t) {
+      var keep = !byOn || !!fs.by.picked[t.getAttribute("data-submitter")];
+      var theirs = 0;
+      t.querySelectorAll(".rp-vote").forEach(function (v) {
+        var ok = !fromOn || (v.classList.contains("has-comment") && !!fs.from.picked[v.getAttribute("data-voter")]);
+        v.classList.toggle("is-filtered", !ok);
+        if (ok && v.classList.contains("has-comment")) theirs++;
+      });
+      if (fromOn && !theirs) keep = false;
+      t.classList.toggle("is-filtered", !keep);
+      if (keep) { shown++; comments += theirs; }
+    });
+    document.querySelectorAll("#rpFilters details.rp-filter").forEach(function (d) {
+      var f = fs[d.getAttribute("data-filter")];
+      d.classList.toggle("is-on", filterOn(f));
+      d.querySelector(".rp-filter-value").textContent = filterValue(f);
+    });
+    var status = document.getElementById("rpFilterStatus");
+    if (!status) return;
+    status.innerHTML = !byOn && !fromOn ? ""
+      : (shown ? "Showing " + shown + " of " + counted(tracks.length, "track") + (fromOn ? ", " + counted(comments, "comment") : "")
+               : "Nothing matches these filters") +
+        '. <button type="button" class="rp-filter-reset" data-reset="1">Show everything</button>';
   }
 
   function renderRoundPage(d, roundId) {
@@ -657,7 +803,7 @@
       "</section>" +
       // listening (listen.js), when the round was also run on the site
       '<section class="shell block rp-listen" id="rpListen" hidden></section>' +
-      '<section class="shell rp-body"><div id="rpTracks"></div></section>' +
+      '<section class="shell rp-body">' + (status ? "" : '<div class="rp-filters" id="rpFilters"></div>') + '<div id="rpTracks"></div></section>' +
       // a round with Spectators: the podium points they earned (build.py)
       (r.spectators && r.spectators.length ? '<section class="shell block">' + PFML.podiumHtml(r.spectators) + "</section>" : "") +
       // the voters' lounge, read-only, when the round voted on the site (lounge.js)
@@ -677,6 +823,9 @@
     var params = new URLSearchParams(location.search);
     var target = params.get("c");
     if (target && params.get("thread") === "1") state.threads[target] = true;
+
+    state.filters = filtersFor(r);
+    renderFilters();
 
     // Tracks and votes render straight away; the member layer fills in when
     // it arrives, so a slow connection still shows the round immediately.
@@ -738,6 +887,7 @@
     wrap.innerHTML = voteHtml(row);
     var fresh = wrap.firstChild;
     node.replaceWith(fresh);
+    applyFilters();
     var box = fresh.querySelector('form[data-act="reply"] textarea');
     if (box && box.value) fitReplyBox(box);
     if (box && typing) {

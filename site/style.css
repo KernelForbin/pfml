@@ -1209,6 +1209,49 @@ body.auth-checking::before {
 
 .rp-body { padding-top: 20px; }
 #rpTracks { display: grid; gap: 22px; }
+
+/* Track submitted by / Comments by (rounds.js applyFilters): two pill
+   buttons like the round menu above, each opening a list of the round's
+   names with checkboxes. Filtered-out tracks and votes take a class, not
+   the hidden attribute, since .rp-track's display would beat it. */
+.rp-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 18px; }
+.rp-filter { position: relative; max-width: 100%; }
+.rp-filter-btn {
+  list-style: none; position: relative; display: flex; align-items: baseline; gap: 8px; cursor: pointer;
+  padding: 9px 36px 9px 16px; background: var(--card); border: 1px solid var(--border); border-radius: 999px;
+  box-shadow: var(--shadow-sm); font-size: 0.88rem;
+}
+.rp-filter-btn::-webkit-details-marker { display: none; }
+.rp-filter-btn::after {
+  content: "\25BE"; position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
+  color: var(--magenta-text); font-size: 0.8rem;
+}
+.rp-filter[open] .rp-filter-btn::after { transform: translateY(-50%) rotate(180deg); }
+.rp-filter-btn:focus-visible { outline: 3px solid var(--magenta-text); outline-offset: 2px; }
+.rp-filter-label { font-family: "Archivo", sans-serif; font-weight: 700; color: var(--ink); white-space: nowrap; }
+.rp-filter-value { min-width: 0; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-filter.is-on .rp-filter-btn { border-color: var(--magenta-text); }
+.rp-filter.is-on .rp-filter-value { color: var(--magenta-text); font-weight: 600; }
+.rp-filter-panel {
+  position: absolute; z-index: 20; top: calc(100% + 6px); left: 0; width: 290px; max-width: calc(100vw - 32px);
+  padding: 8px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r-sm); box-shadow: var(--shadow-md);
+}
+.rp-filter-all { display: flex; gap: 8px; padding: 2px 2px 8px; border-bottom: 1px solid var(--border-soft); }
+.rp-filter-all button, .rp-filter-reset {
+  font: 600 0.85rem "Inter", sans-serif; color: var(--magenta-text); background: none; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px;
+}
+.rp-filter-list { list-style: none; margin: 6px 0 0; padding: 0; max-height: min(320px, 50vh); overflow-y: auto; }
+.rp-filter-list label { display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-radius: 8px; cursor: pointer; }
+.rp-filter-list input { flex: none; width: 18px; height: 18px; margin: 0; accent-color: var(--magenta); }
+.rp-filter-list label > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.rp-filter-list small { color: var(--muted); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+@media (hover: hover) { .rp-filter-list label:hover { background: var(--wash); } }
+.rp-filter-none { margin: 8px 6px 4px; color: var(--muted); font-size: 0.9rem; }
+.rp-filter-status { flex: 1 1 100%; margin: 0; color: var(--muted); font-size: 0.9rem; }
+.rp-filter-status:empty { display: none; }
+.rp-filter-reset { margin-left: 4px; padding: 4px 10px; }
+.rp-track.is-filtered, .rp-vote.is-filtered { display: none; }
 /* clip, not hidden: both keep the rounded corners, but hidden would make the
    card a scroll container and stop .rp-pin sticking. hidden stays as the
    fallback for browsers without clip (Safari before 16), where the pin
@@ -1298,6 +1341,9 @@ body.auth-checking::before {
   .rp-jump { display: block; width: 100%; }
   /* 16px, or iOS zooms the page in when the menu is tapped */
   .rp-jump-select { width: 100%; font-size: 16px; }
+  /* one under the other, full width, each list as wide as its button */
+  .rp-filter { flex: 1 1 100%; }
+  .rp-filter-panel { width: 100%; max-width: none; }
   .rp-track-main { grid-template-columns: 84px 1fr; gap: 14px; padding: 14px; }
   .rp-art { width: 84px; height: 84px; }
   .rp-score { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 10px; text-align: left; padding-top: 0; }

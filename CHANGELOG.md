@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-11-02: filter a round's results by submitter and commenter
+
+- **Asked:** on the round results pages, two multi-select filters with
+  the players' names, "Track submitted by" and "Comments by", which
+  combine, each with Select all and Clear all.
+- **Changed:**
+  - two pill buttons above a round's tracks, each opening a checklist of
+    this round's names with counts. Every name starts ticked, which means
+    no filter.
+  - Comments by keeps only those people's comments, and the tracks that
+    have one.
+  - A line says how much is showing, with Show everything.
+  - The features page lists it, with a line under New in the last 30 days.
+- **Verified:** new tests in `tests/test_round_filters.py`; breaks in a
+  scratch clone each fail them; the suite passes. Clicked through in a
+  browser with a sign-in stub over Round 7's real data, at 375px and
+  desktop widths, in light and dark (README, Filtering a round's results).
+
 ## 2026-11-02: Round 9's prompt, /round-9-prompt
 
 - **Asked:** a page for Round 9's prompt, Jean Rhys's short story "Mixing
