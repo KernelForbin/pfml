@@ -893,6 +893,57 @@ developer key. A failed lookup keeps the last good numbers, and
 `tests/test_live_spotify.py` checks both pages still carry what's parsed.
 A playlist's numbers change only when you next publish.
 
+## The league's playlists
+
+Asked 2026-11-02: once a round's data comes in, its tracks go on the
+playlists Home links, all four on the user's own Spotify account:
+
+- **every track** on "All Tracks Submitted" and the season's "All
+  Submissions";
+- **the top 3** on "All Podium Tracks" and the season's "Podium Tracks".
+  That's every track placed 1st to 3rd, so a tie at 3rd adds every tied
+  track (the user's call, 2026-11-02; Season 3's Round 7 added 4).
+
+`python scripts/league_playlists.py --dry-run` says what's missing, and
+without `--dry-run` it adds it. It does the newest season (`--season N`
+for another) and reads what `publish.py` built, `site/data/seasonN.json`,
+so it runs after a publish. The playlists are found by their names in
+`playlists.json`, the endings above, under a season group whose `season` is
+the season's label; one with no link yet is skipped and said. It signs in
+with `round_playlists.py`'s Spotify token (`.env`).
+
+- **Only adds.** It never removes or reorders, and a track already on a
+  playlist isn't added again, so a rerun adds nothing. One Season 3 track
+  was already on All Tracks Submitted from an earlier season, so it went on
+  that one once.
+- **Where they go,** as the user had been adding them by hand (measured
+  2026-11-02): at the end, round by round, each round in the export's order,
+  except All Podium Tracks, where the newest round goes on top, each round
+  by place.
+- **Checked back:** after adding to a playlist it reads it again, and stops
+  if anything is missing.
+- **Another recording:** Spotify can keep a different recording from the
+  id it was sent, and nothing in the API links the two (measured
+  2026-11-02: a Season 3 track sent as its original single went on as a
+  compilation's copy, another ISRC). So a track also counts as there
+  when one with exactly its name and artists is, or every rerun would add
+  it again. A different version, such as a live cut, has a different name,
+  so it isn't mistaken for one.
+- **The API** (measured 2026-11-02): items are read with `GET
+  /playlists/{id}/items`, whose rows carry the track as `item` (it used to be
+  `track`), and added with `POST /playlists/{id}/items`, up to 100 at a time,
+  with `position` for the top.
+- **A site round's** YouTube or SoundCloud pick goes on as its Spotify
+  copy; one with no copy is skipped and named.
+
+Catching up on 2026-11-02 added Season 3's Rounds 2-7: 118 tracks to All
+Tracks Submitted, 119 to S3 All Submissions, and 19 each to the two podium
+playlists. Not done, since only Season 3 was asked for: Season 2's Podium
+Tracks has 37 of the 66 tracks placed 1st to 3rd, and Season 1's has
+exactly 3 a round, one of each pair tied for 3rd left out.
+`tests/test_league_playlists.py` covers it offline, and
+`tests/test_live_league_playlists.py` reads the real playlists.
+
 ## Player focus and comparison
 
 Open Standings on any season page and click a name to filter everything below

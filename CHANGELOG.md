@@ -1,5 +1,33 @@
 # Changelog
 
+## 2026-11-02: new rounds go on the league's playlists
+
+- **Asked:** once round data comes in, add every track to All Tracks
+  Submitted and Season 3 All Submissions, and the top 3 to All Podium
+  Tracks and Season 3 Podium Tracks; catch Season 3 up first.
+- **Changed:**
+  - `scripts/league_playlists.py` adds a season's finished rounds to the
+    four playlists Home links, on the user's own Spotify. It only adds,
+    never twice, and checks each playlist back.
+  - "Update the data" runs it after the publish (CLAUDE.md).
+  - A tie at 3rd adds every tied track (the user's call).
+- **Done:** Season 3's Rounds 2-7 were missing from all four playlists.
+  Added: 118 to All Tracks Submitted (one was already there from an earlier
+  season), 119 to S3 All Submissions, 19 to S3 Podium Tracks and 19 to the
+  top of All Podium Tracks.
+- **Measured:** Spotify kept one track as another recording
+  than the id sent, so a track also counts as there by exact name and
+  artists (README, The league's playlists).
+- **Verified:**
+  - A rerun's dry run adds nothing.
+  - A separate read-back of all four playlists against the season data:
+    every track and every track placed 1st to 3rd is on its playlists, in
+    round and export order, with All Podium Tracks newest first.
+  - New tests in `tests/test_league_playlists.py` fail on each of nine
+    breaks in a scratch clone.
+  - The new live test passes.
+  - The suite passes.
+
 ## 2026-11-02: the reaction picker on a track's last comment
 
 - **Reported:** reacting to the bottom comment on a track, the emoji

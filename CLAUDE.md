@@ -99,6 +99,12 @@ the keyboard, so it has to run without a click anywhere. Measured
    `python scripts/publish.py`, and report what changed. The user gave a standing go-ahead (2026-09-23)
    for the publish inside this flow, so it needs no separate ask; it
    uploads data only. Pushing the repo still does.
+   Then `python scripts/league_playlists.py`, which adds the new rounds'
+   tracks to the four playlists Home links (every track, and the top 3),
+   on the user's own Spotify. The user asked for it as part of this flow
+   (2026-11-02), so it needs no separate ask; it only ever adds. When it
+   added anything, run `publish.py` once more so Home's track counts
+   catch up. Report what it added. README, The league's playlists.
 6. Close the tab afterwards and delete any scratch copy.
 
 ## Building a closed site round's playlists
@@ -368,7 +374,9 @@ verified" has to be both.
   `site/emoji-data.js` is what that version builds), and
   `-p test_live_playlists.py` whenever `scripts/round_playlists.py`'s
   lookups or matching change (read-only; Spotify and YouTube parts need
-  their keys in `.env` and skip without them), and `-p test_live_cdn.py`
+  their keys in `.env` and skip without them), and
+  `-p test_live_league_playlists.py` whenever `scripts/league_playlists.py`
+  reads Spotify differently (read-only), and `-p test_live_cdn.py`
   whenever the supabase-js version or its integrity hash changes (a wrong
   hash blanks every page), and `-p test_live_round_repeats.py` whenever
   `fp_kind()` or the round-check functions change (read-only; the only
