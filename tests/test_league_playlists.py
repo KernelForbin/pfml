@@ -143,6 +143,22 @@ class WhatGoesWhere(unittest.TestCase):
         self.assertEqual(sp.ids("S1ALL"), [], "an older season is left alone")
         self.assertEqual(sp.ids("S2ALL"), ["t3", "t1", "t5", "t2", "t4", "t6", "t7"])
 
+    def test_filling_in_an_older_season_puts_its_podium_on_the_end(self):
+        # not on top, above newer seasons' (asked 2026-11-02)
+        sp = FakeSpotify({pid("ALLPODIUM"): ["newer1", "newer2"]})
+        with season(rounds=ROUNDS[1:] + ROUNDS[:1], seasons=2):
+            # season 1 holds just "Second" (t6, t7); season 2 is newest
+            _, log = run(sp, season_num=1)
+        self.assertEqual(sp.ids("ALLPODIUM"), ["newer1", "newer2", "t6", "t7"])
+        self.assertNotIn("(on top)", log)
+
+    def test_an_older_seasons_podium_goes_on_oldest_round_first(self):
+        want, _ = lp.plan([("A", [], [("a1", "A1", ("a1", "x"))]), ("B", [], [("b1", "B1", ("b1", "x"))])],
+                          {}, newest=False)
+        self.assertEqual([r[1] for r in want[lp.ALL_PODIUM]], ["a1", "b1"])
+        want, _ = lp.plan([("A", [], [("a1", "A1", ("a1", "x"))]), ("B", [], [("b1", "B1", ("b1", "x"))])], {})
+        self.assertEqual([r[1] for r in want[lp.ALL_PODIUM]], ["b1", "a1"], "the newest season: newest first")
+
     def test_a_season_can_be_named(self):
         sp = FakeSpotify()
         with season(seasons=2):

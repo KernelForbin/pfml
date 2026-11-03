@@ -15,6 +15,12 @@
   Added: 118 to All Tracks Submitted (one was already there from an earlier
   season), 119 to S3 All Submissions, 19 to S3 Podium Tracks and 19 to the
   top of All Podium Tracks.
+- **Then filled Seasons 1 and 2** (asked the same day): 5 tied 3rds on
+  S1 Podium Tracks, 29 missing tracks on S2's, and the same 34 on the end
+  of All Podium Tracks. Filling an older season puts its podium there
+  rather than on top, above newer seasons'. Every season's dry run now
+  adds nothing; All Podium Tracks holds 152, the 153 podium places across
+  the seasons less one track that placed in two.
 - **Measured:** Spotify kept one track as another recording
   than the id sent, so a track also counts as there by exact name and
   artists (README, The league's playlists).

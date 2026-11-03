@@ -21,7 +21,10 @@ never added again, so a rerun adds nothing, and nothing is ever removed.
 Where new tracks go follows how the user had been adding them by hand
 (measured 2026-11-02): at the end, round by round, in the export's order
 (Music League's own), except "All Podium Tracks", where the newest round
-goes on top, then each round's tracks by place.
+goes on top, then each round's tracks by place. Filling in an older season
+(--season) puts its podium on the end of All Podium Tracks instead, oldest
+first, so it doesn't land above newer seasons' (the user's call to fill
+Seasons 1 and 2, 2026-11-02).
 
 Nothing secret is printed. Stdlib only.
 """
@@ -108,10 +111,11 @@ def on_playlist(row, have):
     return row[1] in ids or row[3] in songs
 
 
-def plan(rounds, have):
+def plan(rounds, have, newest=True):
     """What to add to each playlist, as {kind: [(round, spotify id, title,
     same_song)]}, in the order it goes in, plus the tracks with no Spotify
-    copy. `have` is {kind: playlist_items()}."""
+    copy. `have` is {kind: playlist_items()}; `newest` is whether this is
+    the newest season, whose podium goes on top of All Podium Tracks."""
     want = {ALL_TRACKS: [], SEASON_ALL: [], SEASON_PODIUM: [], ALL_PODIUM: []}
     skipped = []
     for name, everything, podium in rounds:
@@ -127,7 +131,8 @@ def plan(rounds, have):
     by_round = {}
     for row in want[ALL_PODIUM]:
         by_round.setdefault(row[0], []).append(row)
-    want[ALL_PODIUM] = [row for name in reversed(list(by_round)) for row in by_round[name]]
+    if newest:
+        want[ALL_PODIUM] = [row for name in reversed(list(by_round)) for row in by_round[name]]
     for kind, rows in want.items():
         ids, songs = (set(x) for x in have.get(kind) or ([], []))
         keep = []
@@ -167,12 +172,14 @@ def add_items(spotify, playlist_id, track_ids, top=False):
 
 
 def run(season_num=None, dry_run=False, spotify=None, log=print):
-    folders = build.season_folders()
+    every = build.season_folders()
+    folders = every
     if season_num is not None:
         folders = [f for f in folders if f.name == f"season{season_num}"]
     if not folders:
         raise SystemExit(f"No data/season{season_num or 'N'} folder.")
     folder = folders[-1]
+    newest = folder == every[-1]
     season_path = build.OUT_DIR / f"{folder.name}.json"
     if not season_path.exists():
         raise SystemExit(f"No {season_path.name} in site/data. Run python scripts/publish.py first.")
@@ -187,7 +194,7 @@ def run(season_num=None, dry_run=False, spotify=None, log=print):
 
     spotify = spotify or rp.Spotify()
     have = {kind: playlist_items(spotify, pid) for kind, (_, pid) in found.items()}
-    want, skipped = plan(season_tracks(season, export_order(folder)), have)
+    want, skipped = plan(season_tracks(season, export_order(folder)), have, newest)
 
     log(f"{label}: {len(season['rounds'])} finished round(s).")
     for name, title in skipped:
@@ -198,12 +205,13 @@ def run(season_num=None, dry_run=False, spotify=None, log=print):
             continue
         playlist, pid = found[kind]
         rows = want[kind]
-        where = " (on top)" if kind == ALL_PODIUM else ""
-        log(f"{playlist}: has {len(have[kind][0])}, {'would add' if dry_run else 'adding'} {len(rows)}{where}")
+        top = kind == ALL_PODIUM and newest
+        log(f"{playlist}: has {len(have[kind][0])}, {'would add' if dry_run else 'adding'} {len(rows)}"
+            f"{' (on top)' if top else ''}")
         for name, _, title, _ in rows:
             log(f"    {name}: {title}")
         if rows and not dry_run:
-            add_items(spotify, pid, [r[1] for r in rows], top=kind == ALL_PODIUM)
+            add_items(spotify, pid, [r[1] for r in rows], top=top)
             ids, songs = playlist_items(spotify, pid)
             missing = [r for r in rows if not on_playlist(r, (set(ids), set(songs)))]
             if missing:

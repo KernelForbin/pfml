@@ -906,7 +906,7 @@ playlists Home links, all four on the user's own Spotify account:
 
 `python scripts/league_playlists.py --dry-run` says what's missing, and
 without `--dry-run` it adds it. It does the newest season (`--season N`
-for another) and reads what `publish.py` built, `site/data/seasonN.json`,
+for another, whose podium then goes on the end of All Podium Tracks) and reads what `publish.py` built, `site/data/seasonN.json`,
 so it runs after a publish. The playlists are found by their names in
 `playlists.json`, the endings above, under a season group whose `season` is
 the season's label; one with no link yet is skipped and said. It signs in
@@ -938,9 +938,13 @@ with `round_playlists.py`'s Spotify token (`.env`).
 
 Catching up on 2026-11-02 added Season 3's Rounds 2-7: 118 tracks to All
 Tracks Submitted, 119 to S3 All Submissions, and 19 each to the two podium
-playlists. Not done, since only Season 3 was asked for: Season 2's Podium
-Tracks has 37 of the 66 tracks placed 1st to 3rd, and Season 1's has
-exactly 3 a round, one of each pair tied for 3rd left out.
+playlists. Then, asked the same day, Seasons 1 and 2 were filled with
+`--season`: Season 1's Podium Tracks had exactly 3 a round, one of each
+pair tied for 3rd left out (5 added), and Season 2's had 37 of its 66
+(29 added). An older season's podium goes on the end of All Podium Tracks,
+oldest round first, not on top, where it would sit above newer seasons'.
+All Podium Tracks now holds 152: one track reached the podium in two
+seasons.
 `tests/test_league_playlists.py` covers it offline, and
 `tests/test_live_league_playlists.py` reads the real playlists.
 
