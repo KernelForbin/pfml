@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-02: Submit a track leaves the initials menu
+
+- **Asked:** hide Submit a track from the initials menu.
+- **Changed:** the menu no longer links to the Submit page; Home's banner
+  still does while a round is open, and the page itself is unchanged. The
+  features page and README say so.
+- **Verified:** the test now checks the menu has no Submit link (it fails
+  with the link back); the suite passes. Opened the menu in a browser
+  with a sign-in stub: Repeat checker, My profile, Site features, Add to
+  home screen, Dark mode, Sign out, and no Submit link.
+
 ## 2026-11-02: new rounds go on the league's playlists
 
 - **Asked:** once round data comes in, add every track to All Tracks

@@ -1279,8 +1279,8 @@ CHANGELOG entry.
 Commissioner page (season, name, prompt, closing time) and can edit it or
 close it early there (Commissioners, below; until 2026-10-25 this form was
 on the Submit page, for the admin alone). A
-banner on the Home page and a Submit a track link in the initials menu
-lead to it. A member pastes a link, checks it in the service's own player,
+banner on the Home page leads to it (the initials menu linked to it too
+until 2026-11-02, when the user had it hidden). A member pastes a link, checks it in the service's own player,
 and submits. Each submission gets a **tag** (a letter and a digit, like
 Q7) that labels it on the list and in the playlists' gap notes. Members
 were first meant to copy it into a Music League note so voters could

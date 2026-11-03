@@ -10,8 +10,9 @@
      opened the inbox, which is stored in Supabase (members.inbox_seen_at,
      set by mark_inbox_seen()) so it's the same on every device.
    - Your initials, in the same coloured circle as on the round pages,
-     opening a menu: Submit a track, Repeat checker, My profile, Site
-     features, Add to home screen, Dark mode and Sign out.
+     opening a menu: Repeat checker, My profile, Site features, Add to
+     home screen, Dark mode and Sign out. (Submit a track left it
+     2026-11-02; Home's banner leads to the Submit page.)
 
    Round and track names for inbox items come from data/lookup.json (a few
    tens of KB, built by scripts/build.py), fetched only when the inbox is
@@ -578,7 +579,6 @@
       '<div class="acct-pop acct-menu" id="acctMenu" hidden>' +
         '<div class="acct-menu-head">' + avatar(member.competitorId, member.name) +
           '<span class="acct-menu-who"><b>' + esc(member.name) + "</b><small>Signed in</small></span></div>" +
-        '<a class="acct-item" href="submit">Submit a track</a>' +
         '<a class="acct-item" href="repeats">Repeat checker</a>' +
         '<a class="acct-item" href="profile">My profile</a>' +
         '<a class="acct-item" href="features">Site features</a>' +

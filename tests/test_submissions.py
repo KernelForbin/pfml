@@ -163,8 +163,9 @@ class PageCode(unittest.TestCase):
             with self.subTest(el_id):
                 self.assertTrue(f'id="{el_id}"' in html or f'id="{el_id}"' in js, el_id)
 
-    def test_the_page_is_reachable_from_the_menu_and_the_home_page(self):
-        self.assertIn('href="submit">Submit a track', read(SITE / "account.js"))
+    def test_the_page_is_reachable_from_the_home_page_not_the_menu(self):
+        # hidden from the initials menu at the user's ask (2026-11-02)
+        self.assertNotIn('href="submit"', read(SITE / "account.js"))
         self.assertIn('id="submitBanner"', read(SITE / "index.html"))
         app = read(SITE / "app.js")
         home = app.split("function initHome() {", 1)[1].split("\n  }\n", 1)[0]
