@@ -142,6 +142,43 @@ class Vault(unittest.TestCase):
         self.assertIn('<section class="shell block" id="block-vault" hidden>', read("index.html"))
 
 
+class RoundMaterial(unittest.TestCase):
+    """A round's prompt and a link to its reading, on Home (asked
+    2026-11-06), from the hand-kept round_material.json."""
+
+    def setUp(self):
+        self.js = read("app.js")
+        self.fn = body(self.js, "function renderRoundMaterial(index) {")
+
+    def test_home_draws_it_with_the_seasons_and_hides_without_the_file(self):
+        self.assertIn("renderRoundMaterial(index);", body(self.js, "function initHome() {"))
+        self.assertIn('PFML.loadJSON("round_material.json")', self.fn)
+        self.assertIn('$("block-material").hidden = false;', self.fn)
+        html = read("index.html")
+        self.assertIn('<section class="shell block block-first" id="block-material" hidden>', html)
+        self.assertLess(html.index('id="block-material"'), html.index('id="block-seasons"'), "above the seasons")
+
+    def test_it_goes_once_the_rounds_results_are_in(self):
+        self.assertIn("if (season && season.roundCount >= m.round) return;", self.fn)
+
+    def test_the_text_is_escaped_and_the_link_is_one_of_our_pages(self):
+        self.assertIn("esc(p.trim())", self.fn)
+        self.assertIn("esc(m.title)", self.fn)
+        self.assertIn("var link = MATERIAL_LINK.test(m.link || \"\") ? m.link : null;", self.fn)
+        # search, like JavaScript's .test(): the rule has to anchor itself
+        rule = re.search(r"var MATERIAL_LINK = /(.+)/;", self.js).group(1)
+        self.assertTrue(re.search(rule, "round-9-prompt"))
+        for bad in ("https://example.com", "//example.com", "javascript:alert(1)", 'x" onmouseover="y', "round.html"):
+            with self.subTest(bad):
+                self.assertIsNone(re.search(rule, bad))
+
+    def test_the_prompt_never_ships_in_the_repo(self):
+        # the league's own text, and it can name a player: data, not page
+        self.assertNotIn("Exquisite", read("index.html"))
+        self.assertNotIn("Exquisite", self.js)
+        self.assertFalse((SITE / "round_material.json").exists())
+
+
 class Recap(unittest.TestCase):
     def setUp(self):
         self.js = read("rounds.js")

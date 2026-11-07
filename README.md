@@ -847,6 +847,32 @@ A season with zero rounds in its CSVs (a freshly created `data/seasonN/`
 with only `competitors.csv`) shows "not started yet" instead, no LIVE badge,
 and no round line.
 
+## Round material on Home
+
+Asked 2026-11-06, for Round 9's story. A round that comes with something to
+read gets a tile at the top of Home, "This round's prompt": the round's
+number, its name and prompt in full, and a button to the material's page
+(`renderRoundMaterial` in `app.js`).
+
+- **The text is data, not page:** it's the league's own prompt, and a round
+  name can name a player, so it lives in the hand-kept
+  `site/data/round_material.json` (git-ignored, like `playlists.json`), and
+  `publish.py` uploads it with the rest. A test checks no prompt text is in
+  the repo's pages.
+- **The file:** `season` and `round` (which round it's for), `kicker` (the
+  small line, "Round 9"), `title`, `text` (paragraphs split by a blank line),
+  `link` and `linkText`. `link` must be one of the site's own clean
+  addresses (`round-9-prompt`); anything else, a full URL included, drops
+  the button.
+- **It goes on its own** once that round's results are in the stats, when
+  the season's `roundCount` reaches `round`, so it needs no taking down.
+  For the next round, rewrite the file and publish. Without the file, there's
+  no tile.
+- Checked 2026-11-06 in a browser with a sign-in stub at 375px and desktop,
+  light and dark: the full prompt in three paragraphs above Seasons, the
+  button opening the Round 9 page, no sideways scroll at 375px, contrast at
+  least 5.29:1; hidden with Round 9's results in, and with no file.
+
 ## From the vault
 
 A Home section between the season cards and the playlists. It shows one

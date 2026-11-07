@@ -502,6 +502,30 @@
     }).catch(function (err) { console.error(err); });
   }
 
+  // A round that comes with something to read gets a tile on Home: its
+  // prompt in full and a link to the material (asked 2026-11-06, for Round
+  // 9's story). The text is the hand-kept round_material.json, uploaded by
+  // publish.py like playlists.json and never in the repo, since it's the
+  // league's own prompt. The tile goes once that round's results are in the
+  // stats. README, Round material on Home.
+  var MATERIAL_LINK = /^[a-z0-9-]+$/;   // one of the site's own pages, a clean address
+
+  function renderRoundMaterial(index) {
+    PFML.loadJSON("round_material.json").then(function (m) {
+      if (!m || !m.title || !m.text) return;
+      var season = (index.seasons || []).filter(function (s) { return s.key === m.season; })[0];
+      if (season && season.roundCount >= m.round) return;   // its results are in
+      var link = MATERIAL_LINK.test(m.link || "") ? m.link : null;
+      $("materialCard").innerHTML = '<article class="material-card">' +
+        (m.kicker ? '<p class="material-kicker">' + esc(m.kicker) + "</p>" : "") +
+        "<h3>" + esc(m.title) + "</h3>" +
+        String(m.text).split(/\n\s*\n/).map(function (p) { return '<p class="material-text">' + esc(p.trim()) + "</p>"; }).join("") +
+        (link ? '<a class="pill material-link" href="' + link + '">' + esc(m.linkText || "Read the material") + " &rarr;</a>" : "") +
+        "</article>";
+      $("block-material").hidden = false;
+    }).catch(function () { /* no material file: no tile */ });
+  }
+
   // The newest line in the features page's "New in the last 30 days" box (a test
   // keeps the two equal). The features page records the newest date it
   // showed in this browser; Home's button says New until that catches up.
@@ -524,6 +548,7 @@
     renderVault();
     PFML.loadJSON("index.json").then(function (index) {
       renderNav(index, null);
+      renderRoundMaterial(index);
       var grid = el("div", "season-grid");
       if (!index.seasons.length) {
         setBlock("seasonCards", empty("No seasons yet."));

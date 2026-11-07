@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-11-06: Round 9's prompt on Home
+
+- **Asked:** a Round 9 tile on Home with the full prompt and a link to the
+  page with the reading.
+- **Changed:**
+  - "This round's prompt" at the top of Home: the round, its name, the
+    prompt in full and a button to /round-9-prompt.
+  - The text is the hand-kept `site/data/round_material.json`, published
+    with the data, never in the repo; it's the league's own prompt.
+  - The tile goes on its own once the round's results are in.
+  - The features page says so.
+- **Verified:**
+  - New tests in `tests/test_league_extras.py` fail on each of six breaks
+    in a scratch clone. One break first got through: Python's `fullmatch`
+    hid an unanchored link rule, so the test now searches like the
+    browser's `.test()`.
+  - The suite passes.
+  - In a browser with a sign-in stub (README, Round material on Home).
+
 ## 2026-11-02: Submit a track leaves the initials menu
 
 - **Asked:** hide Submit a track from the initials menu.
