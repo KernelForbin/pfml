@@ -1203,10 +1203,27 @@ pfml.fun/round-9-prompt.
   left unstretched), so nothing reflows. A page breaks where the book's
   does, mid-sentence included, and so do the words broken across lines:
   `.bk-sh` marks those hyphens, which aren't part of the word. The book's
-  spelling, punctuation and spaced dots are kept ("verandah", ". . . .",
-  set with third-of-an-em spaces that justification never stretches), as
-  is the blank line before "The afternoon dream" on page 90. Page 87 opens
-  the chapter: its number, the title, a two-line open-face T.
+  spelling and punctuation are kept ("verandah"), as is the blank line
+  before "The afternoon dream" on page 90. Page 87 opens the chapter: its
+  number, the title, a two-line open-face T.
+- **Spacing like the print** (the user's correction, 2026-11-07, after
+  "Oh, is that Venus" came out gappy):
+  - The book's dots sit an en space apart (". . . ."), which
+    justification never stretches. With the third-of-an-em spaces first
+    used, a line full of dots came up short, and justifying it pushed all
+    the slack into the word gaps.
+  - A thin space before `: ; ! ?` ("stranger !"), as the book sets them.
+  - Each line's word gaps were measured in a browser and evened out
+    towards the print's: a letter-spacing of at most 0.03em on a loose
+    line, or a word-spacing of no less than -0.11em on a tight one,
+    written into that line's `style`. A typical gap is now about 0.43em,
+    the Venus line's 0.46em. Lines that are loose in the print stay
+    loose ("shabbiest of the lot").
+  - The type is 5% larger than at first (3.465cqi), with every page
+    measurement scaled down to match, so the pages keep their shape.
+  - The script that set the pages, with the measured spacing, isn't in
+    the repo. The test checks the limits, so a re-set page that breaks
+    them fails.
 - **Type and paper:** Libre Caslon Text, the closest web font to the
   book's Caslon-style type. EB Garamond was tried and left the lines
   gappy, filling about 82% of the measure against Caslon's 98% (measured
@@ -1218,8 +1235,8 @@ pfml.fun/round-9-prompt.
 - **Sizes:** everything is in em off a font size in `cqi`, a share of the
   book's width, so a page keeps its shape at any width. At 375px the
   book's own margins left 10.5px type (measured), so below 561px the
-  pages run nearly to the screen edges with narrower margins: about 13.5px
-  type, the same line breaks.
+  pages run nearly to the screen edges with narrower margins: about 14px
+  type (13.7px measured in a 360px-wide frame), the same line breaks.
 - **Screen readers** skip the pages (`aria-hidden`) and get the same words
   as plain paragraphs (`.cm-sr`). A test joins the pages' lines back into
   paragraphs and checks they match. The pages were made by a script from

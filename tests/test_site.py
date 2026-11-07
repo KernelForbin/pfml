@@ -233,7 +233,7 @@ class RoundPromptPage(unittest.TestCase):
         return re.findall(r'<section class="leaf (leaf-recto|leaf-verso)">(.*?)</section>', book, re.S)
 
     def lines(self, leaf):
-        return re.findall(r'^\s*<span class="(bk-l[^"]*)">(.*)</span>$', leaf, re.M)
+        return re.findall(r'^\s*<span class="(bk-l[^"]*)"(?: style="[^"]*")?>(.*)</span>$', leaf, re.M)
 
     def test_its_the_books_six_pages_in_order(self):
         leaves = self.leaves()
@@ -281,6 +281,28 @@ class RoundPromptPage(unittest.TestCase):
         self.assertIn("with the beginnings of a rose garden", paras[0])   # a word broken across lines, joined
         self.assertIn("I am a well-behaved little girl", paras[17])      # a hyphenated one keeps its hyphen
         self.assertTrue(paras[-1].startswith("Here then is something I can do"))
+
+    def test_spacing_follows_the_print(self):
+        # asked 2026-11-07, after "Oh, is that Venus" came out gappy: the
+        # book's dots sit an en space apart, it sets a thin space before
+        # : ; ! ?, and each line's spacing was measured so word gaps come out
+        # like the print's, within limits nobody would see as distortion
+        book = self.page.split('<div class="book" aria-hidden="true">', 1)[1].split('<div class="cm-sr">', 1)[0]
+        text = book.replace("&#8194;", " ").replace("&#8201;", " ")
+        self.assertNotRegex(text, r"\.[  ]\.")                       # dots: en spaces only
+        self.assertEqual(text.count(" "), len(re.findall(r"\.(?= \.)", text)))   # only between dots
+        self.assertEqual(text.count(" "), 92)
+        self.assertNotRegex(re.sub(r"<[^>]+>", "", text), r"[^\s ][:;!?]")   # a thin space before each
+        styles = re.findall(r'<span class="bk-l[^"]*" style="([^"]*)">', book)
+        self.assertGreater(len(styles), 30)
+        for style in styles:
+            with self.subTest(style):
+                for prop, value in re.findall(r"(letter-spacing|word-spacing): (-?[\d.]+)em", style):
+                    if prop == "letter-spacing":
+                        self.assertLessEqual(abs(float(value)), 0.03)
+                    else:
+                        self.assertGreaterEqual(float(value), -0.11)
+                self.assertRegex(style, r"^(letter-spacing|word-spacing): -?[\d.]+em(; word-spacing: -?[\d.]+em)?$")
 
     def test_it_sets_the_type_in_caslon(self):
         self.assertIn("family=Libre+Caslon+Text:ital@0;1", self.page)

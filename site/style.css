@@ -663,11 +663,11 @@ button.trend-chip.is-on .dot { opacity: 1; }
   font-family: "Libre Caslon Text", Georgia, serif;
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.28 0 0 0 0 0.18 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
-/* 26 lines of 1.348em; the gutter shades the page's bound edge, left on a
+/* 26 lines of 1.284em; the gutter shades the page's bound edge, left on a
    right-hand (odd) page, right on a left-hand one */
 .leaf {
-  position: relative; height: 46.97em; padding: 4.9em 3.5em 0;
-  font-size: 14px; font-size: 3.3cqi; line-height: 1.348;
+  position: relative; height: 44.73em; padding: 4.667em 3.333em 0;
+  font-size: 14.5px; font-size: 3.465cqi; line-height: 1.284;
   color: var(--leaf-ink);
   background-color: var(--leaf);
   background-image: linear-gradient(90deg, rgba(74, 56, 30, 0.17), rgba(74, 56, 30, 0) 8%), var(--grain);
@@ -680,23 +680,23 @@ button.trend-chip.is-on .dot { opacity: 1; }
   background: var(--leaf-edge); box-shadow: 0 1px 2px rgba(40, 30, 15, 0.2);
 }
 .leaf-verso::before { right: 3px; left: -3px; }
-.bk-head { height: 1.348em; margin: 0 0 1.2em; text-align: center; font-size: 0.86em; letter-spacing: 0.2em; text-transform: uppercase; }
-.bk-ch { margin: 0.77em 0 0; text-align: center; font-variant-caps: small-caps; font-size: 1.05em; }
-.bk-title { margin: 1.08em 0 2.17em; text-align: center; font-size: 1.12em; letter-spacing: 0.24em; text-transform: uppercase; }
+.bk-head { height: 1.284em; margin: 0 0 1.143em; text-align: center; font-size: 0.86em; letter-spacing: 0.2em; text-transform: uppercase; }
+.bk-ch { margin: 0.733em 0 0; text-align: center; font-variant-caps: small-caps; font-size: 1.05em; }
+.bk-title { margin: 1.029em 0 2.067em; text-align: center; font-size: 1.12em; letter-spacing: 0.24em; text-transform: uppercase; }
 .bk-l { display: block; white-space: nowrap; text-align: justify; text-align-last: justify; }
-.bk-p { text-indent: 1.1em; }
+.bk-p { text-indent: 1.048em; }
 .bk-e { text-align-last: left; }
-.bk-gap { height: 1.348em; }
-.bk-dc { float: left; margin: 0.02em 0.04em 0 0; font-size: 2.72em; line-height: 0.86; color: var(--leaf); -webkit-text-stroke: 0.022em var(--leaf-ink); }
+.bk-gap { height: 1.284em; }
+.bk-dc { float: left; margin: 0.02em 0.04em 0 0; font-size: 2.59em; line-height: 0.86; color: var(--leaf); -webkit-text-stroke: 0.022em var(--leaf-ink); }
 .bk-sc { font-variant-caps: small-caps; letter-spacing: 0.03em; }
-.bk-folio { margin: 0; position: absolute; left: 0; right: 0; bottom: 2.8em; text-align: center; }
+.bk-folio { margin: 0; position: absolute; left: 0; right: 0; bottom: 2.667em; text-align: center; }
 /* a phone: the book's margins would leave 10.5px type at 375px (measured),
    so the pages run nearly to the screen's edges with narrower margins; the
-   lines still break where the book's do, at about 13.5px */
+   lines still break where the book's do, at about 14px */
 @media (max-width: 560px) {
   .book { margin: 0 -12px; gap: 26px; }
-  .leaf { height: 44.62em; padding: 3.4em 1.5em 0; font-size: 3.8cqi; }
-  .bk-folio { bottom: 1.9em; }
+  .leaf { height: 42.5em; padding: 3.238em 1.43em 0; font-size: 3.987cqi; }
+  .bk-folio { bottom: 1.81em; }
 }
 
 /* ---------- footer ---------- */

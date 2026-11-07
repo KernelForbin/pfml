@@ -1,5 +1,32 @@
 # Changelog
 
+## 2026-11-07: Round 9's book pages, spaced like the print
+
+- **Asked:** the word spacing didn't match the printed page: "Oh, is that
+  Venus" had big gaps. Avoid extra space between words and match the
+  print more closely.
+- **Found:** the dots were set too close together (third-of-an-em
+  spaces where the print has about half an em). A line with several dots
+  came up short, so justifying it pushed the slack into the word gaps.
+  More broadly, Libre Caslon is a little narrower than the 1927 type, so
+  a typical gap was stretched by about a third of an em.
+- **Changed:**
+  - Dots an en space apart.
+  - A thin space before `: ; ! ?`, as the book sets them.
+  - Type 5% larger, with the page measurements scaled to match.
+  - Each line's spacing evened out towards the print's: at most 0.03em of
+    letter-spacing on a loose line, no less than -0.11em of word-spacing
+    on a tight one.
+  - Phones get about 14px type.
+- **Verified:**
+  - Measured in a browser at 1280 and 375px: no line overflows. A typical
+    word gap is 0.43em, the Venus line's 0.46em, and the tightest line's
+    0.16 to 0.19em.
+  - Compared side by side with the scan of page 87.
+  - A new test in `tests/test_site.py` checks the dots, the thin spaces
+    and the spacing limits. It failed on each of five breaks in a scratch
+    clone. Full suite passes.
+
 ## 2026-11-07: Round 9's story as pages of the book
 
 - **Asked:** the reading on /round-9-prompt to look like the real book, as
