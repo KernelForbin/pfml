@@ -1196,9 +1196,34 @@ pfml.fun/round-9-prompt.
 - **Members only**, like every page with league content: the usual sign-in
   shell (`auth.js`, `account.js`, `app.js`, which only fills the header,
   `data-page="prompt"`). It reads no data.
-- **The story's text is copied, not retyped**: it was filled in from the
-  user's upload by a script, one `<p>` per paragraph, with the upload's
-  italics as `<i>`/`<em>`. A test checks the whole story is there.
+- **The story as its pages in the book** (asked 2026-11-07): pages 87 to
+  92 of the 1927 edition, set line for line from scans of them the user
+  sent. Every printed line is its own justified block (`.bk-l`, with
+  `.bk-p` for a paragraph's indented first line and `.bk-e` for its last,
+  left unstretched), so nothing reflows. A page breaks where the book's
+  does, mid-sentence included, and so do the words broken across lines:
+  `.bk-sh` marks those hyphens, which aren't part of the word. The book's
+  spelling, punctuation and spaced dots are kept ("verandah", ". . . .",
+  set with third-of-an-em spaces that justification never stretches), as
+  is the blank line before "The afternoon dream" on page 90. Page 87 opens
+  the chapter: its number, the title, a two-line open-face T.
+- **Type and paper:** Libre Caslon Text, the closest web font to the
+  book's Caslon-style type. EB Garamond was tried and left the lines
+  gappy, filling about 82% of the measure against Caslon's 98% (measured
+  2026-11-07). Paper and ink are tokens (`--leaf`, `--leaf-ink`,
+  `--leaf-edge`) that stay the same in dark mode, the way a page you're
+  holding does. Each page has a drop shadow, the pages under it at the
+  fore-edge, and a shaded gutter: left on an odd page, right on an even
+  one.
+- **Sizes:** everything is in em off a font size in `cqi`, a share of the
+  book's width, so a page keeps its shape at any width. At 375px the
+  book's own margins left 10.5px type (measured), so below 561px the
+  pages run nearly to the screen edges with narrower margins: about 13.5px
+  type, the same line breaks.
+- **Screen readers** skip the pages (`aria-hidden`) and get the same words
+  as plain paragraphs (`.cm-sr`). A test joins the pages' lines back into
+  paragraphs and checks they match. The pages were made by a script from
+  a line-for-line transcription, not edited by hand.
 - **Copyright:** published in 1927, so public domain in the US since 2023.
   Rhys died in 1979, so it is still in copyright in the UK and the EU
   until the end of 2049. The repo is public, so the text is too, whatever

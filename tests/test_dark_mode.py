@@ -53,7 +53,7 @@ PAIRS = [("--ink", "--paper"), ("--ink", "--card"), ("--muted", "--paper"), ("--
          ("--deep", "--paper"), ("--deep", "--card"), ("--deep", "--wash"), ("--ink", "--wash"),
          ("--magenta-text", "--paper"), ("--magenta-text", "--card"), ("--on-inverse", "--inverse"),
          ("--acid", "--inverse"), ("--neg", "--card"), ("--on-metal", "--gold"), ("--on-metal", "--silver"),
-         ("--on-metal", "--bronze")]
+         ("--on-metal", "--bronze"), ("--leaf-ink", "--leaf")]
 
 
 class Palette(unittest.TestCase):

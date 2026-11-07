@@ -1,5 +1,34 @@
 # Changelog
 
+## 2026-11-07: Round 9's story as pages of the book
+
+- **Asked:** the reading on /round-9-prompt to look like the real book, as
+  close to the original as possible: its pages, split as they are, with a
+  shadow, the book's font and colouring, and the blank line on page 90
+  before "The afternoon dream". The user sent scans of pages 87 to 92.
+- **Changed:**
+  - The story is set line for line from the scans, as six pages with
+    running heads and page numbers, and the chapter opening on page 87.
+  - The text now follows the book: "verandah", spaced dots, the aunt's
+    two speeches as separate paragraphs, "fall asleep", "duty of mixing".
+    The earlier copy came from an upload that differed in places.
+  - Type: Libre Caslon Text, on paper-coloured pages with a drop shadow, a
+    shaded gutter and the pages under them showing at the edge. The paper
+    stays paper in dark mode.
+  - Phones get narrower page margins, so the type is about 13.5px rather
+    than 10.5px, with the same line breaks.
+  - Screen readers get the same words as plain paragraphs.
+- **Verified:**
+  - New tests in `tests/test_site.py`: six pages in order, each on its
+    side; page breaks and the page 90 blank line where the book has them;
+    the readable copy matching the pages' lines joined back up; Caslon
+    loaded. The ink-on-paper contrast is in `tests/test_dark_mode.py`.
+    Each failed on its own break in a scratch clone (seven breaks).
+  - In a browser with a stub sign-in at 375, 560, 561 and 1280px, light
+    and dark: no sideways scroll, no line wider than its page, the
+    tightest line at 98% of the measure, and the page number clear of the
+    last line on every page. Compared by eye with the scans.
+
 ## 2026-11-06: Round 9's prompt on Home
 
 - **Asked:** a Round 9 tile on Home with the full prompt and a link to the

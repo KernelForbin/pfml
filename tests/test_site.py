@@ -224,13 +224,67 @@ class RoundPromptPage(unittest.TestCase):
     def setUp(self):
         self.page = read("round-9-prompt.html")
 
-    def test_it_holds_the_whole_story(self):
-        story = self.page.split('<article class="shell story">', 1)[1].split("</article>", 1)[0]
-        paras = re.findall(r"<p>(.*?)</p>", story)
-        self.assertEqual(len(paras), 24)
-        self.assertTrue(paras[0].startswith("THE HOUSE in the hills was very new and very ugly"))
-        self.assertTrue(paras[-1].endswith("Action, they say, is more worthy than dreaming…"))
-        self.assertNotIn("*", story)   # the upload's markdown italics, all turned into tags
+    # Since 2026-11-07 the story is shown as its pages in the 1927 book,
+    # set line for line from scans of pages 87 to 92, with the same words
+    # as plain paragraphs for screen readers (the pages are aria-hidden).
+
+    def leaves(self):
+        book = self.page.split('<div class="book" aria-hidden="true">', 1)[1]
+        return re.findall(r'<section class="leaf (leaf-recto|leaf-verso)">(.*?)</section>', book, re.S)
+
+    def lines(self, leaf):
+        return re.findall(r'^\s*<span class="(bk-l[^"]*)">(.*)</span>$', leaf, re.M)
+
+    def test_its_the_books_six_pages_in_order(self):
+        leaves = self.leaves()
+        folios = [int(re.search(r'<p class="bk-folio">(\d+)</p>', body).group(1)) for _, body in leaves]
+        self.assertEqual(folios, list(range(87, 93)))
+        for (side, body), folio in zip(leaves, folios):
+            with self.subTest(folio):
+                self.assertEqual(side, "leaf-recto" if folio % 2 else "leaf-verso")   # odd pages on the right
+                self.assertLessEqual(len(self.lines(body)), 26)
+                head = '<p class="bk-head">Mixing Cocktails</p>'
+                self.assertEqual(head in body, folio != 87)
+        self.assertIn('<p class="bk-title">Mixing Cocktails</p>', leaves[0][1])
+        self.assertIn('<span class="bk-dc">T</span><span class="bk-sc">he</span> house', leaves[0][1])
+
+    def test_pages_break_where_the_books_do(self):
+        ends = [(self.lines(body)[0][1], self.lines(body)[-1][1]) for _, body in self.leaves()]
+        self.assertTrue(ends[0][1].endswith("And that’s"))
+        self.assertTrue(ends[1][0].startswith("the Southern Cross"))
+        self.assertTrue(ends[3][1].endswith("when one shall be plump"))
+        self.assertTrue(ends[4][0].startswith("and beautiful instead of pale"))
+        # the blank line before "The afternoon dream", as on page 90
+        page90 = self.lines(self.leaves()[3][1])
+        at = [i for i, (_, text) in enumerate(page90) if text.startswith("The afternoon dream")][0]
+        self.assertEqual(page90[at - 1], ("bk-l bk-gap", ""))
+
+    def test_the_readable_copy_has_the_pages_words(self):
+        paras, words, glue = [], "", ""
+        for _, body in self.leaves():
+            for cls, text in self.lines(body):
+                if "bk-gap" in cls:
+                    continue
+                broken = text.endswith('<span class="bk-sh">-</span>')
+                text = re.sub(r"</?span[^>]*>", "", text[:-len('<span class="bk-sh">-</span>')] if broken else text)
+                words += glue + text
+                glue = "" if broken or text.endswith("-") else " "
+                if "bk-e" in cls.split():
+                    paras.append(words)
+                    words, glue = "", ""
+        self.assertEqual(words, "", "the last line ends a paragraph")
+        readable = self.page.split('<div class="cm-sr">', 1)[1].split("</div>", 1)[0]
+        self.assertIn("<h2>Mixing Cocktails</h2>", readable)
+        self.assertEqual(re.findall(r"<p>(.*?)</p>", readable), paras)
+        self.assertEqual(len(paras), 27)
+        self.assertTrue(paras[0].startswith("The house in the hills was very new and very ugly"))
+        self.assertIn("with the beginnings of a rose garden", paras[0])   # a word broken across lines, joined
+        self.assertIn("I am a well-behaved little girl", paras[17])      # a hyphenated one keeps its hyphen
+        self.assertTrue(paras[-1].startswith("Here then is something I can do"))
+
+    def test_it_sets_the_type_in_caslon(self):
+        self.assertIn("family=Libre+Caslon+Text:ital@0;1", self.page)
+        self.assertRegex(read("style.css"), r'\.book \{[^}]*font-family: "Libre Caslon Text", Georgia, serif;')
 
     def test_it_loads_the_member_shell_and_no_page_code(self):
         srcs = [a.get("src") for a in Page(self.page).find("script") if a.get("src")]
