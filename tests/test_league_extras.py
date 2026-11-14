@@ -158,6 +158,16 @@ class RoundMaterial(unittest.TestCase):
         self.assertIn('<section class="shell block block-first" id="block-material" hidden>', html)
         self.assertLess(html.index('id="block-material"'), html.index('id="block-seasons"'), "above the seasons")
 
+    def test_home_reads_current_round_prompt_vault_playlists_then_seasons(self):
+        # asked 2026-11-14: the season cards move to the bottom, and the
+        # tile's heading says where the league is instead
+        html = read("index.html")
+        order = [html.index('id="' + b + '"') for b in ("block-material", "block-vault", "block-playlists", "block-seasons")]
+        self.assertEqual(order, sorted(order))
+        self.assertIn('<h2 id="materialHead">', html)
+        self.assertIn('if (season && m.round > 0) $("materialHead").textContent = season.label + ", Round " + m.round;', self.fn)
+        self.assertNotIn("innerHTML", self.fn.split('$("materialHead")')[1].split(";")[0], "the label is text, not markup")
+
     def test_it_goes_once_the_rounds_results_are_in(self):
         self.assertIn("if (season && season.roundCount >= m.round) return;", self.fn)
 

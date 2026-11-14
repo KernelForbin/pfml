@@ -519,6 +519,8 @@
       if (season && season.roundCount >= m.round) return;   // its results are in
       var link = MATERIAL_LINK.test(m.link || "") ? m.link : null;
       var submit = MATERIAL_SUBMIT.test(m.submitLink || "") ? m.submitLink : null;
+      // Where the league is, now that the season cards sit at the bottom of Home.
+      if (season && m.round > 0) $("materialHead").textContent = season.label + ", Round " + m.round;
       $("materialCard").innerHTML = '<article class="material-card">' +
         (m.kicker ? '<p class="material-kicker">' + esc(m.kicker) + "</p>" : "") +
         "<h3>" + esc(m.title) + "</h3>" +

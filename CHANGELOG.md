@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-11-14: Home leads with the current round
+
+- **Asked:** move Seasons down, below Playlists, and say at the top which
+  season and round the league is on: current round and prompt, From the
+  vault, Playlists, then Seasons with All-Time.
+- **Changed:**
+  - Home's blocks in that order.
+  - The round tile's heading reads like "Season 3, Round 10", from the
+    season's label and the round in `round_material.json`.
+  - The features page says so.
+- **Verified:**
+  - A new test in `tests/test_league_extras.py` fails on each of three
+    breaks in a scratch clone (Seasons back on top, no heading, the
+    heading as markup). The suite passes.
+  - A stubbed copy of the site with the real data, at 375px and 1280px,
+    light and dark (README, Round material on Home).
+
 ## 2026-11-14: Submit on Music League, from Home's prompt tile
 
 - **Asked:** a "Submit on Music League" link on the Round 10 prompt tile,

@@ -912,6 +912,16 @@ number, its name and prompt in full, and a button to the material's page
   375px. Checked 2026-11-14 with the real `renderRoundMaterial` and
   `style.css` at 375px and 1280px, light and dark: no sideways scroll,
   `target="_blank" rel="noopener"`.
+- **Home's order** (asked 2026-11-14): the round tile first, then From the
+  vault, Playlists, and the season cards (with All-Time) last. With the
+  cards at the bottom, the tile's heading says where the league is,
+  "<season label>, Round <round>", from `index.json` and the file's
+  `round`, and `kicker` becomes the small "This round's prompt" line.
+  The round number comes only from the file: the export holds finished
+  rounds only, so the data can't say which round is open. Without the
+  file, nothing at the top names the round. Checked 2026-11-14 on a stubbed
+  copy of the site with the real data at 375px and 1280px, light and dark:
+  the four blocks in that order, no sideways scroll.
 - **It goes on its own** once that round's results are in the stats, when
   the season's `roundCount` reaches `round`, so it needs no taking down.
   For the next round, rewrite the file and publish. Without the file, there's
