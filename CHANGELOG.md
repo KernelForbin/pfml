@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-11-14: Who wrote each round's prompt
+
+- **Asked:** go through every past round, work out who wrote its prompt
+  (it has to be an existing player), say how sure, leave blank what can't
+  be told, and store it in a field on every round. Season 1 and Season 2's
+  extra round are the commissioner's (the user confirmed), labelled as such.
+- **Found:** the "(from …)" in a round's name gives most of them through
+  the league's nicknames. A round's winner writes the prompt two rounds on
+  (three in the second half of Season 2, after an extra round), and every
+  named round fits that, which pins each nickname to a player. Vote comments
+  where a writer says "my prompt" settle the rest. All 48 rounds have a
+  writer: 22 high, 5 medium, 21 confirmed by the user (counted from the
+  files), none low or blank.
+- **Changed:** every round in a season's JSON now has `promptBy` (who, as
+  commissioner or not, and how sure), from a hand-kept, local-only
+  `data/seasonN/prompters.json` that `publish.py` backs up with the
+  exports. Not shown on the site yet. CLAUDE.md's "update the data" now
+  records each new round's writer. README, Prompt writers.
+- **Verified:** six new tests in `tests/test_build.py`, which failed on
+  each of seven breaks in a scratch clone. Built all three real seasons in
+  memory: every round has a writer and every writer is one of that
+  season's players. Full suite passes.
+
 ## 2026-11-07: Round 9's book pages, spaced like the print
 
 - **Asked:** the word spacing didn't match the printed page: "Oh, is that

@@ -473,6 +473,46 @@ def check_daily_doubles(path, raw):
                 stop(f"requests[{i}] is accepted but has no {', '.join(missing)}")
 
 
+# Who wrote each round's prompt. Music League's export doesn't say, so it's
+# worked out by hand (the "(from …)" in a round's name, the winners' turn to
+# write two rounds on, comments, the commissioner) and kept, per season, in
+# data/seasonN/prompters.json: local-only, like daily_doubles.json, since it
+# names players. README, Prompt writers.
+PROMPTERS_FILE = "prompters.json"
+PROMPTER_CERTAINTY = ("confirmed", "high", "medium", "low")
+
+
+def load_prompters(folder, names):
+    """{round id: {"people": [{"id", "name"}], "commissioner", "certainty"}}
+    from the season's prompters.json; {} without it. names is the season's
+    {player id: name}, and every writer has to be one of them. Not a scoring
+    input, so a broken file or entry is skipped with a warning rather than
+    stopping the build."""
+    path = folder / PROMPTERS_FILE
+    if not path.exists():
+        return {}
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"  ! {path}: unreadable ({e}); building without prompt writers")
+        return {}
+    entries = raw.get("rounds") if isinstance(raw, dict) else None
+    out = {}
+    for rid, e in (entries.items() if isinstance(entries, dict) else []):
+        people = e.get("prompters") if isinstance(e, dict) else None
+        if not isinstance(people, list) or not people or not all(isinstance(p, str) and p in names for p in people):
+            print(f"  ! {path}: round {rid} needs \"prompters\", a list of this season's player ids; skipped")
+            continue
+        if e.get("certainty") not in PROMPTER_CERTAINTY or not isinstance(e.get("commissioner", False), bool):
+            print(f"  ! {path}: round {rid} needs \"certainty\" ({', '.join(PROMPTER_CERTAINTY)}) "
+                  f"and \"commissioner\" true or false; skipped")
+            continue
+        out[rid] = {"people": [{"id": p, "name": names[p]} for p in people],
+                    "commissioner": e.get("commissioner", False),
+                    "certainty": e["certainty"]}
+    return out
+
+
 def season_folders():
     """data/seasonN folders in season order, numerically, so season10 comes
     after season9. publish.py and enrich_comments.py use this too."""
@@ -944,6 +984,12 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
     comment_only_votes = 0
     downvotes = 0
 
+    prompters = load_prompters(folder, names)
+    # an id that matches no round is a typo, and that writer would never show
+    stray = sorted(set(prompters) - {r["ID"] for r in round_rows})
+    if stray:
+        print(f"  ! {folder / PROMPTERS_FILE}: no round has the id {', '.join(stray)}")
+
     daily = load_daily_doubles(folder)
     dd_by_track = {}
     for r in (daily["accepted"] if daily else []):
@@ -1147,6 +1193,9 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
             # round list says "voting hasn't started" instead of showing an
             # empty result.
             "hasVotingActivity": len(electorate) > 0,
+            # who wrote the prompt, as recorded in prompters.json; None when
+            # nobody has worked it out (README, Prompt writers)
+            "promptBy": prompters.get(rid),
         })
         if spectators:
             rounds_out[-1]["spectators"] = spectators

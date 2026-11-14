@@ -3501,6 +3501,60 @@ jokes), plus one Spanish and one Portuguese comment from earlier rounds.
 Found by reading Round 4 in full and screening the rest for comments made
 mostly of words the league doesn't otherwise use, then reading every hit.
 
+## Prompt writers
+
+Every round in a season's JSON has `promptBy`: who wrote its prompt, or
+`null` when nobody has worked it out. Nothing on the site shows it yet.
+
+```json
+"promptBy": { "people": [{ "id": "<player id>", "name": "..." }],
+              "commissioner": true, "certainty": "confirmed" }
+```
+
+**Kept by hand.** Music League's export doesn't say who wrote a prompt, so
+it's recorded per season in `data/seasonN/prompters.json` (local-only,
+since it names players; `publish.py` backs it up with the exports):
+
+```json
+{ "_nicknames": { "<nickname>": "<player name>" },
+  "rounds": { "<round id>": { "round": "<round name>",
+                              "prompters": ["<player id>"],
+                              "commissioner": false, "certainty": "high" } } }
+```
+
+- `prompters` is a list, because two players can share a round (a Season
+  3 round was written by the two who tied for first two rounds before).
+  Each has to be one of that season's players.
+- `commissioner` is true for a prompt written as the commissioner rather
+  than as a winner: all of Season 1, and the openers and extra rounds since.
+- `certainty` is `confirmed` (the user said so), `high` (named in the
+  round's title, and the rotation or the writer's own comment agrees),
+  `medium` (worked out without a name) or `low`. `round` and `_nicknames`
+  are for a person reading the file; the build ignores them.
+- Like translations, it isn't a scoring input: a broken entry or file is
+  skipped with a warning, and an id that matches no round is named.
+- Names stay out of this README (the repo is public): the nicknames the
+  round titles use, and which player each one is, are in the files'
+  `_nicknames`.
+
+**How they were worked out** (2026-11-14, all 48 rounds of Seasons 1-3):
+
+- The "(from …)" in a round's name, decoded with the league's nicknames.
+- **The rotation:** a round's winner writes the prompt two rounds on, in
+  play order (Season 3 throughout; Season 2 until an extra round partway
+  through, after which it was three rounds on). Every named round fits it,
+  which is what pins each nickname to a player, and it names the writer of
+  the one unnamed Season 3 round after the opening two.
+- Comments: a writer saying so in their own vote comment ("this was my
+  prompt"), and a Season 2 prompt signed by the commissioner.
+- Season 1 and Season 2's extra round have nothing in them, and the user
+  confirmed they're the commissioner's.
+
+For a new round, add its entry when its export arrives (CLAUDE.md, Update
+the data). A round voted on the site already records its prompters in the
+database (DJs and Spectators, above), but `site_rounds_export()` doesn't
+carry them, so a site round needs an entry here too for now.
+
 ## Ties
 
 Ties are real in this data (Season 3's first round ended with two players

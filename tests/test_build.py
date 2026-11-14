@@ -10,7 +10,7 @@ import textwrap
 import unittest
 from unittest import mock
 
-from support import ROOT, build, make_season, quiet, sandbox, uri
+from support import ROOT, build, make_season, publish, quiet, sandbox, uri
 
 # One round, four players. a and b tie on 3; Dan's row on c is 0 points
 # with a comment, which is a comment, not a vote.
@@ -536,6 +536,73 @@ class Translations(unittest.TestCase):
         season, _, printed = self.build_with(None)
         self.assertNotIn("translation", json.dumps(season))
         self.assertNotIn("translations.json", printed)
+
+
+class PromptWriters(unittest.TestCase):
+    """Who wrote each round's prompt, from the hand-kept
+    data/seasonN/prompters.json (README, Prompt writers)."""
+
+    ENTRIES = {"rounds": {
+        "r1": {"prompters": ["p1"], "commissioner": True, "certainty": "confirmed"},
+        "r2": {"prompters": ["p2", "p3"], "commissioner": False, "certainty": "medium"},
+    }}
+
+    def build_with(self, prompters):
+        out = io.StringIO()
+        with sandbox() as root, contextlib.redirect_stdout(out):
+            folder = make_season(root / "data" / "season1", [TIE_ROUND, SECOND_ROUND])
+            if prompters is not None:
+                (folder / "prompters.json").write_text(
+                    prompters if isinstance(prompters, str) else json.dumps(prompters), encoding="utf-8")
+            build.main()
+            season = json.loads((root / "site" / "data" / "season1.json").read_text(encoding="utf-8"))
+            return {r["id"]: r for r in season["rounds"]}, out.getvalue()
+
+    def test_every_round_says_who_wrote_it(self):
+        rounds, _ = self.build_with(self.ENTRIES)
+        self.assertEqual(rounds["r1"]["promptBy"], {"people": [{"id": "p1", "name": "Ann"}],
+                                                    "commissioner": True, "certainty": "confirmed"})
+        self.assertEqual(rounds["r2"]["promptBy"], {"people": [{"id": "p2", "name": "Ben"}, {"id": "p3", "name": "Cat"}],
+                                                    "commissioner": False, "certainty": "medium"})
+
+    def test_a_round_nobody_worked_out_has_the_field_empty(self):
+        one = {"rounds": {"r1": self.ENTRIES["rounds"]["r1"]}}
+        rounds, _ = self.build_with(one)
+        self.assertIn("promptBy", rounds["r2"])
+        self.assertIsNone(rounds["r2"]["promptBy"])
+        rounds, printed = self.build_with(None)
+        self.assertEqual([r["promptBy"] for r in rounds.values()], [None, None])
+        self.assertNotIn("prompters.json", printed)
+
+    def test_a_writer_must_be_one_of_the_seasons_players(self):
+        stranger = {"rounds": {"r1": {"prompters": ["p1", "nobody"], "commissioner": False, "certainty": "high"}}}
+        rounds, printed = self.build_with(stranger)
+        self.assertIsNone(rounds["r1"]["promptBy"])
+        self.assertIn("round r1 needs \"prompters\"", printed)
+
+    def test_a_bad_entry_or_file_is_skipped_not_fatal(self):
+        for bad in ({"prompters": ["p1"], "commissioner": False, "certainty": "sure"},
+                    {"prompters": ["p1"], "commissioner": "yes", "certainty": "high"},
+                    {"prompters": [], "commissioner": False, "certainty": "high"}):
+            rounds, printed = self.build_with({"rounds": {"r1": bad, "r2": self.ENTRIES["rounds"]["r2"]}})
+            self.assertIsNone(rounds["r1"]["promptBy"], bad)
+            self.assertIn("round r1", printed)
+            self.assertIsNotNone(rounds["r2"]["promptBy"], "the good entry still counts")
+        rounds, printed = self.build_with("{not json")
+        self.assertIn("unreadable", printed)
+        self.assertIsNone(rounds["r1"]["promptBy"])
+
+    def test_an_id_that_matches_no_round_is_named(self):
+        typo = {"rounds": {"r7": {"prompters": ["p1"], "commissioner": False, "certainty": "high"}}}
+        _, printed = self.build_with(typo)
+        self.assertIn("no round has the id r7", printed)
+
+    def test_the_file_is_backed_up_with_the_exports(self):
+        # it's hand-kept and local-only, so the export bucket is its only other copy
+        with sandbox() as root:
+            folder = make_season(root / "data" / "season1", [TIE_ROUND])
+            (folder / "prompters.json").write_text(json.dumps(self.ENTRIES), encoding="utf-8")
+            self.assertIn(folder / "prompters.json", publish.backup_files())
 
 
 class SeasonFolders(unittest.TestCase):

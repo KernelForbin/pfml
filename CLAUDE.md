@@ -94,8 +94,8 @@ the keyboard, so it has to run without a click anywhere. Measured
 4. Compare with `data/seasonN/` before copying. A fresh export whose four
    CSVs are byte-identical means no new finished round (the export leaves
    out a round until it's over), so copy nothing and say so.
-5. When it does differ: copy the four CSVs in, do the Daily Double review
-   and the translation check below for each new round, then run
+5. When it does differ: copy the four CSVs in, do the Daily Double review,
+   the translation check and the prompt writer below for each new round, then run
    `python scripts/publish.py`, and report what changed. The user gave a standing go-ahead (2026-09-23)
    for the publish inside this flow, so it needs no separate ask; it
    uploads data only. Pushing the repo still does.
@@ -150,6 +150,18 @@ total. Whenever the user uploads a new Season 3 export, before building:
 
 The build applies only what the file says. It warns about unreviewed rounds
 and refuses to build on malformed entries. See README, Daily Double.
+
+## Record who wrote each new round's prompt
+
+Every round carries `promptBy` (asked 2026-11-14), from the hand-kept,
+local-only `data/seasonN/prompters.json`. For each new round, add an entry:
+the "(from …)" in its name decoded with the file's `_nicknames`, checked
+against the rotation (a round's winner writes the prompt two rounds on);
+`commissioner: true` for the commissioner's own; a certainty. Every writer
+has to be one of that season's players. Match the round by its exact name
+in a script, never by retyping ids. When a name and the rotation disagree,
+or nothing names anyone, ask the user rather than guess. Tell them who you
+recorded. README, Prompt writers.
 
 ## Translate comments that aren't in English
 
