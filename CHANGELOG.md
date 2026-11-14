@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-11-14: Writer's Pick
+
+- **Asked:** a round, season and all-time award for the submitter the
+  prompt writer gave the most points, who "got" the prompt best; a name for
+  it (Writer's Pick, the user's pick of four). A tie shares it with the
+  credit split; a duo's points add up.
+- **Changed:**
+  - `build.py` gives every round `writersPick`, and the season and
+    `career.json` highlights `writersPick`.
+  - The round recap names it, and the season and All-Time highlights have
+    a tile.
+  - The features page, with a New line.
+- **Verified:**
+  - Seven new tests in `tests/test_build.py` (WritersPick); each of the
+    breaks in a scratch clone fails at least one. The suite passes.
+  - All three real seasons built in memory: all 48 rounds have a pick.
+  - The pages in a browser on a stubbed copy of the site with the real
+    data, at 375px and desktop, light and dark.
+
 ## 2026-11-14: Home leads with the current round
 
 - **Asked:** move Seasons down, below Playlists, and say at the top which

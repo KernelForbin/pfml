@@ -538,6 +538,81 @@ class Translations(unittest.TestCase):
         self.assertNotIn("translations.json", printed)
 
 
+class WritersPick(unittest.TestCase):
+    """Writer's Pick (asked 2026-11-14): who the prompt writer's own ballot
+    favoured. A duo's points add up; a tie shares it, each of the tied
+    getting an even split of one pick toward the season and all-time
+    counts (README, Writer's Pick)."""
+
+    def build_with(self, prompters, seasons=1):
+        with sandbox() as root, contextlib.redirect_stdout(io.StringIO()):
+            for n in range(1, seasons + 1):
+                folder = make_season(root / "data" / f"season{n}", [TIE_ROUND, SECOND_ROUND])
+                (folder / "prompters.json").write_text(json.dumps({"rounds": {
+                    rid: {"prompters": ids, "commissioner": False, "certainty": "high"}
+                    for rid, ids in prompters.items()}}), encoding="utf-8")
+            build.main()
+            out = root / "site" / "data"
+            season = json.loads((out / "season1.json").read_text(encoding="utf-8"))
+            career = json.loads((out / "career.json").read_text(encoding="utf-8"))
+            return {r["id"]: r["writersPick"] for r in season["rounds"]}, season["highlights"], career["highlights"]
+
+    def test_the_writers_favourite_takes_it(self):
+        # Ann wrote Round One and gave Ben 2, Cat 1
+        picks, _, _ = self.build_with({"r1": ["p1"]})
+        self.assertEqual(picks["r1"], {"points": 2, "share": 1.0, "people": [{"id": "p2", "name": "Ben"}]})
+
+    def test_a_tie_is_shared_and_split(self):
+        # Cat gave Ann, Ben and Dan 1 each
+        picks, _, _ = self.build_with({"r1": ["p3"]})
+        self.assertEqual([p["name"] for p in picks["r1"]["people"]], ["Ann", "Ben", "Dan"])
+        self.assertEqual((picks["r1"]["points"], picks["r1"]["share"]), (1, 0.333))
+
+    def test_a_duos_points_add_up(self):
+        # Round Two: Cat gave e (Ann) 2 and f (Ben) 1, Dan the reverse.
+        # Cat alone picks Ann; together they're level, 3 each.
+        picks, _, _ = self.build_with({"r2": ["p3"]})
+        self.assertEqual([p["name"] for p in picks["r2"]["people"]], ["Ann"])
+        picks, _, _ = self.build_with({"r2": ["p3", "p4"]})
+        self.assertEqual(picks["r2"], {"points": 3, "share": 0.5,
+                                       "people": [{"id": "p1", "name": "Ann"}, {"id": "p2", "name": "Ben"}]})
+
+    def test_no_writer_or_no_points_from_them_no_pick(self):
+        # Dan's only row in Round One is a 0-point comment; Ann didn't vote in Round Two
+        picks, highlights, career = self.build_with({"r1": ["p4"], "r2": ["p1"]})
+        self.assertEqual(picks, {"r1": None, "r2": None})
+        self.assertNotIn("writersPick", highlights)
+        self.assertNotIn("writersPick", career)
+        picks, _, _ = self.build_with({})
+        self.assertEqual(picks, {"r1": None, "r2": None})
+
+    def test_season_and_all_time_count_split_picks(self):
+        # Ben: Round One outright (1) + half of Round Two (0.5) = 1.5; Ann 0.5
+        _, highlights, career = self.build_with({"r1": ["p1"], "r2": ["p3", "p4"]}, seasons=2)
+        self.assertEqual(highlights["writersPick"],
+                         {"id": "p2", "name": "Ben", "picks": 1.5, "rounds": 2, "outright": 1})
+        self.assertEqual(career["writersPick"],
+                         {"id": "p2", "name": "Ben", "picks": 3.0, "rounds": 4, "outright": 2})
+
+    def test_a_tie_for_the_season_names_everyone(self):
+        # Round Two split between Ann and Ben, and nothing else
+        _, highlights, _ = self.build_with({"r2": ["p3", "p4"]})
+        self.assertEqual(highlights["writersPick"]["name"], "Ann")
+        self.assertEqual(highlights["writersPick"]["tiedWith"], ["Ben"])
+
+    def test_the_pages_show_it(self):
+        js = (ROOT / "site" / "app.js").read_text(encoding="utf-8")
+        for fn in ("function renderHighlights(d) {", "function renderCareerHighlights(c) {"):
+            start = js.index(fn)
+            self.assertIn("if (h.writersPick) g.appendChild(writersPickTile(h.writersPick));",
+                          js[start:js.index("\n  }\n", start)], fn)
+        rounds = (ROOT / "site" / "rounds.js").read_text(encoding="utf-8")
+        start = rounds.index("function recapLines(r, names) {")
+        recap = rounds[start:rounds.index("\n  }\n", start)]
+        self.assertIn("var wp = r.writersPick;", recap)
+        self.assertIn("personLink(p.id, p.name)", recap, "names linked and escaped")
+
+
 class PromptWriters(unittest.TestCase):
     """Who wrote each round's prompt, from the hand-kept
     data/seasonN/prompters.json (README, Prompt writers)."""

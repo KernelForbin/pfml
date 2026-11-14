@@ -513,6 +513,61 @@ def load_prompters(folder, names):
     return out
 
 
+def writers_pick(rnd):
+    """Writer's Pick (asked 2026-11-14): the player whose songs the round's
+    prompt writer gave the most points, the one who "got" the prompt best
+    by the writer's own ballot. A duo's points are added together. A tie
+    shares it, and each of the tied gets an equal split of one pick
+    ("share"), so a clear pick weighs more in the season and all-time
+    counts than a 4-way split (the user's call). None when nobody is
+    recorded as the writer, or the writer gave nobody a point.
+
+    Read from each song's "votes", the writer's own ballot, so a Daily
+    Double or a forfeit (which change a song's total) doesn't move it."""
+    writers = {p["id"] for p in (rnd.get("promptBy") or {}).get("people", [])}
+    if not writers:
+        return None
+    given, names = {}, {}
+    for s in rnd["songs"]:
+        pts = sum(p for vid, p in s["votes"] if vid in writers)
+        if pts:
+            given[s["submitterId"]] = given.get(s["submitterId"], 0) + pts
+            names[s["submitterId"]] = s["submitterName"]
+    top = max(given.values(), default=0)
+    if top <= 0:
+        return None
+    picked = sorted((sid for sid, p in given.items() if p == top), key=lambda sid: names[sid].lower())
+    return {"points": top, "share": round(1 / len(picked), 3),
+            "people": [{"id": sid, "name": names[sid]} for sid in picked]}
+
+
+def writers_pick_board(rounds):
+    """Each player's Writer's Pick count over some rounds: "picks" adds up
+    their shares (an outright pick is 1, a 4-way split 0.25), "rounds" is
+    how many rounds they were picked in at all, "outright" how many alone.
+    Most picks first."""
+    board = {}
+    for r in rounds:
+        wp = r.get("writersPick")
+        for p in (wp["people"] if wp else []):
+            b = board.setdefault(p["id"], {"id": p["id"], "name": p["name"], "picks": 0, "rounds": 0, "outright": 0})
+            b["picks"] += wp["share"]
+            b["rounds"] += 1
+            b["outright"] += len(wp["people"]) == 1
+    for b in board.values():
+        b["picks"] = round(b["picks"], 2)   # so equal counts compare equal (ties)
+    return sorted(board.values(), key=lambda b: (-b["picks"], -b["outright"], b["name"].lower()))
+
+
+def writers_pick_award(rounds):
+    """The season or all-time Writer's Pick: most picks, ties named."""
+    board = writers_pick_board(rounds)
+    if not board:
+        return None
+    g = best_of(board, lambda b: b["picks"], order=by_name)
+    return with_ties(g[0], g, lambda b: b["name"])
+
+
 def season_folders():
     """data/seasonN folders in season order, numerically, so season10 comes
     after season9. publish.py and enrich_comments.py use this too."""
@@ -1221,6 +1276,7 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
             # nobody has worked it out (README, Prompt writers)
             "promptBy": prompters.get(rid),
         })
+        rounds_out[-1]["writersPick"] = writers_pick(rounds_out[-1])
         if spectators:
             rounds_out[-1]["spectators"] = spectators
 
@@ -1491,6 +1547,10 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
             if eligible:
                 g = best_of(eligible, lambda v: v["kingmakerRate"], order=by_name)
                 highlights["bestTastemaker"] = with_ties(g[0], g, name)
+
+        pick = writers_pick_award(rounds_out)
+        if pick:
+            highlights["writersPick"] = pick
 
         artist_counts = {}
         for s in all_songs:
@@ -1852,6 +1912,11 @@ def build_career(season_datas, raw_seasons=None):
         if eligible:
             g = best_of(eligible, lambda r: (r["kingmakerRate"], r["kingmakerHits"]), order=by_name)
             highlights["bestTastemaker"] = with_ties(g[0], g, name)
+
+        # Writer's Pick, all-time: the same count over every season's rounds
+        pick = writers_pick_award([r for d in season_datas for r in d["rounds"]])
+        if pick:
+            highlights["writersPick"] = pick
 
         labels = {d["key"]: d["label"] for d in season_datas}
         g = best_of(players, lambda p: p["bestSeasonPoints"], order=by_name)

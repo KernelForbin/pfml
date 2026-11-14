@@ -105,7 +105,7 @@
     return "round?s=" + encodeURIComponent(seasonKey) + "&r=" + encodeURIComponent(roundId);
   }
 
-  /* ---- the recap: a finished round in four lines ---- */
+  /* ---- the recap: a finished round in a few lines ---- */
 
   // The first song with the most of something, by place; null when nobody
   // has any. Each line is {label, html}.
@@ -127,6 +127,17 @@
     } else if (top.length > 1) {
       lines.push({ label: "Winner",
         html: "a tie at " + top[0].points + " pts: " + top.map(function (s) { return "<b>" + esc(s.title) + "</b> by " + personLink(s.submitterId, s.submitterName); }).join(" and ") });
+    }
+    // Writer's Pick: who the prompt's own writer gave the most (build.py's
+    // writersPick; a duo's points added together, a tie shared).
+    var wp = r.writersPick;
+    if (wp && r.promptBy) {
+      var picked = wp.people.map(function (p) { return personLink(p.id, p.name); });
+      var writers = r.promptBy.people.map(function (p) { return personLink(p.id, p.name); }).join(" &amp; ");
+      lines.push({ label: "Writer’s Pick",
+        html: (picked.length === 1 ? picked[0] + ", " + wp.points + " pts"
+          : "shared by " + picked.slice(0, -1).join(", ") + " and " + picked[picked.length - 1] + ", " + wp.points + " pts each") +
+          " from " + writers + ", who wrote the prompt" });
     }
     var talked = mostOf(r.songs, function (s) { return (s.comments || []).length; });
     if (talked && talked.comments.length >= 2) {

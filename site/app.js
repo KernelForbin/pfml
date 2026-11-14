@@ -537,7 +537,7 @@
   // The newest line in the features page's "New in the last 30 days" box (a test
   // keeps the two equal). The features page records the newest date it
   // showed in this browser; Home's button says New until that catches up.
-  var FEATURES_UPDATED = "2026-11-02";
+  var FEATURES_UPDATED = "2026-11-14";
   var FEATURES_SEEN_KEY = "pfml.featuresSeen";
 
   function renderFeaturesButton() {
@@ -1032,6 +1032,16 @@
       t.kingmakerRounds + " rounds (" + pct(t.kingmakerRate) + ")", false, t.tiedWith);
   }
 
+  // Writer's Pick, on a season page and All-Time alike: who the prompt
+  // writers' own ballots favoured most (build.py's writersPick). A shared
+  // round counts as an even split of one pick, so "picks" can be 6.08.
+  function writersPickTile(t) {
+    var shared = t.rounds - t.outright;
+    return tile("Writer’s Pick", who(t.name, t.id), "the prompt writer’s favourite in " + t.rounds + " " + plural(t.rounds, "round") +
+      (shared ? " (" + shared + " shared)" : "") + ": " + (Math.round(t.picks * 10) / 10) + " " + plural(t.picks, "pick") +
+      (shared ? ", a shared round split evenly" : ""), false, t.tiedWith);
+  }
+
   // Standings places: equal points share one, shown as "T1".
   function placeLabel(p) { return (p.tied ? "T" : "") + p.rank; }
 
@@ -1086,6 +1096,7 @@
         "backs " + h.hedgiestVoter.avgTracksBacked + " tracks a round, top bet averages only " + h.hedgiestVoter.avgTopBet, false, h.hedgiestVoter.tiedWith));
     }
     if (h.bestTastemaker) g.appendChild(tastemakerTile(h.bestTastemaker));
+    if (h.writersPick) g.appendChild(writersPickTile(h.writersPick));
     if (typeof h.shutOutCount === "number") {
       g.appendChild(tile("Shut out", String(h.shutOutCount), "tracks finished the season on zero points or worse", true));
     }
@@ -2194,6 +2205,7 @@
     if (h.mostPodiums) g.appendChild(careerTile("Most podiums", who(h.mostPodiums.name), h.mostPodiums.podiums + " top-3 finishes", h.mostPodiums.tiedWith));
     if (h.bestSingleSeason) g.appendChild(careerTile("Best single season", who(h.bestSingleSeason.name), h.bestSingleSeason.points + " points in " + esc(h.bestSingleSeason.season), h.bestSingleSeason.tiedWith));
     if (h.bestTastemaker) g.appendChild(tastemakerTile(h.bestTastemaker));
+    if (h.writersPick) g.appendChild(writersPickTile(h.writersPick));
     setBlock("highlights", g);
   }
 

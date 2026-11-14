@@ -3613,6 +3613,31 @@ the data). A round voted on the site already records its prompters in the
 database (DJs and Spectators, above), but `site_rounds_export()` doesn't
 carry them, so a site round needs an entry here too for now.
 
+## Writer's Pick
+
+Asked 2026-11-14: an award for whoever "got" the prompt best by its own
+writer's ballot. Named Writer's Pick, by the user's choice.
+
+- **A round's** (`writersPick` on each round, `writers_pick()` in
+  `build.py`): the player whose songs the round's prompt writers gave the
+  most points, read from each song's `votes`, so a Daily Double or a
+  forfeit doesn't move it. A duo's points are added together. A tie
+  shares it. `null` when the round has no recorded writer (Prompt writers,
+  above), or the writer gave nobody a point. Shape: `points` (what the
+  writers gave), `share` (1 / how many share it) and `people`.
+- **A season's and all-time** (`highlights.writersPick` in the season JSON
+  and `career.json`): most picks, where each round adds its `share`, so a
+  clear pick counts 1 and a 4-way split 0.25 each (the user's call, over
+  sharing it whole or dropping tied rounds). The entry carries `picks`,
+  `rounds` (picked at all) and `outright` (picked alone), and ties are
+  named in `tiedWith` like the other highlights.
+- **On the pages:** a line in each round's recap, naming who wrote the
+  prompt, and a tile in the season's highlights and All-Time's League
+  Highlights.
+- **Measured 2026-11-14 on the real data:** the writer's top score was tied
+  in 23 of 48 rounds, at worst 7 ways, which is why the split matters.
+  Every one of the 48 rounds has a pick.
+
 ## Ties
 
 Ties are real in this data (Season 3's first round ended with two players
