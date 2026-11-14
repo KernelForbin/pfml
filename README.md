@@ -830,7 +830,8 @@ while Season 2's last round was being played. That round was missing
 entirely, and all 19 rounds the export did hold had exactly the votes of
 the final export. So:
 
-- **Started** is the `Created` timestamp of that season's first round.
+- **Started** is the `Created` timestamp of that season's first round
+  (the first one played; see Round order below).
 - **Round N · Complete** is the latest round in the export. It's always
   finished.
 - **Round N+1 underway** is inferred: the season is the current one, so the
@@ -846,6 +847,46 @@ the final export. So:
 A season with zero rounds in its CSVs (a freshly created `data/seasonN/`
 with only `competitors.csv`) shows "not started yet" instead, no LIVE badge,
 and no round line.
+
+## Round order
+
+A season's rounds are numbered in the order they were played: by each
+round's first submission, or by its `Created` time if it has none
+(`play_order()` in `build.py`). That one order gives every round number on
+the site: the season page, Results by round, the round page's "Round N of
+M", profiles, the vault, `lookup.json` (the inbox), the repeat checker's
+catalog, the Home card's latest round, and the Daily Double "not yet
+reviewed" warning. It also sets the trend chart's history, so the
+volatile, steady and rounds-at-#1 groups follow the season as it happened.
+
+**Not by `Created`.** That's when the commissioner made the round in Music
+League, not when it ran. Seasons 1 and 2 made every round up front (all on
+2025-02-21, all on 2025-12-12) and moved some later, so ordering by
+`Created`, as the build did until 2026-11-14, put rounds out of place.
+Measured 2026-11-14 against the real exports: 12 of Season 1's 20 rounds
+and 16 of Season 2's 20 were numbered wrongly. The worst was Season 2's
+"Spotify Age", which had submissions on 2025-12-18..21 (a vote comment
+says the commish moved it) and so was played second, but sorted last as
+Round 20. Season 3 made its rounds in order and is unaffected.
+
+**Why the first submission.** It's the earliest thing the export records
+of a round being played. Across all 48 exported rounds it gives exactly
+the order the rows of `rounds.csv` are in, and each round's submissions
+start after the previous round's votes end. The row order would also have
+worked, but nothing documents it, and it can't place a site round among
+the export's. A site round's rows carry its opening time (`opens_at`,
+exported as `created_at`) as `Created`, on the round and on each track
+(`site_season_rows()`), so it sorts by when it opened. The timestamps are
+UTC ISO 8601 text from both sources and compare as text.
+
+**What doesn't move.** Links name a round by its id (`round?s=...&r=...`),
+never its number, so links already shared still lead to the same round.
+Per-round results, standings and career numbers don't depend on order.
+The league playlists (README, The league's playlists) only ever add, so
+Seasons 1 and 2's tracks keep the order they were first added in, which
+was the old one. A site season's own numbering (`site_round_public_name()`,
+`public_label()` in `round_playlists.py`) already goes by `opens_at`, and
+`PFML.roundOrder` orders the tracks inside a round, not the rounds.
 
 ## Round material on Home
 
@@ -3439,8 +3480,8 @@ it, so the round's placings, round wins, podiums, Top tracks and the
 per-submission average are all unaffected. Doubling is literal: a track
 that scored 0 adds nothing, and the Daily Double is still used up.
 
-**Safety checks.** Rounds are applied in the order they were created, so
-if two accepted requests from one person ever made it into the file, the
+**Safety checks.** Rounds are applied in the order they were played
+(Round order, above), so if two accepted requests from one person ever made it into the file, the
 earlier round counts and the later one is ignored with a printed reason.
 The build refuses to run, rather than quietly dropping a bonus, if the file
 is unreadable or the wrong shape (an object whose `requests` and

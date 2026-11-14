@@ -1,5 +1,42 @@
 # Changelog
 
+## 2026-11-14: Rounds numbered in the order they were played
+
+- **Asked:** the build ordered a season's rounds by Music League's
+  `Created`, which is when the commissioner made the round, not when it
+  ran. Seasons 1 and 2 made every round up front and moved some later, so
+  Season 2's "Spotify Age", played second, showed as Round 20.
+- **Found:** confirmed against the real exports. 12 of Season 1's 20
+  rounds and 16 of Season 2's 20 were numbered wrongly; Season 3 was
+  right. Each round's first submission gives the true order: it matches
+  the row order of `rounds.csv` for all 48 rounds, and each round's
+  submissions start after the previous round's votes end.
+- **Changed:**
+  - `play_order()` in `build.py` sorts rounds by their first submission,
+    or by `Created` for a round with none. A site round sorts by when it
+    opened, which its rows already carry.
+  - Every round number follows from this: season pages, Results by round,
+    profiles, the vault, `lookup.json`, the catalog, the Home card's
+    latest round. So do the Daily Double "not yet reviewed" warning and
+    which round a tied Closest round names.
+  - The trend chart's history groups (volatile, steady, rounds at #1) for
+    Seasons 1 and 2 now follow the real path through the season.
+  - Links name rounds by id, so they're unaffected. The league playlists
+    only ever add, so Seasons 1 and 2's tracks stay in the old order there.
+  - README, Round order.
+- **Verified:**
+  - Built the real data into a scratch folder with the old and the new
+    code. Only Seasons 1 and 2 changed. Each round's content was
+    identical, `career.json` was identical, and every round number in
+    lookup, catalog, vault and profiles agreed.
+  - New tests in `tests/test_build.py` (RoundOrder) and
+    `tests/test_site_results.py` use made-up rounds whose made, listed and
+    played orders all differ. In a scratch worktree with a passing
+    baseline they failed on four breaks: sorting by `Created`, keeping
+    the file's order, ordering tied highlights by `Created`, and listing
+    unreviewed rounds by `Created`. Full suite passes.
+  - Not live until `python scripts/publish.py` runs.
+
 ## 2026-11-14: Who wrote each round's prompt
 
 - **Asked:** go through every past round, work out who wrote its prompt

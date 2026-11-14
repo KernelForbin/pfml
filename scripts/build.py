@@ -632,6 +632,28 @@ def season_label(folder, num):
     return f"Season {num}"
 
 
+def play_order(round_rows, sub_rows):
+    """A season's rounds in the order they were played: by the round's
+    first submission, or its Created time when it has none.
+
+    Not by Created alone. Music League's Created is when the commissioner
+    made the round, and Seasons 1 and 2 made every round up front (all on
+    2025-02-21, all on 2025-12-12) and then moved some, so Created put
+    Season 2's "Spotify Age", played second, last as Round 20 (measured
+    2026-11-14; README, Round order). The first submission is when the
+    round opened to players, and across all 48 exported rounds it matches
+    the play order rounds.csv lists them in. A site round's rows carry its
+    opening time as Created, on the round and on each track
+    (site_season_rows), so it sorts the same way. All of these are UTC
+    ISO 8601 strings, so they compare as text."""
+    first = {}
+    for s in sub_rows:
+        at = s.get("Created", "")
+        if at and (s["Round ID"] not in first or at < first[s["Round ID"]]):
+            first[s["Round ID"]] = at
+    return sorted(round_rows, key=lambda r: first.get(r["ID"]) or r.get("Created", ""))
+
+
 def site_season_rows(folder):
     """A season's rounds voted on pfml.fun (site_rounds.json, which
     scripts/publish.py writes from the database's site_rounds_export()), as
@@ -884,6 +906,8 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
     round_rows += site_rounds
     sub_rows += site_subs
     vote_rows += site_votes
+    # every round number on the site comes from this order
+    round_rows = play_order(round_rows, sub_rows)
 
     def spotify_of(rid, uri):
         """The track's Spotify id: its own, or a site track's Spotify copy."""
@@ -1004,7 +1028,7 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
     dd_used = {}        # submitter -> the Daily Double actually applied
     dd_ignored = []
 
-    for rnd in sorted(round_rows, key=lambda r: r.get("Created", "")):
+    for rnd in round_rows:
         rid = rnd["ID"]
         round_subs = subs_by_round.get(rid, [])
         # sorted, not the raw set: a set of strings iterates in an order that
@@ -1227,8 +1251,7 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
                              f"(round id + Spotify URI): {missing}. A typo here would silently drop a bonus.")
         for msg in dd_ignored:
             print(f"  ! {season_key} Daily Double ignored: {msg}")
-        unreviewed = [r.get("Name", r["ID"]) for r in sorted(round_rows, key=lambda r: r.get("Created", ""))
-                      if r["ID"] not in daily["reviewed"]]
+        unreviewed = [r.get("Name", r["ID"]) for r in round_rows if r["ID"] not in daily["reviewed"]]
         if unreviewed:
             print(f"  ! {season_key}: submitter notes not yet reviewed for Daily Double in: {', '.join(unreviewed)}")
         daily_double = {
@@ -1431,8 +1454,10 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
 
         decided = [r for r in rounds_out if r["margin"] is not None]
         if decided:
-            by_date = lambda r: r["created"] or ""
-            g = best_of(decided, lambda r: r["margin"], lowest=True, order=by_date)
+            # a tie names the round played first (play_order)
+            played = {r["id"]: i for i, r in enumerate(rounds_out)}
+            in_play_order = lambda r: played[r["id"]]
+            g = best_of(decided, lambda r: r["margin"], lowest=True, order=in_play_order)
             highlights["closestRound"] = with_ties({"name": g[0]["name"], "margin": g[0]["margin"]},
                                                    g, lambda r: r["name"])
             # A blowout only means something next to a closer round. With
@@ -1442,7 +1467,7 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
             # than the closest one.
             widest = max(r["margin"] for r in decided)
             if widest > highlights["closestRound"]["margin"]:
-                g = best_of(decided, lambda r: r["margin"], order=by_date)
+                g = best_of(decided, lambda r: r["margin"], order=in_play_order)
                 highlights["blowoutRound"] = with_ties({"name": g[0]["name"], "margin": g[0]["margin"],
                                                         "winner": g[0]["songs"][0]["submitterName"],
                                                         "title": g[0]["songs"][0]["title"]},

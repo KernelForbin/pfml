@@ -76,6 +76,17 @@ class InTheBuild(unittest.TestCase):
         # Eve, only on the site, joins the season's players
         self.assertIn({"id": "p5", "name": "Eve"}, data["competitors"])
 
+    def test_it_takes_its_place_by_when_it_opened(self):
+        # A Music League round made before the site round opened (2025-02-01)
+        # but played after it goes after it (README, Round order).
+        later = dict(TIE_ROUND, played="2025-03-01T00:00:00Z")
+        with sandbox() as root, quiet():
+            folder = root / "data" / "season1"
+            make_season(folder, [later])
+            write_site(folder)
+            data, _ = build.build_season(folder, "season1", "Season 1")
+        self.assertEqual([r["id"] for r in data["rounds"]], ["site-r1", "r1"])
+
     def test_scores_places_and_standings_count_it(self):
         data = self.build()
         self.assertEqual([(s["title"], s["points"], s["place"]) for s in data["rounds"][1]["songs"]],

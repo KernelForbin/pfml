@@ -50,6 +50,9 @@ def make_season(folder, rounds, players=PLAYERS, daily_doubles=None):
     """rounds: list of dicts
          {"id", "name", "created", "subs": [(track, submitter, note)],
           "votes": [(voter, track, points, comment)]}
+    plus, optionally, "played": when its tracks and votes came in, for a
+    round made long before it was played (README, Round order); without
+    it they're stamped with "created".
     Writes the four CSVs (and daily_doubles.json if given) into folder."""
     folder = Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
@@ -60,13 +63,14 @@ def make_season(folder, rounds, players=PLAYERS, daily_doubles=None):
          "Description": r.get("description", ""), "Playlist URL": ""} for r in rounds])
     subs, votes = [], []
     for r in rounds:
+        played = r.get("played", r["created"])
         for track, submitter, *rest in r["subs"]:
             subs.append({"Spotify URI": uri(track), "Title": f"Song {track}", "Album": f"Album {track}",
                          "Artist(s)": f"Artist {track}", "Submitter ID": submitter,
-                         "Created": r["created"], "Comment": rest[0] if rest else "",
+                         "Created": played, "Comment": rest[0] if rest else "",
                          "Round ID": r["id"], "Visible To Voters": "Yes"})
         for voter, track, points, *rest in r.get("votes", []):
-            votes.append({"Spotify URI": uri(track), "Voter ID": voter, "Created": r["created"],
+            votes.append({"Spotify URI": uri(track), "Voter ID": voter, "Created": played,
                           "Points Assigned": str(points), "Comment": rest[0] if rest else "",
                           "Round ID": r["id"]})
     write_csv(folder / "submissions.csv", "submissions", subs)

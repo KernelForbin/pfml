@@ -834,6 +834,65 @@ class Catalog(unittest.TestCase):
         self.assertEqual((first["artists"], first["album"]), (song["artists"], song["album"]))
 
 
+class RoundOrder(unittest.TestCase):
+    """Rounds go in the order they were played, not the order they were
+    made (README, Round order). Seasons 1 and 2 made every round up front
+    and moved some later; the real case was Season 2's "Spotify Age", made
+    last, played second, and numbered Round 20.
+
+    Here all three orders differ. Made: Opener, Closer, Moved. Listed in
+    rounds.csv: Closer, Opener, Moved. Played: Opener, Moved, Closer. Moved
+    and Closer are both won by 1, so the closest round is a tie, and Opener
+    is won by 5."""
+
+    ROUNDS = [
+        {"id": "rc", "name": "Closer", "created": "2025-01-01T00:10:00Z", "played": "2025-01-16T00:00:00Z",
+         "subs": [("e", "p1"), ("f", "p2")], "votes": [("p3", "f", 2), ("p4", "e", 1)]},
+        {"id": "ro", "name": "Opener", "created": "2025-01-01T00:00:00Z", "played": "2025-01-02T00:00:00Z",
+         "subs": [("a", "p1"), ("b", "p2")], "votes": [("p3", "a", 3), ("p4", "a", 2)]},
+        {"id": "rm", "name": "Moved", "created": "2025-01-01T00:30:00Z", "played": "2025-01-09T00:00:00Z",
+         "subs": [("c", "p1"), ("d", "p2")], "votes": [("p3", "c", 2), ("p4", "d", 1)]},
+    ]
+    PLAYED = ["Opener", "Moved", "Closer"]
+
+    def build(self, rounds=ROUNDS, **kw):
+        with sandbox() as root, quiet():
+            make_season(root / "data" / "season1", rounds, **kw)
+            build.main()
+            out = root / "site" / "data"
+            read = lambda name: json.loads((out / name).read_text(encoding="utf-8"))
+            return {name: read(name + ".json") for name in ("season1", "index", "lookup", "catalog", "vault", "profiles")}
+
+    def test_season_rounds_are_numbered_in_play_order(self):
+        season = self.build()["season1"]
+        self.assertEqual([r["name"] for r in season["rounds"]], self.PLAYED)
+
+    def test_the_latest_round_is_the_last_one_played(self):
+        self.assertEqual(self.build()["index"]["seasons"][0]["liveRound"], {"number": 3, "name": "Closer"})
+
+    def test_every_round_number_follows_play_order(self):
+        out = self.build()
+        number = {"ro": 1, "rm": 2, "rc": 3}
+        self.assertEqual({rid: r["number"] for rid, r in out["lookup"]["rounds"].items()}, number)
+        self.assertEqual({r["id"]: r["number"] for r in out["catalog"]["rounds"]}, number)
+        self.assertEqual({w["roundId"]: w["roundNumber"] for w in out["vault"]["winners"]}, number)
+        ann = out["profiles"]["players"]["p1"]["bestTracks"]
+        self.assertEqual({t["roundId"]: t["roundNumber"] for t in ann}, number)
+
+    def test_a_tied_closest_round_names_the_one_played_first(self):
+        closest = self.build()["season1"]["highlights"]["closestRound"]
+        self.assertEqual((closest["name"], closest["tiedWith"]), ("Moved", ["Closer"]))
+
+    def test_unreviewed_daily_double_rounds_are_listed_in_play_order(self):
+        season = self.build(daily_doubles={"reviewedRounds": [], "requests": []})["season1"]
+        self.assertEqual(season["dailyDouble"]["unreviewedRounds"], self.PLAYED)
+
+    def test_a_round_with_no_tracks_goes_by_when_it_was_made(self):
+        empty = {"id": "rx", "name": "Nobody Came", "created": "2025-01-12T00:00:00Z", "subs": []}
+        season = self.build(self.ROUNDS + [empty])["season1"]
+        self.assertEqual([r["name"] for r in season["rounds"]], ["Opener", "Moved", "Nobody Came", "Closer"])
+
+
 class Deterministic(unittest.TestCase):
     def test_same_output_under_different_hash_seeds(self):
         # A set of voter ids once leaked Python's per-process hash order into
