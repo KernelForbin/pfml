@@ -9,3 +9,7 @@ GHSA-67rp-h2mf-ph72  2026-10-24  Storage Iceberg S3 routes. PFML has no Iceberg 
 GHSA-2rcv-vpjw-5g6c  2026-10-24  Realtime cross-tenant channels. The site never uses Realtime.
 GHSA-9vjf-j9f7-j42c  2026-10-24  Realtime broadcast frames. The site never uses Realtime.
 GHSA-x5vv-ww37-gvwm  2026-10-24  Postgres Nix setup docs, local privilege escalation. Self-hosting only.
+GHSA-fgvp-cqg6-q8h2  2026-11-14  Storage RLS bypass via a signed JWT with role "none" (critical). Needs a token issuer that emits that role; PFML's Auth has no custom access-token hook and only issues anon/authenticated. Live Storage is 1.94.2 (fixed in 1.89.9); only the two private buckets exist and every file in both matched the local copies.
+GHSA-3m3f-pjv4-x2fp  2026-11-14  Storage S3 presigned PUT URL turned into a copy/read (high). PFML never uses the S3 protocol or presigned URLs; publish.py uploads over the REST API with the secret key. Live Storage is 1.94.2 (fixed in 1.89.10).
+GHSA-2p28-q2vx-mw6w  2026-11-14  Storage S3 SigV4 signature lifetime not enforced (medium). PFML never uses the S3 protocol or S3 credentials. Live Storage is 1.94.2 (fixed in 1.84.14).
+GHSA-3xwc-rjxj-m99h  2026-11-14  pg_graphql nodeId SQL injection through a crafted primary-key column name (low). Needs an untrusted role that can create tables in an exposed schema; members and strangers reach the database only through PostgREST and PFML's functions, which never create tables, and the site never calls GraphQL.
