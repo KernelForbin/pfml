@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-14: Submit on Music League, from Home's prompt tile
+
+- **Asked:** a "Submit on Music League" link on the Round 10 prompt tile,
+  to the league on Music League.
+- **Changed:**
+  - `round_material.json` takes `submitLink`, drawn as a second button
+    that opens in a new tab. Only a Music League league address passes.
+  - The features page says so.
+- **Verified:**
+  - A new test in `tests/test_league_extras.py` fails on each of five
+    breaks in a scratch clone (no end anchor, http, a lookalike host, the
+    same tab, no check at all). The suite passes.
+  - The real tile code and stylesheet in a browser at 375px and 1280px,
+    light and dark (README, Round material on Home).
+
 ## 2026-11-14: Rounds numbered in the order they were played
 
 - **Asked:** the build ordered a season's rounds by Music League's

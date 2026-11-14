@@ -172,6 +172,20 @@ class RoundMaterial(unittest.TestCase):
             with self.subTest(bad):
                 self.assertIsNone(re.search(rule, bad))
 
+    def test_the_submit_button_goes_only_to_a_league_on_music_league(self):
+        # asked 2026-11-14: "Submit on Music League", in a new tab
+        self.assertIn('var submit = MATERIAL_SUBMIT.test(m.submitLink || "") ? m.submitLink : null;', self.fn)
+        self.assertIn('href="\' + submit + \'" target="_blank" rel="noopener">Submit on Music League', self.fn)
+        rule = re.search(r"var MATERIAL_SUBMIT = /(.+)/;", self.js).group(1).replace("\\/", "/")
+        self.assertTrue(re.search(rule, "https://app.musicleague.com/l/0123456789abcdef0123456789abcdef/"))
+        for bad in ("https://app.musicleague.com.evil.com/l/0123456789abcdef0123456789abcdef/",
+                    "http://app.musicleague.com/l/0123456789abcdef0123456789abcdef/",
+                    "https://app.musicleague.com/l/0123456789abcdef0123456789abcdef/-/data",
+                    "https://app.musicleague.com/l/x\" onmouseover=\"y/",
+                    "javascript:alert(1)", "round-9-prompt"):
+            with self.subTest(bad):
+                self.assertIsNone(re.search(rule, bad))
+
     def test_the_prompt_never_ships_in_the_repo(self):
         # the league's own text, and it can name a player: data, not page
         self.assertNotIn("Exquisite", read("index.html"))

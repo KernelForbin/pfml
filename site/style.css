@@ -1238,7 +1238,8 @@ body.auth-checking::before {
 .material-kicker { margin: 0; font: 700 0.74rem/1.3 "Archivo", sans-serif; text-transform: uppercase; letter-spacing: 0.06em; color: var(--magenta-text); }
 .material-card h3 { margin: 4px 0 0; font-size: 1.2rem; overflow-wrap: anywhere; }
 .material-text { margin: 10px 0 0; line-height: 1.6; overflow-wrap: anywhere; }
-.material-card .pill { margin: 14px 0 0; }
+.material-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; }
+.material-card .pill { margin: 0; }
 @media (max-width: 480px) { .vault-art { width: 64px; height: 64px; } .vault-card { gap: 12px; padding: 14px; } }
 
 /* the round recap (rounds.js) */

@@ -905,6 +905,13 @@ number, its name and prompt in full, and a button to the material's page
   `link` and `linkText`. `link` must be one of the site's own clean
   addresses (`round-9-prompt`); anything else, a full URL included, drops
   the button.
+- **Submit on Music League** (asked 2026-11-14, for Round 10):
+  `submitLink` adds a second button, opening in a new tab. It takes only a
+  league's own page, `https://app.musicleague.com/l/<32 hex>/` exactly;
+  anything else drops it. The two buttons sit side by side and wrap at
+  375px. Checked 2026-11-14 with the real `renderRoundMaterial` and
+  `style.css` at 375px and 1280px, light and dark: no sideways scroll,
+  `target="_blank" rel="noopener"`.
 - **It goes on its own** once that round's results are in the stats, when
   the season's `roundCount` reaches `round`, so it needs no taking down.
   For the next round, rewrite the file and publish. Without the file, there's

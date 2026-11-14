@@ -509,6 +509,8 @@
   // league's own prompt. The tile goes once that round's results are in the
   // stats. README, Round material on Home.
   var MATERIAL_LINK = /^[a-z0-9-]+$/;   // one of the site's own pages, a clean address
+  // The league's own page on Music League, where the round takes its songs; nothing else.
+  var MATERIAL_SUBMIT = /^https:\/\/app\.musicleague\.com\/l\/[0-9a-f]{32}\/$/;
 
   function renderRoundMaterial(index) {
     PFML.loadJSON("round_material.json").then(function (m) {
@@ -516,11 +518,15 @@
       var season = (index.seasons || []).filter(function (s) { return s.key === m.season; })[0];
       if (season && season.roundCount >= m.round) return;   // its results are in
       var link = MATERIAL_LINK.test(m.link || "") ? m.link : null;
+      var submit = MATERIAL_SUBMIT.test(m.submitLink || "") ? m.submitLink : null;
       $("materialCard").innerHTML = '<article class="material-card">' +
         (m.kicker ? '<p class="material-kicker">' + esc(m.kicker) + "</p>" : "") +
         "<h3>" + esc(m.title) + "</h3>" +
         String(m.text).split(/\n\s*\n/).map(function (p) { return '<p class="material-text">' + esc(p.trim()) + "</p>"; }).join("") +
-        (link ? '<a class="pill material-link" href="' + link + '">' + esc(m.linkText || "Read the material") + " &rarr;</a>" : "") +
+        (link || submit ? '<p class="material-links">' +
+          (link ? '<a class="pill material-link" href="' + link + '">' + esc(m.linkText || "Read the material") + " &rarr;</a>" : "") +
+          (submit ? '<a class="pill material-link" href="' + submit + '" target="_blank" rel="noopener">Submit on Music League &nearr;</a>' : "") +
+          "</p>" : "") +
         "</article>";
       $("block-material").hidden = false;
     }).catch(function () { /* no material file: no tile */ });
