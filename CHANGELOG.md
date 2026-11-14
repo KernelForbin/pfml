@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-11-14: The prompt writer on each round's tile
+
+- **Asked:** Results by round should show who wrote each round's prompt,
+  with the round's name and number.
+- **Changed:** each tile says "Prompt by" and the writer or writers, with a
+  Commissioner tag for the commissioner's own rounds. The features page
+  says so.
+- **Verified:**
+  - Three new tests in `tests/test_league_extras.py` fail on each of five
+    breaks in a scratch clone. The suite passes.
+  - A stubbed copy of the site with the real data (Round 9 included), at
+    375px and 1280px, light and dark (README, Prompt writers).
+- **Data:** Round 9 imported the same day; its prompt writer recorded
+  from the nickname in its name, which matches the rotation; no Daily
+  Double request; nothing to translate.
+
 ## 2026-11-14: Writer's Pick
 
 - **Asked:** a round, season and all-time award for the submitter the

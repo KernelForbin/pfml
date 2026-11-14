@@ -170,6 +170,17 @@
      1. Season page: the list of rounds
      ===================================================================== */
 
+  // Who wrote the round's prompt (build.py's promptBy, README Prompt
+  // writers), on the round's tile: plain names, since the tile is itself a
+  // link. Nothing when nobody has worked it out.
+  function promptByLine(r) {
+    var by = r.promptBy;
+    if (!by || !by.people || !by.people.length) return "";
+    var names = by.people.map(function (p) { return "<b>" + esc(p.name) + "</b>"; });
+    return '<span class="rl-by">Prompt by ' + (names.length > 1 ? names.slice(0, -1).join(", ") + " &amp; " + names[names.length - 1] : names[0]) +
+      (by.commissioner ? ' <span class="rl-commish">Commissioner</span>' : "") + "</span>";
+  }
+
   function renderList(host, d, opts) {
     opts = opts || {};
     var selected = opts.selected || [];
@@ -197,6 +208,7 @@
         artHtml(top[0] && top[0].art, "rl-art") +
         '<span class="rl-text"><span class="rl-num">Round ' + x.n + (r.created ? " &middot; " + esc(dateOf(r.created)) : "") + "</span>" +
         '<span class="rl-name">' + esc(r.name) + "</span>" +
+        promptByLine(r) +
         (sub ? '<span class="rl-sub">' + sub + "</span>" : "") +
         (status ? "" : '<span class="rl-counts">' + counted(c.tracks, "track") + " &middot; " + counted(c.votes, "vote") + " &middot; " + counted(c.comments, "comment") + "</span>") +
         '</span><span class="rl-go" aria-hidden="true">&rarr;</span></a>';

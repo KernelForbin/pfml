@@ -203,6 +203,28 @@ class RoundMaterial(unittest.TestCase):
         self.assertFalse((SITE / "round_material.json").exists())
 
 
+class RoundTilePromptBy(unittest.TestCase):
+    """Results by round: each round's tile names who wrote its prompt, with
+    the Commissioner tag (asked 2026-11-14)."""
+
+    def setUp(self):
+        self.js = read("rounds.js")
+        self.fn = body(self.js, "function promptByLine(r) {")
+
+    def test_every_tile_carries_it(self):
+        self.assertIn("promptByLine(r) +", body(self.js, "function renderList(host, d, opts) {"))
+
+    def test_names_escaped_not_linked_and_the_commissioner_tagged(self):
+        # the tile is itself a link, so the names can't be
+        self.assertIn('"<b>" + esc(p.name) + "</b>"', self.fn)
+        self.assertNotIn("<a", self.fn)
+        self.assertNotIn("personLink", self.fn)
+        self.assertIn('(by.commissioner ? \' <span class="rl-commish">Commissioner</span>\' : "")', self.fn)
+
+    def test_nothing_without_a_writer(self):
+        self.assertIn('if (!by || !by.people || !by.people.length) return "";', self.fn)
+
+
 class Recap(unittest.TestCase):
     def setUp(self):
         self.js = read("rounds.js")

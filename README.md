@@ -3562,7 +3562,13 @@ mostly of words the league doesn't otherwise use, then reading every hit.
 ## Prompt writers
 
 Every round in a season's JSON has `promptBy`: who wrote its prompt, or
-`null` when nobody has worked it out. Nothing on the site shows it yet.
+`null` when nobody has worked it out. Each round's tile in a season's
+Results by round shows it (`promptByLine` in `rounds.js`, asked
+2026-11-14): "Prompt by" and the names, plain rather than linked since
+the tile is itself a link, and a Commissioner tag when `commissioner` is
+true. Checked 2026-11-14 on a stubbed copy with the real data at 375px
+and 1280px, light and dark: no tile wider than the page, the tag at
+4.96:1 (dark) and 5.33:1 (light).
 
 ```json
 "promptBy": { "people": [{ "id": "<player id>", "name": "..." }],
