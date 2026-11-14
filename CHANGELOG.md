@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-14: A round's date is when it started
+
+- **Asked:** every Season 3 tile in Results by round said Sep 13, the day
+  the commissioner set all the rounds up; show when each round started.
+- **Changed:** each round carries `startedAt`, its first submission (or
+  Created, with none), and its tile and page show that instead of Created.
+- **Verified:**
+  - Three new or extended tests in `tests/test_build.py` (RoundOrder) fail
+    on each of four breaks in a scratch clone. The suite passes.
+  - All three real seasons: every round has its own date, in play order.
+  - A stubbed copy of the site with the real data at 375px: Season 3's
+    tiles from Sep 13 to Nov 6, and a round page's header to match.
+
 ## 2026-11-14: The prompt writer on each round's tile
 
 - **Asked:** Results by round should show who wrote each round's prompt,

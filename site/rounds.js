@@ -206,7 +206,7 @@
         : top.length ? "<b>" + esc(top[0].submitterName) + "</b> won with " + esc(top[0].title) : "";
       return '<a class="rl-card" href="' + roundUrl(d.key, r.id) + '">' +
         artHtml(top[0] && top[0].art, "rl-art") +
-        '<span class="rl-text"><span class="rl-num">Round ' + x.n + (r.created ? " &middot; " + esc(dateOf(r.created)) : "") + "</span>" +
+        '<span class="rl-text"><span class="rl-num">Round ' + x.n + (r.startedAt ? " &middot; " + esc(dateOf(r.startedAt)) : "") + "</span>" +
         '<span class="rl-name">' + esc(r.name) + "</span>" +
         promptByLine(r) +
         (sub ? '<span class="rl-sub">' + sub + "</span>" : "") +
@@ -810,7 +810,7 @@
       '<section class="shell rp-head">' +
         '<a class="rp-back" href="' + esc(d.key) + '#block-rounds">&larr; ' + esc(d.label) + "</a>" +
         roundJumpHtml(d, i) +
-        '<p class="rp-kicker">Round ' + (i + 1) + " of " + d.rounds.length + (r.created ? " &middot; " + esc(dateOf(r.created)) : "") + "</p>" +
+        '<p class="rp-kicker">Round ' + (i + 1) + " of " + d.rounds.length + (r.startedAt ? " &middot; " + esc(dateOf(r.startedAt)) : "") + "</p>" +
         "<h1>" + esc(r.name) + "</h1>" +
         (r.description ? '<p class="rp-prompt">' + esc(r.description) + "</p>" : "") +
         // who wrote the prompt, for a round set up on the site (app.js)

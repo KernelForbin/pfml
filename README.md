@@ -888,6 +888,17 @@ was the old one. A site season's own numbering (`site_round_public_name()`,
 `public_label()` in `round_playlists.py`) already goes by `opens_at`, and
 `PFML.roundOrder` orders the tracks inside a round, not the rounds.
 
+**The date on a round** (asked 2026-11-14): a round's tile in Results by
+round and the top of its page show `startedAt`, its first submission (or
+Created, with none), from `round_starts()` in `build.py`, the same time the
+play order sorts by. They used to show Created, and Season 3 set every
+round up on its first day, so all nine tiles said Sep 13. Measured
+2026-11-14 on the real data: every round in all three seasons gets its own
+date, in play order. `created` stays in the season JSON because the
+season's own `startedAt` (the season card) is still read from it. Dates
+show in the viewer's time zone, so an evening-UTC first submission can read
+a day earlier in the US.
+
 ## Round material on Home
 
 Asked 2026-11-06, for Round 9's story. A round that comes with something to

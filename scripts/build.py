@@ -701,12 +701,22 @@ def play_order(round_rows, sub_rows):
     opening time as Created, on the round and on each track
     (site_season_rows), so it sorts the same way. All of these are UTC
     ISO 8601 strings, so they compare as text."""
+    starts = round_starts(round_rows, sub_rows)
+    return sorted(round_rows, key=lambda r: starts[r["ID"]])
+
+
+def round_starts(round_rows, sub_rows):
+    """When each round started, by round id: its first submission, or its
+    Created time when it has none (see play_order, which sorts by it). Each
+    round carries it as "startedAt", the date its tile and page show
+    (asked 2026-11-14), since Created put every Season 3 round on the day
+    the commissioner set them all up."""
     first = {}
     for s in sub_rows:
         at = s.get("Created", "")
         if at and (s["Round ID"] not in first or at < first[s["Round ID"]]):
             first[s["Round ID"]] = at
-    return sorted(round_rows, key=lambda r: first.get(r["ID"]) or r.get("Created", ""))
+    return {r["ID"]: first.get(r["ID"]) or r.get("Created", "") for r in round_rows}
 
 
 def site_season_rows(folder):
@@ -963,6 +973,7 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
     vote_rows += site_votes
     # every round number on the site comes from this order
     round_rows = play_order(round_rows, sub_rows)
+    starts = round_starts(round_rows, sub_rows)
 
     def spotify_of(rid, uri):
         """The track's Spotify id: its own, or a site track's Spotify copy."""
@@ -1262,6 +1273,9 @@ def build_season(folder: Path, season_key: str, label: str, translations=None):
             "name": rnd["Name"],
             "description": rnd.get("Description", "").strip(),
             "created": rnd.get("Created", ""),
+            # when it opened to players (round_starts); "created" is when
+            # it was set up, which can be weeks earlier
+            "startedAt": starts.get(rid, ""),
             "playlistUrl": rnd.get("Playlist URL", "").strip(),
             "songs": songs,
             "margin": margin,

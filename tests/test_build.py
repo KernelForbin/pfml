@@ -828,6 +828,9 @@ class EverythingWrittenIsRead(unittest.TestCase):
         "reviewedRounds": "Daily Double record", "unreviewedRounds": "Daily Double record",
         "playerId": "Daily Double record", "playerName": "Daily Double record",
         "basePoints": "Daily Double record",
+        # when Music League's round was set up; the pages show startedAt
+        # (2026-11-14), and build.py reads it for the season's startedAt
+        "created": "the season's startedAt",
     }
 
     def test_every_key_in_every_file_is_read_or_kept_on_purpose(self):
@@ -966,6 +969,23 @@ class RoundOrder(unittest.TestCase):
         empty = {"id": "rx", "name": "Nobody Came", "created": "2025-01-12T00:00:00Z", "subs": []}
         season = self.build(self.ROUNDS + [empty])["season1"]
         self.assertEqual([r["name"] for r in season["rounds"]], ["Opener", "Moved", "Nobody Came", "Closer"])
+        self.assertEqual(season["rounds"][2]["startedAt"], "2025-01-12T00:00:00Z", "no tracks: when it was made")
+
+    def test_each_round_carries_the_day_it_started(self):
+        # asked 2026-11-14: Season 3's tiles all said the day the rounds
+        # were set up; a round's date is now its first submission
+        rounds = {r["name"]: r for r in self.build()["season1"]["rounds"]}
+        for r in self.ROUNDS:
+            self.assertEqual(rounds[r["name"]]["startedAt"], r["played"], r["name"])
+            self.assertEqual(rounds[r["name"]]["created"], r["created"], "created stays as it was")
+
+    def test_the_tile_and_the_round_page_show_the_start(self):
+        js = (ROOT / "site" / "rounds.js").read_text(encoding="utf-8")
+        shown = '(r.startedAt ? " &middot; " + esc(dateOf(r.startedAt)) : "")'
+        for fn in ("function renderList(host, d, opts) {", "function renderRoundPage(d, roundId) {"):
+            start = js.index(fn)
+            self.assertIn(shown, js[start:js.index("\n  }\n", start)], fn)
+        self.assertNotIn("dateOf(r.created)", js)
 
 
 class Deterministic(unittest.TestCase):
