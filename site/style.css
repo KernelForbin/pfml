@@ -354,7 +354,6 @@ table.taste td.nil { color: #C6BDCC; font-weight: 400; }
   transition: box-shadow .18s ease, transform .18s ease;
 }
 @media (hover: hover) { .season-card:hover { color: var(--ink); box-shadow: var(--shadow-md); transform: translateY(-2px); } }
-.season-card.is-live { background: linear-gradient(165deg, var(--card) 0%, var(--wash) 130%); }
 .season-card-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .season-card-name-wrap { display: flex; align-items: center; gap: 9px; }
 .season-card-name { font-family: "Archivo", sans-serif; font-weight: 700; font-size: 1.28rem; letter-spacing: -0.01em; }
@@ -368,18 +367,58 @@ table.taste td.nil { color: #C6BDCC; font-weight: 400; }
 .live-badge .pip { background: var(--acid); box-shadow: 0 0 0 2px rgba(255,255,255,.35); }
 .season-card-stats { margin-top: 10px; color: var(--muted); font-size: 0.88rem; }
 .season-card-round { margin-top: 6px; font-size: 0.88rem; }
-.season-card-round .phase {
-  display: inline-flex; align-items: center; font-weight: 600; color: var(--deep);
-  background: var(--wash); border-radius: 999px; padding: 2px 10px; margin-left: 6px; font-size: 0.8rem;
-}
 .season-card-leader { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-soft); font-size: 0.9rem; }
 .season-card-leader .lbl { color: var(--muted); display: block; font-size: 0.76rem; margin-bottom: 2px; }
 .season-card-leader .val { font-weight: 700; font-family: "Archivo", sans-serif; }
 .season-card-leader .val .pts { color: var(--magenta-text); }
 
+/* ---------- home page: the current season ---------- */
+
+/* Its own kind of tile, wide and dark under the round's prompt, so it
+   doesn't read as one more of the Past Seasons cards (asked 2026-11-15). */
+.now-card {
+  display: block; text-decoration: none; color: var(--on-inverse);
+  background: var(--inverse); border-radius: var(--r); padding: 22px 24px 18px;
+  box-shadow: var(--shadow-md); transition: box-shadow .18s ease, transform .18s ease;
+}
+/* the site-wide a:hover would turn it all purple, unreadable on the dark */
+.now-card:hover { color: var(--on-inverse); }
+@media (hover: hover) { .now-card:hover { transform: translateY(-2px); } }
+.now-head { display: flex; align-items: center; gap: 10px; }
+.now-label { font-family: "Archivo", sans-serif; font-weight: 800; font-size: 1.7rem; letter-spacing: -0.02em; line-height: 1.1; }
+.now-round { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; margin: 8px 0 0; }
+.now-round b { font-family: "Archivo", sans-serif; font-size: 1.05rem; color: var(--acid); }
+.now-last { font-size: 0.88rem; }
+.now-top {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px;
+  list-style: none; margin: 16px 0 0; padding: 0;
+}
+.now-top li {
+  display: flex; align-items: center; gap: 10px; min-width: 0;
+  padding: 9px 12px; border-radius: var(--r-sm); border: 1px solid rgba(255, 255, 255, 0.14);
+}
+.now-place {
+  flex: 0 0 auto; min-width: 30px; padding: 3px 7px; border-radius: 999px; text-align: center;
+  font-family: "Archivo", sans-serif; font-weight: 800; font-size: 0.78rem;
+  background: var(--gold); color: var(--on-metal);
+}
+.now-place.is-2 { background: var(--silver); color: var(--on-metal); }
+.now-place.is-3 { background: var(--bronze); color: var(--on-metal); }
+.now-name { flex: 1 1 auto; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.now-pts { flex: 0 0 auto; font-family: "Archivo", sans-serif; font-weight: 700; color: var(--acid); font-variant-numeric: tabular-nums; }
+.now-foot {
+  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 16px;
+  margin: 16px 0 0; font-size: 0.86rem;
+}
+.now-go { font-weight: 700; color: var(--acid); white-space: nowrap; }
+@media (max-width: 620px) {
+  .now-card { padding: 18px 16px 15px; }
+  .now-label { font-size: 1.45rem; }
+}
+
 /* ---------- home page: playlists ---------- */
 
-/* One tile per playlist, league-wide first then newest season first:
+/* One tile per playlist, All-Time first then newest season first:
    four across, two on a phone so each phone row is one season's pair. */
 .pl-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .pl-tile {
@@ -396,7 +435,13 @@ table.taste td.nil { color: #C6BDCC; font-weight: 400; }
 }
 /* the ↗ that says "opens in Spotify", in place of the words */
 .pl-out { font-size: 0.95rem; line-height: 1; color: var(--muted); }
-.pl-kicker { font-size: 0.72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+/* which season the playlist is from, as a tag (asked 2026-11-15): purple
+   on lilac for a season, solid purple for All-Time */
+.pl-kicker {
+  align-self: flex-start; padding: 2px 8px; border-radius: 999px; background: var(--wash); color: var(--deep);
+  font-family: "Archivo", sans-serif; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;
+}
+.pl-kicker.is-all { background: var(--magenta); color: #fff; }
 .pl-name { font-family: "Archivo", sans-serif; font-weight: 700; font-size: 1rem; line-height: 1.25; overflow-wrap: anywhere; }
 .pl-cta { margin-top: auto; padding-top: 8px; font-size: 0.8rem; font-weight: 600; color: var(--deep); font-variant-numeric: tabular-nums; }
 .pl-stat { white-space: nowrap; }
@@ -404,6 +449,7 @@ table.taste td.nil { color: #C6BDCC; font-weight: 400; }
 .pl-tile.is-soon { border-style: dashed; box-shadow: none; color: var(--muted); }
 .pl-tile.is-soon .pl-icon { background: var(--paper); color: var(--muted); }
 .pl-tile.is-soon .pl-cta { color: var(--muted); }
+.pl-tile.is-soon .pl-kicker { background: var(--paper); color: var(--muted); }
 @media (hover: hover) {
   a.pl-tile:hover { color: var(--ink); border-color: rgba(158, 0, 196, 0.35); box-shadow: var(--shadow-md); transform: translateY(-1px); }
   a.pl-tile:hover .pl-out { color: var(--magenta-text); }

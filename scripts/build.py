@@ -2190,6 +2190,10 @@ def main():
             # everyone sharing first place, in standings order
             "leaderNames": [p["name"] for p in data["standings"] if p["rank"] == 1],
             "leaderPoints": leader["points"] if leader else None,
+            # the top three places for Home's current-season card, a shared
+            # place listing everyone in it (asked 2026-11-15)
+            "top": [{"name": p["name"], "points": p["points"], "rank": p["rank"], "tied": p["tied"]}
+                    for p in data["standings"] if p["rank"] <= 3],
             "startedAt": data["startedAt"],
             "liveRound": data["liveRound"],
             "activePlayers": active_players(data),

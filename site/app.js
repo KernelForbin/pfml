@@ -212,44 +212,60 @@
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   }
 
-  function seasonCard(s, isLive) {
-    var a = el("a", "season-card" + (isLive ? " is-live" : ""));
-    a.href = s.key;
-
-    var nameHtml = '<div class="season-card-name-wrap"><span class="season-card-name">' + esc(s.label) + "</span>" +
-      (isLive ? '<span class="live-badge"><span class="pip" aria-hidden="true"></span>Live</span>' : "") + "</div>";
-
-    var statLine = s.roundCount
+  function seasonStatLine(s) {
+    return s.roundCount
       ? s.roundCount + " " + plural(s.roundCount, "round") + " &middot; " + s.songCount + " tracks &middot; " + s.playerCount + " players"
       : s.playerCount + " players &middot; not started yet";
+  }
 
-    var roundLine = "";
-    // The export only ever holds finished rounds (see build.py), so the
-    // latest one is complete and the next is underway. Which phase that
-    // next round is in isn't in the data, so the card doesn't say.
-    if (isLive && s.liveRound) {
-      roundLine = '<div class="season-card-round">Round ' + s.liveRound.number + ": " + esc(s.liveRound.name) +
-        '<span class="phase">Complete</span></div>' +
-        '<div class="season-card-round">Round ' + (s.liveRound.number + 1) + " underway</div>";
-    }
-    var startedLine = "";
-    if (isLive && s.startedAt) {
-      var d = fmtDate(s.startedAt);
-      if (d) startedLine = '<div class="season-card-round">Started ' + d + "</div>";
-    }
+  // A finished season, under Past Seasons: its size and who won.
+  function seasonCard(s) {
+    var a = el("a", "season-card");
+    a.href = s.key;
 
     var leaderHtml = "";
     if (s.leaderName) {
       var leaders = (s.leaderNames && s.leaderNames.length) ? s.leaderNames : [s.leaderName];
-      var label = isLive ? (leaders.length > 1 ? "Tied for the lead" : "Leading")
-                         : (leaders.length > 1 ? "Joint winners" : "Winner");
-      leaderHtml = '<div class="season-card-leader"><span class="lbl">' + label + '</span>' +
+      leaderHtml = '<div class="season-card-leader"><span class="lbl">' + (leaders.length > 1 ? "Joint winners" : "Winner") + '</span>' +
         '<div class="val">' + joinNames(leaders) + ' <span class="pts">' + s.leaderPoints + ' pts</span></div></div>';
     }
 
     a.innerHTML =
-      '<div class="season-card-top">' + nameHtml + '<span class="season-card-arrow">&rarr;</span></div>' +
-      '<div class="season-card-stats">' + statLine + "</div>" + roundLine + startedLine + leaderHtml;
+      '<div class="season-card-top"><div class="season-card-name-wrap"><span class="season-card-name">' + esc(s.label) + "</span></div>" +
+      '<span class="season-card-arrow">&rarr;</span></div>' +
+      '<div class="season-card-stats">' + seasonStatLine(s) + "</div>" + leaderHtml;
+    return a;
+  }
+
+  // The season in progress gets its own wide, dark card under the round's
+  // prompt (asked 2026-11-15): where it's up to and its top three.
+  function nowCard(s) {
+    var live = s.roundCount > 0;
+    var a = el("a", "now-card");
+    a.href = s.key;
+
+    // The export only ever holds finished rounds (see build.py), so the
+    // latest one is complete and the next is underway. Which phase that
+    // next round is in isn't in the data, so the card doesn't say.
+    var roundLine = live && s.liveRound
+      ? '<p class="now-round"><b>Round ' + (s.liveRound.number + 1) + " underway</b>" +
+        '<span class="now-last">Round ' + s.liveRound.number + ", " + esc(s.liveRound.name) + ", complete</span></p>"
+      : '<p class="now-round"><b>Not started yet</b></p>';
+    var started = live && fmtDate(s.startedAt);
+
+    var top = live ? (s.top || []) : [];
+    var table = top.length ? '<ol class="now-top">' + top.map(function (p) {
+      return '<li><span class="now-place is-' + p.rank + '">' + (p.tied ? "T" : "") + p.rank + "</span>" +
+        '<span class="now-name">' + esc(p.name) + "</span>" +
+        '<span class="now-pts">' + p.points + " pts</span></li>";
+    }).join("") + "</ol>" : "";
+
+    a.innerHTML =
+      '<div class="now-head"><span class="now-label">' + esc(s.label) + "</span>" +
+      (live ? '<span class="live-badge"><span class="pip" aria-hidden="true"></span>Live</span>' : "") + "</div>" +
+      roundLine + table +
+      '<p class="now-foot"><span>' + seasonStatLine(s) + (started ? " &middot; started " + started : "") + "</span>" +
+      '<span class="now-go">Standings &amp; results &rarr;</span></p>';
     return a;
   }
 
@@ -303,7 +319,7 @@
     var st = idm && stats && stats[idm[1]];
     var inner = '<span class="pl-top"><span class="pl-icon">' + icon + "</span>" +
         (url ? '<span class="pl-out" aria-hidden="true">&nearr;</span>' : "") + "</span>" +
-      '<span class="pl-kicker">' + esc(group) + "</span>" +
+      '<span class="pl-kicker' + (group === PL_ALL_TIME ? " is-all" : "") + '">' + esc(group) + "</span>" +
       '<span class="pl-name">' + esc(name) + "</span>" +
       '<span class="pl-cta">' + (!url ? "Coming soon" : !st ? "Open in Spotify" :
         playlistStatsParts(st).map(function (x) { return '<span class="pl-stat">' + x + "</span>"; }).join("")) + "</span>";
@@ -318,14 +334,17 @@
     return a;
   }
 
-  // League-wide first, then seasons newest first, like the season menu.
+  // All-Time first, then seasons newest first, like the season menu. The
+  // league-wide group is called All-Time, as everywhere else that spans
+  // every season (asked 2026-11-15).
+  var PL_ALL_TIME = "All-Time";
   function renderPlaylists(pl, stats) {
     var host = $("playlists");
     if (!host) return;
     host.innerHTML = "";
     if (!pl) { host.appendChild(empty("Playlists haven't been added yet.")); return; }
     var grid = el("div", "pl-grid");
-    (pl.leagueWide || []).forEach(function (item) { grid.appendChild(playlistTile(item, "League-wide", stats)); });
+    (pl.leagueWide || []).forEach(function (item) { grid.appendChild(playlistTile(item, PL_ALL_TIME, stats)); });
     (pl.seasons || []).slice().reverse().forEach(function (group) {
       group.items.forEach(function (item) { grid.appendChild(playlistTile(item, group.season, stats)); });
     });
@@ -557,17 +576,18 @@
     PFML.loadJSON("index.json").then(function (index) {
       renderNav(index, null);
       renderRoundMaterial(index);
-      var grid = el("div", "season-grid");
-      if (!index.seasons.length) {
-        setBlock("seasonCards", empty("No seasons yet."));
-      } else {
-        index.seasons.slice().reverse().forEach(function (s) {
-          var isLive = s.key === index.currentSeason && s.roundCount > 0;
-          grid.appendChild(seasonCard(s, isLive));
-        });
-        grid.appendChild(careerCard(index));
-        setBlock("seasonCards", grid);
+      var current = index.seasons.filter(function (s) { return s.key === index.currentSeason; })[0];
+      if (current) {
+        setBlock("nowCard", nowCard(current));
+        $("block-now").hidden = false;
       }
+      // Past Seasons: every other season, newest first, then All-Time.
+      var grid = el("div", "season-grid");
+      index.seasons.slice().reverse().forEach(function (s) {
+        if (s !== current) grid.appendChild(seasonCard(s));
+      });
+      grid.appendChild(careerCard(index));
+      setBlock("seasonCards", grid);
       // Stats are optional: without them the tiles just say "Open in Spotify".
       return Promise.all([
         PFML.loadJSON("playlists.json").catch(function () { return null; }),

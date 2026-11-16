@@ -975,6 +975,22 @@ class PlaylistTiles(unittest.TestCase):
         self.assertIn('el("div", "pl-tile is-soon", inner)', tile, "no url: a tile that isn't a link")
         self.assertIn('a.target = "_blank"; a.rel = "noopener"', tile)
 
+    def test_the_league_wide_group_is_all_time_and_each_group_is_a_tag(self):
+        # asked 2026-11-15: "All-Time", like everything else spanning every
+        # season, and which season a tile is from stands out
+        js = read("app.js")
+        self.assertIn('var PL_ALL_TIME = "All-Time";', js)
+        self.assertNotIn('"League-wide"', js)
+        render = js_function(js, "function renderPlaylists(pl, stats)")
+        self.assertIn("playlistTile(item, PL_ALL_TIME, stats)", render)
+        tile = js_function(js, "function playlistTile(item, group, stats)")
+        self.assertIn('(group === PL_ALL_TIME ? " is-all" : "")', tile)
+        css = read("style.css")
+        kicker = " ".join(css_rules(css, ".pl-kicker"))
+        self.assertIn("background: var(--wash)", kicker)
+        self.assertIn("font-weight: 800", kicker)
+        self.assertIn("background: var(--magenta)", " ".join(css_rules(css, ".pl-kicker.is-all")))
+
     def test_tile_shows_track_count_and_running_time_when_known(self):
         js = read("app.js")
         tile = js_function(js, "function playlistTile(item, group, stats)")

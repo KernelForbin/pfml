@@ -184,6 +184,17 @@ class Main(unittest.TestCase):
             index = json.loads((root / "site" / "data" / "index.json").read_text(encoding="utf-8"))
         self.assertEqual(index["seasons"][0]["liveRound"], {"number": 2, "name": "Round Two"})
 
+    def test_the_top_three_places_go_to_homes_current_season_card(self):
+        # Ann and Ben share first, Cat is third, Dan fourth stays off
+        with sandbox() as root, quiet():
+            make_season(root / "data" / "season1", [TIE_ROUND])
+            build.main()
+            index = json.loads((root / "site" / "data" / "index.json").read_text(encoding="utf-8"))
+        self.assertEqual(index["seasons"][0]["top"], [
+            {"name": "Ann", "points": 3, "rank": 1, "tied": True},
+            {"name": "Ben", "points": 3, "rank": 1, "tied": True},
+            {"name": "Cat", "points": 2, "rank": 3, "tied": False}])
+
     def test_the_players_taking_part_are_the_latest_rounds_submitters(self):
         # The Submit page's "x/20 submitted" counts out of these. Round One
         # had four players, Round Two only Ann and Ben.

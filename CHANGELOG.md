@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-11-15: Home: the current season in its own card, Past Seasons, All-Time playlists
+
+- **Asked:** make the season of each Home playlist more obvious, call the
+  league-wide ones All Time like everything else spanning every season,
+  put the current season in a different kind of tile under the prompt,
+  and move Seasons above Playlists as Past Seasons.
+- **Changed:**
+  - Home reads: the round's prompt, Current season, From the vault, Past
+    Seasons, Playlists.
+  - The current season is a wide dark card: Live, the round underway and
+    the last one complete, its top three places (a shared place as T2,
+    everyone in it), and its size and start. `index.json` gives each
+    season its `top` for it.
+  - Past Seasons holds every other season (winner, size) and All-Time.
+  - Each playlist tile's group is a bold tag: lilac for a season, solid
+    purple for All-Time, which replaces "League-wide".
+- **Verified:**
+  - New tests in `tests/test_build.py`, `tests/test_league_extras.py` and
+    `tests/test_site.py` fail on each of eight breaks in a scratch clone.
+    The suite passes.
+  - A stubbed copy of the site with the real data at 375px and 1280px,
+    light and dark: the five blocks in order, Season 3's card with its
+    leader 1st and two players at T2, no sideways scroll at 375px, every
+    text pair at least 6.46:1.
+
 ## 2026-11-14: A round's date is when it started
 
 - **Asked:** every Season 3 tile in Results by round said Sep 13, the day

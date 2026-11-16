@@ -60,7 +60,7 @@ supabase/functions/      Edge Functions, deployed by hand from the dashboard:
                          search-tracks, send-reminders
 tests/                   offline test suite (stdlib unittest, made-up data)
 site/                    everything GitHub Pages serves
-  index.html             home page: season cards + playlists, pfml.fun
+  index.html             home page: round prompt, current season, vault, past seasons, playlists
   career.html            cross-season standings, static, not templated
   season.template.html   template build.py fills in per season
   round.html             one round, full width: every track, vote and comment
@@ -819,9 +819,17 @@ CLAUDE.md, Checking page code in a browser.
 
 ## The "live" season on the home page
 
-The home page marks whichever season is last by number as the current one.
-If it has at least one round, its card shows a LIVE badge, the latest
-round marked Complete, "Round N+1 underway", and a start date.
+The home page marks whichever season is last by number as the current one,
+and gives it its own card under the round's prompt (`nowCard` in `app.js`;
+asked 2026-11-15): wide and dark, unlike the white Past Seasons cards
+below, which hold every other season and All-Time. If the season has at
+least one round, the card shows a LIVE badge, "Round N+1 underway", the
+latest round marked complete, its top three places (`top` in `index.json`:
+everyone with a place of 3 or better, so a shared place lists them all, as
+T2), and its size and start date. Checked 2026-11-15 on a stubbed copy of
+the site with the real data at 375px and 1280px, light and dark: no
+sideways scroll, every text pair on the card at least 9:1, and hovering
+keeps it readable (the site-wide `a:hover` would turn it purple).
 
 **Music League's export only contains finished rounds.** A round in song
 submission or voting isn't in it at all: no round row, no submissions, no
@@ -832,7 +840,7 @@ the final export. So:
 
 - **Started** is the `Created` timestamp of that season's first round
   (the first one played; see Round order below).
-- **Round N · Complete** is the latest round in the export. It's always
+- **Round N, complete** is the latest round in the export. It's always
   finished.
 - **Round N+1 underway** is inferred: the season is the current one, so the
   next round is assumed to be in play. Whether it's in song submission or
@@ -845,8 +853,8 @@ the final export. So:
   finished seasons.
 
 A season with zero rounds in its CSVs (a freshly created `data/seasonN/`
-with only `competitors.csv`) shows "not started yet" instead, no LIVE badge,
-and no round line.
+with only `competitors.csv`) shows "Not started yet" instead, no LIVE badge,
+and no places.
 
 ## Round order
 
@@ -923,16 +931,17 @@ number, its name and prompt in full, and a button to the material's page
   375px. Checked 2026-11-14 with the real `renderRoundMaterial` and
   `style.css` at 375px and 1280px, light and dark: no sideways scroll,
   `target="_blank" rel="noopener"`.
-- **Home's order** (asked 2026-11-14): the round tile first, then From the
-  vault, Playlists, and the season cards (with All-Time) last. With the
-  cards at the bottom, the tile's heading says where the league is,
+- **Home's order** (asked 2026-11-14, and 2026-11-15): the round tile
+  first, then Current season (README, The "live" season on the home
+  page), From the vault, Past Seasons (with All-Time), and Playlists last.
+  The tile's heading says where the league is,
   "<season label>, Round <round>", from `index.json` and the file's
   `round`, and `kicker` becomes the small "This round's prompt" line.
   The round number comes only from the file: the export holds finished
   rounds only, so the data can't say which round is open. Without the
   file, nothing at the top names the round. Checked 2026-11-14 on a stubbed
   copy of the site with the real data at 375px and 1280px, light and dark:
-  the four blocks in that order, no sideways scroll.
+  the four blocks in that order, no sideways scroll; and 2026-11-15, the five.
 - **It goes on its own** once that round's results are in the stats, when
   the season's `roundCount` reaches `round`, so it needs no taking down.
   For the next round, rewrite the file and publish. Without the file, there's
@@ -944,7 +953,7 @@ number, its name and prompt in full, and a button to the material's page
 
 ## From the vault
 
-A Home section between the season cards and the playlists. It shows one
+A Home section between the current season's card and Past Seasons. It shows one
 past round winner at random on each visit: its round (linked), track,
 artist and points, who sent it (linked to their profile), their note, and the
 comment from whoever gave it the most points (the longest, on a tie), with
@@ -955,8 +964,8 @@ first listing each, about 40 KB. Without the file the section stays hidden.
 ## Playlists on the home page
 
 `site/data/playlists.json` is the one file in `site/data/` that `build.py`
-never touches, it's yours to edit directly. It holds the league-wide and
-per-season playlist links shown on the home page. Each entry looks like:
+never touches, it's yours to edit directly. It holds the league-wide
+(`leagueWide`) and per-season playlist links shown on the home page. Each entry looks like:
 
 ```json
 { "label": "PFML - S1 - All Submissions", "url": null }
@@ -964,6 +973,10 @@ per-season playlist links shown on the home page. Each entry looks like:
 
 Each entry is a tile on the home page (league-wide first, then seasons
 newest first), its name with the repeated "PFML - S1 - " prefix dropped.
+Its group is a bold tag at the top of the tile: lilac with the season's
+name, or solid purple saying All-Time for the league-wide ones, the name
+everything spanning every season goes by (asked 2026-11-15; it said
+League-wide before).
 `url: null` renders as a dashed "Coming soon" tile with no link. Fill in a real
 `https://open.spotify.com/playlist/...` URL and it becomes a live link the
 next time you run `scripts/publish.py`. The file is git-ignored like the
@@ -1178,7 +1191,7 @@ part's working).
 `career.html`, titled All-Time League Stats). The season button names the
 season being viewed, or the one in progress on any other page, and opens
 a list of every season, newest first (`seasonPicker` in `app.js`). All-Time
-also has a card on the Home page, next to the season cards.
+also has a card on the Home page, under Past Seasons.
 
 **Account menu.** `account.js` adds two buttons to the right of the top bar
 on every members-only page once `auth.js` lets a member in: the inbox, and

@@ -158,12 +158,15 @@ class RoundMaterial(unittest.TestCase):
         self.assertIn('<section class="shell block block-first" id="block-material" hidden>', html)
         self.assertLess(html.index('id="block-material"'), html.index('id="block-seasons"'), "above the seasons")
 
-    def test_home_reads_current_round_prompt_vault_playlists_then_seasons(self):
-        # asked 2026-11-14: the season cards move to the bottom, and the
-        # tile's heading says where the league is instead
+    def test_home_reads_prompt_current_season_vault_past_seasons_then_playlists(self):
+        # asked 2026-11-14: the tile's heading says where the league is; and
+        # 2026-11-15: the current season under the prompt, Past Seasons
+        # above Playlists
         html = read("index.html")
-        order = [html.index('id="' + b + '"') for b in ("block-material", "block-vault", "block-playlists", "block-seasons")]
+        order = [html.index('id="' + b + '"') for b in ("block-material", "block-now", "block-vault", "block-seasons", "block-playlists")]
         self.assertEqual(order, sorted(order))
+        self.assertIn("<h2>Past Seasons</h2>", html)
+        self.assertNotIn("<h2>Seasons</h2>", html)
         self.assertIn('<h2 id="materialHead">', html)
         self.assertIn('if (season && m.round > 0) $("materialHead").textContent = season.label + ", Round " + m.round;', self.fn)
         self.assertNotIn("innerHTML", self.fn.split('$("materialHead")')[1].split(";")[0], "the label is text, not markup")
@@ -201,6 +204,42 @@ class RoundMaterial(unittest.TestCase):
         self.assertNotIn("Exquisite", read("index.html"))
         self.assertNotIn("Exquisite", self.js)
         self.assertFalse((SITE / "round_material.json").exists())
+
+
+class CurrentSeasonCard(unittest.TestCase):
+    """Asked 2026-11-15: the season in progress in its own kind of tile
+    under the round's prompt, the rest under Past Seasons."""
+
+    def setUp(self):
+        self.js = read("app.js")
+        self.home = body(self.js, "function initHome() {")
+        self.card = body(self.js, "function nowCard(s) {")
+
+    def test_the_current_season_gets_the_card_and_is_left_out_of_past_seasons(self):
+        self.assertIn("return s.key === index.currentSeason;", self.home)
+        self.assertIn('setBlock("nowCard", nowCard(current));', self.home)
+        self.assertIn('$("block-now").hidden = false;', self.home)
+        self.assertIn("if (s !== current) grid.appendChild(seasonCard(s));", self.home)
+        self.assertIn('<section class="shell block" id="block-now" hidden>', read("index.html"))
+
+    def test_past_season_cards_name_the_winner_never_a_leader(self):
+        card = body(self.js, "function seasonCard(s) {")
+        self.assertIn('"Winner"', card)
+        self.assertNotIn("Leading", card)
+        self.assertNotIn("live-badge", card)
+
+    def test_it_shows_the_top_places_with_ties_and_where_the_season_is(self):
+        self.assertIn("var top = live ? (s.top || []) : [];", self.card)
+        self.assertIn('(p.tied ? "T" : "") + p.rank', self.card)
+        self.assertIn("esc(p.name)", self.card)
+        self.assertIn("esc(s.liveRound.name)", self.card)
+        self.assertIn("Not started yet", self.card)
+
+    def test_it_is_a_dark_tile_that_stays_readable_on_hover(self):
+        # the site-wide a:hover turns links purple, unreadable on --inverse
+        css = read("style.css")
+        self.assertIn("background: var(--inverse)", css.split(".now-card {", 1)[1].split("}", 1)[0])
+        self.assertIn(".now-card:hover { color: var(--on-inverse); }", css)
 
 
 class RoundTilePromptBy(unittest.TestCase):
