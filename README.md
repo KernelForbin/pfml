@@ -829,15 +829,21 @@ CLAUDE.md, Checking page code in a browser.
 
 The home page marks whichever season is last by number as the current one,
 and gives it its own card under the round's prompt (`nowCard` in `app.js`;
-asked 2026-11-15): wide and dark, unlike the white Past Seasons cards
-below, which hold every other season and All-Time. If the season has at
-least one round, the card shows a LIVE badge, "Round N+1 underway", the
-latest round marked complete, its top three places (`top` in `index.json`:
-everyone with a place of 3 or better, so a shared place lists them all, as
-T2), and its size and start date. Checked 2026-11-15 on a stubbed copy of
-the site with the real data at 375px and 1280px, light and dark: no
-sideways scroll, every text pair on the card at least 9:1, and hovering
-keeps it readable (the site-wide `a:hover` would turn it purple).
+asked 2026-11-15), apart from the Past Seasons cards below, which hold
+every other season and All-Time. It's built like the prompt and vault
+cards around it: the card surface, a purple kicker, a bold title, light in
+light mode and dark in dark. (It started as a dark tile in both modes; the
+user didn't like it and it didn't follow the light theme, so it changed on
+2026-11-16.) If the season has at least one round, the kicker reads "Round
+N+1 underway", the title carries a LIVE badge, and under it are the latest
+round marked complete, its top three places as rows like the standings
+table, leader on the wash (`top` in `index.json`: everyone with a place of
+3 or better, so a shared place lists them all, as T2), and its size and
+start date. Checked 2026-11-16 on a stubbed copy of the site with the real
+data at 375px and 1280px, light and dark: no sideways scroll, no name cut
+off, every text pair on the card at least 4.96:1 (points on the wash, in
+dark), and hovering keeps it readable (the site-wide `a:hover` would turn
+it purple).
 
 **Music League's export only contains finished rounds.** A round in song
 submission or voting isn't in it at all: no round row, no submissions, no

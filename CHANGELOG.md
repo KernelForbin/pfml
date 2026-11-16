@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-16: Home's Current season card, in the site's own colors
+
+- **Asked:** the card's color scheme didn't fit, and it only looked built
+  for dark mode; make it more like the rest of the site.
+- **Changed:** it's now a card like the prompt and vault cards beside it,
+  following light and dark mode: a purple "Round N underway" kicker, the
+  season's name with its Live badge, and the top three as rows like the
+  standings table, leader on the purple wash, so long names no longer get
+  cut off three across. The lime-on-black tile is gone.
+- **Verified:** on a stubbed copy at 375px and 1280px, light and dark: no
+  sideways scroll, no name cut off, every text pair at least 4.96:1. The
+  test that pinned the dark tile now pins the card surface and fails on
+  the old CSS. The suite passes.
+
 ## 2026-11-15: American spelling on the site
 
 - **Asked:** change the site's British spellings to American.

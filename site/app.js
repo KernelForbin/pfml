@@ -237,8 +237,9 @@
     return a;
   }
 
-  // The season in progress gets its own wide, dark card under the round's
-  // prompt (asked 2026-11-15): where it's up to and its top three.
+  // The season in progress gets its own card under the round's prompt
+  // (asked 2026-11-15): where it's up to and its top three. It's built like
+  // the prompt and vault cards around it, light in light mode (2026-11-16).
   function nowCard(s) {
     var live = s.roundCount > 0;
     var a = el("a", "now-card");
@@ -247,10 +248,10 @@
     // The export only ever holds finished rounds (see build.py), so the
     // latest one is complete and the next is underway. Which phase that
     // next round is in isn't in the data, so the card doesn't say.
-    var roundLine = live && s.liveRound
-      ? '<p class="now-round"><b>Round ' + (s.liveRound.number + 1) + " underway</b>" +
-        '<span class="now-last">Round ' + s.liveRound.number + ", " + esc(s.liveRound.name) + ", complete</span></p>"
-      : '<p class="now-round"><b>Not started yet</b></p>';
+    var kicker = live && s.liveRound ? "Round " + (s.liveRound.number + 1) + " underway" : "Not started yet";
+    var lastLine = live && s.liveRound
+      ? '<p class="now-last">Round ' + s.liveRound.number + ", " + esc(s.liveRound.name) + ", complete</p>"
+      : "";
     var started = live && fmtDate(s.startedAt);
 
     var top = live ? (s.top || []) : [];
@@ -261,9 +262,10 @@
     }).join("") + "</ol>" : "";
 
     a.innerHTML =
+      '<p class="now-kicker">' + kicker + "</p>" +
       '<div class="now-head"><span class="now-label">' + esc(s.label) + "</span>" +
       (live ? '<span class="live-badge"><span class="pip" aria-hidden="true"></span>Live</span>' : "") + "</div>" +
-      roundLine + table +
+      lastLine + table +
       '<p class="now-foot"><span>' + seasonStatLine(s) + (started ? " &middot; started " + started : "") + "</span>" +
       '<span class="now-go">Standings &amp; results &rarr;</span></p>';
     return a;

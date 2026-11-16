@@ -235,11 +235,21 @@ class CurrentSeasonCard(unittest.TestCase):
         self.assertIn("esc(s.liveRound.name)", self.card)
         self.assertIn("Not started yet", self.card)
 
-    def test_it_is_a_dark_tile_that_stays_readable_on_hover(self):
-        # the site-wide a:hover turns links purple, unreadable on --inverse
+    def test_it_is_a_card_like_its_neighbours_in_both_modes(self):
+        # It was a dark --inverse tile that ignored light mode; it's now the
+        # same card surface as the prompt and vault cards (2026-11-16).
         css = read("style.css")
-        self.assertIn("background: var(--inverse)", css.split(".now-card {", 1)[1].split("}", 1)[0])
-        self.assertIn(".now-card:hover { color: var(--on-inverse); }", css)
+        rule = css.split(".now-card {", 1)[1].split("}", 1)[0]
+        self.assertIn("background: var(--card)", rule)
+        self.assertIn("color: var(--ink)", rule)
+        self.assertNotIn("inverse", css.split("/* ---------- home page: the current season", 1)[1]
+                         .split("/* ---------- home page: playlists", 1)[0])
+        # the site-wide a:hover would otherwise turn every line purple
+        self.assertIn(".now-card:hover { color: var(--ink); }", css)
+
+    def test_it_leads_with_where_the_season_is_as_a_kicker(self):
+        self.assertIn('<p class="now-kicker">', self.card)
+        self.assertIn('" underway"', self.card)
 
 
 class RoundTilePromptBy(unittest.TestCase):
