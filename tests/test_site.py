@@ -1476,6 +1476,16 @@ class SecurityCheckCard(unittest.TestCase):
         self.assertRegex(card, r'<span class="sec-when">Full review: [A-Z][a-z]+ \d{1,2}, 20\d\d</span>')
         self.assertLess(page.index('class="sec-card"'), page.index("<h2>When you sign in with Google</h2>"))
 
+    def test_its_text_describes_the_checks_not_a_dated_finding(self):
+        # asked 2026-11-15: true whenever it's read, so the only dates are
+        # the two times in its head; what a review found goes in the README
+        page = read("privacy.html")
+        card = page.split('<section class="sec-card"', 1)[1].split("</section>", 1)[0]
+        body = card.split("</div>", 1)[1]
+        months = "January|February|March|April|May|June|July|August|September|October|November|December"
+        self.assertNotRegex(body, r"\b(%s)\s+\d{1,2}\b" % months)
+        self.assertNotRegex(body, r"(?i)last \d+ days|\b20\d\d\b")
+
 
 class PinnedTrackBar(unittest.TestCase):
     """On a round page, the song being commented on stays pinned under the

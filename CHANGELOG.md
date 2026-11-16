@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-15: The privacy page's Security check card, reworded
+
+- **Asked:** make the card future-proof, true whenever it's read, without
+  the dated "new security problems" finding; describe how each area the
+  site depends on is checked; and a more formal tone.
+- **Changed:** a short introduction, then one item per area: Supabase,
+  the sign-in library, publishing on GitHub, access from outside, the
+  site's own code, and what happens when a check fails. Each says what is
+  checked and how often, as `scripts/security_check.py` and the full
+  review actually do. The October Storage finding stays in the README.
+- **Verified:** a new test in `tests/test_site.py` (SecurityCheckCard)
+  fails on the old wording and passes on the new; the suite passes. The
+  page at 375px, light and dark: no sideways scroll, text at least 14:1.
+
 ## 2026-11-15: Home: the current season in its own card, Past Seasons, All-Time playlists
 
 - **Asked:** make the season of each Home playlist more obvious, call the

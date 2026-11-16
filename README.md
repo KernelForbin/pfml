@@ -291,9 +291,17 @@ it left the footers on 2026-10-25.
 ### Security check
 
 Near the privacy page's top, a **Security check** card gives members a
-plain-language summary, with two times: the last full review (by hand,
-in the card's wording) and when the daily check last passed (stamped at
-deploy). Keep each claim on it true.
+plain-language summary, with two times: the last full review (by hand)
+and when the daily check last passed (stamped at deploy). Keep each claim
+on it true.
+
+Its wording describes the checks, area by area (Supabase, the sign-in
+library, publishing on GitHub, access from outside, the site's own code,
+what a failure does), in a formal register, so it stays true whenever
+it's read (rewritten 2026-11-15, at the user's request). It names no
+dated finding: what a review found goes here in the README, and a test
+refuses a date or "last N days" in the card's text. A full review moves
+only its date; the wording changes only when the checks themselves do.
 
 **The 2026-10-24 full review** covered security advisories from the
 previous 30 days for Supabase, GitHub Actions, supabase-js and browsers; a

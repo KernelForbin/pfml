@@ -26,6 +26,7 @@
   .sec-card h2 { margin: 0; font-size: 1.15rem; }
   .sec-when { color: var(--muted); font-size: 0.86rem; width: 100%; }
   .sec-when + .sec-when { margin-top: -6px; }
+  .sec-intro { margin: 12px 0 0; }
   .sec-card ul { margin: 12px 0 0; padding-left: 20px; }
   .sec-card li { margin: 6px 0; }
   .sec-card h3 { margin: 14px 0 4px; font-size: 0.98rem; }
@@ -51,11 +52,14 @@
       <span class="sec-when">Full review: October 24, 2026</span>
       <span class="sec-when" id="secAuto">Daily check: not run yet</span>
     </div>
+    <p class="sec-intro">PFML depends on a small number of outside services. Each is checked for known security problems, and the site itself is tested from the outside, every day. A person also reviews the whole site by hand from time to time; the dates above show when each was last completed.</p>
     <ul>
-      <li><b>New security problems:</b> we went through the security problems announced in the last 30 days for everything PFML is built on: Supabase, GitHub, the sign-in library, and the browsers you use. One mattered: on October 14, Supabase announced a serious flaw in its file storage that could let a stranger replace stored files. Supabase has fixed it on PFML's project, and we checked every stored league file against our own copy: they all match. None of the others affect PFML.</li>
-      <li><b>Tested from the outside:</b> we tried to get into the site the way a stranger would, without signing in. Every part of the league's data, every members-only feature and the stored files all said no. Nothing could be read or changed.</li>
-      <li><b>A locked sign-in library:</b> the code that handles signing in is fixed to one exact version and checked against its fingerprint. If anyone tampered with the copy online, your browser would refuse to run it.</li>
-      <li><b>Checked our own code:</b> anything members type, like replies and comments, is shown as plain text, so it can't run as code in someone else's browser.</li>      <li><b>Checked every day:</b> each morning, an automatic check looks for newly announced problems in Supabase, the sign-in library and the tools that publish the site, makes sure the Supabase services PFML runs on have every fix, and repeats the test from the outside. The time above is when it last passed. If something needs a person to look at it, the time stays put until they have.</li>
+      <li><b>Supabase (accounts, the database and file storage):</b> every day, the versions of the sign-in and file storage services that PFML uses are compared against the security advisories Supabase publishes. Any new advisory from Supabase, or from the software it uses to serve the database, must be assessed by a person before the daily check can pass.</li>
+      <li><b>The sign-in library:</b> the code that handles signing in is fixed to one exact version and verified against its fingerprint, so a browser will refuse to run a copy that has been altered. That version is checked every day against GitHub's public database of security advisories.</li>
+      <li><b>Publishing the site (GitHub):</b> the automated tools that test and publish the site are fixed to exact versions and checked every day against the same advisory database. A publish is refused if it contains any league data or private keys.</li>
+      <li><b>Access from outside:</b> every day, an automated test approaches the site as a visitor who has not signed in. It attempts to read the league's data, change it, use members-only features, open the stored files, and use the site's server functions. Each attempt must be refused. Its attempts to add data are built so that they could not take effect even if one were accepted.</li>
+      <li><b>The site's own code:</b> anything members write, such as comments and replies, is shown as plain text, so it cannot run as code in another member's browser. Each full review checks this throughout the site, along with recent security advisories for Supabase, GitHub, the sign-in library and the major browsers.</li>
+      <li><b>When a check fails:</b> the daily check's time above moves forward only after a check passes in full. If anything needs a person's attention, the time stays where it is until it has been resolved.</li>
     </ul>
     <h3>What you can do</h3>
     <ul>

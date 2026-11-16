@@ -350,8 +350,10 @@ PFML, then a line in `scripts/security_reviewed.txt` (id, date, why).
 Supabase publishes some advisories only on its own repos, not in GitHub's
 global database, and a 30-day review once missed a critical Storage one
 that way (2026-10-24), so read those repos too when rechecking by hand. A
-full review by hand also updates the card's "Full review" date and its
-wording, and every claim on it has to stay true.
+full review by hand also updates the card's "Full review" date. Its
+wording describes the checks, not what a review found (the user's call,
+2026-11-15), so it changes only when the checks do; findings go in the
+README. Every claim on it has to stay true.
 
 ## Dark mode: colours go through tokens
 
