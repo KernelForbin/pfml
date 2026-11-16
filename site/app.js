@@ -1057,7 +1057,7 @@
   // round counts as an even split of one pick, so "picks" can be 6.08.
   function writersPickTile(t) {
     var shared = t.rounds - t.outright;
-    return tile("Writer’s Pick", who(t.name, t.id), "the prompt writer’s favourite in " + t.rounds + " " + plural(t.rounds, "round") +
+    return tile("Writer’s Pick", who(t.name, t.id), "the prompt writer’s favorite in " + t.rounds + " " + plural(t.rounds, "round") +
       (shared ? " (" + shared + " shared)" : "") + ": " + (Math.round(t.picks * 10) / 10) + " " + plural(t.picks, "pick") +
       (shared ? ", a shared round split evenly" : ""), false, t.tiedWith);
   }
@@ -1919,14 +1919,14 @@
         sbox.appendChild(el("h3", null, "Tone"));
         sbox.insertAdjacentHTML("beforeend",
           '<p class="block-note">Labels from scripts/enrich_comments.py, over the ' +
-          'comments it has actually classified. Unlabelled comments are not counted.</p>');
+          'comments it has actually classified. Unlabeled comments are not counted.</p>');
         var srow = el("div", "cmt-word-row");
         withSent.forEach(function (c) {
           var top = Object.keys(c.sentiment.counts).sort(function (a, b) {
             return c.sentiment.counts[b] - c.sentiment.counts[a];
           }).slice(0, 3);
           srow.insertAdjacentHTML("beforeend",
-            '<span class="cmt-word" title="' + c.sentiment.labelled + ' comments labelled">' +
+            '<span class="cmt-word" title="' + c.sentiment.labelled + ' comments labeled">' +
             who(c.name, c.id) + " <b>" + top.map(esc).join(", ") + "</b></span>");
         });
         sbox.appendChild(srow);
@@ -2503,7 +2503,7 @@
     host.innerHTML = "";
     var wrap = el("div", "pf-fans");
     wrap.appendChild(peopleList("Biggest fans", (prof && prof.fans) || [], "Nobody has voted for " + name + " yet."));
-    wrap.appendChild(peopleList("Their favourites", (prof && prof.favorites) || [], name + " hasn’t voted yet."));
+    wrap.appendChild(peopleList("Their favorites", (prof && prof.favorites) || [], name + " hasn’t voted yet."));
     // build.taste_twins: who backs the same songs more than usual, ranked;
     // the correlation itself is modest, so no percentage
     wrap.appendChild(peopleList("Votes most like them", (prof && prof.tasteTwins) || [],

@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-15: American spelling on the site
+
+- **Asked:** change the site's British spellings to American.
+- **Changed:** favorite and favorites (Writer's Pick, profiles), recognize
+  (privacy), labeled (comment stats), gray and colors (features page).
+  Code comments, the data key `labelled`, the `aria-labelledby` attribute
+  and the Round 9 story (a quoted 1927 text) stay as they are.
+- **Verified:** a new test (`tests/test_site.py`, AmericanSpelling) reads
+  every page and script outside comments and fails on each of four
+  British spellings put back in a scratch clone. The suite passes.
+
 ## 2026-11-15: The privacy page's Security check card, reworded
 
 - **Asked:** make the card future-proof, true whenever it's read, without

@@ -1246,7 +1246,7 @@ a round's top three; tracks submitted; points given) sit two rows of three,
 or three rows of two at phone widths (`.pf-tiles`). Totals and comment
 stats come from `career.json`; each season's finish, the five best tracks (newest first
 on equal points), the three biggest fans (most points given to this
-player) and favourites (most points this player gave), all summed over
+player) and favorites (most points this player gave), all summed over
 every season, come from `profiles.json` (`build_profiles` in `build.py`).
 A third list, **Votes most like them** (`tasteTwins`, `taste_twins` in
 `build.py`), names the three players whose voting is closest. In each round

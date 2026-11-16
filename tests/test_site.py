@@ -60,6 +60,26 @@ def tracked_files():
     return out.stdout.splitlines()
 
 
+class AmericanSpelling(unittest.TestCase):
+    """Asked 2026-11-15: the site's own words use American spelling. Code
+    comments, data keys (`sentiment.labelled`), the aria-labelledby
+    attribute and the Round 9 story, which is a quoted 1927 text, are left
+    as they are."""
+    BRITISH = re.compile(r"(?i)\b\w*(favour|colour|behaviour|neighbour|recognis|organis|realis|apologis)\w*"
+                         r"|(?<![.\w-])labelled(?!by)|\bgrey\b|\bcentre\b|\bcatalogue\b")
+    SKIP = {"round-9-prompt.html", "emoji-data.js"}
+
+    def test_no_british_spelling_in_what_members_read(self):
+        for path in sorted(SITE.glob("*.html")) + sorted(SITE.glob("*.js")):
+            if path.name in self.SKIP or re.fullmatch(r"season\d+\.html", path.name):
+                continue
+            text = re.sub(r"/\*.*?\*/|<!--.*?-->", "", path.read_text(encoding="utf-8"), flags=re.S)
+            for n, line in enumerate(text.splitlines(), 1):
+                code = re.sub(r"(^|\s)//.*$", "", line)
+                with self.subTest(f"{path.name}:{n}"):
+                    self.assertNotRegex(code, self.BRITISH)
+
+
 class FeaturesPageIsStandalone(unittest.TestCase):
     def setUp(self):
         self.page = Page(read("features.html"))
