@@ -36,6 +36,7 @@ import json
 import math
 import re
 import statistics
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -2149,6 +2150,46 @@ def active_players(data):
     return sorted(players.values(), key=lambda p: p["name"].lower())
 
 
+def latest_round(data, before):
+    """The season's latest finished round for Home: its number and name,
+    its id for a link to its results, and its podium. seenAt is when a
+    build first found it, which Home's results tile counts 24 hours from
+    (asked 2026-11-17: "when you get the data"). The export says when
+    votes were cast, not when the round reached the site, so the build
+    keeps that itself: a round is new when the last build's index.json had
+    fewer rounds for this season, and the time carries over while the
+    round stays the latest. before is that season's liveRound from the
+    last index.json, {} when the index had no such season (a new one), and
+    None when there was no index to compare with, which stamps nothing.
+    README, Rounds on Home."""
+    live = data["liveRound"]
+    if not live:
+        return None
+    last = data["rounds"][-1]
+    out = dict(live, id=last["id"], podium=[
+        {"place": s["place"], "title": s["title"], "artistText": s["artistText"],
+         "submitterName": s["submitterName"], "points": s["points"]}
+        for s in last["songs"] if s.get("place") and s["place"] <= 3])
+    if before is None:
+        return out
+    if before.get("number") == live["number"]:
+        if before.get("seenAt"):
+            out["seenAt"] = before["seenAt"]
+    elif (before.get("number") or 0) < live["number"]:
+        out["seenAt"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return out
+
+
+def previous_live_rounds():
+    """Each season's liveRound in the index.json the last build wrote, or
+    None when there isn't one to read."""
+    try:
+        old = json.loads((OUT_DIR / "index.json").read_text(encoding="utf-8"))
+        return {s["key"]: s.get("liveRound") or {} for s in old["seasons"]}
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
 def main():
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     folders = season_folders()
@@ -2158,6 +2199,7 @@ def main():
     template_path = OUT_DIR.parent / "season.template.html"
     template = template_path.read_text(encoding="utf-8") if template_path.exists() else None
 
+    previous = previous_live_rounds()
     index = []
     season_datas = []
     raw_seasons = []
@@ -2195,7 +2237,7 @@ def main():
             "top": [{"name": p["name"], "points": p["points"], "rank": p["rank"], "tied": p["tied"]}
                     for p in data["standings"] if p["rank"] <= 3],
             "startedAt": data["startedAt"],
-            "liveRound": data["liveRound"],
+            "liveRound": latest_round(data, None if previous is None else previous.get(key, {})),
             "activePlayers": active_players(data),
         })
 

@@ -523,42 +523,92 @@
     }).catch(function (err) { console.error(err); });
   }
 
-  // A round that comes with something to read gets a tile on Home: its
-  // prompt in full and a link to the material (asked 2026-11-06, for Round
-  // 9's story). The text is the hand-kept round_material.json, uploaded by
-  // publish.py like playlists.json and never in the repo, since it's the
-  // league's own prompt. The tile goes once that round's results are in the
-  // stats. README, Round material on Home.
+  // Home's rounds, top first (asked 2026-11-17): the round just finished,
+  // for 24 hours from when its results reached the site; the current
+  // round, with its prompt and Submit on Music League; and the next round,
+  // with its prompt, or "Waiting for its prompt" until it's known. All of
+  // it follows the season's roundCount, so one new export moves every tile
+  // along: Round 10's results come in, Round 10 becomes the results tile,
+  // Round 11 moves up to current with the Submit button, and Round 12
+  // appears as next. The prompts are the hand-kept round_material.json,
+  // uploaded by publish.py and never in the repo, since they're the
+  // league's own words and a round name can name a player (README, Rounds
+  // on Home). A round's prompt can link to its reading (Round 9's story).
   var MATERIAL_LINK = /^[a-z0-9-]+$/;   // one of the site's own pages, a clean address
   // The league's own page on Music League, where the round takes its songs; nothing else.
   var MATERIAL_SUBMIT = /^https:\/\/app\.musicleague\.com\/l\/[0-9a-f]{32}\/$/;
+  var RESULTS_FOR_MS = 24 * 60 * 60 * 1000;
 
-  function renderRoundMaterial(index) {
+  function renderHomeRounds(index) {
+    var season = (index.seasons || []).filter(function (s) { return s.key === index.currentSeason; })[0];
+    if (!season) return;
+    renderResultsTile(season);
     PFML.loadJSON("round_material.json").then(function (m) {
-      if (!m || !m.title || !m.text) return;
-      var season = (index.seasons || []).filter(function (s) { return s.key === m.season; })[0];
-      if (season && season.roundCount >= m.round) return;   // its results are in
-      var link = MATERIAL_LINK.test(m.link || "") ? m.link : null;
+      if (!m || m.season !== season.key) return;   // another season's prompts: none apply
+      var prompts = {};
+      (m.rounds || []).forEach(function (r) { if (r && r.title && r.text) prompts[r.round] = r; });
       var submit = MATERIAL_SUBMIT.test(m.submitLink || "") ? m.submitLink : null;
-      // Where the league is, now that the season cards sit at the bottom of Home.
-      if (season && m.round > 0) $("materialHead").textContent = season.label + ", Round " + m.round;
-      $("materialCard").innerHTML = '<article class="material-card">' +
-        (m.kicker ? '<p class="material-kicker">' + esc(m.kicker) + "</p>" : "") +
-        "<h3>" + esc(m.title) + "</h3>" +
-        String(m.text).split(/\n\s*\n/).map(function (p) { return '<p class="material-text">' + esc(p.trim()) + "</p>"; }).join("") +
-        (link || submit ? '<p class="material-links">' +
-          (link ? '<a class="pill material-link" href="' + link + '">' + esc(m.linkText || "Read the material") + " &rarr;</a>" : "") +
-          (submit ? '<a class="pill material-link" href="' + submit + '" target="_blank" rel="noopener">Submit on Music League &nearr;</a>' : "") +
-          "</p>" : "") +
-        "</article>";
-      $("block-material").hidden = false;
-    }).catch(function () { /* no material file: no tile */ });
+      // The export holds finished rounds only, so the one after the last
+      // finished is the current round. lastRound, when the file has it,
+      // stops the tiles at the season's end.
+      var current = season.roundCount + 1;
+      var exists = function (n) { return !(m.lastRound > 0) || n <= m.lastRound; };
+      if (exists(current)) {
+        $("materialCard").innerHTML = roundTile(season, current, prompts[current], submit);
+        $("block-material").hidden = false;
+      }
+      if (exists(current + 1)) {
+        $("nextCard").innerHTML = roundTile(season, current + 1, prompts[current + 1], null);
+        $("block-next").hidden = false;
+      }
+    }).catch(function () { /* no material file: no round tiles */ });
+  }
+
+  function roundTile(season, n, r, submit) {
+    var link = r && MATERIAL_LINK.test(r.link || "") ? r.link : null;
+    return '<article class="material-card">' +
+      '<p class="material-kicker">' + esc(season.label) + " &middot; Round " + n + "</p>" +
+      (r
+        ? "<h3>" + esc(r.title) + "</h3>" +
+          String(r.text).split(/\n\s*\n/).map(function (p) { return '<p class="material-text">' + esc(p.trim()) + "</p>"; }).join("")
+        : '<h3 class="material-waiting">Waiting for its prompt</h3>') +
+      (link || submit ? '<p class="material-links">' +
+        (link ? '<a class="pill material-link" href="' + link + '">' + esc(r.linkText || "Read the material") + " &rarr;</a>" : "") +
+        (submit ? '<a class="pill material-link" href="' + submit + '" target="_blank" rel="noopener">Submit on Music League &nearr;</a>' : "") +
+        "</p>" : "") +
+      "</article>";
+  }
+
+  // The round just finished, for 24 hours from seenAt, when a build first
+  // found its results (build.py latest_round); after that it's on the
+  // season's own page, through the Current season card below.
+  function renderResultsTile(season) {
+    var r = season.liveRound;
+    var seen = r && r.id && Date.parse(r.seenAt || "");
+    if (!seen || Date.now() - seen >= RESULTS_FOR_MS) return;
+    var a = el("a", "now-card results-card");
+    a.href = "round?s=" + encodeURIComponent(season.key) + "&r=" + encodeURIComponent(r.id);
+    var podium = r.podium || [];
+    var shared = function (t) { return podium.filter(function (o) { return o.place === t.place; }).length > 1; };
+    a.innerHTML =
+      '<p class="now-kicker">' + esc(season.label) + " &middot; Round " + r.number + " results are in</p>" +
+      '<div class="now-head"><span class="now-label">' + esc(r.name) + "</span></div>" +
+      (podium.length ? '<ol class="now-top">' + podium.map(function (t) {
+        return '<li><span class="now-place is-' + t.place + '">' + (shared(t) ? "T" : "") + t.place + "</span>" +
+          '<span class="res-what"><span class="res-title">' + esc(t.title) + "</span>" +
+          '<span class="res-by">' + esc(t.artistText) + " &middot; sent by " + esc(t.submitterName) + "</span></span>" +
+          '<span class="now-pts">' + t.points + " pts</span></li>";
+      }).join("") + "</ol>" : "") +
+      '<p class="now-foot"><span>On Home for a day, then in ' + esc(season.label) + "</span>" +
+      '<span class="now-go">Full results &rarr;</span></p>';
+    setBlock("resultsCard", a);
+    $("block-results").hidden = false;
   }
 
   // The newest line in the features page's "New in the last 30 days" box (a test
   // keeps the two equal). The features page records the newest date it
   // showed in this browser; Home's button says New until that catches up.
-  var FEATURES_UPDATED = "2026-11-14";
+  var FEATURES_UPDATED = "2026-11-17";
   var FEATURES_SEEN_KEY = "pfml.featuresSeen";
 
   function renderFeaturesButton() {
@@ -577,7 +627,7 @@
     renderVault();
     PFML.loadJSON("index.json").then(function (index) {
       renderNav(index, null);
-      renderRoundMaterial(index);
+      renderHomeRounds(index);
       var current = index.seasons.filter(function (s) { return s.key === index.currentSeason; })[0];
       if (current) {
         setBlock("nowCard", nowCard(current));

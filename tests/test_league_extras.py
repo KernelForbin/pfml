@@ -143,41 +143,56 @@ class Vault(unittest.TestCase):
 
 
 class RoundMaterial(unittest.TestCase):
-    """A round's prompt and a link to its reading, on Home (asked
-    2026-11-06), from the hand-kept round_material.json."""
+    """Home's rounds (asked 2026-11-06 for a round's prompt, 2026-11-17 for
+    the next round and the results tile), the prompts from the hand-kept
+    round_material.json."""
 
     def setUp(self):
         self.js = read("app.js")
-        self.fn = body(self.js, "function renderRoundMaterial(index) {")
+        self.fn = body(self.js, "function renderHomeRounds(index) {")
+        self.tile = body(self.js, "function roundTile(season, n, r, submit) {")
+        self.results = body(self.js, "function renderResultsTile(season) {")
 
-    def test_home_draws_it_with_the_seasons_and_hides_without_the_file(self):
-        self.assertIn("renderRoundMaterial(index);", body(self.js, "function initHome() {"))
+    def test_home_draws_them_with_the_seasons_and_hides_without_the_file(self):
+        self.assertIn("renderHomeRounds(index);", body(self.js, "function initHome() {"))
         self.assertIn('PFML.loadJSON("round_material.json")', self.fn)
         self.assertIn('$("block-material").hidden = false;', self.fn)
+        self.assertIn('$("block-next").hidden = false;', self.fn)
+        self.assertIn(".catch(function () { /* no material file: no round tiles */ });", self.fn)
         html = read("index.html")
-        self.assertIn('<section class="shell block block-first" id="block-material" hidden>', html)
-        self.assertLess(html.index('id="block-material"'), html.index('id="block-seasons"'), "above the seasons")
+        for block in ("block-results", "block-material", "block-next"):
+            with self.subTest(block):
+                self.assertRegex(html, r'<section class="shell block[a-z -]*" id="' + block + '" hidden>')
 
-    def test_home_reads_prompt_current_season_vault_past_seasons_then_playlists(self):
-        # asked 2026-11-14: the tile's heading says where the league is; and
-        # 2026-11-15: the current season under the prompt, Past Seasons
-        # above Playlists
+    def test_home_reads_results_current_next_season_vault_past_seasons_then_playlists(self):
+        # asked 2026-11-17: the round just finished on top, then the current
+        # round, the next one below; 2026-11-15: the current season under
+        # them, Past Seasons above Playlists
         html = read("index.html")
-        order = [html.index('id="' + b + '"') for b in ("block-material", "block-now", "block-vault", "block-seasons", "block-playlists")]
+        order = [html.index('id="' + b + '"') for b in ("block-results", "block-material", "block-next", "block-now",
+                                                      "block-vault", "block-seasons", "block-playlists")]
         self.assertEqual(order, sorted(order))
-        self.assertIn("<h2>Past Seasons</h2>", html)
-        self.assertNotIn("<h2>Seasons</h2>", html)
-        self.assertIn('<h2 id="materialHead">', html)
-        self.assertIn('if (season && m.round > 0) $("materialHead").textContent = season.label + ", Round " + m.round;', self.fn)
-        self.assertNotIn("innerHTML", self.fn.split('$("materialHead")')[1].split(";")[0], "the label is text, not markup")
+        for head in ("<h2>Just finished</h2>", "<h2>Current round</h2>", "<h2>Next round</h2>", "<h2>Past Seasons</h2>"):
+            with self.subTest(head):
+                self.assertIn(head, html)
 
-    def test_it_goes_once_the_rounds_results_are_in(self):
-        self.assertIn("if (season && season.roundCount >= m.round) return;", self.fn)
+    def test_the_rounds_follow_the_export_so_a_new_round_moves_every_tile_along(self):
+        # the export holds finished rounds only: the one after the last is current
+        self.assertIn("var current = season.roundCount + 1;", self.fn)
+        self.assertIn('$("materialCard").innerHTML = roundTile(season, current, prompts[current], submit);', self.fn)
+        self.assertIn('$("nextCard").innerHTML = roundTile(season, current + 1, prompts[current + 1], null);', self.fn)
+        self.assertIn("if (!m || m.season !== season.key) return;", self.fn)
+        self.assertIn("return s.key === index.currentSeason;", self.fn)
+        self.assertIn("return !(m.lastRound > 0) || n <= m.lastRound;", self.fn)
+
+    def test_a_round_without_its_prompt_says_it_is_waiting(self):
+        self.assertIn("Waiting for its prompt", self.tile)
+        self.assertIn('esc(season.label) + " &middot; Round " + n', self.tile)
 
     def test_the_text_is_escaped_and_the_link_is_one_of_our_pages(self):
-        self.assertIn("esc(p.trim())", self.fn)
-        self.assertIn("esc(m.title)", self.fn)
-        self.assertIn("var link = MATERIAL_LINK.test(m.link || \"\") ? m.link : null;", self.fn)
+        self.assertIn("esc(p.trim())", self.tile)
+        self.assertIn("esc(r.title)", self.tile)
+        self.assertIn('var link = r && MATERIAL_LINK.test(r.link || "") ? r.link : null;', self.tile)
         # search, like JavaScript's .test(): the rule has to anchor itself
         rule = re.search(r"var MATERIAL_LINK = /(.+)/;", self.js).group(1)
         self.assertTrue(re.search(rule, "round-9-prompt"))
@@ -185,10 +200,11 @@ class RoundMaterial(unittest.TestCase):
             with self.subTest(bad):
                 self.assertIsNone(re.search(rule, bad))
 
-    def test_the_submit_button_goes_only_to_a_league_on_music_league(self):
+    def test_the_submit_button_goes_only_to_a_league_on_music_league_and_only_on_the_current_round(self):
         # asked 2026-11-14: "Submit on Music League", in a new tab
         self.assertIn('var submit = MATERIAL_SUBMIT.test(m.submitLink || "") ? m.submitLink : null;', self.fn)
-        self.assertIn('href="\' + submit + \'" target="_blank" rel="noopener">Submit on Music League', self.fn)
+        self.assertIn('href="\' + submit + \'" target="_blank" rel="noopener">Submit on Music League', self.tile)
+        self.assertEqual(self.fn.count("submit)"), 1, "the next round never gets the button")
         rule = re.search(r"var MATERIAL_SUBMIT = /(.+)/;", self.js).group(1).replace("\\/", "/")
         self.assertTrue(re.search(rule, "https://app.musicleague.com/l/0123456789abcdef0123456789abcdef/"))
         for bad in ("https://app.musicleague.com.evil.com/l/0123456789abcdef0123456789abcdef/",
@@ -199,10 +215,26 @@ class RoundMaterial(unittest.TestCase):
             with self.subTest(bad):
                 self.assertIsNone(re.search(rule, bad))
 
+    def test_the_results_tile_shows_for_24_hours_from_when_the_results_came_in(self):
+        self.assertIn("var RESULTS_FOR_MS = 24 * 60 * 60 * 1000;", self.js)
+        self.assertIn('var seen = r && r.id && Date.parse(r.seenAt || "");', self.results)
+        self.assertIn("if (!seen || Date.now() - seen >= RESULTS_FOR_MS) return;", self.results)
+        self.assertIn("renderResultsTile(season);", self.fn)
+        self.assertIn('$("block-results").hidden = false;', self.results)
+
+    def test_the_results_tile_links_the_rounds_results_and_escapes_its_tracks(self):
+        self.assertIn('a.href = "round?s=" + encodeURIComponent(season.key) + "&r=" + encodeURIComponent(r.id);', self.results)
+        for field in ("esc(r.name)", "esc(t.title)", "esc(t.artistText)", "esc(t.submitterName)"):
+            with self.subTest(field):
+                self.assertIn(field, self.results)
+        self.assertIn('(shared(t) ? "T" : "") + t.place', self.results)
+
     def test_the_prompt_never_ships_in_the_repo(self):
         # the league's own text, and it can name a player: data, not page
-        self.assertNotIn("Exquisite", read("index.html"))
-        self.assertNotIn("Exquisite", self.js)
+        for text in ("Exquisite", "Gender Bender", "Deformity"):
+            with self.subTest(text):
+                self.assertNotIn(text, read("index.html"))
+                self.assertNotIn(text, self.js)
         self.assertFalse((SITE / "round_material.json").exists())
 
 

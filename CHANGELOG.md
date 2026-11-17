@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-11-17: Rounds on Home: just finished, current and next
+
+- **Asked:** add the next round's prompt to Home. When the current round's
+  data comes in, show that round as a results tile for 24 hours, make the
+  next round the current one with the Submit on Music League button, and
+  then put up a new next round, waiting for its prompt.
+- **Changed:** Home opens with Just finished (the latest round's top three
+  and a link to its results, for 24 hours), Current round (its prompt and
+  Submit on Music League) and Next round (its prompt, or "Waiting for its
+  prompt"). Which round is current comes from the stats, the one after the
+  last finished, so one new export moves every tile along on its own.
+  `round_material.json` now lists prompts by round, as many ahead as are
+  known. The export doesn't say when a round reached the site, so
+  `build.py` stamps `seenAt` on the index's latest round the first time a
+  build finds it, and keeps it while that round stays the latest.
+- **Verified:** on a stubbed copy with the real data at 375px and 1280px,
+  light and dark: Round 9 just in shows all three tiles; Round 10 just in
+  shows Round 10's results, Round 11 current with the button, and Round 12
+  waiting; 25 hours on, the results tile is gone. No sideways scroll, no
+  track or name cut off, every text pair at least 4.86:1. New build tests
+  cover the stamp (none without an earlier index, kept on rebuilds, set for
+  a new round and a new season's first) and the podium. The suite passes.
+
 ## 2026-11-16: Home's Current season card, in the site's own colors
 
 - **Asked:** the card's color scheme didn't fit, and it only looked built

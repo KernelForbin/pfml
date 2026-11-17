@@ -413,6 +413,12 @@ table.taste td.nil { color: #C6BDCC; font-weight: 400; }
   margin: 14px 0 0; color: var(--muted); font-size: 0.86rem;
 }
 .now-go { font-weight: 700; color: var(--magenta-text); white-space: nowrap; }
+/* Home's results tile (app.js renderResultsTile): the round's top tracks
+   in the same rows, each a title over its artist and who sent it */
+.res-what { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.res-title, .res-by { overflow-wrap: anywhere; }   /* wrap, never cut a name short */
+.res-title { font-weight: 600; }
+.res-by { color: var(--muted); font-size: 0.84rem; }
 @media (max-width: 480px) { .now-card { padding: 14px; } }
 
 /* ---------- home page: playlists ---------- */
@@ -1288,6 +1294,7 @@ body.auth-checking::before {
 .material-text { margin: 10px 0 0; line-height: 1.6; overflow-wrap: anywhere; }
 .material-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; }
 .material-card .pill { margin: 0; }
+.material-waiting { color: var(--muted); }
 @media (max-width: 480px) { .vault-art { width: 64px; height: 64px; } .vault-card { gap: 12px; padding: 14px; } }
 
 /* the round recap (rounds.js) */

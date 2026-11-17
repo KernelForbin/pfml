@@ -163,6 +163,17 @@ in a script, never by retyping ids. When a name and the rotation disagree,
 or nothing names anyone, ask the user rather than guess. Tell them who you
 recorded. README, Prompt writers.
 
+## New round prompts go on Home
+
+Home shows the round just finished (24 hours), the current round and the
+next (README, Rounds on Home), and moves them along on its own when an
+export brings a new round. The prompts come from the hand-kept,
+local-only `site/data/round_material.json`: when the user gives a new
+round's prompt, add it to `rounds` (exact title and text, as given), then
+publish, which outside "update the data" needs their go-ahead. If they
+name its writer too, keep that for `prompters.json` once the round is in
+an export.
+
 ## Translate comments that aren't in English
 
 The user asked (2026-10-11) for every comment or note not in English to

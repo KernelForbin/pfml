@@ -182,7 +182,52 @@ class Main(unittest.TestCase):
             make_season(root / "data" / "season1", [TIE_ROUND, SECOND_ROUND])
             build.main()
             index = json.loads((root / "site" / "data" / "index.json").read_text(encoding="utf-8"))
-        self.assertEqual(index["seasons"][0]["liveRound"], {"number": 2, "name": "Round Two"})
+        live = index["seasons"][0]["liveRound"]
+        self.assertEqual((live["number"], live["name"], live["id"]), (2, "Round Two", "r2"))
+        self.assertNotIn("phase", live)
+
+    def test_the_latest_rounds_podium_goes_to_homes_results_tile(self):
+        # Round Two: e (Ann) and f (Ben) share first on 3
+        with sandbox() as root, quiet():
+            make_season(root / "data" / "season1", [TIE_ROUND, SECOND_ROUND])
+            build.main()
+            index = json.loads((root / "site" / "data" / "index.json").read_text(encoding="utf-8"))
+        podium = index["seasons"][0]["liveRound"]["podium"]
+        self.assertEqual([(t["place"], t["submitterName"], t["points"]) for t in podium], [(1, "Ann", 3), (1, "Ben", 3)])
+        self.assertEqual(set(podium[0]), {"place", "title", "artistText", "submitterName", "points"})
+        # Round One alone: Ann and Ben share first, Cat third, Dan fourth stays off
+        with sandbox() as root, quiet():
+            make_season(root / "data" / "season1", [TIE_ROUND])
+            build.main()
+            index = json.loads((root / "site" / "data" / "index.json").read_text(encoding="utf-8"))
+        self.assertEqual([(t["place"], t["submitterName"]) for t in index["seasons"][0]["liveRound"]["podium"]],
+                         [(1, "Ann"), (1, "Ben"), (3, "Cat")])
+
+    def test_a_round_is_stamped_when_a_build_first_finds_it_and_keeps_that_time(self):
+        # asked 2026-11-17: Home shows a round's results for 24 hours from
+        # when the data came in, which the export can't say
+        def live():
+            index = json.loads((root / "site" / "data" / "index.json").read_text(encoding="utf-8"))
+            return index["seasons"][0]["liveRound"]
+        with sandbox() as root, quiet():
+            make_season(root / "data" / "season1", [TIE_ROUND])
+            build.main()
+            self.assertNotIn("seenAt", live(), "no earlier index to compare with: no stamp")
+            build.main()
+            self.assertNotIn("seenAt", live(), "the same round again is not new")
+            make_season(root / "data" / "season1", [TIE_ROUND, SECOND_ROUND])
+            build.main()
+            seen = live()["seenAt"]
+            self.assertRegex(seen, r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")
+            with mock.patch.object(build, "datetime") as clock:
+                clock.now.return_value = build.datetime(2099, 1, 1, tzinfo=build.timezone.utc)
+                build.main()
+            self.assertEqual(live()["seenAt"], seen, "kept while it stays the latest round")
+            make_season(root / "data" / "season2", [TIE_ROUND])
+            build.main()
+            index = json.loads((root / "site" / "data" / "index.json").read_text(encoding="utf-8"))
+            self.assertIn("seenAt", index["seasons"][1]["liveRound"], "a new season's first round is new too")
+            self.assertEqual(index["seasons"][0]["liveRound"]["seenAt"], seen)
 
     def test_the_top_three_places_go_to_homes_current_season_card(self):
         # Ann and Ben share first, Cat is third, Dan fourth stays off
@@ -957,7 +1002,8 @@ class RoundOrder(unittest.TestCase):
         self.assertEqual([r["name"] for r in season["rounds"]], self.PLAYED)
 
     def test_the_latest_round_is_the_last_one_played(self):
-        self.assertEqual(self.build()["index"]["seasons"][0]["liveRound"], {"number": 3, "name": "Closer"})
+        live = self.build()["index"]["seasons"][0]["liveRound"]
+        self.assertEqual((live["number"], live["name"]), (3, "Closer"))
 
     def test_every_round_number_follows_play_order(self):
         out = self.build()

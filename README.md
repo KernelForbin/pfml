@@ -921,49 +921,76 @@ season's own `startedAt` (the season card) is still read from it. Dates
 show in the viewer's time zone, so an evening-UTC first submission can read
 a day earlier in the US.
 
-## Round material on Home
+## Rounds on Home
 
-Asked 2026-11-06, for Round 9's story. A round that comes with something to
-read gets a tile at the top of Home, "This round's prompt": the round's
-number, its name and prompt in full, and a button to the material's page
-(`renderRoundMaterial` in `app.js`).
+Asked 2026-11-06 for Round 9's story, 2026-11-14 for the Submit button and
+2026-11-17 for the rest. The top of Home follows the league round by round,
+in three tiles (`renderHomeRounds`, `roundTile` and `renderResultsTile` in
+`app.js`):
 
-- **The text is data, not page:** it's the league's own prompt, and a round
-  name can name a player, so it lives in the hand-kept
-  `site/data/round_material.json` (git-ignored, like `playlists.json`), and
-  `publish.py` uploads it with the rest. A test checks no prompt text is in
-  the repo's pages.
-- **The file:** `season` and `round` (which round it's for), `kicker` (the
-  small line, "Round 9"), `title`, `text` (paragraphs split by a blank line),
-  `link` and `linkText`. `link` must be one of the site's own clean
-  addresses (`round-9-prompt`); anything else, a full URL included, drops
-  the button.
-- **Submit on Music League** (asked 2026-11-14, for Round 10):
-  `submitLink` adds a second button, opening in a new tab. It takes only a
-  league's own page, `https://app.musicleague.com/l/<32 hex>/` exactly;
-  anything else drops it. The two buttons sit side by side and wrap at
-  375px. Checked 2026-11-14 with the real `renderRoundMaterial` and
-  `style.css` at 375px and 1280px, light and dark: no sideways scroll,
-  `target="_blank" rel="noopener"`.
-- **Home's order** (asked 2026-11-14, and 2026-11-15): the round tile
-  first, then Current season (README, The "live" season on the home
-  page), From the vault, Past Seasons (with All-Time), and Playlists last.
-  The tile's heading says where the league is,
-  "<season label>, Round <round>", from `index.json` and the file's
-  `round`, and `kicker` becomes the small "This round's prompt" line.
-  The round number comes only from the file: the export holds finished
-  rounds only, so the data can't say which round is open. Without the
-  file, nothing at the top names the round. Checked 2026-11-14 on a stubbed
-  copy of the site with the real data at 375px and 1280px, light and dark:
-  the four blocks in that order, no sideways scroll; and 2026-11-15, the five.
-- **It goes on its own** once that round's results are in the stats, when
-  the season's `roundCount` reaches `round`, so it needs no taking down.
-  For the next round, rewrite the file and publish. Without the file, there's
-  no tile.
-- Checked 2026-11-06 in a browser with a sign-in stub at 375px and desktop,
-  light and dark: the full prompt in three paragraphs above Seasons, the
-  button opening the Round 9 page, no sideways scroll at 375px, contrast at
-  least 5.29:1; hidden with Round 9's results in, and with no file.
+- **Just finished:** the latest finished round, for 24 hours after its
+  results reach the site: its name, its top three tracks (a shared place
+  marked like T1) with artist and who sent each, and a link to its results
+  page. After that it's on the season's page, through the Current season
+  card.
+- **Current round:** the one after the last finished, with its prompt in
+  full, a link to its reading when it has one, and Submit on Music League.
+- **Next round:** the one after that, with its prompt when it's known, or
+  "Waiting for its prompt", and no button.
+
+**One export moves everything along.** Which round is current comes only
+from the stats: the export holds finished rounds only (README, The "live"
+season), so the round after the season's `roundCount` is the one in play.
+When Round 10's results arrive, Round 10 becomes Just finished, Round 11
+moves up to Current round with the button, and Round 12 appears as Next
+round, waiting for its prompt. Nothing needs taking down by hand.
+
+**The 24 hours start when the results reached the site,** which the export
+can't say (its times are when votes were cast). `build.py`
+(`latest_round`) keeps it: a season's `liveRound` in `index.json` carries
+`seenAt`, stamped the first time a build finds that round newer than the
+last `index.json` it wrote, carried over on every rebuild while it stays the
+latest, and left out when there's no earlier `index.json` to compare with
+(a fresh checkout), so a rebuild never shows an old round as new. A new
+season's first round counts as new. The same `liveRound` carries the
+round's `id` and `podium` for the tile. Home hides the tile by the reader's
+clock.
+
+**The prompts are data, not page:** they're the league's own words, and a
+round name can name a player, so they live in the hand-kept
+`site/data/round_material.json` (git-ignored, like `playlists.json`), which
+`publish.py` uploads with the rest. A test checks no prompt text is in the
+repo's pages. The file:
+
+- `season`: the season these rounds belong to. Only the current season's
+  are shown.
+- `rounds`: each known prompt, as many ahead as are known: `round`,
+  `title` (the round's name), `text` (paragraphs split by a blank line), and
+  optionally `link` with `linkText`. `link` must be one of the site's own
+  clean addresses (`round-9-prompt`); anything else, a full URL included,
+  drops the button.
+- `submitLink`: the league's page on Music League,
+  `https://app.musicleague.com/l/<32 hex>/` exactly, for the current round's
+  Submit on Music League button (new tab, `rel="noopener"`); anything else
+  drops it.
+- `lastRound` (optional): the season's last round, so no tile names a round
+  past it.
+
+When the league announces a new round's prompt, add it to `rounds` and
+publish. Without the file, there are no Current or Next round tiles; the
+results tile needs only `index.json`.
+
+**Home's order:** Just finished, Current round, Next round, then Current
+season (README, The "live" season on the home page), From the vault, Past
+Seasons (with All-Time), and Playlists last.
+
+Checked 2026-11-17 on a stubbed copy with the real data at 375px and
+1280px, light and dark: Round 9 just in (all three tiles: Round 9's top
+three, Round 10 with the button, Round 11 with its prompt); Round 10 just in
+(Round 10's results, Round 11 current with the button, Round 12 waiting);
+25 hours on, no results tile. No sideways scroll, no title or name cut off
+(they wrap; at 375px they had been cut, so the ellipsis went), every text
+pair at least 4.86:1 (the muted artist line on the leader's wash, light).
 
 ## From the vault
 
