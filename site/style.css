@@ -1502,6 +1502,20 @@ body.auth-checking::before {
 .pf-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .pf-of { color: var(--muted); font-size: 0.8em; }
 .pf-seasons .vname a { color: var(--ink); font-weight: 600; }
+/* Prompts written (app.js renderProfilePrompts): a count, then each round */
+.pf-prompt-sum { margin: 0 0 12px; max-width: 680px; }
+.pf-prompts { list-style: none; margin: 0; padding: 0; max-width: 680px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; }
+.pf-prompts li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 12px; padding: 10px 14px; }
+.pf-prompts li + li { border-top: 1px solid var(--border-soft); }
+.pf-prompts a { min-width: 0; display: flex; flex-direction: column; color: var(--ink); text-decoration: none; }
+@media (hover: hover) { .pf-prompts a:hover .pf-prompt-name { color: var(--magenta-text); } }
+.pf-prompt-where { color: var(--muted); font-size: 0.8rem; }
+.pf-prompt-name { font-weight: 600; overflow-wrap: anywhere; }
+.pf-prompt-how { color: var(--muted); font-size: 0.84rem; text-align: right; }
+.pf-prompt-how .rl-commish { margin-left: 0; }
+.pf-prompts-more { max-width: 680px; margin-top: 10px; }
+.pf-prompts-more summary { cursor: pointer; color: var(--magenta-text); font-weight: 600; font-size: 0.9rem; }
+.pf-prompts-more .pf-prompts { margin-top: 10px; }
 .pf-fans { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
 .pf-people {
   background: var(--card); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow-sm);

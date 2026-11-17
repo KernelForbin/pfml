@@ -306,6 +306,42 @@ class RoundTilePromptBy(unittest.TestCase):
         self.assertIn('if (!by || !by.people || !by.people.length) return "";', self.fn)
 
 
+class ProfilePrompts(unittest.TestCase):
+    """A profile's Prompts written (asked 2026-11-17): how many, how many as
+    the commissioner and how many from round wins, and each round."""
+
+    def setUp(self):
+        self.js = read("app.js")
+        self.fn = body(self.js, "function renderProfilePrompts(prof) {")
+
+    def test_the_profile_draws_it_under_season_by_season(self):
+        self.assertIn("renderProfilePrompts(prof);", body(self.js, "function initProfile() {"))
+        html = read("profile.html")
+        self.assertIn('<section class="shell block" id="block-prompts">', html)
+        self.assertLess(html.index('id="block-seasons"'), html.index('id="block-prompts"'))
+        self.assertLess(html.index('id="block-prompts"'), html.index('id="block-tracks"'))
+        # hidden with the other profiles.json sections when that file is missing
+        self.assertIn('["block-seasons", "block-prompts", "block-tracks", "block-fans"]', self.js)
+
+    def test_it_splits_commissioner_prompts_from_round_wins(self):
+        self.assertIn('"<b>" + n.commissioner + "</b> as the commissioner, <b>" + n.won + "</b> from "', self.fn)
+        self.assertIn('!n.commissioner ? "all from round wins"', self.fn)
+        self.assertIn('!n.won ? "all as the commissioner"', self.fn)
+        self.assertIn('if (!n.total) { host.appendChild(empty("No prompts on record yet.")); return; }', self.fn)
+        self.assertIn('(x.commissioner ? \'<span class="rl-commish">Commissioner</span>\' : "Round win")', self.fn)
+
+    def test_each_round_links_to_its_page_with_names_escaped(self):
+        self.assertIn('var href = "round?s=" + encodeURIComponent(x.seasonKey) + "&r=" + encodeURIComponent(x.roundId);', self.fn)
+        for field in ("esc(x.seasonLabel)", "esc(x.roundName)", "esc(o.name)"):
+            with self.subTest(field):
+                self.assertIn(field, self.fn)
+
+    def test_a_long_list_folds_after_the_first_few(self):
+        self.assertIn("var PROMPTS_SHOWN = 5;", self.js)
+        self.assertIn("list.slice(0, PROMPTS_SHOWN)", self.fn)
+        self.assertIn('"<summary>Show all " + list.length + "</summary>"', self.fn)
+
+
 class Recap(unittest.TestCase):
     def setUp(self):
         self.js = read("rounds.js")

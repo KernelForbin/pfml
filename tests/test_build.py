@@ -696,6 +696,26 @@ class PromptWriters(unittest.TestCase):
         self.assertEqual(rounds["r2"]["promptBy"], {"people": [{"id": "p2", "name": "Ben"}, {"id": "p3", "name": "Cat"}],
                                                     "commissioner": False, "certainty": "medium"})
 
+    def test_profiles_count_the_prompts_each_player_wrote_as_commissioner_or_from_a_win(self):
+        # asked 2026-11-17: Prompts written on the profile, the commissioner's
+        # split from the ones a round win earned; a shared prompt counts for each
+        entries = {"rounds": dict(self.ENTRIES["rounds"],
+                                  r2={"prompters": ["p1", "p3"], "commissioner": False, "certainty": "medium"})}
+        with sandbox() as root, quiet():
+            folder = make_season(root / "data" / "season1", [TIE_ROUND, SECOND_ROUND])
+            (folder / "prompters.json").write_text(json.dumps(entries), encoding="utf-8")
+            build.main()
+            players = json.loads((root / "site" / "data" / "profiles.json").read_text(encoding="utf-8"))["players"]
+        self.assertEqual(players["p1"]["promptCounts"], {"total": 2, "commissioner": 1, "won": 1})
+        self.assertEqual(players["p3"]["promptCounts"], {"total": 1, "commissioner": 0, "won": 1})
+        self.assertEqual(players["p2"]["promptCounts"], {"total": 0, "commissioner": 0, "won": 0})
+        self.assertEqual(players["p2"]["prompts"], [])
+        # newest first, each pointing at its round
+        self.assertEqual([(x["roundId"], x["roundNumber"], x["commissioner"], x["with"]) for x in players["p1"]["prompts"]],
+                         [("r2", 2, False, [{"id": "p3", "name": "Cat"}]), ("r1", 1, True, [])])
+        self.assertEqual(players["p1"]["prompts"][0]["roundName"], "Round Two")
+        self.assertEqual(players["p1"]["prompts"][0]["seasonKey"], "season1")
+
     def test_a_round_nobody_worked_out_has_the_field_empty(self):
         one = {"rounds": {"r1": self.ENTRIES["rounds"]["r1"]}}
         rounds, _ = self.build_with(one)

@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-11-17: Prompts written on every profile
+
+- **Asked:** a Prompts submitted stat on the profile, for the commissioner
+  noting how many were commissioner prompts and how many came from round
+  wins.
+- **Changed:** every profile has Prompts written under Season by season:
+  the count, the split (commissioner, round wins), and each round newest
+  first, linked to its results, tagged Commissioner or Round win, with a
+  shared prompt's co-writer. `profiles.json` carries `prompts` and
+  `promptCounts`, built from each round's `promptBy`.
+- **Verified:** on a stubbed copy with profiles built from the real season
+  data, at 375px and 1280px, light and dark: the commissioner's 27 (26 as
+  commissioner, 1 from a round win), a shared prompt, and a player with
+  none; no sideways scroll, contrast at least 5.33:1. A build test covers
+  the counts, the order and the co-writer, page tests the section. The
+  suite passes.
+
 ## 2026-11-17: Rounds on Home: just finished, current and next
 
 - **Asked:** add the next round's prompt to Home. When the current round's

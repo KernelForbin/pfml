@@ -2025,7 +2025,7 @@ def build_profiles(season_datas):
 
     def profile(pid, name):
         return profiles.setdefault(pid, {"id": pid, "name": name, "seasons": [], "tracks": [],
-                                         "_fans": {}, "_favorites": {}, "pointsGiven": 0})
+                                         "_fans": {}, "_favorites": {}, "pointsGiven": 0, "prompts": []})
 
     for d in season_datas:
         # (a season with no rounds has no standings or songs: adds nothing)
@@ -2038,6 +2038,15 @@ def build_profiles(season_datas):
                 "submissions": p["submissions"],
             })
         for n, r in enumerate(d["rounds"], 1):
+            # the prompts they wrote (asked 2026-11-17), from prompters.json:
+            # as the commissioner, or their turn from winning a round
+            by = r.get("promptBy") or {}
+            for w in by.get("people", []):
+                profile(w["id"], w["name"])["prompts"].append({
+                    "seasonKey": d["key"], "seasonLabel": d["label"], "roundNumber": n,
+                    "roundId": r["id"], "roundName": r["name"], "commissioner": by["commissioner"],
+                    "with": [o for o in by["people"] if o["id"] != w["id"]],   # a shared prompt
+                })
             for s in r["songs"]:
                 sub = profile(s["submitterId"], s["submitterName"])
                 sub["tracks"].append(with_link({
@@ -2074,6 +2083,11 @@ def build_profiles(season_datas):
             "tasteTwins": [{"id": t["id"], "name": profiles[t["id"]]["name"], "rounds": t["rounds"]}
                            for t in twins.get(pid, []) if t["id"] in profiles],
             "pointsGiven": p["pointsGiven"],
+            # newest first; a shared prompt counts once for each writer
+            "prompts": p["prompts"][::-1],
+            "promptCounts": {"total": len(p["prompts"]),
+                             "commissioner": sum(1 for x in p["prompts"] if x["commissioner"]),
+                             "won": sum(1 for x in p["prompts"] if not x["commissioner"])},
         }
     return {"players": dict(sorted(out.items()))}
 

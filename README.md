@@ -3684,6 +3684,20 @@ the data). A round voted on the site already records its prompters in the
 database (DJs and Spectators, above), but `site_rounds_export()` doesn't
 carry them, so a site round needs an entry here too for now.
 
+**On each profile** (asked 2026-11-17): Prompts written, under Season by
+season (`renderProfilePrompts` in `app.js`), from `prompts` and
+`promptCounts` in `profiles.json` (`build_profiles`). A count, how many as
+the commissioner and how many from round wins (every prompt not marked
+`commissioner`, since a round's winner writes a later one), then each
+round, newest first, linked to its results, with a Commissioner or Round
+win tag and the co-writer of a shared prompt. A shared prompt counts once
+for each writer. The first five show, the rest under Show all. It counts
+every recorded entry whatever its `certainty`, like the round tiles do.
+Checked 2026-11-17 on a stubbed copy with profiles built from the real
+season data, at 375px and 1280px, light and dark: the commissioner's 27
+(26 and 1), a shared prompt naming its co-writer, a player with none; no
+sideways scroll, the tag held top right, contrast at least 5.33:1.
+
 ## Writer's Pick
 
 Asked 2026-11-14: an award for whoever "got" the prompt best by its own

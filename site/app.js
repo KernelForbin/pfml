@@ -2518,6 +2518,39 @@
     host.appendChild(box);
   }
 
+  // The prompts they wrote (asked 2026-11-17), newest first, and how many
+  // came as the commissioner and how many from winning a round, the
+  // winner's turn to write a later one. From prompters.json, kept by hand
+  // (README, Prompt writers); a shared prompt counts for each writer.
+  var PROMPTS_SHOWN = 5;
+
+  function renderProfilePrompts(prof) {
+    var host = $("pfPrompts");
+    host.innerHTML = "";
+    var list = (prof && prof.prompts) || [];
+    var n = (prof && prof.promptCounts) || { total: 0, commissioner: 0, won: 0 };
+    if (!n.total) { host.appendChild(empty("No prompts on record yet.")); return; }
+    var split = !n.commissioner ? "all from round wins"
+      : !n.won ? "all as the commissioner"
+      : "<b>" + n.commissioner + "</b> as the commissioner, <b>" + n.won + "</b> from " + plural(n.won, "a round win", "round wins");
+    host.appendChild(el("p", "pf-prompt-sum", "<b>" + n.total + "</b> " + plural(n.total, "prompt") + " written: " + split + "."));
+    function item(x) {
+      // the same address rounds.js's roundUrl() builds; profile.html doesn't load rounds.js
+      var href = "round?s=" + encodeURIComponent(x.seasonKey) + "&r=" + encodeURIComponent(x.roundId);
+      return '<li><a href="' + href + '"><span class="pf-prompt-where">' + esc(x.seasonLabel) + " &middot; Round " + x.roundNumber + "</span>" +
+        '<span class="pf-prompt-name">' + esc(x.roundName) + "</span></a>" +
+        '<span class="pf-prompt-how">' + (x.commissioner ? '<span class="rl-commish">Commissioner</span>' : "Round win") +
+        ((x.with || []).length ? " &middot; with " + x.with.map(function (o) { return esc(o.name); }).join(" &amp; ") : "") + "</span></li>";
+    }
+    host.appendChild(el("ol", "pf-prompts", list.slice(0, PROMPTS_SHOWN).map(item).join("")));
+    if (list.length > PROMPTS_SHOWN) {
+      var more = el("details", "pf-prompts-more",
+        "<summary>Show all " + list.length + "</summary>" +
+        '<ol class="pf-prompts">' + list.slice(PROMPTS_SHOWN).map(item).join("") + "</ol>");
+      host.appendChild(more);
+    }
+  }
+
   function renderProfileTracks(prof) {
     var host = $("pfTracks");
     host.innerHTML = "";
@@ -2632,11 +2665,12 @@
         ", across " + p.seasonsPlayed + " " + plural(p.seasonsPlayed, "season") + ".";
       renderProfileCareer(c, p, prof);
       renderProfileSeasons(prof);
+      renderProfilePrompts(prof);
       renderProfileTracks(prof);
       renderProfileFans(prof, p.name);
       renderProfileComments(cm, p.id);
       if (!profiles) {
-        ["block-seasons", "block-tracks", "block-fans"].forEach(function (s) { $(s).hidden = true; });
+        ["block-seasons", "block-prompts", "block-tracks", "block-fans"].forEach(function (s) { $(s).hidden = true; });
       }
     }).catch(function (err) {
       console.error(err);
