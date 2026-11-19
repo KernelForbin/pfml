@@ -39,12 +39,12 @@
   // the verdict, from the highest weight among the reasons
   var LEVELS = [
     { min: 100, key: "exact", label: "Exact repeat" },
-    { min: 90, key: "red", label: "The league will care" },
-    { min: 75, key: "orange", label: "Expect some grumbling" },
-    { min: 50, key: "amber", label: "People will notice" },
-    { min: 25, key: "yellow", label: "A few might notice" },
-    { min: 1, key: "lime", label: "Barely a blip" },
-    { min: 0, key: "green", label: "Fresh: nothing like it before" }
+    { min: 90, key: "red", label: "The league will mind this repeat" },
+    { min: 75, key: "orange", label: "Expect some grumbling about the repeat" },
+    { min: 50, key: "amber", label: "People will notice the repeat" },
+    { min: 25, key: "yellow", label: "A few might notice the repeat" },
+    { min: 1, key: "lime", label: "Barely counts as a repeat" },
+    { min: 0, key: "green", label: "Fresh: not a repeat of anything" }
   ];
 
   function fold(s) {
@@ -226,8 +226,10 @@
     var x = (100 + 74 * Math.cos(a)).toFixed(1), y = (100 - 74 * Math.sin(a)).toFixed(1);
     var html =
       '<div class="sg sg-' + result.level.key + '">' +
-        '<p class="sg-kicker">Estimated League Sentiment</p>' +
-        '<svg class="sg-dial" viewBox="0 0 200 112" role="img" aria-label="Estimated League Sentiment: ' + esc(result.level.label) + '">' +
+        '<p class="sg-kicker">Estimated League Sentiment on Repeats</p>' +
+        // what it judges: the repeat only, never whether the league will like the song
+        '<p class="sg-scope">How the league will feel about it as a repeat, not about the song itself.</p>' +
+        '<svg class="sg-dial" viewBox="0 0 200 112" role="img" aria-label="Estimated League Sentiment on Repeats: ' + esc(result.level.label) + '">' +
           '<defs><linearGradient id="' + id + '" x1="0" x2="1" y1="0" y2="0">' +
             '<stop offset="0" stop-color="#2E9E44"/><stop offset="0.45" stop-color="#E3B12C"/><stop offset="1" stop-color="#C62828"/>' +
           "</linearGradient></defs>" +

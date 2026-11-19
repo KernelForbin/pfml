@@ -1386,16 +1386,21 @@ gauge. An "Artist - Topic" channel counts as the artist (measured
 (`/repeats?q=steely%20dan`), so it can be shared. It's reached from the
 initials menu and the Submit page.
 
-**Estimated League Sentiment.** A gauge, green to red, for how much the
-league will care about a repeat. It's shown for a picked track: on the
-repeat checker, from a list of Spotify matches under the box ("How will
-the league feel about it?"), and on the Submit page, for a search result
+**Estimated League Sentiment on Repeats.** A gauge, green to red, for how
+much the league will mind a repeat. It judges the repeat only, never
+whether the league will like the song, and says so under its heading
+and in every verdict (the user's call, 2026-11-19: "sentiment" alone read
+as how the league would feel about the track in general). It's shown for
+a picked track: on the repeat checker, from a list of Spotify matches
+under the box ("How will the league feel about it as a repeat?"), and on
+the Submit page, for a search result
 or any pasted link. A pasted link is looked up in the catalog (a Spotify
 track submitted before) or, failing that, in its service's own oEmbed:
 YouTube and SoundCloud give the title and channel, Spotify the title only.
 All three answer browsers on pfml.fun (measured 2026-10-19). It shows a
-verdict ("Barely a blip" through "The league will care", and "Exact
-repeat" with an extra warning) and the reasons, each with the earlier
+verdict ("Fresh: not a repeat of anything", "Barely counts as a
+repeat" through "The league will mind this repeat", and "Exact repeat"
+with an extra warning) and the reasons, each with the earlier
 submission. It never shows a number.
 
 The kinds of repeat it weighs, each by this season or an earlier one:

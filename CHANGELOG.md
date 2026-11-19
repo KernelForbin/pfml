@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-11-19: The repeat gauge says it's about repeats
+
+- **Asked:** make it clear the repeat checker's sentiment is how the
+  league will feel about the level of repeats, not how they'll feel in
+  general.
+- **Changed:** the gauge is now Estimated League Sentiment on Repeats,
+  with a line under it: how the league will feel about the track as a
+  repeat, not about the song itself. Every verdict names the repeat
+  ("People will notice the repeat", "Fresh: not a repeat of anything",
+  and so on), and the repeat checker asks "How will the league feel about
+  it as a repeat?". Same gauge, same weights, on both the repeat checker
+  and the Submit page.
+- **Verified:** a test holds the scope line and a repeat in every verdict;
+  checked in a browser at 375px and 1280px, light and dark. The suite
+  passes.
+
 ## 2026-11-17: Prompts written on every profile
 
 - **Asked:** a Prompts submitted stat on the profile, for the commissioner

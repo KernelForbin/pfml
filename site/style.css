@@ -1993,6 +1993,7 @@ button.cm-person { cursor: pointer; }
 /* Estimated League Sentiment (sentiment.js) */
 .sg { margin-top: 14px; padding: 14px 16px 16px; max-width: 520px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow-sm); }
 .sg-kicker { margin: 0; font: 700 0.74rem/1 "Archivo", sans-serif; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.sg-scope { margin: 4px 0 0; font-size: 0.86rem; color: var(--muted); }
 .sg-dial { display: block; width: 100%; max-width: 260px; margin: 8px auto 0; }
 .sg-needle { stroke: var(--ink); stroke-width: 4; stroke-linecap: round; }
 .sg-hub { fill: var(--ink); }

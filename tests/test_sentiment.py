@@ -43,6 +43,21 @@ class Rules(unittest.TestCase):
         self.assertIn("var a = Math.PI * (1 - Math.min(100, result.score) / 100);", gauge)
         self.assertNotRegex(gauge, r"\.weight|RULES\[[^\]]+\]\.(now|past)")
 
+    def test_the_gauge_says_it_judges_the_repeat_not_the_song(self):
+        # The user's call (2026-11-19): "sentiment" alone read as how the
+        # league would feel about the track in general. The heading, the
+        # line under it and every verdict keep it about the repeat.
+        gauge = self.js.split("function gaugeHtml(result) {", 1)[1].split("\n  }\n", 1)[0]
+        self.assertIn('<p class="sg-kicker">Estimated League Sentiment on Repeats</p>', gauge)
+        self.assertRegex(gauge, r'<p class="sg-scope">[^<]*\brepeat\b[^<]*not about the song[^<]*</p>')
+        self.assertIn('aria-label="Estimated League Sentiment on Repeats: ', gauge)
+        levels = re.search(r"var LEVELS = \[(.*?)\n  \];", self.js, re.S).group(1)
+        labels = re.findall(r'label: "([^"]+)"', levels)
+        self.assertEqual(len(labels), 7)
+        for label in labels:
+            with self.subTest(label):
+                self.assertRegex(label.lower(), r"\brepeat\b")
+
     def test_every_rule_says_what_it_is_and_has_both_seasons(self):
         rules = re.search(r"var RULES = \{(.*?)\n  \};", self.js, re.S).group(1)
         entries = re.findall(r"(\w+):\s+\{ now: (\d+), past: (\d+), says: \"([^\"]+)\" \}", rules)
