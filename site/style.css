@@ -1516,6 +1516,16 @@ body.auth-checking::before {
 .pf-prompts-more { max-width: 680px; margin-top: 10px; }
 .pf-prompts-more summary { cursor: pointer; color: var(--magenta-text); font-weight: 600; font-size: 0.9rem; }
 .pf-prompts-more .pf-prompts { margin-top: 10px; }
+/* Tracks (app.js renderProfileTracks): sort menu, direction, the list, Show all */
+.pf-track-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 0 0 14px; }
+.pf-track-label { font-size: 0.85rem; font-weight: 600; color: var(--muted); }
+.pf-track-tools .rp-jump, .pf-track-tools .pill { margin: 0; }
+/* beside its label even on phones, where .rp-jump goes full width */
+.pf-track-tools .rp-jump { display: inline-block; width: auto; }
+.pf-track-dir, .pf-track-more { font-family: inherit; cursor: pointer; }
+.pf-track-dir span { color: var(--magenta-text); }
+.pf-track-more { margin: 14px 0 0; }
+.pf-album { font-size: 0.82rem; }
 .pf-fans { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
 .pf-people {
   background: var(--card); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow-sm);

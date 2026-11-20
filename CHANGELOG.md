@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-11-20: Every track on a profile, sortable
+
+- **Asked:** a way to see all of a player's submitted tracks on their
+  profile, sortable and reverse-sortable by points, season/round, song
+  name, artist, "and anything else that might make sense".
+- **Changed:** Best tracks is now Tracks: every track they've submitted,
+  best first, the first five until Show all. A menu sorts by points,
+  finish, season and round, song, artist, album or voters, and a button
+  flips the order and says which way it runs. Each card adds its finish
+  out of the round's size and its voters. `profiles.json` carries every
+  track (`tracks`, replacing the top-five `bestTracks`) with its album,
+  voters (`backers`) and round size (`field`).
+- **Verified:** tests hold the sorts offered, the reverse, and that the
+  build carries every field the sorts read; each was broken in a scratch
+  clone and caught. Checked on a stubbed copy with profiles built from the
+  real data (49 tracks for the busiest player): every sort and its reverse,
+  Show all kept across sorts, no sideways scroll at 375px or 1280px,
+  contrast at least 5.29 in light and dark. The suite passes.
+
 ## 2026-11-19: The repeat gauge says it's about repeats
 
 - **Asked:** make it clear the repeat checker's sentiment is how the

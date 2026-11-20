@@ -1953,7 +1953,6 @@ def build_career(season_datas, raw_seasons=None):
     }
 
 
-PROFILE_TOP_TRACKS = 5
 PROFILE_TOP_PEOPLE = 3
 # A taste twin needs this many rounds both players voted in. Fewer rounds
 # also count for less (TASTE_TWIN_SHRINK), so a newcomer's six lucky rounds
@@ -2016,7 +2015,8 @@ def taste_twins(season_datas):
 
 def build_profiles(season_datas):
     """Per-player extras for the profile page (profile.html), keyed by
-    competitor id: each season's finish, their highest-scoring tracks, who
+    competitor id: each season's finish, every track they sent (best first;
+    the page sorts it other ways too), who
     gave them the most points and who they gave the most. Totals, Career
     Score and comment stats are already in career.json; the page reads both.
     Everything here is summed from the season data rather than from the raw
@@ -2050,8 +2050,10 @@ def build_profiles(season_datas):
             for s in r["songs"]:
                 sub = profile(s["submitterId"], s["submitterName"])
                 sub["tracks"].append(with_link({
-                    "title": s["title"], "artistText": s["artistText"], "spotifyId": s["spotifyId"],
-                    "art": s.get("art"), "points": s["points"], "place": s["place"],
+                    "title": s["title"], "artistText": s["artistText"], "album": s["album"],
+                    "spotifyId": s["spotifyId"], "art": s.get("art"), "points": s["points"], "place": s["place"],
+                    # for sorting by voters, and "3rd of 16" (the round's size)
+                    "backers": s["backers"], "field": len(r["songs"]),
                     "roundId": r["id"], "roundName": r["name"], "roundNumber": n,
                     "seasonKey": d["key"], "seasonLabel": d["label"],
                 }, s))
@@ -2077,7 +2079,7 @@ def build_profiles(season_datas):
         tracks = sorted(p["tracks"], key=lambda t: (-t["points"], -order[t["seasonKey"]], -t["roundNumber"], t["title"]))
         out[pid] = {
             "id": pid, "name": p["name"], "seasons": p["seasons"],
-            "bestTracks": tracks[:PROFILE_TOP_TRACKS],
+            "tracks": tracks,
             "fans": top_people(p["_fans"]),
             "favorites": top_people(p["_favorites"]),
             "tasteTwins": [{"id": t["id"], "name": profiles[t["id"]]["name"], "rounds": t["rounds"]}

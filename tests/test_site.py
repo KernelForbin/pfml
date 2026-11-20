@@ -730,7 +730,7 @@ class ProfilePage(unittest.TestCase):
         code = js.split("/* ---- profile page", 1)[1].split("/* ---- round page", 1)[0]
         ids = set(re.findall(r'\$\("(\w+)"\)', code)) | set(re.findall(r'setBlock\("(\w+)"', code))
         ids |= {i for group in re.findall(r"\[([^\]]*)\]\.forEach", code) for i in re.findall(r'"([\w-]+)"', group)}
-        ids -= {"pfPick", "pfReacts"}   # created by the code itself
+        ids -= {"pfPick", "pfReacts", "pfSort", "pfDir"}   # created by the code itself
         page = read("profile.html")
         self.assertTrue(ids)
         for i in sorted(ids):
@@ -745,6 +745,31 @@ class ProfilePage(unittest.TestCase):
         css = read("style.css")
         self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr))", " ".join(css_rules(css, ".pf-tiles")))
         # two per row on phones comes from .hl-pair (TwoPerRowOnPhones)
+
+    def test_tracks_sort_every_way_asked_for_and_reverse(self):
+        # Asked 2026-11-20: every track on the profile, sortable by points,
+        # season and round, song, artist "and anything else that makes
+        # sense" (finish, album, voters), each reversible.
+        js = read("app.js")
+        table = js.split("var TRACK_SORTS = [", 1)[1].split("\n  ];", 1)[0]
+        keys = re.findall(r'\{ key: "(\w+)", label: "[^"]+", first: "[^"]+", last: "[^"]+",', table)
+        self.assertEqual(keys, ["points", "place", "round", "title", "artist", "album", "backers"])
+        self.assertEqual(keys[0], "points", "best first by default, as Best tracks was")
+        tracks = js_function(js, "function renderProfileTracks(prof)")
+        self.assertIn("(prof && prof.tracks) || []", tracks)
+        self.assertIn("reversed = !reversed; draw();", tracks)
+        self.assertIn("return reversed ? -c : c;", js_function(js, "function sortTracks(tracks, sort, reversed)"))
+
+    def test_every_field_the_track_sorts_read_is_built(self):
+        js = read("app.js")
+        code = js.split("function trackWhen(t) {", 1)[1].split("function sortTracks", 1)[0]
+        used = set(re.findall(r"\b[abt]\.(\w+)", code))
+        self.assertTrue(used >= {"points", "place", "title", "artistText", "album", "backers", "seasonKey", "roundNumber"})
+        build_src = (ROOT / "scripts" / "build.py").read_text(encoding="utf-8")
+        built = build_src.split("def build_profiles(", 1)[1].split("\ndef ", 1)[0]
+        for field in used:
+            with self.subTest(field):
+                self.assertIn('"%s":' % field, built)
 
     def test_profile_defaults_to_the_signed_in_member(self):
         init = js_function(read("app.js"), "function initProfile()")

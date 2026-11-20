@@ -103,7 +103,7 @@ site/                    everything GitHub Pages serves
   data/                  LOCAL ONLY (git-ignored), published to Supabase
     index.json           generated: season list + each leader
     career.json           generated: cross-season standings and highlights
-    profiles.json         generated: per-player seasons, best tracks, fans
+    profiles.json         generated: per-player seasons, every track, fans
     lookup.json           generated: round id -> season, number, name, track
                           titles, for the inbox
     season1.json          generated
@@ -1277,8 +1277,8 @@ without `?p`. Six Career tiles (Career Score, ranked with ties; total
 points; rounds won; top-3 rate, the share of their tracks that finished in
 a round's top three; tracks submitted; points given) sit two rows of three,
 or three rows of two at phone widths (`.pf-tiles`). Totals and comment
-stats come from `career.json`; each season's finish, the five best tracks (newest first
-on equal points), the three biggest fans (most points given to this
+stats come from `career.json`; each season's finish, every track they've
+submitted (`tracks`, best first, newest first on equal points), the three biggest fans (most points given to this
 player) and favorites (most points this player gave), all summed over
 every season, come from `profiles.json` (`build_profiles` in `build.py`).
 A third list, **Votes most like them** (`tasteTwins`, `taste_twins` in
@@ -1293,7 +1293,23 @@ small points widely everyone's twin, and centring each round removed that.
 It also paired the two players who share a surname, over 46 rounds, so the
 measure tracks something real. The correlations are modest (the best is
 about 0.3), so the page shows the order and the rounds shared, not a
-percentage. `.pf-people` has `min-width: 0`, or a long name in the third
+percentage.
+
+**Tracks** (asked 2026-11-20) lists every track the player has submitted,
+best first, the first five until Show all. A menu sorts them by points,
+finish (place, then points), season and round, song, artist, album or
+voters (how many gave it points, `backers`), each in its natural direction
+first (most points, best finish, newest, A to Z, most voters); the button
+beside it names the order and flips it. Ties go newest first, then by
+title. Text sorts ignore case and punctuation and read numbers as numbers
+(`Intl.Collator`). Each card shows its points, its finish out of the
+round's size (`field`) and its voters. `TRACK_SORTS` in `app.js` is the
+list; `build_profiles` carries every field it reads (a test holds both).
+Every track made `profiles.json` about 370KB, from 76KB (measured on the
+real data 2026-11-20, 810 tracks). Gzipped, the tracks come to about 68KB,
+and moving the round details into a lookup saved only about 2KB of that,
+so they stay inline on each track.
+`.pf-people` has `min-width: 0`, or a long name in the third
 list pushed the page 46px wider than a phone.
 The count of reactions their comments have had is live from Supabase,
 leaving out any they left on their own. A dropdown switches player. Names link to profiles almost everywhere they

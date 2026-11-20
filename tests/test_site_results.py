@@ -148,7 +148,7 @@ class InTheBuild(unittest.TestCase):
         self.assertEqual(next(t for t in catalog if t["title"] == "Cloud Song")["link"]["platform"], "soundcloud")
         vault = build.build_vault([data])["winners"]
         self.assertEqual(next(w for w in vault if w["roundId"] == "site-r1")["link"], {"platform": "soundcloud", "id": SC})
-        cat_tracks = build.build_profiles([data])["players"]["p3"]["bestTracks"]
+        cat_tracks = build.build_profiles([data])["players"]["p3"]["tracks"]
         self.assertEqual(next(t for t in cat_tracks if t["title"] == "Cloud Song")["link"]["id"], SC)
 
     def test_a_season_played_only_on_the_site(self):

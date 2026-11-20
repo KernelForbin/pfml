@@ -479,13 +479,28 @@ class Profiles(unittest.TestCase):
     def test_points_given_and_received_balance(self):
         p = build.build_profiles(self.seasons())["players"]
         given = sum(x["pointsGiven"] for x in p.values())
-        received = sum(t["points"] for x in p.values() for t in x["bestTracks"])  # few enough tracks to all fit
+        received = sum(t["points"] for x in p.values() for t in x["tracks"])  # every track
         self.assertEqual(given, received)
 
     def test_best_tracks_highest_first_newest_first_on_a_tie(self):
         p = build.build_profiles(self.seasons())["players"]
-        tracks = [(t["spotifyId"], t["points"], t["seasonKey"], t["roundNumber"]) for t in p["p1"]["bestTracks"]]
+        tracks = [(t["spotifyId"], t["points"], t["seasonKey"], t["roundNumber"]) for t in p["p1"]["tracks"]]
         self.assertEqual(tracks, [("e", 3, "season2", 1), ("e", 3, "season1", 2), ("a", 3, "season1", 1)])
+
+    def test_every_track_they_sent_with_what_the_page_sorts_by(self):
+        # The profile's track list sorts by points, finish, round, song,
+        # artist, album and voters (asked 2026-11-20), so it needs every
+        # track, not just the best few, and the fields to sort them by.
+        with sandbox() as root, quiet():
+            seasons = [build.build_season(make_season(root / "data" / ("season%d" % n), [TIE_ROUND, SECOND_ROUND]),
+                                          "season%d" % n, "Season %d" % n)[0] for n in (1, 2, 3)]
+        tracks = build.build_profiles(seasons)["players"]["p1"]["tracks"]
+        self.assertEqual(len(tracks), 6)
+        a = next(t for t in tracks if t["spotifyId"] == "a" and t["seasonKey"] == "season1")
+        self.assertEqual((a["backers"], a["field"], a["place"]), (2, 4, 1))
+        e = next(t for t in tracks if t["spotifyId"] == "e" and t["seasonKey"] == "season1")
+        self.assertEqual((e["backers"], e["field"]), (2, 2))
+        self.assertEqual(a["album"], song(seasons[0], "a")["album"])
 
     def test_each_season_finish_with_its_field_size(self):
         p = build.build_profiles(self.seasons())["players"]
@@ -1031,7 +1046,7 @@ class RoundOrder(unittest.TestCase):
         self.assertEqual({rid: r["number"] for rid, r in out["lookup"]["rounds"].items()}, number)
         self.assertEqual({r["id"]: r["number"] for r in out["catalog"]["rounds"]}, number)
         self.assertEqual({w["roundId"]: w["roundNumber"] for w in out["vault"]["winners"]}, number)
-        ann = out["profiles"]["players"]["p1"]["bestTracks"]
+        ann = out["profiles"]["players"]["p1"]["tracks"]
         self.assertEqual({t["roundId"]: t["roundNumber"] for t in ann}, number)
 
     def test_a_tied_closest_round_names_the_one_played_first(self):

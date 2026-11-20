@@ -608,7 +608,7 @@
   // The newest line in the features page's "New in the last 30 days" box (a test
   // keeps the two equal). The features page records the newest date it
   // showed in this browser; Home's button says New until that catches up.
-  var FEATURES_UPDATED = "2026-11-17";
+  var FEATURES_UPDATED = "2026-11-20";
   var FEATURES_SEEN_KEY = "pfml.featuresSeen";
 
   function renderFeaturesButton() {
@@ -2412,7 +2412,7 @@
 
   /* ---- profile page (profile?p=<competitor id>; yours without ?p) ----
      Totals and comment stats come from career.json, the rest (season
-     finishes, best tracks, fans) from profiles.json, both built by
+     finishes, every track, fans) from profiles.json, both built by
      scripts/build.py; the reaction tally is live from Supabase. */
 
   function ordinal(n) {
@@ -2551,25 +2551,100 @@
     }
   }
 
+  // Every track they've sent (asked 2026-11-20), best first like the old
+  // Best tracks list, and sortable: each way has its natural direction
+  // first, and the button flips it. Ties go newest first, then by title.
+  // The first TRACKS_SHOWN show until "Show all"; the sort and the
+  // expanded state stay as they are while the other changes.
+  var TRACKS_SHOWN = 5;
+  var ABC = new Intl.Collator(undefined, { sensitivity: "base", numeric: true, ignorePunctuation: true });
+
+  function trackWhen(t) {   // play order: season, then round
+    return (parseInt(String(t.seasonKey).replace(/\D/g, ""), 10) || 0) * 1000 + t.roundNumber;
+  }
+
+  // cmp sorts in the natural direction ("first" names it, "last" the reverse)
+  var TRACK_SORTS = [
+    { key: "points", label: "Points", first: "Most points first", last: "Fewest points first",
+      cmp: function (a, b) { return b.points - a.points; } },
+    { key: "place", label: "Finish", first: "Best finish first", last: "Worst finish first",
+      cmp: function (a, b) { return (a.place || Infinity) - (b.place || Infinity) || b.points - a.points; } },
+    { key: "round", label: "Season and round", first: "Newest first", last: "Oldest first",
+      cmp: function (a, b) { return trackWhen(b) - trackWhen(a); } },
+    { key: "title", label: "Song", first: "A to Z", last: "Z to A",
+      cmp: function (a, b) { return ABC.compare(a.title || "", b.title || ""); } },
+    { key: "artist", label: "Artist", first: "A to Z", last: "Z to A",
+      cmp: function (a, b) { return ABC.compare(a.artistText || "", b.artistText || ""); } },
+    { key: "album", label: "Album", first: "A to Z", last: "Z to A",
+      cmp: function (a, b) { return ABC.compare(a.album || "", b.album || ""); } },
+    { key: "backers", label: "Voters", first: "Most voters first", last: "Fewest voters first",
+      cmp: function (a, b) { return b.backers - a.backers || b.points - a.points; } }
+  ];
+
+  function sortTracks(tracks, sort, reversed) {
+    return tracks.slice().sort(function (a, b) {
+      var c = sort.cmp(a, b);
+      if (c) return reversed ? -c : c;
+      return trackWhen(b) - trackWhen(a) || ABC.compare(a.title || "", b.title || "");
+    });
+  }
+
+  function trackCard(t) {
+    // the same address rounds.js's roundUrl() builds; profile.html doesn't load rounds.js
+    var href = "round?s=" + encodeURIComponent(t.seasonKey) + "&r=" + encodeURIComponent(t.roundId);
+    var art = t.art ? '<img class="rl-art" src="' + esc(t.art) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+                    : '<span class="rl-art is-empty" aria-hidden="true">&#9835;</span>';
+    return '<a class="rl-card" href="' + href + '">' + art +
+      '<span class="rl-text"><span class="rl-num">' + esc(t.seasonLabel) + " &middot; Round " + t.roundNumber + " &middot; " + esc(t.roundName) + "</span>" +
+      '<span class="rl-name">' + esc(t.title) + "</span>" +
+      '<span class="rl-sub">' + esc(t.artistText) + (t.album ? ' <span class="pf-album">&middot; ' + esc(t.album) + "</span>" : "") + "</span>" +
+      '<span class="rl-counts">' + t.points + " " + plural(t.points, "point") +
+      (t.place ? " &middot; " + ordinal(t.place) + (t.field ? " of " + t.field : "") : "") +
+      (t.backers != null ? " &middot; " + t.backers + " " + plural(t.backers, "voter") : "") + "</span>" +
+      '</span><span class="rl-go" aria-hidden="true">&rarr;</span></a>';
+  }
+
   function renderProfileTracks(prof) {
     var host = $("pfTracks");
     host.innerHTML = "";
-    var tracks = (prof && prof.bestTracks) || [];
+    var tracks = (prof && prof.tracks) || [];
     if (!tracks.length) { host.appendChild(empty("No tracks submitted yet.")); return; }
+    var sort = TRACK_SORTS[0], reversed = false, all = false;
+    var tools = el("div", "pf-track-tools",
+      '<label class="pf-track-label" for="pfSort">Sort by</label>' +
+      // In .rp-jump, like the player menu above, for its ▾ and its width.
+      '<div class="rp-jump"><select id="pfSort" class="rp-jump-select">' + TRACK_SORTS.map(function (x) {
+        return '<option value="' + x.key + '">' + esc(x.label) + "</option>";
+      }).join("") + "</select></div>" +
+      '<button type="button" class="pill pf-track-dir" id="pfDir"></button>');
     var list = el("div", "rl");
-    list.innerHTML = tracks.map(function (t) {
-      // the same address rounds.js's roundUrl() builds; profile.html doesn't load rounds.js
-      var href = "round?s=" + encodeURIComponent(t.seasonKey) + "&r=" + encodeURIComponent(t.roundId);
-      var art = t.art ? '<img class="rl-art" src="' + esc(t.art) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
-                      : '<span class="rl-art is-empty" aria-hidden="true">&#9835;</span>';
-      return '<a class="rl-card" href="' + href + '">' + art +
-        '<span class="rl-text"><span class="rl-num">' + esc(t.seasonLabel) + " &middot; Round " + t.roundNumber + " &middot; " + esc(t.roundName) + "</span>" +
-        '<span class="rl-name">' + esc(t.title) + "</span>" +
-        '<span class="rl-sub">' + esc(t.artistText) + "</span>" +
-        '<span class="rl-counts">' + t.points + " points" + (t.place ? " &middot; " + ordinal(t.place) + " place" : "") + "</span>" +
-        '</span><span class="rl-go" aria-hidden="true">&rarr;</span></a>';
-    }).join("");
+    var more = el("button", "pill pf-track-more");
+    more.type = "button";
+    host.appendChild(tools);
     host.appendChild(list);
+    if (tracks.length > TRACKS_SHOWN) host.appendChild(more);
+    function draw() {
+      var dir = $("pfDir");
+      dir.innerHTML = '<span aria-hidden="true">&#8645;</span> ' + esc(reversed ? sort.last : sort.first);
+      dir.setAttribute("aria-label", (reversed ? sort.last : sort.first) + ". Reverse the order");
+      var shown = sortTracks(tracks, sort, reversed);
+      list.innerHTML = (all ? shown : shown.slice(0, TRACKS_SHOWN)).map(trackCard).join("");
+      more.textContent = all ? "Show fewer" : "Show all " + tracks.length + " tracks";
+      more.setAttribute("aria-expanded", all ? "true" : "false");
+    }
+    $("pfSort").addEventListener("change", function () {
+      sort = TRACK_SORTS.filter(function (x) { return x.key === $("pfSort").value; })[0] || TRACK_SORTS[0];
+      reversed = false;
+      draw();
+    });
+    $("pfDir").addEventListener("click", function () { reversed = !reversed; draw(); });
+    more.addEventListener("click", function () {
+      all = !all;
+      draw();
+      // back to the top of the list when it shrinks, not left far below it
+      if (!all) $("block-tracks").scrollIntoView({ behavior: "instant", block: "start" });
+    });
+    draw();
   }
 
   // value: what goes on the right of each name (points, by default)
