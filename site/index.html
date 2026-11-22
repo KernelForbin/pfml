@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&family=Bungee&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body class="gated" data-page="home">
@@ -51,6 +51,16 @@
 
   <section class="shell announce" id="announceBox" hidden></section>
   <section class="shell sub-banner" id="submitBanner" hidden></section>
+
+  <!-- the Repeat checker sign (README, Repeat checker sign): the bulbs are
+       placed by app.js renderRepeatSign, and are decoration only -->
+  <section class="shell rsign-wrap">
+    <div class="rsign-row">
+      <div class="rsign-arrow" data-points="right" aria-hidden="true"></div>
+      <a class="rsign" id="repeatSign" href="repeats"><span class="rsign-lights" aria-hidden="true"></span><span class="rsign-txt">Check for repeats here</span><span class="rsign-sub">Before you submit</span></a>
+      <div class="rsign-arrow" data-points="left" aria-hidden="true"></div>
+    </div>
+  </section>
 
   <section class="shell block block-first" id="block-results" hidden>
     <h2>Just finished</h2>

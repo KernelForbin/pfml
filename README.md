@@ -1389,6 +1389,26 @@ pfml.fun/round-9-prompt.
 
 ## Repeat checker (/repeats)
 
+### Repeat checker sign
+
+Asked 2026-11-22: link the Repeat checker at the top of Home, above the
+current round, "obnoxiously obvious", with blinking arrows round it, "a
+caricature of a notification". From four mockups the user picked a Vegas
+marquee: "Check for repeats here" in gold Bungee (Google Fonts, Home only)
+on a dark sign (`--inverse`, dark in both modes), a ring of chasing bulbs,
+and a solid arrow of bulbs each side whose lights run in toward it. It sits
+after the announcements and the open-round banner, before Just finished,
+Current round and Next round, and always shows. The whole sign is one link
+to `repeats`; the bulbs and arrows are `aria-hidden`.
+
+`renderRepeatSign` in `app.js` places the bulbs: every ~17px round the
+sign, 8px in, chasing in threes, redrawn by a `ResizeObserver` whenever the
+sign changes size (the font arriving late rewraps the words, which left a
+ring drawn at the old size in the mockup). Each bulb blinks once every
+0.9s, well under the 3 flashes a second that can trigger seizures, and
+with reduced motion every bulb stays lit. On a phone (480px and under) the
+arrows shrink so the sign keeps its width.
+
 Has an artist, song or album been submitted before? Members type into one
 box and the page answers as they type: "Yes: 3 past submissions match", in
 groups for Artist, Song and Album, newest first. Each match shows the

@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-22: A Check for repeats here sign on Home
+
+- **Asked:** link the Repeat checker at the top of Home above the current
+  round, obnoxiously obvious, with blinking arrows; then, from mockups,
+  a Vegas marquee saying "Check for repeats here" (option A).
+- **Changed:** Home opens with a marquee sign: gold letters on a dark
+  sign, a ring of chasing bulbs and a bulb arrow racing in from each side,
+  linking to the Repeat checker. It's above Just finished, Current round
+  and Next round, always shown. Reduced motion keeps every bulb lit.
+- **Verified:** tests hold the link and its place above the rounds, the
+  blink rate under 3 a second, reduced motion and the dark sign; each was
+  broken in a scratch clone and caught. Checked in a browser at 375px and
+  1280px, light and dark. The suite passes.
+
 ## 2026-11-20: Every track on a profile, sortable
 
 - **Asked:** a way to see all of a player's submitted tracks on their
