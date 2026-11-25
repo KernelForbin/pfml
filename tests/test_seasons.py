@@ -116,7 +116,7 @@ class Timing(unittest.TestCase):
         self.early = function(self.sql, "site_round_finish_early")
 
     def test_steady_never_closes_early(self):
-        self.assertIn("if not found or s.timing = 'steady' then return; end if;", self.early)
+        self.assertIn("if not found or s.timing = 'steady' or public.site_season_paused(s.key) then return; end if;", self.early)
 
     def test_submissions_close_when_everyone_playing_on_the_site_is_in(self):
         # every one of the round's songs from each of them (stage 3)
@@ -127,6 +127,7 @@ class Timing(unittest.TestCase):
         self.assertIn("and not exists (select 1 from public.site_votes v where v.round_id = p_round and v.user_id = o.user_id))", self.early)
         # and every Spectator who has joined (2026-10-29)
         self.assertIn("where p.season_key = s.key and public.site_round_role(p_round, p.competitor_id) = 'spectator'\n"
+                      "                     and not public.site_sitting_out(p_round, p.competitor_id)\n"
                       "                     and not exists (select 1 from public.site_votes v where v.round_id = p_round and v.user_id = m.user_id)) then", self.early)
         self.assertIn("update public.site_rounds set voting_closed_at = now() where id = p_round;", self.early)
 

@@ -77,8 +77,10 @@ class TheDatabase(unittest.TestCase):
                 self.assertTrue(function(self.sql, name).split("begin", 1)[1].lstrip().startswith("if not public.is_commissioner() then"))
         claim = function(self.sql, "announcements_claim")
         self.assertIn("perform pg_advisory_xact_lock(hashtext('pfml.announcements_claim'));", claim)
-        self.assertIn("update public.site_announcements a set pushed_at = now()\n     where a.pushed_at is null and a.created_at > now() - interval '1 day'", claim)
-        self.assertIn("coalesce((select rs.announcements from public.reminder_settings rs where rs.user_id = m.user_id), true);", claim)
+        # due once its own time comes (scheduled ones, 2026-11-25), within a day
+        self.assertIn("update public.site_announcements a set pushed_at = now()\n     where a.pushed_at is null and coalesce(a.send_at, a.created_at) <= now()\n"
+                      "       and coalesce(a.send_at, a.created_at) > now() - interval '1 day'", claim)
+        self.assertIn("coalesce((select rs.announcements from public.reminder_settings rs where rs.user_id = m.user_id), true)\n", claim)
         self.assertIn("#variable_conflict use_column", claim)
 
     def test_the_bell_has_an_announcements_switch(self):

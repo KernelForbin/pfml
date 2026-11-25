@@ -23,6 +23,11 @@ GRADER = read(ROOT / "supabase" / "functions" / "grade-guesses" / "index.ts")
 GUESS = read(SITE / "guess.js")
 
 
+# the grants of columns site_rounds gained after this migration
+LATER_GRANTS = [line for line in read(ROOT / "supabase" / "migrations" / "2026-11-25_commissioner_tools.sql").splitlines()
+                if line.startswith("grant select (") and "on table public.site_rounds to authenticated" in line]
+
+
 def site_round_columns(sql):
     """Every column site_rounds has, from its create and every add column."""
     table = sql.split("create table if not exists public.site_rounds (", 1)[1].split("\n);", 1)[0]
@@ -41,6 +46,9 @@ class TheDatabase(unittest.TestCase):
     def test_members_read_every_column_but_the_name_and_prompt(self):
         granted = MIG.split("grant select (", 1)[1].split(")", 1)[0]
         granted = {c.strip() for c in granted.split(",")}
+        # and the columns added since, granted where they're added
+        for later in LATER_GRANTS:
+            granted |= {c.strip() for c in later.split("grant select (", 1)[1].split(")", 1)[0].split(",")}
         self.assertIn("revoke select on table public.site_rounds from anon, authenticated;", MIG)
         # a column added later must be granted too, or the pages lose it
         self.assertEqual(granted, site_round_columns(self.sql) - {"name", "prompt"})

@@ -118,7 +118,8 @@ class TheDatabase(unittest.TestCase):
     def test_reminders_tell_djs_to_submit_and_everyone_to_vote(self):
         claim = function(self.sql, "reminders_claim")
         self.assertIn("and public.site_round_role(r.id, m.competitor_id) = 'dj'", claim)
-        self.assertIn("where public.site_round_role(x.id, p.competitor_id) = 'spectator') w on w.round_id = r.id", claim)
+        self.assertIn("where public.site_round_role(x.id, p.competitor_id) = 'spectator'\n"
+                      "               and not public.site_sitting_out(x.id, p.competitor_id)) w on w.round_id = r.id", claim)
 
     def test_the_lounge_lets_a_spectator_in(self):
         self.assertIn("or public.site_user_role(r.id, auth.uid()) = 'spectator' end,", function(self.sql, "lounge_state"))
