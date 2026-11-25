@@ -130,6 +130,44 @@
     return "finished";
   }
 
+  // A round in a paused season (README, Commissioner tools) says this in
+  // place of its countdown; "" when its season isn't paused. A pause with
+  // a resume time has already moved the deadline out by the pause, so
+  // that deadline (passed in) is the real one; one paused until a
+  // commissioner resumes it has no deadline to show yet.
+  function pauseNote(r, deadline) {
+    if (!r || !r.paused) return "";
+    if (!r.paused_until) return "The league is paused until the commissioners resume it. Nothing can be sent or voted on until then.";
+    return "The league is paused until " + closes(r.paused_until).at + "." +
+      (deadline ? " After that, it closes " + closes(deadline).at + "." : "");
+  }
+
+  // The strip under the top bar on every page while a season is paused or
+  // has a pause coming: when, until when, and what still works. Without
+  // the database function (before its migration), nothing.
+  function renderPauseStrip() {
+    var api_ = PFML.api;
+    if (!api_ || typeof api_.pauses !== "function" || document.querySelector(".pause-strip")) return;
+    api_.pauses().then(function (rows) {
+      if (!rows.length || document.querySelector(".pause-strip")) return;
+      var until = function (p) { return p.resume_at ? "until " + closes(p.resume_at).at : "until the commissioners resume it"; };
+      var box = document.createElement("div");
+      box.className = "pause-strip";
+      box.setAttribute("role", "status");
+      box.innerHTML = '<div class="shell">' + rows.map(function (p) {
+        var line = p.state === "paused"
+          ? "<b>" + esc(p.season_name) + " is paused</b> " + esc(until(p)) +
+            ". Nothing can be sent or voted on until then; drafts, comments and the voters’ lounge still work, and every deadline moves later by the pause."
+          : "<b>" + esc(p.season_name) + " pauses</b> " +
+            esc(p.after_round_label ? "once " + p.after_round_label + " finishes voting" + (p.starts_at ? " (" + closes(p.starts_at).at + ")" : "")
+                                    : closes(p.starts_at).at) + ", " + esc(until(p)) + ".";
+        return "<p>" + line + (p.note ? ' <span class="pause-note">' + esc(p.note) + "</span>" : "") + "</p>";
+      }).join("") + "</div>";
+      var bar = document.querySelector(".topbar");
+      if (bar) bar.insertAdjacentElement("afterend", box);
+    }).catch(function (err) { console.error(err); });
+  }
+
   // Who's playing a season: who was picked when it was set up on the site
   // (site_season_players), else everyone with a track in its latest
   // finished round (index.json). Null when neither says.
@@ -279,6 +317,7 @@
   PFML.closes = closes;
   PFML.siteVoting = SITE_VOTING;
   PFML.roundPhase = roundPhase;
+  PFML.pauseNote = pauseNote;
   PFML.seasonPlayers = seasonPlayers;
   PFML.roundRoster = roundRoster;
   PFML.myRole = myRole;
@@ -773,4 +812,5 @@
   }
 
   PFML.ready.then(build);
+  PFML.ready.then(renderPauseStrip);
 })();

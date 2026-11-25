@@ -146,7 +146,7 @@ class ThePages(unittest.TestCase):
 
     def test_a_spectator_gets_no_submit_form(self):
         render = js_body(read(SITE / "submit.js"), "function render() {")
-        self.assertIn('if (open && state.role !== "spectator" && (state.mine.length < songsOf(r) || state.changing)) renderForm();', render)
+        self.assertIn('if (open && !r.paused && state.role !== "spectator" && sitting(r) !== "approved" && (state.mine.length < songsOf(r) || state.changing)) renderForm();', render)
         self.assertIn('state.role === "spectator" ? \'<p class="sub-role">', render)
 
     def test_a_spectator_gets_a_ballot(self):

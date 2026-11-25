@@ -1109,7 +1109,9 @@
     var page = document.getElementById("roundPage");
     var phase = PFML.roundPhase(r);
     document.title = "PFML - " + r.name;
-    var where = phase === "upcoming" ? "Opens " + PFML.closes(r.opens_at).at
+    var where = r.paused && (phase === "submitting" || phase === "voting")
+        ? PFML.pauseNote(r, phase === "submitting" ? r.closes_at : r.voting_closes_at)
+      : phase === "upcoming" ? "Opens " + PFML.closes(r.opens_at).at
       : phase === "submitting" ? "Taking tracks until " + PFML.closes(r.closes_at).at
       : phase === "voting" ? "Voting until " + PFML.closes(r.voting_closes_at).at
       : phase === "finished" ? "Voting closed: the results come with the next update"

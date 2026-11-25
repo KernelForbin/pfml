@@ -1607,7 +1607,9 @@ Oct 23, not used yet" or "no link yet". The invites table has no policies, so th
 `admin_invite_status()`, admin only, which returns who has an unused link
 and when it was made, never the link itself; `scripts/invites.py --player
 "Name"` prints it. Migration:
-`supabase/migrations/2026-10-24_admin_invite_status.sql`.
+`supabase/migrations/2026-10-24_admin_invite_status.sql`. Since 2026-11-25
+each of those players has a Make a link (or Show the link) button too, so
+the admin can make and share one from a phone (Commissioner tools, below).
 
 ### Who's in
 
@@ -2216,7 +2218,9 @@ services, submitter notes, a repeat rule and announcements), all below.
 **The Commissioner page** (`/commissioner`, `commissioner.html` and
 `commissioner.js`), linked as Commissioner in the initials menu for the
 admin and commissioners only. Anyone else who opens it reads "This page is
-for the league's commissioners." It has:
+for the league's commissioners." Since 2026-11-25 it's in tabs, with a Now
+tab first (Commissioner tools, below); what's listed here is under More. It
+has:
 
 - **The open round, or opening one:** the form the Submit page used to have
   (season, name, description, closing time, and voting's fields once voting
@@ -2614,6 +2618,156 @@ the notification switches and `site_rounds_export`.
   - when the repeat data failed to load, the repeat box vanished, block
     and all;
   - the form's own text still offered Spotify in a YouTube-only round.
+
+## Commissioner tools
+
+Asked 2026-11-25: good commissioner tools, starting with a pause, and the
+whole commissioner process reviewed for phone and desktop. From the
+proposal, the user picked everything but season wrap-up and returning a
+track. One migration, `supabase/migrations/2026-11-25_commissioner_tools.sql`
+(the same block near the end of `schema.sql`), and its rehearsal,
+`supabase/checks/2026-11-25_commissioner_tools_rehearsal.sql` (17 checks).
+Everything here reaches only seasons set up on the site, never Season 3 or
+Round 7.
+
+**The Commissioner page in tabs** (`commissioner.html`): Now (`now.js`),
+Seasons (`seasons.js`), Announce, People (the admin only), Log, and More
+(the single-round form and Earlier rounds, for rounds played in Music
+League, rarely needed now). The open tab is in the address (`#seasons`),
+so a reload stays on it. Each renderer still sets its own section's
+`hidden` for "has something to show"; the tab hides the rest with
+`main[data-tab]` rules in `style.css`. Confirmations happen in the page
+(`PFMLAsk` in `now.js`), not the browser's own box, which an iPhone shows
+away from what it's asking about.
+
+**The Now tab** shows, per season still running:
+
+- **Needs you:** sit-out asks (Yes, No), prompts a round's winner has sent
+  (edit, Approve, or Drop the turn), turns still waiting, a round opening
+  within 3 days with no prompt, DJs who haven't joined so can't send a
+  track, and (the admin) a closed round's playlists not built yet.
+- **The open round:** its phase and deadline, a meter, and who it's still
+  waiting on, in chips: still to send (or vote), in, sitting out, not
+  joined. `site_round_status()` (commissioners only) gives each player's
+  role, joined, how many tracks (never which) and whether they've voted.
+- **Buttons:** +1 hour and +1 day (`extend_site_round()`: the deadline it's
+  working to and everything after it in the season move together; a day is
+  a day on the league's clock), Close now, and Nudge.
+- **Nudge** (`nudge_round()`): a push to everyone the round is still
+  waiting on (`site_round_waiting()`: DJs short of tracks, or everyone with
+  a track and every Spectator who hasn't voted; never anyone sitting out),
+  at most once every 6 hours a round. It goes out on the next run of the
+  five-minute timer.
+
+**Pausing a season.** Now, at a set time, or once a round's voting
+closes; until a set time or until a commissioner resumes it
+(`pause_season`, `set_pause_resume`, `resume_season`; one open pause per
+season, in `site_season_pauses`). The user's calls (2026-11-25):
+
+- **The clock stops.** When the pause starts, every deadline still ahead
+  in the season (a round not open yet, a deadline not passed) moves out by
+  the pause in whole days on the league's clock (`site_pause_move`), so
+  each keeps its time of day: to the set resume time, or a year when
+  there's none yet (`hold_days`). When it ends, they settle at the length
+  it really took, rounded up to whole days (`site_days_until`), so the
+  round that was open gets back at least the time it had left. Changing
+  the resume time while paused settles them again.
+- **What stops:** a track can't go in, change or come out, and a ballot
+  can't be submitted, by any route: triggers on `site_submissions` and
+  `site_votes` (`site_writes_allowed`) refuse anyone signed in, scripts and
+  the SQL Editor aside. Reminders hold (`reminders_claim`), Accelerated
+  and Speedy don't close early (`site_round_finish_early`), and nobody
+  moves a deadline (`site_rounds_times_guard`, `extend_site_round`).
+- **What still works:** drafts, comments, reactions and the voters' lounge.
+- **Starting and ending** post an announcement to the season's players,
+  from whoever set the pause.
+- **The timer:** `site_pause_tick()`, every minute (`pg_cron` job
+  `pfml-pauses`, scheduled by the migration), starts a pause whose time has
+  come (time stops at its set moment, or at the moment that round's voting
+  closed), ends one due to end, and hands out prompt turns. A pause whose
+  time has come counts as on even before the timer runs
+  (`site_season_paused`), so nothing slips in during that minute. To stop
+  the timer: `select cron.unschedule('pfml-pauses');`
+- **Members see** a strip under the top bar on every page (`account.js`,
+  `site_pauses()`), and `PFML.pauseNote()` in place of a round's countdown
+  on Home, the Submit page, the round page and the ballot. The Submit page
+  shows no form while paused.
+
+**Sitting a round out** (`site_round_sitouts`): a player asks on the
+Submit page, for the open round or one in Coming up (`ask_sit_out`): a DJ
+until submissions close, with no track in, and a Spectator until voting
+does. The commissioners get a notification and say yes or no on the Now
+tab (`decide_sit_out`; they can also set it without an ask). Once it's yes:
+no track (a trigger refuses one), Accelerated and Speedy don't wait on
+them, and no reminders or nudges. Sending a track takes back an ask not
+yet answered. A player with no track has nothing to lose for not voting,
+so the stats need no change.
+
+**A round's own days:** a round not open yet can take its own days to
+submit and to vote (`site_rounds.submit_days`, `vote_days`; blank is the
+season's), in Edit this round. `site_season_reschedule` lays the season
+out with them. The open round uses +1 day instead.
+
+**Prompt rotation** (`site_seasons.prompt_rotation`, a switch in a season's
+Settings and the setup's first step): when a round finishes, Round N's
+winner (the owners of its top-scoring track by the points that count, more
+than one on a tie; nobody when nothing scored) gets the prompt for Round
+N+2 in the season's order, if it hasn't opened (`site_prompt_turns`). They
+get a notification and write it on Home (`my_prompt_turns`,
+`send_prompt_turn`); a commissioner edits and approves it on the Now tab
+(`decide_prompt_turn`), which makes it the round's name and prompt and its
+writers the round's prompters. Turning rotation on mid-season hands out
+nothing for rounds already finished.
+
+**Announcements:** now or at a set time (up to 60 days ahead), to the
+whole league or to one season's players, and editable: its words any
+time, its time until it goes out (`post_announcement(body, send_at,
+season)`, `edit_announcement`). Members see one once its time comes, and a
+season's only if they play in it (the table's policy); Home dates it from
+its send time. Commissioners see them all.
+
+**Notifications to one member** (`site_push_notices`): nudges, sit-out
+answers and asks, and prompt turns. `announcements_claim` hands them to
+`send-reminders` with the announcements, so the Edge Function needed no
+change. A nudge to send respects the member's New round switch, a nudge to
+vote their Voting switch, the rest their Announcements switch.
+
+**Invite links from the page:** in League status, the admin's Make a link
+(`create_invite()`, the admin only) makes a player's link, or returns their
+unused one, with Copy and Share. The log says a link was made, never the
+link.
+
+**The activity log** (`site_activity`, read through `site_activity_list()`,
+commissioners only): pauses, deadlines moved, nudges, sit-out answers,
+prompt approvals, invite links, and, through triggers, rounds and seasons
+added, changed or removed, players and roles, commissioners chosen and
+announcements. Changes the site makes on its own (an early close, a pause
+moving deadlines, a season laying out its rounds) mark the transaction
+quiet (`site_quiet()`), so they don't flood it. The Log tab shows 50 at a
+time.
+
+**The season setup is kept as it goes:** `seasons.js` saves it to the
+device (`pfml.seasonDraft`) on every step and change, so a reload, or a
+phone dropping the tab, loses nothing. Seasons offers Pick up where you
+left off; it's dropped once the season is created or the setup stopped.
+
+**Checked:**
+
+- **The SQL** ran on a local Postgres (`pgserver`, outside the repo) with
+  Supabase's `auth`, `cron` and `storage` stubbed: `schema.sql` loads
+  whole, the migration runs twice cleanly, and the rehearsal passes. Six
+  breaks to the SQL each made it fail. Every earlier rehearsal that passes
+  on today's schema still passes (the 2026-10-25 to 10-27 ones were written
+  for the schema of their day, and later migrations changed what they test).
+- **Tests:** `tests/test_commissioner_tools.py`, 15 breaks in a scratch
+  clone with a passing baseline, all caught. `tests/test_live_commissioner_tools.py`
+  checks the live functions are there and turn strangers away (read-only).
+- **In a browser:** a stubbed copy at 375px and 1280px, light and dark,
+  with real clicks: pausing (the in-page ask, then the paused card) and
+  resuming, the strip, the Submit page's line and sit-out ask, the prompt
+  card on Home, a scheduled announcement kept off Home, every tab, invite
+  links, a round's days, and the setup surviving a reload. No sideways
+  scroll; contrast at least 5.29.
 
 ## Deleting a round
 

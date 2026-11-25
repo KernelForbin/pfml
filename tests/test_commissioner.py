@@ -95,7 +95,7 @@ class ThePages(unittest.TestCase):
 
     def test_the_page_loads_what_it_needs_in_order(self):
         srcs = re.findall(r'<script src="([^"]+)"', self.html)
-        self.assertEqual(srcs[1:], ["config.js", "auth.js", "account.js", "voting.js", "seasons.js", "commissioner.js", "app.js"])
+        self.assertEqual(srcs[1:], ["config.js", "auth.js", "account.js", "voting.js", "seasons.js", "now.js", "commissioner.js", "app.js"])
         self.assertIn('<body class="gated" data-page="commissioner">', self.html)
         self.assertIn('page === "commissioner"', js_body(read(SITE / "app.js"), "function boot() {"))
 

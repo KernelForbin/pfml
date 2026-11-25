@@ -1,5 +1,42 @@
 # Changelog
 
+## 2026-11-25: Commissioner tools: pausing, the Now tab, sitting out and more
+
+- **Asked:** good commissioner tools, starting with a pause (now, at a
+  set time, or after a round's voting; resumed by hand or at a set time),
+  and a review of the whole commissioner process for phone and desktop.
+  From the proposal, the user picked everything but season wrap-up and
+  returning a track, and answered: the clock stops (deadlines move out by
+  the pause, in whole days), drafts, comments and the lounge keep working,
+  a player asks to sit out and a commissioner approves, and Round N's
+  winner writes Round N+2's prompt.
+- **Changed:** the Commissioner page is in tabs (Now, Seasons, Announce,
+  People, Log, More). Now shows what needs a commissioner (sit-out asks,
+  prompts to approve, a round opening without a prompt, DJs who haven't
+  joined, playlists to build) and each season's open round: who it's
+  still waiting on, +1 hour, +1 day, Close now and Nudge, and pausing.
+  A pause stops tracks and ballots by any route, holds reminders and early
+  closes, moves every deadline ahead out by the pause, and posts an
+  announcement when it starts and ends; members see a strip under the top
+  bar. Players can ask to sit a round out on the Submit page. Rounds can
+  take their own days. Prompt rotation hands a round's winner the prompt
+  two rounds on, written on Home. Announcements can wait for a set time,
+  go to one season, and be edited. The admin makes invite links on the
+  page. An activity log records what commissioners do. The season setup
+  is kept on the device as it goes. Confirmations are in the page, not the
+  browser's box. One migration, `2026-11-25_commissioner_tools.sql`, with a
+  one-minute `pg_cron` timer; nudges and the new messages go out through
+  `announcements_claim`, so `send-reminders` needs no redeploy.
+- **Verified:** the migration and its rehearsal (17 checks) ran on a local
+  Postgres with Supabase's auth, cron and storage stubbed; six breaks to
+  the SQL each made the rehearsal fail, and every earlier rehearsal that
+  passes on the current schema still passes. 30 new tests; 15 breaks in a
+  scratch clone with a passing baseline, each caught. Checked on a stubbed
+  copy at 375px and 1280px, light and dark (contrast at least 5.29):
+  pausing and resuming, the strip, sitting out, the prompt card, the tabs,
+  invite links and the setup surviving a reload, with real clicks. Not yet
+  run on the live project: the migration waits on the user.
+
 ## 2026-11-22: A Check for repeats here sign on Home
 
 - **Asked:** link the Repeat checker at the top of Home above the current

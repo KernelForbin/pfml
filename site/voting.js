@@ -114,8 +114,9 @@
       var spectator = !!PFML.member && state.spectators.indexOf(PFML.member.competitorId) !== -1;
       if (!mine.length && !spectator) {
         parts.head.innerHTML = '<p class="block-note">Only players with a track in this round' + (roster.length ? ", and its Spectators," : "") +
-          " vote. Voting closes " + esc(closes.at) +
-          " (" + esc(closes.left) + "); the results show here after.</p>" + votedLine(voters, submitters, state.names);
+          " vote. " + (r.paused ? esc(PFML.pauseNote(r, r.voting_closes_at)) + " The results show here after voting closes."
+            : "Voting closes " + esc(closes.at) + " (" + esc(closes.left) + "); the results show here after.") +
+          "</p>" + votedLine(voters, submitters, state.names);
         return null;
       }
       return Promise.all([api().myBallot(r.id), api().myBallotDraft(r.id)]).then(function (saved) {
@@ -136,8 +137,9 @@
             (r.downvotes === 1 ? " downvote" : " downvotes") + ", at most " + r.max_down_per_track +
             " on one: they’re optional, and press − below 0 to give them." : "") +
           " Comment on any track" + (mine.length ? ", yours too" : "") + ". Everything saves as you go, on every device you sign in on; " +
-          "it counts once you Submit, with every point given. You can change it until voting closes, " +
-          esc(closes.at) + " (" + esc(closes.left) + ").</p>" +
+          "it counts once you Submit, with every point given. " +
+          (r.paused ? esc(PFML.pauseNote(r, r.voting_closes_at)) + " Your draft still saves."
+                    : "You can change it until voting closes, " + esc(closes.at) + " (" + esc(closes.left) + ").") + "</p>" +
           // the penalty is on a track, so it's nothing to a Spectator
           (r.nonvoters_keep_points || !mine.length ? "" : '<p class="block-note vt-rule">Players who don’t submit a ballot score ' +
             (r.downvotes ? "only the downvotes they got" : "0") + " for this round.</p>") +

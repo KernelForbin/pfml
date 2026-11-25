@@ -351,6 +351,21 @@ its own change with its own migration and rehearsal:
   go-ahead each time. The user's account tokens stay in `.env`, never in
   Supabase.
 
+**Commissioner tools** (2026-11-25; README, Commissioner tools): the page
+is in tabs (Now is `now.js`), with pausing a season, +1 hour / +1 day,
+nudges, sitting a round out, a round's own days, prompt rotation,
+scheduled and season-only announcements, invite links for the admin, and
+an activity log. The user's calls: a pause stops the clock (deadlines
+move out by it in whole days, so each keeps its time of day), drafts,
+comments and the lounge keep working, a player asks to sit out and a
+commissioner approves, and Round N's winner writes Round N+2's prompt.
+Season wrap-up and returning a track were left out on purpose. The pause
+timer is `pg_cron` job `pfml-pauses`, every minute, scheduled by the
+migration. Nudges and the other one-member messages go out through
+`announcements_claim`, so `send-reminders` needed no change. Commissioner
+actions ask in the page (`PFMLAsk`), never `window.confirm` (a test holds
+it). Pause and sit-out only ever reach seasons set up on the site.
+
 ## The daily security check
 
 `.github/workflows/security-check.yml` runs `scripts/security_check.py`
@@ -424,6 +439,9 @@ verified" has to be both.
   `supabase/checks/2026-10-27_demo_ballots_rehearsal.sql`),
   and `-p test_live_ballot_drafts.py` whenever the draft functions change
   (read-only; the full flow is `supabase/checks/2026-10-27_ballot_drafts_rehearsal.sql`),
+  and `-p test_live_commissioner_tools.py` whenever the commissioner
+  tools' functions change (read-only; the full flow is
+  `supabase/checks/2026-11-25_commissioner_tools_rehearsal.sql`),
   and `-p test_live_voting.py` whenever the voting functions change
   (read-only; the full round is `supabase/checks/2026-10-25_site_voting_rehearsal.sql`,
   which only the user can run, in the SQL Editor).

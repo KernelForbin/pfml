@@ -205,7 +205,9 @@
     }
     var open = isOpen(r);
     var phase = voting().on(r) ? PFML.roundPhase(r) : "";
-    $("subLine").textContent = open
+    $("subLine").textContent = r.paused && (open || phase === "voting")
+      ? PFML.pauseNote(r, open ? r.closes_at : r.voting_closes_at)
+      : open
       ? "Submissions close " + PFML.closes(r.closes_at).at + " (" + PFML.closes(r.closes_at).left + ")."
       : phase === "voting" ? "Voting is open. It closes " + PFML.closes(r.voting_closes_at).at + " (" + PFML.closes(r.voting_closes_at).left + ")."
       : phase === "finished" ? "Voting is over. The results are on the round’s page."
@@ -225,7 +227,7 @@
       '<p class="sub-prompter" id="subPrompter" hidden></p>' +
       (state.role === "spectator" ? '<p class="sub-role"><b>You’re a Spectator this round.</b> You don’t send a track: ' +
         "once submissions close, you vote and comment on every track.</p>" : "") +
-      '<p class="sub-count" id="subCount"></p></div>';
+      '<p class="sub-count" id="subCount"></p>' + sitOutHtml(r, open) + "</div>";
     box.hidden = false;
     PFML.promptBy(r).then(function (line) {
       if (state.round !== r || !line) return;
@@ -235,7 +237,8 @@
     renderWho(r, open);
 
     if (state.mine.length) renderMine(open);
-    if (open && state.role !== "spectator" && (state.mine.length < songsOf(r) || state.changing)) renderForm();
+    // no form while sitting out, or while the season is paused (the database refuses then too)
+    if (open && !r.paused && state.role !== "spectator" && sitting(r) !== "approved" && (state.mine.length < songsOf(r) || state.changing)) renderForm();
     if (!open) {
       // listening, and voting for a round that votes here, are on the
       // round's own page (listen.js, voting.js), for good
@@ -250,15 +253,65 @@
     }
   }
 
+  /* ---- sitting a round out (README, Commissioner tools) ---- */
+
+  // The caller's sit-out for a round: "asked", "approved" or "".
+  function sitting(r) {
+    var me = PFML.member && PFML.member.competitorId;
+    var row = (r && r.site_round_sitouts || []).filter(function (x) { return x.competitor_id === me; })[0];
+    return row ? row.status : "";
+  }
+
+  // A player asks to sit a round out and a commissioner says yes: no track
+  // expected, and no reminders. Only in a season set up on the site (its
+  // rounds vote here); a DJ until submissions close, with no track in, and
+  // a Spectator until voting does. The database holds the same rules.
+  function sitOutHtml(r, open) {
+    if (!r || !r.votes_on_site || !PFML.member || typeof api().askSitOut !== "function") return "";
+    var phase = PFML.roundPhase(r), status = sitting(r);
+    var dj = state.role !== "spectator";
+    if (r === state.round && (dj ? !(phase === "upcoming" || open) || state.mine.length : phase === "finished")) return "";
+    var text = status === "approved" ? "You’re sitting this round out: no track needed, and no reminders for it."
+      : status === "asked" ? "You asked to sit this round out. A commissioner will say yes or no."
+      : "Can’t make this one?";
+    var label = status === "approved" ? "I’ll play after all" : status === "asked" ? "Take it back" : "Ask to sit it out";
+    return '<p class="sub-sitout" data-sitout="' + esc(r.id) + '" data-on="' + (status ? "0" : "1") + '"><span>' + esc(text) + "</span> " +
+      '<button type="button" class="sub-btn sub-btn-quiet sub-btn-small">' + esc(label) + "</button></p>";
+  }
+
+  function onSitOut(ev) {
+    var b = ev.target.closest(".sub-sitout button");
+    if (!b) return;
+    var row = b.closest(".sub-sitout");
+    b.disabled = true;
+    api().askSitOut(row.getAttribute("data-sitout"), row.getAttribute("data-on") === "1").then(load, function (err) {
+      b.disabled = false;
+      row.querySelector("span").textContent = errText(err);
+    });
+  }
+
   /* ---- coming up: rounds a season set up on the site has scheduled ---- */
 
   function renderNext() {
     var list = state.upcoming || [];
     $("subNext").hidden = !list.length;
     $("subNextList").innerHTML = list.map(function (x) {
-      return '<li><b>' + esc(x.name) + "</b><span>Opens " + esc(PFML.closes(x.opens_at).at) + "</span>" +
+      return '<li data-next="' + esc(x.id) + '"><b>' + esc(x.name) + "</b><span>Opens " + esc(PFML.closes(x.opens_at).at) + "</span>" +
         (x.prompt ? "<p>" + esc(x.prompt) + "</p>" : "") + "</li>";
     }).join("");
+    // asking to sit one out, for the season's own players only
+    var seasons = {};
+    list.forEach(function (x) { if (x.votes_on_site) seasons[x.season_key] = true; });
+    Object.keys(seasons).forEach(function (key) {
+      PFML.seasonPlayers(key).then(function (players) {
+        var me = PFML.member && PFML.member.competitorId;
+        if (!players || !players.some(function (p) { return p.id === me; })) return;
+        list.forEach(function (x) {
+          var li = x.season_key === key && document.querySelector('#subNextList [data-next="' + x.id + '"]');
+          if (li && !li.querySelector(".sub-sitout")) li.insertAdjacentHTML("beforeend", sitOutHtml(x, false));
+        });
+      }).catch(function (err) { console.error(err); });
+    });
   }
 
   /* ---- who's in: x/20 submitted, and who hasn't ---- */
@@ -846,6 +899,8 @@
       render();
     });
     $("subWithdraw").addEventListener("click", withdraw);
+    $("subRound").addEventListener("click", onSitOut);
+    $("subNextList").addEventListener("click", onSitOut);
     $("subMineEmbed").addEventListener("click", removeTrack);
     $("subNoteSwitch").innerHTML = noteSwitchHtml(false);
     $("subNoteSwitch").addEventListener("click", function (ev) {

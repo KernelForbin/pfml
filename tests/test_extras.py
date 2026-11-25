@@ -213,12 +213,15 @@ class ThePages(unittest.TestCase):
 
     def test_announcements_on_the_pages(self):
         cm = read(SITE / "commissioner.js")
-        announce = js_body(cm, "function onAnnounce(ev) {")
-        self.assertLess(announce.index("window.confirm(\"Post this"), announce.index("api().postAnnouncement(text)"))
+        # asked in the page since 2026-11-25, with when and who
+        post = js_body(cm, "function postAnnouncement(form) {")
+        self.assertLess(post.index("ask(form.querySelector('button[type=\"submit\"]'),"), post.index("api().postAnnouncement(text, at.at, season)"))
         self.assertIn("renderAnnouncements();", js_body(cm, "function render() {"))
         home = js_body(read(SITE / "app.js"), "function renderAnnouncements() {")
         self.assertIn("var since = Date.now() - ANNOUNCE_DAYS * 864e5;", home)
-        self.assertIn("return Date.parse(a.created_at) > since; }).slice(0, 3);", home)
+        # one scheduled for later waits for its time (2026-11-25)
+        self.assertIn("var at = function (a) { return Date.parse(a.send_at || a.created_at); };", home)
+        self.assertIn("return at(a) > since && at(a) <= Date.now(); })", home)
         self.assertIn('<section class="shell announce" id="announceBox" hidden></section>', read(SITE / "index.html"))
 
 

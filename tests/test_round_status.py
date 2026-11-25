@@ -210,7 +210,8 @@ class HomeBanner(unittest.TestCase):
     def test_it_says_when_the_round_closes(self):
         banner = js_body(self.app, "function renderSubmitBanner() {")
         self.assertIn("var closes = PFML.closes(open.closes_at);", banner)
-        self.assertIn('Closes \' + esc(closes.at) + " \\u00b7 " + esc(closes.left)', banner)
+        self.assertIn('"Closes " + esc(closes.at) + " \\u00b7 " + esc(closes.left)', banner)
+        self.assertIn("(open.paused ? esc(PFML.pauseNote(open, open.closes_at))", banner)
 
     def test_it_says_whether_you_have_a_track_in(self):
         self.assertIn("bannerMine(open);", js_body(self.app, "function renderSubmitBanner() {"))

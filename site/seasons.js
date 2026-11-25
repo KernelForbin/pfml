@@ -32,6 +32,25 @@
   }
   function errText(err) { return (err && err.message) || String(err); }
   function when(iso) { return PFML.closes(iso).at; }
+  // now.js's in-page "are you sure?", or the browser's own if it didn't load
+  function ask(anchor, text, yes) {
+    return window.PFMLAsk ? window.PFMLAsk(anchor, text, yes) : Promise.resolve(window.confirm(text));
+  }
+
+  // The season being set up is kept on this device as it goes (2026-11-25),
+  // so a reload, or a phone dropping the tab while you copy a prompt, loses
+  // nothing. Cleared once it's created or abandoned.
+  var DRAFT_KEY = "pfml.seasonDraft";
+  function saveDraft() {
+    try { if (wizard) localStorage.setItem(DRAFT_KEY, JSON.stringify(wizard)); } catch (e) { /* private mode: no draft */ }
+  }
+  function readDraft() {
+    try {
+      var d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
+      return d && d.d && d.d.key && Array.isArray(d.d.rounds) ? d : null;
+    } catch (e) { return null; }
+  }
+  function dropDraft() { try { localStorage.removeItem(DRAFT_KEY); } catch (e) { /* nothing kept */ } }
 
   var STEPS = ["Details", "Songs + Votes", "Timing", "Players", "Rounds"];
   var PLAYERS_STEP = 3, ROUNDS_STEP = 4;
@@ -280,12 +299,19 @@
     var box = $("cmSeasons");
     box.hidden = false;
     var list = ctx.seasons.slice().sort(function (a, b) { return b.key.localeCompare(a.key, undefined, { numeric: true }); });
+    var draft = !wizard && readDraft();
+    // a draft for a season that has since been created is no use
+    if (draft && ctx.seasons.some(function (s) { return s.key === draft.d.key; })) { dropDraft(); draft = null; }
     box.innerHTML = "<h2>Seasons</h2>" +
       '<p class="block-note">A season set up here runs on pfml.fun from start to finish: submitting, voting and results. ' +
       "Its rounds open on their own, on schedule.</p>" +
       list.map(seasonPanel).join("") +
       (wizard ? '<div class="cm-wizard" id="cmWizard"></div>'
-              : '<div class="sub-actions"><button type="button" class="sub-btn" data-act="new">Set up a new season</button></div>') +
+        : draft ? '<div class="cn-draft"><p>You were setting up <b>' + esc(draft.d.name || "a new season") + "</b> on this device" +
+            (draft.d.rounds.length ? ", with " + draft.d.rounds.length + (draft.d.rounds.length === 1 ? " round" : " rounds") : "") + ".</p>" +
+            '<div class="sub-actions"><button type="button" class="sub-btn" data-act="w-resume">Pick up where you left off</button>' +
+            '<button type="button" class="sub-btn sub-btn-quiet" data-act="w-discard">Start again</button></div></div>'
+        : '<div class="sub-actions"><button type="button" class="sub-btn" data-act="new">Set up a new season</button></div>') +
       '<p class="sub-msg" id="cmSeasonsMsg" role="status" hidden></p>';
     if (wizard) drawWizard();
   }
@@ -302,6 +328,7 @@
   function statusLine(s, rounds) {
     var live = rounds.filter(function (r) { var p = PFML.roundPhase(r); return p === "submitting" || p === "voting"; })[0];
     var next = rounds.filter(function (r) { return PFML.roundPhase(r) === "upcoming"; })[0];
+    if (rounds.length && rounds[0].paused) return "Paused" + (live ? " in round " + (rounds.indexOf(live) + 1) + " of " + rounds.length : "");
     if (live) {
       var n = rounds.indexOf(live) + 1;
       return "Round " + n + " of " + rounds.length + " · " + (PFML.roundPhase(live) === "submitting"
@@ -327,7 +354,7 @@
           '<div class="sub-actions"><button type="submit" class="sub-btn sub-btn-quiet">Add round</button></div>' +
         "</form>" +
         "<h3>Settings</h3>" +
-        '<form class="sub-admin-form" data-act="settings">' + settingsFields(s, "cmSet-" + s.key) +
+        '<form class="sub-admin-form" data-act="settings">' + settingsFields(s, "cmSet-" + s.key) + rotationField(s.prompt_rotation) +
           '<p class="block-note">Rules reach every round whose submissions haven’t closed. Songs a round, and days to submit and vote, reach the rounds that haven’t opened.</p>' +
           '<div class="sub-actions"><button type="submit" class="sub-btn">Save settings</button></div>' +
         "</form>" +
@@ -341,9 +368,34 @@
       "</div></details>";
   }
 
+  // Prompt rotation (README, Commissioner tools): Round N's winner writes
+  // Round N+2's prompt, and a commissioner approves it before it shows.
+  function rotationField(on) {
+    return '<label class="cm-check cn-rotation"><input type="checkbox" name="prompt_rotation"' + (on ? " checked" : "") + ">" +
+      "<span><b>Prompt rotation</b>: a round’s winner writes the prompt two rounds on. They write it on Home, and a commissioner approves it on the Now tab.</span></label>";
+  }
+
+  // A round's own days to submit and to vote (README, Commissioner tools),
+  // while it hasn't opened: blank is the season's.
+  function daysFields(r) {
+    var s = ctx.seasons.filter(function (x) { return x.key === r.season_key; })[0] || {};
+    var pick = function (name, own, dflt, label) {
+      return '<span><label class="sub-label" for="cmD-' + name + "-" + esc(r.id) + '">' + label + "</label>" +
+        '<select class="sub-input" id="cmD-' + name + "-" + esc(r.id) + '" name="' + name + '">' +
+        '<option value=""' + (own ? "" : " selected") + ">The season’s (" + days(dflt || 1) + ")</option>" +
+        range(1, 14).map(function (n) { return '<option value="' + n + '"' + (own === n ? " selected" : "") + ">" + days(n) + "</option>"; }).join("") +
+        "</select></span>";
+    };
+    return '<div class="cm-pair">' + pick("r_submit_days", r.submit_days, s.submit_days, "Days to submit") +
+      pick("r_vote_days", r.vote_days, s.vote_days, "Days to vote") + "</div>";
+  }
+
   function roundRow(r, i, rounds) {
     var phase = PFML.roundPhase(r), upcoming = phase === "upcoming";
-    var dates = upcoming ? "Opens " + when(r.opens_at) + " · submissions close " + when(r.closes_at)
+    var own = r.submit_days || r.vote_days
+      ? " · its own " + [r.submit_days ? days(r.submit_days) + " to submit" : "", r.vote_days ? days(r.vote_days) + " to vote" : ""].filter(Boolean).join(", ")
+      : "";
+    var dates = upcoming ? "Opens " + when(r.opens_at) + " · submissions close " + when(r.closes_at) + own
       : phase === "submitting" ? "Submissions close " + when(r.closes_at)
       : phase === "voting" ? "Voting closes " + when(r.voting_closes_at)
       : "Finished " + when(r.voting_closed_at || r.voting_closes_at);
@@ -362,6 +414,7 @@
           '<input class="sub-input" name="name" maxlength="120" value="' + esc(r.name) + '" aria-label="Round name">' +
           '<textarea class="sub-input sub-textarea" name="prompt" maxlength="2000" rows="2" aria-label="Description">' + esc(r.prompt) + "</textarea>" +
           (upcoming || phase === "submitting" ? ruleFields(r, "cmR-" + r.id) + hideFields(r) : "") +
+          (upcoming ? daysFields(r) : "") +
           // who wrote the prompt, any time; roles while it takes tracks
           '<div data-fill="round" data-roles="' + (upcoming || phase === "submitting" ? "1" : "") + '"></div>' +
           '<div class="sub-actions"><button type="submit" class="sub-btn sub-btn-quiet">Save</button></div>' +
@@ -476,7 +529,7 @@
     var key = nextKey();
     wizard = { step: 0, d: { key: key, name: "Season " + key.replace(/\D/g, ""), description: "", point_budget: 19, max_per_track: 5,
                              nonvoters_keep_points: false, timing: "steady", submit_days: 2, vote_days: 5,
-                             songs_per_round: 1, downvotes: 0, max_down_per_track: 0,
+                             songs_per_round: 1, downvotes: 0, max_down_per_track: 0, prompt_rotation: false,
                              services: ["spotify", "youtube", "soundcloud"], repeat_rule: "warn",
                              first_date: "", first_time: "20:00", rounds: [],
                              players: (current && current.activePlayers || []).map(function (p) { return p.id; }),
@@ -501,7 +554,8 @@
       body = '<label class="sub-label" for="cmNew-name">Season name</label>' +
         '<input class="sub-input" id="cmNew-name" name="name" maxlength="60" value="' + esc(d.name) + '">' +
         '<label class="sub-label" for="cmNew-desc">Description</label>' +
-        '<textarea class="sub-input sub-textarea" id="cmNew-desc" name="description" maxlength="2000" rows="3">' + esc(d.description) + "</textarea>";
+        '<textarea class="sub-input sub-textarea" id="cmNew-desc" name="description" maxlength="2000" rows="3">' + esc(d.description) + "</textarea>" +
+        rotationField(d.prompt_rotation);
     } else if (step === 1) {
       body = votesFields(d, id);
     } else if (step === 2) {
@@ -550,7 +604,9 @@
       '<div class="sub-actions cm-wizard-nav">' +
         '<button type="button" class="sub-btn sub-btn-quiet" data-act="' + (step ? "w-back" : "w-cancel") + '">' + (step ? "Back" : "Cancel") + "</button>" +
         (step < STEPS.length - 1 ? '<button type="button" class="sub-btn" data-act="w-next">Next</button>'
-                                 : '<button type="button" class="sub-btn" data-act="w-create">Create the season</button>') + "</div>";
+                                 : '<button type="button" class="sub-btn" data-act="w-create">Create the season</button>') + "</div>" +
+      '<p class="block-note cn-draft-note">Kept on this device as you go, until it’s created.</p>';
+    saveDraft();
   }
 
   function firstClose(d) {
@@ -582,6 +638,7 @@
         "; repeats within a round: " + RULES.filter(function (x) { return x[0] === d.repeat_rule; })[0][1].toLowerCase() + "</li>" +
       "<li>" + esc(TIMING[d.timing].name) + ": " + days(d.submit_days) + " to submit, " + days(d.vote_days) + " to vote</li>" +
       "<li>" + esc(rosterLine(wizardRoster(d))) + "</li>" +
+      "<li>" + (d.prompt_rotation ? "Prompt rotation: each round’s winner writes the prompt two rounds on" : "No prompt rotation: you write the prompts") + "</li>" +
       "<li>" + (first ? "First playlist " + esc(when(first.toISOString())) : "No first playlist yet") + "</li>" +
       "<li>Voting on pfml.fun, results shown when voting closes</li></ul></div>";
   }
@@ -595,6 +652,8 @@
     if (wizard.step === 0) {
       d.name = f.name.value.trim();
       d.description = f.description.value.trim();
+      d.prompt_rotation = !!(f.prompt_rotation && f.prompt_rotation.checked);
+      saveDraft();
       if (!d.name) return "Give the season a name.";
     } else if (wizard.step === 1 || wizard.step === 2) {
       if (f.point_budget) {
@@ -674,13 +733,25 @@
               songs_per_round: d.songs_per_round, downvotes: d.downvotes, max_down_per_track: d.max_down_per_track,
               services: d.services, repeat_rule: d.repeat_rule, first_playlist_at: first.toISOString(),
               rounds: d.rounds.map(function (r) { return roundForCreate(r, roster); }), players: roster };
-    if (!window.confirm("Create " + d.name + " with " + d.rounds.length + (d.rounds.length === 1 ? " round" : " rounds") +
-                        "? Its first round opens " + (schedule(first, 1, d.submit_days, d.vote_days)[0].opens.getTime() <= Date.now() + 60000 ? "straight away" : "on schedule") + ".")) return;
-    api().createSiteSeason(p).then(function () {
-      var name = d.name;
-      wizard = null;
-      return Promise.resolve(ctx.reload()).then(function () { say(name + " is set up.", true); });
-    }).catch(function (err) { wizardMsg(errText(err)); });
+    ask(document.querySelector('[data-act="w-create"]'), "Create " + d.name + " with " + d.rounds.length + (d.rounds.length === 1 ? " round" : " rounds") +
+        "? Its first round opens " + (schedule(first, 1, d.submit_days, d.vote_days)[0].opens.getTime() <= Date.now() + 60000 ? "straight away" : "on schedule") + ".",
+        "Create it").then(function (yes) {
+      if (!yes) return;
+      api().createSiteSeason(p).then(function () {
+        // rotation is its own switch; a season made without it can turn it on later
+        return d.prompt_rotation ? api().setSeasonRotation(d.key, true).catch(function (err) {
+          throw new Error(d.name + " is set up, but prompt rotation didn’t turn on: " + errText(err) + ". Turn it on in its Settings.");
+        }) : null;
+      }).then(function () {
+        var name = d.name;
+        wizard = null;
+        dropDraft();
+        return Promise.resolve(ctx.reload()).then(function () { say(name + " is set up.", true); });
+      }).catch(function (err) {
+        if (/is set up, but/.test(errText(err))) { wizard = null; dropDraft(); Promise.resolve(ctx.reload()).then(function () { say(errText(err)); }); return; }
+        wizardMsg(errText(err));
+      });
+    });
   }
 
   /* ---- events ---- */
@@ -728,6 +799,19 @@
     if (!b || b.tagName === "FORM") return;
     var act = b.getAttribute("data-act");
     if (act === "new") { say(""); startWizard(); return; }
+    if (act === "w-resume") {
+      var draft = readDraft();
+      if (!draft) { render(ctx); return; }
+      loadPeople().then(function () { wizard = draft; render(ctx); showWizard(); },
+                        function (err) { say("Couldn’t load the players: " + errText(err)); });
+      return;
+    }
+    if (act === "w-discard") {
+      ask(b, "Throw away the season you were setting up? It was never created.", "Throw it away").then(function (yes) {
+        if (yes) { dropDraft(); render(ctx); }
+      });
+      return;
+    }
     if (act === "add-person") { addPerson(b); return; }
     if (act.indexOf("w-") === 0) { onWizardClick(act, b); return; }
     var li = b.closest("[data-round]");
@@ -737,13 +821,18 @@
     var done;
     if (act === "up" || act === "down") done = api().moveSiteSeasonRound(id, act === "up");
     else if (act === "remove") {
-      if (!window.confirm("Remove " + name + "? It hasn’t opened, so nobody has a track in it.")) return;
-      done = api().removeSiteSeasonRound(id);
+      ask(b, "Remove " + name + "? It hasn’t opened, so nobody has a track in it.", "Remove it").then(function (yes) {
+        if (yes) run(api().removeSiteSeasonRound(id));
+      });
+      return;
     } else return;
-    b.disabled = true;
-    var key = li.closest(".cm-season").getAttribute("data-season");
-    done.then(function () { return ctx.reload(); }).then(function () { reopen(key, ""); })
-      .catch(function (err) { panelMsg(li, errText(err)); b.disabled = false; });
+    run(done);
+    function run(p) {
+      b.disabled = true;
+      var key = li.closest(".cm-season").getAttribute("data-season");
+      p.then(function () { return ctx.reload(); }).then(function () { reopen(key, ""); })
+        .catch(function (err) { panelMsg(li, errText(err)); b.disabled = false; });
+    }
   }
 
   // The redraw after a change closes every season; open this one again,
@@ -759,7 +848,12 @@
   function onWizardClick(act, b) {
     var d = wizard && wizard.d;
     if (!d) return;
-    if (act === "w-cancel") { if (window.confirm("Stop setting up this season? Nothing has been saved.")) { wizard = null; render(ctx); } return; }
+    if (act === "w-cancel") {
+      ask(b, "Stop setting up this season? It hasn’t been created, and what you’ve entered goes.", "Stop").then(function (yes) {
+        if (yes) { wizard = null; dropDraft(); render(ctx); }
+      });
+      return;
+    }
     if (act === "w-next") { goStep(wizard.step + 1); return; }
     if (act === "w-back") { goStep(wizard.step - 1); return; }
     if (act === "w-step") { goStep(+b.getAttribute("data-step")); return; }
@@ -829,6 +923,8 @@
       dmax.innerHTML = downMaxOptions(down, dmax.value === "none" || dmax.value === "0" ? down : Math.min(+dmax.value, down));
     }
     if (form.id !== "cmWizardForm") return;
+    // what's typed is kept as it's typed, not only on Next
+    if (ev && ev.type === "change" && t && !/^cmNew-r/.test(t.id || "")) { readStep(); saveDraft(); }
     if (wizard.step === ROUNDS_STEP && t && (t.name === "first_date" || t.name === "first_time")) {
       readStep();
       $("cmSched").outerHTML = previewHtml(wizard.d);
@@ -868,7 +964,10 @@
       if (!s.name) { panelMsg(form, "Give the season a name."); return; }
       if (s.error) { panelMsg(form, s.error); return; }
       delete s.error;
-      done = api().updateSiteSeason(key, s);
+      var rotate = !!(form.elements.prompt_rotation && form.elements.prompt_rotation.checked);
+      done = api().updateSiteSeason(key, s).then(function () {
+        if (season && rotate !== !!season.prompt_rotation) return api().setSeasonRotation(key, rotate);
+      });
     } else if (act === "add-round") {
       var name = form.elements.name.value.trim();
       if (!name) { panelMsg(form, "Give the round a name."); return; }
@@ -905,9 +1004,15 @@
       var hasPeople = !!form.querySelector('[data-fill="round"] .cm-people-pick');
       var roles = hasPeople && form.querySelector("select.cm-role") ? fullRoles(roster, readRoundRoles(form, roster)) : null;
       var who = hasPeople ? readPrompters(form) : null;
+      // a round that hasn't opened can take its own days
+      var round = ctx.rounds.filter(function (x) { return x.id === id; })[0] || {};
+      var sd = form.elements.r_submit_days ? +form.elements.r_submit_days.value || null : round.submit_days || null;
+      var vd = form.elements.r_vote_days ? +form.elements.r_vote_days.value || null : round.vote_days || null;
       done = api().updateSiteRound(id, fields).then(function (rows) {
         if (!rows || !rows.length) throw new Error("Only the admin or a commissioner can do that.");
         if (hasPeople) return api().setSiteRoundPeople(id, roles, who);
+      }).then(function () {
+        if (sd !== (round.submit_days || null) || vd !== (round.vote_days || null)) return api().setSiteRoundDays(id, sd, vd);
       });
     } else if (act === "players") {
       var list = readRoster(form);

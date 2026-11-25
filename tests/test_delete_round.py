@@ -92,8 +92,9 @@ class ThePage(unittest.TestCase):
 
     def test_it_asks_first_and_reloads_after(self):
         body = js_body(PAGE, "function onRoundDelete(ev) {")
-        self.assertLess(body.index("window.confirm("), body.index("api().deleteSiteRound(id)"))
-        self.assertIn("if (!r || !window.confirm(", body)
+        # asked in the page since 2026-11-25 (now.js's PFMLAsk), not the browser's box
+        self.assertLess(body.index("ask(b, \"Delete "), body.index("api().deleteSiteRound(id)"))
+        self.assertIn("if (!yes) return;", body)
         self.assertIn("api().deleteSiteRound(id).then(load).catch(", body)
         self.assertIn('$("cmRoundList").addEventListener("click", onRoundDelete);', js_body(PAGE, "function boot() {"))
 

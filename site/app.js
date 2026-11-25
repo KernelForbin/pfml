@@ -361,7 +361,11 @@
     if (!box || typeof PFML.api.announcements !== "function") return;
     Promise.all([PFML.api.announcements(), PFML.api.people()]).then(function (res) {
       var since = Date.now() - ANNOUNCE_DAYS * 864e5;
-      var list = (res[0] || []).filter(function (a) { return Date.parse(a.created_at) > since; }).slice(0, 3);
+      // one scheduled for later (README, Commissioner tools) waits for its
+      // time, and dates from it: a commissioner can read it early, but not here
+      var at = function (a) { return Date.parse(a.send_at || a.created_at); };
+      var list = (res[0] || []).filter(function (a) { return at(a) > since && at(a) <= Date.now(); })
+        .sort(function (a, b) { return at(b) - at(a); }).slice(0, 3);
       if (!list.length) return;
       var people = res[1] || {};
       box.innerHTML = list.map(function (a) {
@@ -369,7 +373,8 @@
         return '<article class="announce-card"><p class="announce-kicker">From the commissioners</p>' +
           '<p class="announce-body">' + esc(a.body) + "</p>" +
           '<p class="announce-who">' + esc(who) + " \u00b7 " +
-            esc(new Date(a.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })) + "</p></article>";
+            esc(new Date(at(a)).toLocaleDateString(undefined, { month: "short", day: "numeric" })) +
+            (a.edited_at ? " \u00b7 edited" : "") + "</p></article>";
       }).join("");
       box.hidden = false;
     }).catch(function (err) { console.error(err); });
@@ -387,7 +392,8 @@
       var closes = PFML.closes(open.closes_at);
       box.innerHTML = '<a class="sub-banner-link" href="submit"><span class="sub-banner-kicker">Open for submissions</span>' +
         "<b>" + esc(open.name) + '</b><span class="sub-banner-count" id="submitBannerCount"></span>' +
-        '<span class="sub-banner-when">Closes ' + esc(closes.at) + " \u00b7 " + esc(closes.left) + "</span>" +
+        '<span class="sub-banner-when">' + (open.paused ? esc(PFML.pauseNote(open, open.closes_at))
+          : "Closes " + esc(closes.at) + " \u00b7 " + esc(closes.left)) + "</span>" +
         '<span class="sub-banner-mine" id="submitBannerMine"></span>' +
         '<span class="sub-banner-go" id="submitBannerGo">Submit your track \u2192</span></a>';
       box.hidden = false;
@@ -408,7 +414,8 @@
     // straight to the round's page, where the ballot is in its track list
     $("submitBanner").innerHTML = '<a class="sub-banner-link" href="round?site=' + encodeURIComponent(r.id) + '"><span class="sub-banner-kicker">Voting is open</span>' +
       "<b>" + esc(r.name) + "</b>" +
-      '<span class="sub-banner-when">Voting closes ' + esc(closes.at) + " · " + esc(closes.left) + "</span>" +
+      '<span class="sub-banner-when">' + (r.paused ? esc(PFML.pauseNote(r, r.voting_closes_at))
+        : "Voting closes " + esc(closes.at) + " · " + esc(closes.left)) + "</span>" +
       '<span class="sub-banner-mine" id="submitBannerMine"></span>' +
       '<span class="sub-banner-go" id="submitBannerGo">Listen and vote →</span></a>';
     $("submitBanner").hidden = false;
@@ -608,7 +615,7 @@
   // The newest line in the features page's "New in the last 30 days" box (a test
   // keeps the two equal). The features page records the newest date it
   // showed in this browser; Home's button says New until that catches up.
-  var FEATURES_UPDATED = "2026-11-22";
+  var FEATURES_UPDATED = "2026-11-25";
   var FEATURES_SEEN_KEY = "pfml.featuresSeen";
 
   function renderFeaturesButton() {
@@ -666,11 +673,57 @@
     else window.addEventListener("resize", draw);
   }
 
+  // Prompt rotation (README, Commissioner tools): a round's winner writes
+  // the prompt two rounds on. While it's their turn, Home asks them for it,
+  // and a commissioner approves it before it shows. Nothing for anyone else,
+  // or before the database has the function.
+  function renderPromptTurns() {
+    var box = $("promptTurnBox");
+    if (!box || typeof PFML.api.myPromptTurns !== "function") return;
+    PFML.api.myPromptTurns().then(function (turns) {
+      if (!turns.length) { box.hidden = true; box.innerHTML = ""; return; }
+      box.innerHTML = turns.map(function (t, i) {
+        var others = (t.writers || []).filter(function (n) { return !PFML.member || n !== PFML.member.name; });
+        return '<form class="announce-card turn-card" data-turn="' + esc(t.round_id) + '" novalidate>' +
+          '<p class="announce-kicker">Your turn to write a prompt</p>' +
+          '<p class="announce-body">You won “' + esc(t.from_round_name) + "”, so you write the prompt for <b>" + esc(t.round_label) +
+            "</b>. It opens " + esc(PFML.closes(t.opens_at).at) + "." + (others.length ? " You share this one with " + esc(others.join(" and ")) + "." : "") + "</p>" +
+          '<label class="sub-label" for="turnName' + i + '">Round name</label>' +
+          '<input class="sub-input" id="turnName' + i + '" name="name" maxlength="120" value="' + esc(t.name) + '">' +
+          '<label class="sub-label" for="turnPrompt' + i + '">The prompt</label>' +
+          '<textarea class="sub-input sub-textarea" id="turnPrompt' + i + '" name="prompt" maxlength="2000" rows="4">' + esc(t.prompt) + "</textarea>" +
+          '<p class="sub-msg" role="status"' + (t.status === "sent" ? ">Sent. A commissioner approves it before it shows; you can change it until then."
+            : " hidden>") + "</p>" +
+          '<div class="sub-actions"><button type="submit" class="sub-btn">' + (t.status === "sent" ? "Send the change" : "Send it to the commissioners") + "</button></div>" +
+          "</form>";
+      }).join("");
+      box.hidden = false;
+    }).catch(function (err) { console.error(err); });
+  }
+
+  function onPromptTurn(ev) {
+    var form = ev.target.closest("[data-turn]");
+    if (!form) return;
+    ev.preventDefault();
+    var msg = form.querySelector(".sub-msg");
+    var name = form.elements.name.value.trim(), prompt = form.elements.prompt.value.trim();
+    function say(text, good) { msg.textContent = text; msg.className = "sub-msg" + (good ? " is-good" : " is-error"); msg.hidden = false; }
+    if (!name || !prompt) { say("Give the round a name and write the prompt."); return; }
+    var b = form.querySelector("button");
+    b.disabled = true;
+    PFML.api.sendPromptTurn(form.getAttribute("data-turn"), name, prompt).then(function () {
+      say("Sent. A commissioner approves it before it shows; you can change it until then.", true);
+      b.textContent = "Send the change";
+    }).catch(function (err) { say((err && err.message) || String(err)); }).then(function () { b.disabled = false; });
+  }
+
   function initHome() {
     renderFeaturesButton();
     renderRepeatSign();
     renderSubmitBanner();
     renderAnnouncements();
+    renderPromptTurns();
+    if ($("promptTurnBox")) $("promptTurnBox").addEventListener("submit", onPromptTurn);
     renderVault();
     PFML.loadJSON("index.json").then(function (index) {
       renderNav(index, null);

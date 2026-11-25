@@ -264,7 +264,7 @@ class ThePages(unittest.TestCase):
         create = js_body(self.seasons, "function create() {")
         self.assertLess(create.index("if (!d.name)"), create.index("api().createSiteSeason(p)"))
         self.assertLess(create.index("first.getTime() <= Date.now()"), create.index("api().createSiteSeason(p)"))
-        self.assertLess(create.index("window.confirm("), create.index("api().createSiteSeason(p)"))
+        self.assertLess(create.index("ask(document.querySelector('[data-act=\"w-create\"]'),"), create.index("api().createSiteSeason(p)"))
 
     def test_the_commissioner_page_hands_seasons_over_and_keeps_their_rounds_apart(self):
         self.assertIn("window.PFMLSeasons.render({ rounds: state.rounds, seasons: state.seasons, index: state.index, reload: load });",
@@ -305,7 +305,7 @@ class ThePages(unittest.TestCase):
 
     def test_a_change_keeps_its_season_open(self):
         click = js_body(self.seasons, "function onClick(ev) {")
-        self.assertIn('done.then(function () { return ctx.reload(); }).then(function () { reopen(key, ""); })', click)
+        self.assertIn('p.then(function () { return ctx.reload(); }).then(function () { reopen(key, ""); })', click)
         self.assertIn('.then(function () { reopen(key, "Saved."); })', js_body(self.seasons, "function onSubmit(ev) {"))
 
     def test_an_empty_schedule_takes_no_room(self):

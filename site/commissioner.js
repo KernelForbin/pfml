@@ -7,6 +7,10 @@
    The admin also chooses who's a commissioner, sees the league status, and
    can delete an earlier round that was never really played.
    It took over the admin form the Submit page used to have (2026-10-25).
+   Since 2026-11-25 it's in tabs (Now, Seasons, Announce, People, Log,
+   More): the Now tab is now.js, Seasons is seasons.js, and the rest is
+   here, with the activity log, scheduled and season-only announcements,
+   and the admin's invite links.
 
    The database holds every rule (supabase/schema.sql, commissioners): only
    a commissioner can write a round, only the admin sets roles, and nobody
@@ -25,6 +29,10 @@
     });
   }
   function errText(err) { return (err && err.message) || String(err); }
+  // now.js's in-page "are you sure?", or the browser's own if it didn't load
+  function ask(anchor, text, yes) {
+    return window.PFMLAsk ? window.PFMLAsk(anchor, text, yes) : Promise.resolve(window.confirm(text));
+  }
 
   function role() { return PFML.member && PFML.member.role; }
   function isAdmin() { return role() === "admin"; }
@@ -93,16 +101,18 @@
 
   function render() {
     var open = state.rounds.filter(isOpen)[0] || null;
-    $("cmLine").textContent = open
-      ? "“" + open.name + "” is open. Submissions close " + PFML.closes(open.closes_at).at + "."
+    $("cmLine").textContent = open && open.paused ? "“" + open.name + "” is open, and its season is paused."
+      : open ? "“" + open.name + "” is open. Submissions close " + PFML.closes(open.closes_at).at + "."
       : "No round is open for submissions.";
     renderRoundForm(open);
     renderRounds(open);
     if (window.PFMLSeasons) {
       window.PFMLSeasons.render({ rounds: state.rounds, seasons: state.seasons, index: state.index, reload: load });
     }
+    if (window.PFMLNow) window.PFMLNow.render({ rounds: state.rounds, seasons: state.seasons, reload: load });
     renderAnnouncements();
     if (isAdmin()) { renderPeople(); renderLeagueStatus(); }
+    renderLog(false);
   }
 
   /* ---- the open round, or opening one ---- */
@@ -165,9 +175,12 @@
   }
 
   function closeRound(r) {
-    if (!window.confirm("Close submissions for “" + r.name + "” now? Members won't be able to submit or change their tracks.")) return;
-    api().updateSiteRound(r.id, { closed_at: new Date().toISOString() })
-      .then(wrote).then(load).catch(function (err) { adminMsg(errText(err)); });
+    ask($("subAdmClose"), "Close submissions for “" + r.name + "” now? Members won't be able to submit or change their tracks.", "Close submissions")
+      .then(function (yes) {
+        if (!yes) return;
+        api().updateSiteRound(r.id, { closed_at: new Date().toISOString() })
+          .then(wrote).then(load).catch(function (err) { adminMsg(errText(err)); });
+      });
   }
 
   /* ---- earlier rounds: name and description ---- */
@@ -211,16 +224,19 @@
     var id = form.closest(".cm-round").getAttribute("data-round");
     var r = state.rounds.filter(function (x) { return x.id === id; })[0];
     var tracks = state.deletable[id] || 0;
-    if (!r || !window.confirm("Delete “" + r.name + "” for good? " +
+    if (!r) return;
+    ask(b, "Delete “" + r.name + "” for good? " +
         (tracks ? (tracks === 1 ? "Its 1 track goes" : "Its " + tracks + " tracks go") + " with it. " : "") +
-        "This can’t be undone.")) return;
-    var msg = form.querySelector(".sub-msg");
-    b.disabled = true;
-    api().deleteSiteRound(id).then(load).catch(function (err) {
-      b.disabled = false;
-      msg.textContent = errText(err);
-      msg.className = "sub-msg is-error";
-      msg.hidden = false;
+        "This can’t be undone.", "Delete it").then(function (yes) {
+      if (!yes) return;
+      var msg = form.querySelector(".sub-msg");
+      b.disabled = true;
+      api().deleteSiteRound(id).then(load).catch(function (err) {
+        b.disabled = false;
+        msg.textContent = errText(err);
+        msg.className = "sub-msg is-error";
+        msg.hidden = false;
+      });
     });
   }
 
@@ -240,26 +256,50 @@
     }).catch(function (err) { say(errText(err)); });
   }
 
-  /* ---- announcements: a message to everyone ---- */
+  /* ---- announcements: a message to everyone, or to a season ---- */
 
   // Posted to Home for a week and pushed to everyone with notifications on
-  // (send-reminders, announcements_claim). Any commissioner can take one down.
+  // (send-reminders, announcements_claim): now, or at a set time; to the
+  // whole league, or to one season's players. Its words can change after;
+  // its time, until it goes out. Any commissioner can take one down.
+  function annAt(a) { return Date.parse(a.send_at || a.created_at); }
+  function annTime(t) {
+    return new Date(t).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  }
+
   function renderAnnouncements() {
     var box = $("cmAnnounce");
     Promise.all([api().announcements(), api().people()]).then(function (res) {
       var people = res[1] || {};
+      var seasons = state.seasons.slice().sort(function (a, b) { return b.key.localeCompare(a.key, undefined, { numeric: true }); });
+      var nameOf = function (key) { var s = seasons.filter(function (x) { return x.key === key; })[0]; return s ? s.name : key; };
+      var list = (res[0] || []).slice().sort(function (a, b) { return annAt(b) - annAt(a); });
+      state.announcements = list;
       box.innerHTML = "<h2>Announcements</h2>" +
-        '<p class="block-note">A message to the whole league: it shows on Home for a week, and everyone with notifications on gets it on their phone.</p>' +
+        '<p class="block-note">A message on Home for a week, and on the phone of everyone with notifications on.</p>' +
         '<form class="sub-admin-form" id="cmAnnounceForm" novalidate>' +
           '<label class="sub-label" for="cmAnnounceText">Your message</label>' +
           '<textarea class="sub-input sub-textarea" id="cmAnnounceText" maxlength="1000" rows="3"></textarea>' +
+          '<fieldset class="cn-choice"><legend class="sub-label">When</legend>' +
+            '<label><input type="radio" name="when" value="now" checked> Now</label>' +
+            '<label><input type="radio" name="when" value="later"> Later</label>' +
+            '<input class="sub-input" type="datetime-local" name="send_at" aria-label="Send at (your time)"></fieldset>' +
+          (seasons.length ? '<fieldset class="cn-choice"><legend class="sub-label">Who</legend>' +
+            '<label><input type="radio" name="who" value="" checked> The whole league</label>' +
+            seasons.map(function (s) {
+              return '<label><input type="radio" name="who" value="' + esc(s.key) + '"> ' + esc(s.name) + "\u2019s players</label>";
+            }).join("") + "</fieldset>" : "") +
           '<p class="sub-msg" id="cmAnnounceMsg" role="status" hidden></p>' +
-          '<div class="sub-actions"><button type="submit" class="sub-btn">Post and notify everyone</button></div>' +
+          '<div class="sub-actions"><button type="submit" class="sub-btn">Post it</button></div>' +
         "</form>" +
-        ((res[0] || []).length ? '<ul class="cm-announce-list">' + res[0].map(function (a) {
-          return '<li><p>' + esc(a.body) + "</p><small>" + esc(people[a.created_by] ? people[a.created_by].name : "A commissioner") + " \u00b7 " +
-            esc(new Date(a.created_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })) +
-            '</small><button type="button" class="sub-btn sub-btn-quiet" data-announce="' + esc(a.id) + '">Take down</button></li>';
+        (list.length ? '<ul class="cm-announce-list">' + list.map(function (a) {
+          var later = annAt(a) > Date.now();
+          return '<li data-ann="' + esc(a.id) + '"' + (later ? ' class="is-later"' : "") + "><p>" + esc(a.body) + "</p><small>" +
+            esc(people[a.created_by] ? people[a.created_by].name : "A commissioner") + " \u00b7 " +
+            (later ? "goes out " : "") + esc(annTime(annAt(a))) +
+            (a.season_key ? " \u00b7 " + esc(nameOf(a.season_key)) + " only" : "") + (a.edited_at ? " \u00b7 edited" : "") + "</small>" +
+            '<div class="sub-actions"><button type="button" class="sub-btn sub-btn-quiet sub-btn-small" data-ann-act="edit">Edit</button>' +
+              '<button type="button" class="sub-btn sub-btn-quiet sub-btn-small" data-ann-act="down">Take down</button></div></li>';
         }).join("") + "</ul>" : "");
       box.hidden = false;
     }).catch(function (err) { console.error(err); });
@@ -272,18 +312,77 @@
     m.hidden = !text;
   }
 
+  // the form's send time: null for now, or an error
+  function sendAtOf(form) {
+    var later = form.querySelector('input[name="when"]:checked');
+    if (!later || later.value !== "later") return { at: null };
+    var t = form.elements.send_at.value ? new Date(form.elements.send_at.value) : null;
+    if (!t || isNaN(t) || t.getTime() <= Date.now()) return { error: "Pick a time in the future to send it." };
+    return { at: t.toISOString() };
+  }
+
   function onAnnounce(ev) {
     if (ev.type === "submit") {
       ev.preventDefault();
-      var text = $("cmAnnounceText").value.trim();
-      if (!text) { announceMsg("Write a message first."); return; }
-      if (!window.confirm("Post this to the whole league and notify everyone?")) return;
-      api().postAnnouncement(text).then(renderAnnouncements).catch(function (err) { announceMsg(errText(err)); });
+      var form = ev.target;
+      if (form.id === "cmAnnounceForm") { postAnnouncement(form); return; }
+      editAnnouncement(form);
       return;
     }
-    var b = ev.target.closest("[data-announce]");
-    if (!b || !window.confirm("Take this announcement down? It leaves Home; any notification already sent stays sent.")) return;
-    api().deleteAnnouncement(b.getAttribute("data-announce")).then(renderAnnouncements).catch(function (err) { announceMsg(errText(err)); });
+    var b = ev.target.closest("[data-ann-act]");
+    if (!b) return;
+    var item = b.closest("[data-ann]");
+    var ann = (state.announcements || []).filter(function (x) { return x.id === item.getAttribute("data-ann"); })[0];
+    if (!ann) return;
+    if (b.getAttribute("data-ann-act") === "edit") {
+      var open = item.querySelector("form");
+      if (open) { open.remove(); return; }
+      var later = annAt(ann) > Date.now();
+      item.insertAdjacentHTML("beforeend", '<form class="sub-admin-form cm-ann-edit" novalidate>' +
+        '<textarea class="sub-input sub-textarea" name="body" maxlength="1000" rows="3" aria-label="The message">' + esc(ann.body) + "</textarea>" +
+        (later ? '<label class="sub-label" for="cmAnnAt-' + esc(ann.id) + '">Goes out (your time)</label>' +
+          '<input class="sub-input" id="cmAnnAt-' + esc(ann.id) + '" type="datetime-local" name="send_at" value="' + esc(localInput(ann.send_at)) + '">'
+          : '<p class="block-note">It has gone out, so only its words can change. Notifications already sent stay as they were.</p>') +
+        '<p class="sub-msg is-error" role="status" hidden></p>' +
+        '<div class="sub-actions"><button type="submit" class="sub-btn sub-btn-small">Save</button></div></form>');
+      return;
+    }
+    ask(b, "Take this announcement down? It leaves Home; any notification already sent stays sent.", "Take it down").then(function (yes) {
+      if (yes) api().deleteAnnouncement(ann.id).then(renderAnnouncements).catch(function (err) { announceMsg(errText(err)); });
+    });
+  }
+
+  function postAnnouncement(form) {
+    var text = $("cmAnnounceText").value.trim();
+    if (!text) { announceMsg("Write a message first."); return; }
+    var at = sendAtOf(form);
+    if (at.error) { announceMsg(at.error); return; }
+    var who = form.querySelector('input[name="who"]:checked');
+    var season = who && who.value ? who.value : null;
+    var to = season ? ((state.seasons.filter(function (s) { return s.key === season; })[0] || {}).name || "the season") + "\u2019s players" : "the whole league";
+    ask(form.querySelector('button[type="submit"]'),
+        at.at ? "Send this to " + to + " " + annTime(Date.parse(at.at)) + "?" : "Post this to " + to + " and notify them now?",
+        at.at ? "Schedule it" : "Post it").then(function (yes) {
+      if (!yes) return;
+      api().postAnnouncement(text, at.at, season).then(renderAnnouncements).catch(function (err) { announceMsg(errText(err)); });
+    });
+  }
+
+  function editAnnouncement(form) {
+    var li = form.closest("[data-ann]");
+    var a = (state.announcements || []).filter(function (x) { return x.id === li.getAttribute("data-ann"); })[0];
+    var msg = form.querySelector(".sub-msg");
+    var say = function (text) { msg.textContent = text; msg.hidden = false; };
+    var body = form.elements.body.value.trim();
+    if (!a) return;
+    if (!body) { say("Write a message first."); return; }
+    var at = a.send_at;
+    if (form.elements.send_at && form.elements.send_at.value) {
+      var t = new Date(form.elements.send_at.value);
+      if (isNaN(t) || t.getTime() <= Date.now()) { say("Pick a time in the future to send it."); return; }
+      at = t.toISOString();
+    }
+    api().editAnnouncement(a.id, body, at).then(renderAnnouncements).catch(function (err) { say(errText(err)); });
   }
 
   /* ---- the admin: who's a commissioner ---- */
@@ -347,18 +446,94 @@
         Object.keys(res[1]).forEach(function (u) { linked[res[1][u].competitorId] = true; });
         res[2].forEach(function (row) { waiting[row.competitor_id] = row.made_at; });
         var out = players.filter(function (p) { return !linked[p.id]; });
-        parts.push("<li><b>Not joined the site</b> " + (out.length ? out.length + "<ul>" + out.map(function (p) {
+        parts.push("<li><b>Not joined the site</b> " + (out.length ? out.length + '<ul class="cn-invites">' + out.map(function (p) {
           var made = waiting[p.id];
-          return "<li>" + esc(p.name) + " <small>" + (made
+          return '<li data-invite="' + esc(p.id) + '" data-name="' + esc(p.name) + '"><span>' + esc(p.name) + " <small>" + (made
             ? "link made " + esc(new Date(made).toLocaleDateString(undefined, { month: "short", day: "numeric" })) + ", not used yet"
-            : "no link yet") + "</small></li>";
+            : "no link yet") + "</small></span>" +
+            '<button type="button" class="sub-btn sub-btn-quiet sub-btn-small" data-act="invite">' + (made ? "Show the link" : "Make a link") + "</button></li>";
         }).join("") + "</ul>" : "everyone taking part has joined") + "</li>");
       }
       if (!parts.length) return;
       $("subAdmStatus").innerHTML = "<h3>League status</h3><ul>" + parts.join("") + "</ul>" +
-        '<p class="block-note">Make or reprint someone’s link: <code>python scripts/invites.py --player "Name"</code></p>';
+        '<p class="block-note">An invite link ties whoever opens it, signed in with Google, to that player for good, and works once. ' +
+        "Send each one privately, to the right person.</p>";
       $("cmStatus").hidden = false;
     });
+  }
+
+  // The admin makes (or shows again) a player's invite link, to copy or
+  // share from a phone. The log notes it, never the link.
+  function onInvite(ev) {
+    var b = ev.target.closest('[data-act="invite"]');
+    if (b) {
+      var li = b.closest("[data-invite]");
+      b.disabled = true;
+      api().createInvite(li.getAttribute("data-invite")).then(function (code) {
+        var link = "https://pfml.fun/?invite=" + encodeURIComponent(code);
+        b.remove();
+        li.insertAdjacentHTML("beforeend", '<div class="cn-invite-link"><input class="sub-input" readonly value="' + esc(link) +
+          '" aria-label="Invite link for ' + esc(li.getAttribute("data-name")) + '">' +
+          '<div class="sub-actions"><button type="button" class="sub-btn sub-btn-small" data-act="copy">Copy</button>' +
+          (navigator.share ? '<button type="button" class="sub-btn sub-btn-quiet sub-btn-small" data-act="share">Share</button>' : "") + "</div></div>");
+      }).catch(function (err) { b.disabled = false; b.textContent = errText(err); });
+      return;
+    }
+    var c = ev.target.closest('[data-act="copy"], [data-act="share"]');
+    if (!c) return;
+    var box = c.closest(".cn-invite-link"), url = box.querySelector("input").value;
+    if (c.getAttribute("data-act") === "share") {
+      navigator.share({ title: "PFML", text: "Your link to join PFML. It works once.", url: url }).catch(function () {});
+      return;
+    }
+    var done = navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject(new Error("no clipboard"));
+    done.then(function () { c.textContent = "Copied"; }, function () { box.querySelector("input").select(); c.textContent = "Selected: copy it"; });
+  }
+
+  /* ---- the activity log ---- */
+
+  // Newest first, 50 at a time; "Show older" pages on. Drawn when its tab
+  // is open, and again after any change while it is.
+  var log = { last: null, loaded: false };
+  function renderLog(more) {
+    if (!more && currentTab() !== "log") { log.loaded = false; return; }
+    if (typeof api().activityLog !== "function") return;
+    api().activityLog(more ? log.last : null, 50).then(function (rows) {
+      var html = rows.map(function (x) {
+        return "<li><span>" + esc(x.action) + "</span><small>" + esc(x.who) + " · " +
+          esc(new Date(x.at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })) + "</small></li>";
+      }).join("");
+      if (more) $("cmLogList").insertAdjacentHTML("beforeend", html);
+      else $("cmLogList").innerHTML = html || '<li class="cn-log-empty">Nothing yet.</li>';
+      if (rows.length) log.last = rows[rows.length - 1].id;
+      log.loaded = true;
+      $("cmLogMore").hidden = rows.length < 50;
+      $("cmLogMsg").hidden = true;
+      $("cmLog").hidden = false;
+    }).catch(function (err) {
+      $("cmLogMsg").textContent = "Couldn’t load the log: " + errText(err);
+      $("cmLogMsg").hidden = false;
+      $("cmLog").hidden = false;
+    });
+  }
+
+  /* ---- tabs ---- */
+
+  // The open tab is in the address (#seasons), so a reload or a link from
+  // the Now tab lands on it. People is the admin's only.
+  var TABS = ["now", "seasons", "announce", "people", "log", "more"];
+  function currentTab() {
+    var t = (location.hash || "").replace("#", "");
+    if (t === "people" && !isAdmin()) t = "";
+    return TABS.indexOf(t) !== -1 ? t : "now";
+  }
+  function showTab() {
+    var t = currentTab();
+    document.querySelector("main").setAttribute("data-tab", t);
+    Array.prototype.forEach.call(document.querySelectorAll("#cmTabs [data-tab]"), function (a) {
+      if (a.getAttribute("data-tab") === t) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+    });
+    if (t === "log" && !log.loaded) renderLog(false);
   }
 
   /* ---- start ---- */
@@ -373,6 +548,12 @@
     $("cmPeopleList").addEventListener("click", onPersonClick);
     $("cmAnnounce").addEventListener("submit", onAnnounce);
     $("cmAnnounce").addEventListener("click", onAnnounce);
+    $("subAdmStatus").addEventListener("click", onInvite);
+    $("cmLogMore").addEventListener("click", function () { renderLog(true); });
+    $("cmTabs").hidden = false;
+    if (isAdmin()) document.querySelector('#cmTabs [data-tab="people"]').hidden = false;
+    window.addEventListener("hashchange", function () { showTab(); window.scrollTo({ top: 0, behavior: "instant" }); });
+    showTab();
     // season names for the round list and the season picker; the page
     // works without them
     PFML.loadJSON("index.json").then(function (index) { state.index = index; })

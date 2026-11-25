@@ -446,13 +446,16 @@
     setSubmissionNote: function (roundId, tag, note, inVoting) {
       return client.rpc("set_submission_note", { p_round: roundId, p_tag: tag, p_note: note, p_in_voting: !!inVoting }).then(must);
     },
-    // The commissioners' announcements, newest first.
+    // The commissioners' announcements, newest first. A member sees one once
+    // its time has come (send_at), and one for a season only if they play
+    // in it; commissioners see them all.
     announcements: function () {
-      return client.from("site_announcements").select("id, body, created_by, created_at")
+      return client.from("site_announcements").select("id, body, created_by, created_at, send_at, season_key, edited_at, pushed_at")
         .order("created_at", { ascending: false }).limit(20).then(must);
     },
-    postAnnouncement: function (body) {
-      return client.rpc("post_announcement", { p_body: body }).then(must);
+    // Now, or at sendAt; to everyone, or (seasonKey) to a season's players.
+    postAnnouncement: function (body, sendAt, seasonKey) {
+      return client.rpc("post_announcement", { p_body: body, p_send_at: sendAt || null, p_season: seasonKey || null }).then(must);
     },
     deleteAnnouncement: function (id) {
       return client.rpc("delete_announcement", { p_id: id }).then(must);
@@ -622,7 +625,7 @@
     // playing each.
     siteSeasons: function () {
       return client.from("site_seasons").select("key, name, description, point_budget, max_per_track, nonvoters_keep_points, " +
-          "timing, submit_days, vote_days, songs_per_round, downvotes, max_down_per_track, services, repeat_rule, created_at, " +
+          "timing, submit_days, vote_days, songs_per_round, downvotes, max_down_per_track, services, repeat_rule, created_at, prompt_rotation, " +
           "site_season_players(competitor_id, role)")
         .order("key").then(must);
     },
@@ -676,6 +679,88 @@
     // The admin makes a member a commissioner, or a member again.
     setCommissioner: function (competitorId, on) {
       return client.rpc("set_commissioner", { p_competitor: competitorId, p_on: on }).then(must);
+    },
+    // ---- commissioner tools (README, Commissioner tools) ----
+    // Every season's open pause, started or not ([{season_key, season_name,
+    // state: "paused" | "scheduled", starts_at, after_round_label,
+    // resume_at, started_at, note}]): for members, the strip under the top
+    // bar; for commissioners, the Now panel.
+    pauses: function () {
+      return client.rpc("site_pauses").then(must).then(function (rows) { return rows || []; });
+    },
+    // Pauses a season now (both null), at startsAt, or once afterRound's
+    // voting closes; until resumeAt, or (null) until resumed.
+    pauseSeason: function (key, startsAt, afterRound, resumeAt, note) {
+      return client.rpc("pause_season", { p_key: key, p_starts_at: startsAt || null, p_after_round: afterRound || null,
+        p_resume_at: resumeAt || null, p_note: note || "" }).then(must);
+    },
+    setPauseResume: function (key, resumeAt) {
+      return client.rpc("set_pause_resume", { p_key: key, p_resume_at: resumeAt || null }).then(must);
+    },
+    // Resumes a paused season now, or cancels a pause that hasn't started.
+    resumeSeason: function (key) {
+      return client.rpc("resume_season", { p_key: key }).then(must);
+    },
+    // More time for the open round: hours, or days on the league's clock.
+    // Resolves to the new deadline.
+    extendSiteRound: function (roundId, hours, days) {
+      return client.rpc("extend_site_round", { p_round: roundId, p_hours: hours || null, p_days: days || null }).then(must);
+    },
+    // Everyone playing a round and where they stand (never which track):
+    // [{competitor_id, name, role, joined, tracks, voted, sitting}].
+    roundStatus: function (roundId) {
+      return client.rpc("site_round_status", { p_round: roundId }).then(must).then(function (rows) { return rows || []; });
+    },
+    // Pushes "still waiting on you" to everyone the round waits on, once
+    // every 6 hours at most. Resolves to how many it went to.
+    nudgeRound: function (roundId) {
+      return client.rpc("nudge_round", { p_round: roundId }).then(must);
+    },
+    lastNudge: function (roundId) {
+      return client.rpc("site_round_last_nudge", { p_round: roundId }).then(must);
+    },
+    // The caller asks to sit a round out (on), or takes it back.
+    askSitOut: function (roundId, on) {
+      return client.rpc("ask_sit_out", { p_round: roundId, p_on: !!on }).then(must);
+    },
+    // A commissioner says yes (or sets it) or no.
+    decideSitOut: function (roundId, competitorId, approve) {
+      return client.rpc("decide_sit_out", { p_round: roundId, p_competitor: competitorId, p_approve: !!approve }).then(must);
+    },
+    // The commissioners' activity log, newest first, a page at a time.
+    activityLog: function (before, limit) {
+      return client.rpc("site_activity_list", { p_before: before || null, p_limit: limit || 50 }).then(must)
+        .then(function (rows) { return rows || []; });
+    },
+    // Prompt rotation: the caller's turns to write a prompt, sending one,
+    // and the commissioners' list and their answer (name null drops it).
+    myPromptTurns: function () {
+      return client.rpc("my_prompt_turns").then(must).then(function (rows) { return rows || []; });
+    },
+    sendPromptTurn: function (roundId, name, prompt) {
+      return client.rpc("send_prompt_turn", { p_round: roundId, p_name: name, p_prompt: prompt }).then(must);
+    },
+    promptTurns: function () {
+      return client.rpc("site_prompt_turns_list").then(must).then(function (rows) { return rows || []; });
+    },
+    decidePromptTurn: function (roundId, name, prompt) {
+      return client.rpc("decide_prompt_turn", { p_round: roundId, p_name: name, p_prompt: prompt }).then(must);
+    },
+    setSeasonRotation: function (key, on) {
+      return client.rpc("set_site_season_rotation", { p_key: key, p_on: !!on }).then(must);
+    },
+    // A round's own days to submit and to vote (null: the season's), while
+    // it hasn't opened.
+    setSiteRoundDays: function (roundId, submitDays, voteDays) {
+      return client.rpc("set_site_round_days", { p_round: roundId, p_submit: submitDays || null, p_vote: voteDays || null }).then(must);
+    },
+    // The admin only: a player's invite code (their unused one, or a new
+    // one). The link is https://pfml.fun/?invite=<code>.
+    createInvite: function (competitorId) {
+      return client.rpc("create_invite", { p_competitor: competitorId }).then(must);
+    },
+    editAnnouncement: function (id, body, sendAt) {
+      return client.rpc("edit_announcement", { p_id: id, p_body: body, p_send_at: sendAt || null }).then(must);
     },
     me: function () { return currentUserId(); }
   };

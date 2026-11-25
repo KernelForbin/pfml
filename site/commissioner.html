@@ -32,27 +32,47 @@
     <p class="hero-line" id="cmLine">Loading the rounds.</p>
   </section>
 
-  <section class="shell block block-first sub-admin" id="cmRound" hidden></section>
+  <!-- the page's parts, as tabs, so a phone isn't one long scroll (2026-11-25) -->
+  <nav class="shell cn-tabs" id="cmTabs" aria-label="Commissioner" hidden>
+    <a href="#now" data-tab="now">Now</a>
+    <a href="#seasons" data-tab="seasons">Seasons</a>
+    <a href="#announce" data-tab="announce">Announce</a>
+    <a href="#people" data-tab="people" data-admin hidden>People</a>
+    <a href="#log" data-tab="log">Log</a>
+    <a href="#more" data-tab="more">More</a>
+  </nav>
 
-  <section class="shell block" id="cmSeasons" hidden></section>
+  <section class="shell block block-first" id="cmNow" data-panel="now" hidden></section>
 
-  <section class="shell block" id="cmAnnounce" hidden></section>
+  <section class="shell block block-first" id="cmSeasons" data-panel="seasons" hidden></section>
 
-  <section class="shell block" id="cmRounds" hidden>
-    <h2>Earlier rounds</h2>
-    <p class="block-note">A round's name and description can change at any time. Its deadlines can't once they've passed. The admin can delete a round nobody really played: an empty one, or a test.</p>
-    <div class="cm-rounds" id="cmRoundList"></div>
-  </section>
+  <section class="shell block block-first" id="cmAnnounce" data-panel="announce" hidden></section>
 
-  <section class="shell block" id="cmPeople" hidden>
+  <section class="shell block block-first" id="cmPeople" data-panel="people" hidden>
     <h2>Commissioners</h2>
-    <p class="block-note">Only you see this. A commissioner can open, change and close rounds, like you. They can't choose commissioners, see who has an invite link waiting, or delete a round.</p>
+    <p class="block-note">Only you see this. A commissioner can run seasons and rounds, like you. They can't choose commissioners, make invite links, see who has an invite link waiting, or delete a round.</p>
     <div class="cm-people" id="cmPeopleList"></div>
     <p class="sub-msg is-error" id="cmPeopleMsg" role="status" hidden></p>
   </section>
 
-  <section class="shell block" id="cmStatus" hidden>
+  <section class="shell block" id="cmStatus" data-panel="people" hidden>
     <div class="sub-admin-status" id="subAdmStatus"></div>
+  </section>
+
+  <section class="shell block block-first" id="cmLog" data-panel="log" hidden>
+    <h2>Activity log</h2>
+    <p class="block-note">What the commissioners have done, newest first: pauses, deadlines, nudges, rounds and seasons changed, announcements. Only commissioners see it.</p>
+    <ol class="cn-log" id="cmLogList"></ol>
+    <div class="sub-actions"><button type="button" class="sub-btn sub-btn-quiet" id="cmLogMore" hidden>Show older</button></div>
+    <p class="sub-msg is-error" id="cmLogMsg" role="status" hidden></p>
+  </section>
+
+  <section class="shell block block-first sub-admin" id="cmRound" data-panel="more" hidden></section>
+
+  <section class="shell block" id="cmRounds" data-panel="more" hidden>
+    <h2>Earlier rounds</h2>
+    <p class="block-note">A round's name and description can change at any time. Its deadlines can't once they've passed. The admin can delete a round nobody really played: an empty one, or a test.</p>
+    <div class="cm-rounds" id="cmRoundList"></div>
   </section>
 
   <section class="shell block">
@@ -72,6 +92,7 @@
 <script src="account.js"></script>
 <script src="voting.js"></script>
 <script src="seasons.js"></script>
+<script src="now.js"></script>
 <script src="commissioner.js"></script>
 <script src="app.js"></script>
 </body>

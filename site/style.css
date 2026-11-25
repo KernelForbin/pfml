@@ -1885,6 +1885,104 @@ button.cm-person { cursor: pointer; }
 .sub-next span { color: var(--muted); font-size: 0.85rem; }
 .sub-next p { margin: 4px 0 0; font-size: 0.9rem; overflow-wrap: anywhere; }
 .cm-person small { color: var(--muted); font-size: 0.82rem; text-align: right; }
+/* commissioner tools (README, Commissioner tools): the tabs, the Now tab,
+   pausing, the log, invite links; and the pause strip on every page */
+main[data-tab="now"] [data-panel]:not([data-panel="now"]),
+main[data-tab="seasons"] [data-panel]:not([data-panel="seasons"]),
+main[data-tab="announce"] [data-panel]:not([data-panel="announce"]),
+main[data-tab="people"] [data-panel]:not([data-panel="people"]),
+main[data-tab="log"] [data-panel]:not([data-panel="log"]),
+main[data-tab="more"] [data-panel]:not([data-panel="more"]) { display: none; }
+.cn-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.cn-tabs[hidden], .cn-tabs [hidden] { display: none; }
+.cn-tabs a { padding: 8px 14px; border: 1px solid var(--border); border-radius: 999px; background: var(--card); color: var(--ink);
+  font: 600 0.9rem/1 "Archivo", sans-serif; text-decoration: none; }
+.cn-tabs a[aria-current="page"] { background: var(--magenta); border-color: var(--magenta); color: #fff; }
+@media (hover: hover) { .cn-tabs a:not([aria-current]):hover { border-color: var(--edge); } }
+.sub-btn-small { padding: 9px 14px; font-size: 0.85rem; }
+.cn-needs { max-width: 720px; margin-bottom: 18px; padding: 12px 14px; border: 1px solid var(--border); border-left: 4px solid var(--magenta);
+  border-radius: 12px; background: var(--card); }
+.cn-needs h3 { margin: 0 0 8px; font-size: 1rem; }
+.cn-needs ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.cn-need { display: flex; flex-direction: column; gap: 6px; overflow-wrap: anywhere; font-size: 0.92rem; }
+.cn-need + .cn-need { padding-top: 10px; border-top: 1px solid var(--border-soft); }
+.cn-need .sub-actions { margin-top: 0; }
+.cn-calm { margin-bottom: 18px; }
+.cn-season { max-width: 720px; margin-bottom: 14px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); }
+.cn-season-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.cn-season-head h3 { margin: 0; font-size: 1.05rem; }
+.cn-season-head span { color: var(--muted); font-size: 0.85rem; }
+.cn-pause { margin-top: 10px; padding: 10px 12px; border: 1px solid var(--border-soft); border-radius: 10px; }
+.cn-pause > summary { color: var(--magenta-text); font-weight: 600; cursor: pointer; }
+.cn-pause p { margin: 0; font-size: 0.92rem; }
+.cn-pause form { margin-top: 10px; }
+.cn-pause.is-on { border-color: var(--magenta); background: var(--wash); }
+.cn-pause.is-set { border-style: dashed; border-color: var(--edge); }
+.cn-choice { margin: 6px 0 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 6px; }
+.cn-choice label { display: flex; align-items: center; gap: 8px; font-size: 0.92rem; }
+.cn-choice input[type="radio"] { margin: 0; accent-color: var(--magenta); }
+/* a hidden form stays hidden: .sub-admin-form's display would win over the attribute */
+.cn-resume-form[hidden] { display: none; }
+/* a time or a round to pick shows once its choice is picked; a browser
+   without :has() shows them all, so nothing is ever out of reach */
+@supports selector(:has(*)) {
+  .cn-choice input[type="datetime-local"], .cn-choice select { display: none; }
+  .cn-choice:has(input[value="at"]:checked) input[type="datetime-local"],
+  .cn-choice:has(input[value="later"]:checked) input[type="datetime-local"],
+  .cn-choice:has(input[value="after"]:checked) select { display: block; }
+}
+.cn-round { margin-top: 12px; }
+.cn-kicker { margin: 0; font: 700 0.72rem/1.3 "Archivo", sans-serif; letter-spacing: 0.06em; text-transform: uppercase; color: var(--magenta-text); }
+.cn-round h4 { margin: 2px 0 2px; font-size: 1.05rem; overflow-wrap: anywhere; }
+.cn-deadline { margin: 0 0 8px; color: var(--muted); font-size: 0.9rem; }
+.cn-meter { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.92rem; }
+.cn-meter b { font-variant-numeric: tabular-nums; }
+.cn-bar { flex: 1 1 auto; max-width: 260px; height: 8px; border-radius: 999px; background: var(--border); overflow: hidden; }
+.cn-bar span { display: block; height: 100%; border-radius: 999px; background: var(--magenta); }
+.cn-group { margin-top: 6px; }
+.cn-group-title { display: block; margin-bottom: 4px; color: var(--muted); font-size: 0.8rem; font-weight: 600; }
+.cn-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.cn-chip { padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px; font-size: 0.85rem; overflow-wrap: anywhere; }
+.cn-chip.is-out { border-color: var(--neg); color: var(--neg); }
+.cn-chip.is-in { background: var(--wash); }
+.cn-chip.is-sitting { border-style: dashed; color: var(--muted); }
+.cn-chip.is-away { color: var(--muted); border-color: var(--border-soft); }
+.cn-actions { margin-top: 12px; }
+.cn-nudged { margin: 8px 0 0; font-size: 0.82rem; }
+.cn-ask { margin-top: 10px; padding: 10px 12px; border: 1px solid var(--magenta); border-radius: 10px; background: var(--wash); max-width: 640px; }
+.cn-ask p { margin: 0; font-size: 0.92rem; }
+.cn-ask .sub-actions { margin-top: 8px; }
+.cn-log { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; max-width: 720px; }
+.cn-log li { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border: 1px solid var(--border-soft); border-radius: 8px;
+  background: var(--card); overflow-wrap: anywhere; font-size: 0.92rem; }
+.cn-log small { color: var(--muted); font-size: 0.8rem; }
+.cn-log .cn-log-empty { color: var(--muted); }
+.cn-invites { margin: 6px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.cn-invites > li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; }
+.cn-invite-link { flex-basis: 100%; }
+.cn-invite-link input { font-size: 14px; }
+.cn-invite-link .sub-actions { margin-top: 6px; }
+.cn-rotation span { flex: 1 1 200px; font-size: 0.9rem; }
+.cn-rotation { margin-top: 10px; align-items: flex-start; }
+.cn-rotation input { margin-top: 3px; }
+.cn-draft { max-width: 720px; padding: 12px 14px; border: 1px dashed var(--edge); border-radius: 12px; }
+.cn-draft p { margin: 0; }
+.cn-draft-note { margin: 10px 0 0; font-size: 0.8rem; }
+.cm-announce-list li.is-later { border-style: dashed; border-color: var(--edge); }
+.cm-announce-list .sub-actions { margin-top: 0; }
+.cm-ann-edit { margin-top: 8px; }
+/* sitting a round out, on the Submit page */
+.sub-sitout { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 10px 0 0; font-size: 0.9rem; color: var(--muted); }
+.sub-next .sub-sitout span { color: var(--muted); }
+/* a round's winner writing the next prompt, on Home */
+.turn-card { display: flex; flex-direction: column; gap: 6px; max-width: 640px; }
+.turn-card .announce-body { margin-bottom: 4px; }
+/* the strip under the top bar while a season is paused, or about to be */
+.pause-strip { background: var(--inverse); color: var(--on-inverse); }
+.pause-strip .shell { padding-top: 10px; padding-bottom: 10px; }
+.pause-strip p { margin: 0; font-size: 0.9rem; }
+.pause-strip p + p { margin-top: 6px; }
+.pause-strip .pause-note { display: block; margin-top: 2px; opacity: 0.85; white-space: pre-line; }
 .sub-admin h3 { margin: 4px 0 4px; font-size: 1.05rem; }
 
 @media (max-width: 620px) {
