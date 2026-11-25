@@ -2769,6 +2769,131 @@ left off; it's dropped once the season is created or the setup stopped.
   links, a round's days, and the setup surviving a reload. No sideways
   scroll; contrast at least 5.29.
 
+## The live room
+
+Asked 2026-11-25: a page at `/tt` that works like turntable.fm did, with
+one room. Members take turns DJing a track each, live, from YouTube or
+SoundCloud; everyone there hears it at the same moment. The user's calls:
+members only, Awesome and Lame, no limit on DJs, a played track to the
+bottom of its DJ's queue, initials for avatars, and **Lames never skip a
+track: only the DJ playing it, the admin or a commissioner can**. It's the
+mechanic, in PFML's own look; nothing of turntable.fm's name or artwork.
+
+**The page** (`tt.html`, `tt.js`; Live room in the menu under the
+initials):
+
+- **The stage:** the player, what's playing and who's playing it, a
+  progress bar, Awesome and Lame (never on your own track), Skip for who
+  may, and Tune in, Volume and Tune out.
+- **On the decks:** the DJs in turn order, the one playing marked, with
+  Step up to DJ (once your queue has a track) or Step down. A track of
+  yours that's playing plays on after you step down. The admin and
+  commissioners get a ✕ to take someone off.
+- **The crowd:** everyone else who's here. An Awesome sets its giver's
+  avatar bobbing (still, with a ring, for reduced motion).
+- **Chat:** the last 200 messages on coming in, 280 characters each, 20 a
+  minute at most. Its writer or the admin can remove one; it's marked
+  removed, never deleted.
+- **Your music:** Queue (what you'll play, top first: up, down, Top, To
+  library), Library, and Add a track: search YouTube (the same
+  `search-tracks` function as the Submit page), or paste a YouTube or
+  SoundCloud link (read through the service's oEmbed, like the Submit
+  page). A library holds 500 tracks.
+- **Recently played:** the last 20, with Save.
+
+**The database is the room** (`supabase/migrations/2026-11-25_live_room.sql`,
+the same block near the end of `schema.sql`). Seven tables, all closed to
+the API but one row:
+
+- `room_tracks`: each member's library; `queue_pos` puts a track in their
+  queue.
+- `room_djs`: who's on the decks, `seq` in the order they stepped up.
+- `room_plays`: every track played, the one playing included, with its
+  own copy of the track.
+- `room_state`: the one row. `play_id` is what's playing, `last_seq` the
+  turn that played last, `version` goes up whenever anything members see
+  changes, `chat_epoch` when a message is removed.
+- `room_presence`, `room_votes`, `room_messages`.
+
+**How it runs.** No timer. Every page calls `room_here()` every 20
+seconds, and at once when the room changes or the playing track's time is
+up. It marks the caller present, moves the room along (`room_advance`: a
+track whose time is up ends and the next DJ's starts; anyone silent for
+90 seconds has left the crowd and the decks), and returns everything the
+page shows, with the database's own time. The next turn
+(`room_start_next`) is the DJ with the next `seq` after the last one that
+played, wrapping round; their top queued track starts, and moves to the
+bottom of their queue. A DJ whose turn comes with an empty queue is off
+the decks. With nobody left, the room goes quiet. A room nobody is in
+just waits: the next person in finds stale DJs dropped.
+
+**Hearing about changes:** `room_state` is in the `supabase_realtime`
+publication, and it's the one table members can select, so a page
+subscribed to its updates (`roomWatch` in `auth.js`) hears that
+something changed and asks again. It's the site's only use of Supabase
+Realtime. While that isn't connected, the page asks every 4 seconds
+instead, so the room works without it.
+
+**Staying in sync.** `room_here()` returns `now` on the database's
+clock; the page takes the difference from its own (halfway through the
+round trip) and works out how far into the track the room is. Its player
+is told to play from there, and every 5 seconds a player more than 3
+seconds out is moved back. Both players are made once and kept, since a
+player that has already started is the likeliest to be allowed to start
+the next track. YouTube plays without its own controls, so nobody
+scrubs away from the room; a tap on the video pauses it, and the page
+then offers "Tap to hear the room".
+
+**Sound needs a tap.** Nothing plays until Tune in: browsers refuse
+sound that no tap asked for. A player made before the tap only cues its
+track, because an iPhone starts sound only inside a tap and only in a
+player that already exists (measured for the round player, 2026-10-26).
+If a track should be playing and isn't after 4.5 seconds, the button
+comes back, and a phone is told to tap the video itself.
+
+**A track's length.** A YouTube search result comes with its length. A
+pasted link doesn't, so the track plays with its length unknown (the
+database allows it 10 minutes) until the DJ's own player has it loaded
+and reports it (`room_set_length`: once, from the DJ's page, or anyone's
+when the DJ has gone). Their library remembers it.
+
+**A track that won't play:** YouTube says so when a video is gone or its
+owner doesn't let other sites play it. The page says "This track won't
+play here", and if it's the DJ's own page, skips it.
+
+**Skipping** (`room_skip`): the DJ whose track it is, the admin or a
+commissioner. `room_vote` touches nothing but the vote. A commissioner
+skipping someone else's track, taking someone off the decks, or the admin
+removing someone else's message, goes in the activity log.
+
+**Not built:** more than one room, DJ points, avatars beyond initials, a
+notification when someone starts DJing, and Spotify (its player needs
+each listener signed in to Spotify, and plays previews on a phone).
+
+**Checked:**
+
+- **The SQL** on the local Postgres: the migration runs twice cleanly and
+  the rehearsal (`supabase/checks/2026-11-25_live_room_rehearsal.sql`, 14
+  checks) passes: turns in order, one track each, the played track to the
+  bottom, who can and can't skip, votes, a measured length, 90 seconds of
+  silence, the chat's history and removal, and that nobody reads the
+  tables.
+- **Tests:** `tests/test_room.py`, break-checked in a scratch clone;
+  `tests/test_live_room.py` for the live functions (read-only).
+- **In a browser,** a stubbed copy following the database's rules, with
+  real YouTube and SoundCloud players (2026-11-25): after Tune in the
+  YouTube player sat 0.1 to 0.4 seconds from the room's clock and the
+  SoundCloud one 0.2, joining mid-track with the device's clock set two
+  minutes out. The next DJ's track started with no second tap, on the same
+  service and across a change of service. Pausing the video brought back
+  "Tap to hear the room", and tapping it rejoined at the room's second.
+  Chat (HTML shown as text), votes, skip, queue order, a pasted link and
+  the member's view (no Skip, no ✕) worked with real clicks. No sideways
+  scroll at 375px or 1280px; contrast at least 5.29 in light and dark.
+- **Not checked:** how it looks (the browser pane was hidden that day, so
+  layout was measured, not seen); Realtime on the live project, which
+  needs a signed-in member; any phone; SoundCloud on an iPhone.
+
 ## Deleting a round
 
 Asked for 2026-10-25, after four test rounds from 2026-10-18/19 ("Round 7:

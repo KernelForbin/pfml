@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PFML - Live room</title>
+<script>try{if(localStorage.getItem("pfml.theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}</script>
+<meta name="description" content="The PFML live room: take turns DJing, together.">
+<meta name="theme-color" content="#9E00C4">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%239E00C4'/><circle cx='50' cy='50' r='36' fill='%2316111A'/><path d='M50 18A32 32 0 0 1 82 50' fill='none' stroke='%23D7A4F0' stroke-width='2.5' stroke-linecap='round'/><path d='M50 76A26 26 0 0 1 24 50' fill='none' stroke='%23D7A4F0' stroke-width='2.5' stroke-linecap='round'/><path d='M67.32 40A20 20 0 0 1 64.14 64.14' fill='none' stroke='%23D7A4F0' stroke-width='2' stroke-linecap='round'/><circle cx='50' cy='50' r='13' fill='%239E00C4'/><path d='M46 57V43H51.5A4.2 4.2 0 0 1 51.5 51.4H49.5V57Z' fill='%23F8F9FA'/></svg>">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-title" content="PFML">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="gated" data-page="tt">
+
+<header class="topbar">
+  <div class="shell topbar-inner">
+    <a class="wordmark" href="./">PFML</a>
+    <nav class="seasons" id="seasonTabs" aria-label="Season"></nav>
+  </div>
+</header>
+
+<main>
+  <section class="shell hero tt-hero">
+    <h1>Live room</h1>
+    <p class="hero-line" id="ttLine">Coming in.</p>
+  </section>
+
+  <section class="shell tt" id="ttRoom" hidden>
+    <div class="tt-main">
+      <!-- the stage: what's playing, for everyone at once -->
+      <div class="tt-stage">
+        <div class="tt-screen">
+          <div class="rp-video tt-yt" id="ttYt" hidden><div id="ttYtHost"></div></div>
+          <div class="tt-sc" id="ttSc" hidden></div>
+          <p class="tt-idle" id="ttIdle">Nobody&rsquo;s DJing. Queue a track and step up.</p>
+        </div>
+        <div class="tt-now" id="ttNow" aria-live="polite"></div>
+        <div class="tt-bar" id="ttBar" hidden><span id="ttBarFill"></span></div>
+        <p class="tt-note" id="ttNote" hidden></p>
+        <div class="tt-acts" id="ttActs"></div>
+      </div>
+
+      <div class="tt-box">
+        <div class="tt-box-head"><h2>On the decks</h2><span id="ttDeckBtn"></span></div>
+        <ol class="tt-decks" id="ttDecks"></ol>
+        <p class="sub-msg is-error" id="ttDeckMsg" role="status" hidden></p>
+      </div>
+
+      <div class="tt-box">
+        <div class="tt-box-head"><h2>The crowd</h2><span class="tt-count" id="ttCrowdCount"></span></div>
+        <ul class="tt-crowd" id="ttCrowd"></ul>
+      </div>
+    </div>
+
+    <aside class="tt-box tt-chat" aria-label="Chat">
+      <div class="tt-box-head"><h2>Chat</h2></div>
+      <ol class="tt-msgs" id="ttMsgs" aria-live="polite"></ol>
+      <form class="tt-say" id="ttSay" novalidate>
+        <label class="cm-sr" for="ttSayText">Say something</label>
+        <input class="sub-input" id="ttSayText" maxlength="280" autocomplete="off" placeholder="Say something">
+        <button type="submit" class="sub-btn">Send</button>
+      </form>
+      <p class="sub-msg is-error" id="ttSayMsg" role="status" hidden></p>
+    </aside>
+  </section>
+
+  <section class="shell block" id="ttMine" hidden>
+    <h2>Your music</h2>
+    <p class="block-note">Your queue is what you play when it&rsquo;s your turn, top first. Each track you play goes to the bottom of it. Your library keeps the rest.</p>
+    <nav class="cn-tabs tt-tabs" id="ttTabs" aria-label="Your music">
+      <button type="button" data-tab="queue" aria-pressed="true">Queue</button>
+      <button type="button" data-tab="library" aria-pressed="false">Library</button>
+      <button type="button" data-tab="add" aria-pressed="false">Add a track</button>
+    </nav>
+    <ol class="tt-list" id="ttQueue"></ol>
+    <ul class="tt-list" id="ttLibrary" hidden></ul>
+    <div id="ttAdd" hidden>
+      <form class="sub-form" id="ttAddForm" novalidate>
+        <label class="sub-label" for="ttAddText">Search YouTube, or paste a YouTube or SoundCloud link</label>
+        <input class="sub-input" id="ttAddText" autocomplete="off" placeholder="Artist and song, or a link">
+        <div class="sub-actions"><button type="submit" class="sub-btn">Search</button></div>
+      </form>
+      <ul class="tt-list" id="ttResults"></ul>
+    </div>
+    <p class="sub-msg" id="ttMineMsg" role="status" hidden></p>
+  </section>
+
+  <section class="shell block" id="ttRecent" hidden>
+    <h2>Recently played</h2>
+    <ul class="tt-list" id="ttRecentList"></ul>
+  </section>
+
+  <section class="shell block">
+    <p class="block-note">The room plays while this page is open and your screen is on. YouTube and SoundCloud play in their own players, so they see that you&rsquo;re listening, as on any site that embeds them.</p>
+  </section>
+</main>
+
+<footer class="shell site-footer">
+  <p>Members only.</p>
+  <p><a href="privacy">Privacy and Security</a></p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js"
+        integrity="sha384-iLddHTLokph6Omwoyid4XKxHaWa6w41BnoEj0q5oOrzmYPpHIKt1wyjReA7s//pP" crossorigin="anonymous"></script>
+<script src="config.js"></script>
+<script src="auth.js"></script>
+<script src="account.js"></script>
+<script src="sentiment.js"></script>
+<script src="tt.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

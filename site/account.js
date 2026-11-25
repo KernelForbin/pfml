@@ -620,6 +620,7 @@
           '<span class="acct-menu-who"><b>' + esc(member.name) + "</b><small>Signed in</small></span></div>" +
         '<a class="acct-item" href="repeats">Repeat checker</a>' +
         '<a class="acct-item" href="profile">My profile</a>' +
+        '<a class="acct-item" href="tt">Live room</a>' +
         '<a class="acct-item" href="features">Site features</a>' +
         '<a class="acct-item" href="commissioner" id="acctCommish" hidden>Commissioner</a>' +
         // the admin's way into the round demo from the installed app,

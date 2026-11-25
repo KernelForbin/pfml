@@ -18,7 +18,7 @@ SITE = ROOT / "site"
 SUPABASE_JS_URL = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js"
 SUPABASE_JS_INTEGRITY = "sha384-iLddHTLokph6Omwoyid4XKxHaWa6w41BnoEj0q5oOrzmYPpHIKt1wyjReA7s//pP"
 MEMBER_PAGES = ["index.html", "career.html", "round.html", "season.template.html", "profile.html", "submit.html", "repeats.html",
-                "commissioner.html", "round-9-prompt.html"]
+                "commissioner.html", "round-9-prompt.html", "tt.html"]
 FONT_HOSTS = {"fonts.googleapis.com", "fonts.gstatic.com"}
 
 
@@ -333,7 +333,7 @@ class RoundPromptPage(unittest.TestCase):
         self.assertEqual(srcs, [SUPABASE_JS_URL, "config.js", "auth.js", "account.js", "app.js"])
         self.assertIn('<body class="gated" data-page="prompt">', self.page)
         # app.js fills its header, as for the other pages that bring their own content
-        self.assertIn('page === "commissioner" || page === "prompt") {', js_function(read("app.js"), "function boot()"))
+        self.assertIn('page === "commissioner" || page === "prompt" || page === "tt") {', js_function(read("app.js"), "function boot()"))
 
 
 class GeneratedPages(unittest.TestCase):

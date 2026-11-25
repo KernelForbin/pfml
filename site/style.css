@@ -1983,6 +1983,82 @@ main[data-tab="more"] [data-panel]:not([data-panel="more"]) { display: none; }
 .pause-strip p { margin: 0; font-size: 0.9rem; }
 .pause-strip p + p { margin-top: 6px; }
 .pause-strip .pause-note { display: block; margin-top: 2px; opacity: 0.85; white-space: pre-line; }
+/* the live room (/tt, tt.js): the stage, the decks, the crowd, the chat */
+.tt-hero { padding-bottom: 0; }
+.tt { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin-top: 18px; align-items: start; }
+.tt[hidden] { display: none; }
+.tt-main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+@media (min-width: 900px) {
+  .tt { grid-template-columns: minmax(0, 1fr) 340px; }
+  .tt-chat { position: sticky; top: 84px; }
+}
+.tt-box, .tt-stage { border: 1px solid var(--border); border-radius: var(--r); background: var(--card); padding: 14px 16px; min-width: 0; }
+.tt-box-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; margin-bottom: 10px; }
+.tt-box-head h2 { margin: 0; font-size: 1.05rem; }
+.tt-box-head > span { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.tt-count, .tt-need { color: var(--muted); font-size: 0.85rem; }
+/* the stage stays dark in both modes, like a room with the lights down */
+.tt-stage { background: var(--inverse); color: var(--on-inverse); border-color: transparent; }
+.tt-screen { max-width: 560px; }
+.tt-sc[hidden], .tt-yt[hidden], .tt-idle[hidden], .tt-bar[hidden] { display: none; }
+.tt-idle { margin: 0; padding: 28px 0; font-size: 1.05rem; opacity: 0.85; }
+.tt-now { margin-top: 12px; }
+.tt-now:empty { display: none; }
+.tt-kicker { margin: 0; font: 700 0.72rem/1.3 "Archivo", sans-serif; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.75; }
+.tt-title { margin: 2px 0; font-size: 1.25rem; overflow-wrap: anywhere; }
+.tt-by { margin: 0; font-size: 0.92rem; opacity: 0.9; overflow-wrap: anywhere; }
+.tt-time { margin-left: 6px; font-variant-numeric: tabular-nums; opacity: 0.8; white-space: nowrap; }
+.tt-bar { height: 5px; margin-top: 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.18); overflow: hidden; max-width: 560px; }
+.tt-bar span { display: block; height: 100%; width: 0; border-radius: 999px; background: var(--acid); }
+.tt-note { margin: 10px 0 0; font-size: 0.9rem; }
+.tt-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+.tt-acts:empty { display: none; }
+.tt-tune { font-size: 1rem; padding: 14px 22px; }
+.tt-hint { flex-basis: 100%; margin: 0; font-size: 0.88rem; opacity: 0.9; }
+.tt-vote[aria-pressed="true"] { background: var(--acid); border-color: var(--acid); color: var(--on-metal); }
+.tt-tally { font-size: 0.9rem; opacity: 0.9; }
+.tt-volume { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; }
+.tt-volume input { width: 110px; accent-color: var(--acid); }
+.tt-decks, .tt-crowd { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 12px 14px; }
+.tt-person { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; width: 76px; text-align: center; }
+.tt-person .av { width: 46px; height: 46px; font-size: 0.95rem; }
+.tt-decks .tt-person .av { width: 58px; height: 58px; font-size: 1.15rem; }
+.tt-person-name { max-width: 100%; font-size: 0.78rem; line-height: 1.25; overflow-wrap: anywhere; }
+.tt-turn { color: var(--muted); font-size: 0.72rem; }
+.tt-person.is-playing .tt-turn { color: var(--magenta-text); font-weight: 700; }
+.tt-person.is-playing .av { box-shadow: 0 0 0 3px var(--card), 0 0 0 6px var(--magenta); }
+.tt-off { position: absolute; top: -6px; right: -2px; width: 24px; height: 24px; border-radius: 999px; font-size: 0.7rem; line-height: 1; padding: 0; }
+.tt-empty { color: var(--muted); font-size: 0.9rem; list-style: none; }
+/* an Awesome sets its giver's head bobbing */
+@keyframes tt-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+.tt-person.is-bobbing .av { animation: tt-bob 0.55s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .tt-person.is-bobbing .av { animation: none; box-shadow: 0 0 0 2px var(--acid); }
+}
+.tt-chat { display: flex; flex-direction: column; }
+.tt-msgs { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; height: 46vh; min-height: 220px;
+  max-height: 520px; overflow-y: auto; overscroll-behavior: contain; }
+.tt-msg { display: flex; align-items: flex-start; gap: 9px; }
+.tt-msg .av { flex: none; width: 30px; height: 30px; font-size: 0.66rem; margin-top: 2px; }
+.tt-msg > div { min-width: 0; }
+.tt-msg-head { margin: 0; font-size: 0.82rem; }
+.tt-msg-head small { color: var(--muted); font-size: 0.74rem; }
+.tt-msg-body { margin: 1px 0 0; font-size: 0.94rem; line-height: 1.4; overflow-wrap: anywhere; white-space: pre-wrap; }
+.tt-msg-del { border: 0; background: none; padding: 0 2px; color: var(--muted); font: inherit; font-size: 0.74rem; text-decoration: underline; cursor: pointer; }
+.tt-say { display: flex; gap: 8px; margin-top: 12px; }
+.tt-say .sub-input { min-width: 0; }
+.tt-tabs button { padding: 8px 14px; border: 1px solid var(--border); border-radius: 999px; background: var(--card); color: var(--ink);
+  font: 600 0.9rem/1 "Archivo", sans-serif; cursor: pointer; }
+.tt-tabs button[aria-pressed="true"] { background: var(--magenta); border-color: var(--magenta); color: #fff; }
+.tt-list { margin: 12px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; max-width: 720px; }
+.tt-list[hidden] { display: none; }
+.tt-item { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); }
+.tt-thumb { flex: none; width: 60px; height: 45px; border-radius: 6px; object-fit: cover; background: var(--wash); }
+.tt-thumb-none { display: flex; align-items: center; justify-content: center; color: var(--magenta-text); font-size: 1.2rem; }
+.tt-track { flex: 1 1 160px; display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.tt-track b { font-weight: 600; }
+.tt-track small { color: var(--muted); font-size: 0.82rem; }
+.tt-item-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .sub-admin h3 { margin: 4px 0 4px; font-size: 1.05rem; }
 
 @media (max-width: 620px) {

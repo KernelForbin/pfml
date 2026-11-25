@@ -762,6 +762,55 @@
     editAnnouncement: function (id, body, sendAt) {
       return client.rpc("edit_announcement", { p_id: id, p_body: body, p_send_at: sendAt || null }).then(must);
     },
+    // ---- the live room (README, The live room) ----
+    // "I'm here", and everything the room shows: the database's time, what's
+    // playing, the decks, the crowd, and the chat (the last 200 messages, or
+    // only those after `afterId`). Called every few seconds while the page
+    // is open; it also moves the room along when a track's time is up.
+    roomHere: function (afterId) {
+      return client.rpc("room_here", { p_after: afterId || null }).then(must);
+    },
+    roomLeave: function () {
+      return client.rpc("room_leave").then(must);
+    },
+    // Calls `onChange` whenever the room changes (Realtime, on the one row
+    // members can read), and `onStatus(true|false)` as the connection comes
+    // and goes: without it the page asks more often instead.
+    roomWatch: function (onChange, onStatus) {
+      var channel = client.channel("room")
+        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "room_state" }, function () { onChange(); })
+        .subscribe(function (status) { onStatus(status === "SUBSCRIBED"); });
+      return function () { client.removeChannel(channel); };
+    },
+    roomStepUp: function () { return client.rpc("room_step_up").then(must); },
+    roomStepDown: function () { return client.rpc("room_step_down").then(must); },
+    // Only the DJ playing, the admin or a commissioner (the database checks).
+    roomSkip: function () { return client.rpc("room_skip").then(must); },
+    roomRemoveDj: function (competitorId) {
+      return client.rpc("room_remove_dj", { p_competitor: competitorId }).then(must);
+    },
+    // 1 Awesome, -1 Lame, 0 takes it back.
+    roomVote: function (vote) { return client.rpc("room_vote", { p_vote: vote }).then(must); },
+    roomSetLength: function (playId, seconds) {
+      return client.rpc("room_set_length", { p_play: playId, p_seconds: seconds }).then(must);
+    },
+    roomSay: function (body) { return client.rpc("room_say", { p_body: body }).then(must); },
+    roomRemoveMessage: function (id) { return client.rpc("room_remove_message", { p_id: id }).then(must); },
+    roomRecent: function () {
+      return client.rpc("room_recent").then(must).then(function (rows) { return rows || []; });
+    },
+    // The caller's own tracks: the queue first, in order (queue_pos), then
+    // the rest of the library.
+    roomLibrary: function () {
+      return client.rpc("room_library").then(must).then(function (rows) { return rows || []; });
+    },
+    roomLibraryAdd: function (t, queue) {
+      return client.rpc("room_library_add", { p_platform: t.platform, p_track: t.track, p_title: t.title,
+        p_artist: t.artist || "", p_seconds: t.seconds || null, p_queue: !!queue }).then(must);
+    },
+    roomLibraryRemove: function (id) { return client.rpc("room_library_remove", { p_id: id }).then(must); },
+    // The queue as a whole, top first; every other track goes back to the library.
+    roomQueueSet: function (ids) { return client.rpc("room_queue_set", { p_ids: ids }).then(must); },
     me: function () { return currentUserId(); }
   };
 

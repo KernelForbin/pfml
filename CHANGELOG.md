@@ -1,5 +1,37 @@
 # Changelog
 
+## 2026-11-25: The live room
+
+- **Asked:** a page at /tt that works like turntable.fm, with one room:
+  members DJ a track live from YouTube or SoundCloud, build a library and
+  a queue, choose to step up, and take turns one track each in the order
+  they stepped up; initials for avatars, as the DJ and in the crowd; a live
+  chat whose history stays. Then: build my picks (members only, Awesome
+  and Lame, no limit on DJs, a played track to the bottom of its DJ's
+  queue), but **Lames never skip: only the DJ playing, the admin or a
+  commissioner can**.
+- **Changed:** `site/tt.html` and `tt.js`, Live room in the menu. The
+  database is the room (`2026-11-25_live_room.sql`): what's playing and
+  since when on its own clock, the rotation, who's here (a page says so
+  every 20 seconds; 90 seconds of silence is gone), votes, the chat, and
+  each member's library and queue. No timer runs it: whoever asks next
+  moves it along. Pages hear changes through Supabase Realtime on the one
+  row members can read, the site's first use of it, and fall back to
+  asking every 4 seconds. Each page keeps its YouTube or SoundCloud player
+  at the room's second, after a Tune in tap. A pasted link's length is
+  measured by the DJ's own player.
+- **Verified:** the migration and its rehearsal (14 checks) ran on a local
+  Postgres. On a stubbed copy with real YouTube and SoundCloud players:
+  the player sat 0.1 to 0.4 seconds from the room's clock on YouTube and
+  0.2 on SoundCloud, joining mid-track with the device clock two minutes
+  out; the next DJ's track started with no second tap, across a change of
+  service; a pause brought back "Tap to hear the room"; chat, votes,
+  skipping, the queue and a pasted link (read through YouTube's oEmbed)
+  worked with real clicks. No sideways scroll at 375px or 1280px;
+  contrast at least 5.29, light and dark. Not checked: screenshots (the
+  browser pane was hidden, so layout was measured, not seen), Realtime on
+  the live project, and any phone.
+
 ## 2026-11-25: Commissioner tools: pausing, the Now tab, sitting out and more
 
 - **Asked:** good commissioner tools, starting with a pause (now, at a

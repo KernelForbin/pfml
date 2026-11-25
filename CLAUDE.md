@@ -374,6 +374,23 @@ migration. Nudges and the other one-member messages go out through
 actions ask in the page (`PFMLAsk`), never `window.confirm` (a test holds
 it). Pause and sit-out only ever reach seasons set up on the site.
 
+## The live room
+
+`/tt` (`tt.html`, `tt.js`; asked 2026-11-25; README, The live room): one
+room where members take turns DJing a track each, live, from YouTube or
+SoundCloud, with a crowd, Awesome and Lame, and a chat that keeps its
+history. The user's calls: members only; no limit on DJs; a played track
+goes to the bottom of its DJ's queue; **Lames never skip, only the DJ
+playing, the admin or a commissioner can**; everyone is their initials
+for now. The database is the room and keeps its clock (`room_here()`);
+nothing runs it but the pages asking. It's the site's only use of
+Supabase Realtime (changes of the one `room_state` row), with asking
+every 4 seconds as the fallback, so it must keep working without it.
+Sound starts only from a tap (Tune in), and a phone needs the player to
+exist before that tap. Don't use the name or look of turntable.fm in the
+site. Try changes on a stubbed copy with real players: the stub has to
+follow the database's rules (turns, who may skip, 90 seconds of silence).
+
 ## The daily security check
 
 `.github/workflows/security-check.yml` runs `scripts/security_check.py`
@@ -450,6 +467,8 @@ verified" has to be both.
   and `-p test_live_commissioner_tools.py` whenever the commissioner
   tools' functions change (read-only; the full flow is
   `supabase/checks/2026-11-25_commissioner_tools_rehearsal.sql`),
+  and `-p test_live_room.py` whenever the live room's functions change
+  (read-only; the full flow is `supabase/checks/2026-11-25_live_room_rehearsal.sql`),
   and `-p test_live_voting.py` whenever the voting functions change
   (read-only; the full round is `supabase/checks/2026-10-25_site_voting_rehearsal.sql`,
   which only the user can run, in the SQL Editor).
