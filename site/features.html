@@ -128,9 +128,9 @@
 
   /* the mode switch: same look as the trend chart's view switch */
   .modes {
-    display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 26px;
+    display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 26px;
     border: 1px solid var(--border); border-radius: 999px; overflow: hidden;
-    background: var(--card); box-shadow: var(--shadow-sm); max-width: 520px;
+    background: var(--card); box-shadow: var(--shadow-sm); max-width: 700px;
   }
   .modes a {
     display: block; text-align: center; font-size: 0.84rem; font-weight: 500;
@@ -139,6 +139,12 @@
   .modes a:not(:last-child) { border-right: 1px solid var(--border); }
   .modes a:hover { color: var(--ink); background: var(--wash); }
   .modes a[aria-current="page"] { background: var(--magenta); color: #fff; }
+  /* four don't fit one row on a phone: two rows of two, every label whole */
+  @media (max-width: 620px) {
+    .modes { grid-template-columns: repeat(2, 1fr); border-radius: 14px; }
+    .modes a:nth-child(2n) { border-right: 0; }
+    .modes a:nth-child(-n+2) { border-bottom: 1px solid var(--border); }
+  }
   @media (max-width: 380px) { .modes a { font-size: 0.78rem; padding: 9px 4px; } }
 
   .mode { padding-top: 22px; }
@@ -270,6 +276,9 @@
     <aside class="whats-new" id="whatsNew" aria-labelledby="whats-new-title">
       <h2 id="whats-new-title">New in the last 30 days</h2>
       <ul>
+        <li data-shipped="2026-11-25"><time datetime="2026-11-25">Nov 25</time><span><b>For commissioners: the Commissioner page in tabs.</b> Now, Seasons, Announce, People, Log and More, so a phone isn&rsquo;t one long scroll, and every &ldquo;are you sure?&rdquo; asks right on the page. <a href="?mode=commish">For commissioners</a>, below, has the lot.</span></li>
+        <li data-shipped="2026-11-25"><time datetime="2026-11-25">Nov 25</time><span><b>For commissioners: the Now tab.</b> What needs a commissioner, and who the open round is still waiting on, with +1 hour, +1 day, Close now and Nudge, one tap each.</span></li>
+        <li data-shipped="2026-11-25"><time datetime="2026-11-25">Nov 25</time><span><b>For commissioners: pausing, and more.</b> Pause a season now, at a set time or after a round, until a set time or by hand. Also new: answers to sit-out asks, prompt rotation, a round&rsquo;s own number of days, announcements scheduled ahead or for one season and editable after, invite links from the page for the admin, a log of what the commissioners did, and a season setup that&rsquo;s kept as you go.</span></li>
         <li data-shipped="2026-11-25"><time datetime="2026-11-25">Nov 25</time><span><b>A season can pause.</b> The commissioners can pause a season played on the site, over the holidays say. A strip at the top of every page says until when. Nothing can be sent or voted on meanwhile, and every deadline moves later by the pause; drafts, comments and the voters&rsquo; lounge still work.</span></li>
         <li data-shipped="2026-11-25"><time datetime="2026-11-25">Nov 25</time><span><b>Sit a round out.</b> Can&rsquo;t make a round in a season played on the site? Ask on the Submit page. Once a commissioner says yes, nobody waits on your track and no reminders come for it.</span></li>
         <li data-shipped="2026-11-25"><time datetime="2026-11-25">Nov 25</time><span><b>Win, then write the prompt.</b> In a season with prompt rotation, a round&rsquo;s winner writes the prompt two rounds on, right on Home, and a commissioner approves it.</span></li>
@@ -313,12 +322,14 @@
       <li><b>Inbox:</b> see when someone reacts to or replies to your comments.</li>
       <li><b>Home:</b> the round that just finished for a day, the current round and the next one with their prompts, then the season in progress, a past winner from the vault, the past seasons, and the All-Time and season playlists that open in Spotify.</li>
       <li><b>Members only:</b> sign in with Google, using your personal invite link the first time.</li>
+      <li><b>For commissioners:</b> the tools the league&rsquo;s commissioners run it with, on the Commissioner page. Anyone can read what they are.</li>
     </ul>
     <p class="modes-lead">Tap a section below for the details.</p>
     <nav class="modes" aria-label="Part of the site">
       <a href="?mode=seasons" data-mode="seasons">Season pages</a>
       <a href="?mode=rounds" data-mode="rounds">Round pages</a>
       <a href="?mode=home" data-mode="home">Home, All-Time &amp; you</a>
+      <a href="?mode=commish" data-mode="commish">For commissioners</a>
     </nav>
   </section>
 
@@ -660,6 +671,96 @@
     </div>
   </section>
 
+  <!-- ============ FOR COMMISSIONERS ============ -->
+  <!-- The user's call (2026-11-25): commissioner features are listed here,
+       in their own tab, for anyone to read. Only commissioners can use them. -->
+  <section class="mode" id="mode-commish" data-mode="commish">
+    <h2>For commissioners</h2>
+    <p class="note">The league&rsquo;s commissioners run it from the Commissioner page: Commissioner, in the menu under their initials. The admin picks who&rsquo;s a commissioner, and is always one. Anyone can read what they can do; only they can do it. Nobody, commissioners and the admin included, can see who submitted which track.</p>
+    <div class="cards">
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-layers"/></svg></span><h3>The Commissioner page</h3></div>
+        <ul>
+          <li>Tabs: Now, Seasons, Announce, People (the admin&rsquo;s), Log and More. The page remembers the open tab, so a reload stays on it.</li>
+          <li>Anything that counts, like closing a round, pausing or deleting, asks &ldquo;are you sure?&rdquo; right on the page, under the button you tapped.</li>
+          <li>More holds the rounds played in Music League: opening one to collect tracks on the site, and renaming or redescribing an earlier one.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-focus"/></svg></span><h3>Now</h3></div>
+        <ul>
+          <li>Needs you: players asking to sit a round out (Yes or No), a prompt a round&rsquo;s winner has sent (edit it, then Approve), turns still waiting on a winner, a round opening within 3 days with no prompt, and DJs who haven&rsquo;t joined the site, so can&rsquo;t send a track. The admin also sees a closed round whose playlists aren&rsquo;t built yet.</li>
+          <li>Each season&rsquo;s open round: its deadline, how many are in (like 5/8), and who&rsquo;s still to send or vote, who&rsquo;s in, who&rsquo;s sitting out and who hasn&rsquo;t joined. Never which track is whose.</li>
+          <li>+1 hour and +1 day: more time for the open round, and everything after it in the season moves with it.</li>
+          <li>Close now: closes submissions, or voting, early.</li>
+          <li>Nudge: a notification to everyone the round is still waiting on, &ldquo;Still waiting on your track&rdquo; (or vote). Once every 6 hours a round at most; the button says when it can go again.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-history"/></svg></span><h3>Pausing a season</h3></div>
+        <ul>
+          <li>Pause a season played on the site now, at a set time, or once a chosen round finishes voting; until a set time, or until a commissioner resumes it. Add a note for everyone if you like.</li>
+          <li>While it&rsquo;s paused nobody can send, change or take out a track, or submit a ballot. Drafts, comments and the voters&rsquo; lounge still work, no reminders go out, and no round closes early.</li>
+          <li>The clock stops: the round that was open gets back the time it had left, and every deadline after it moves later by the pause, in whole days, so each keeps its time of day.</li>
+          <li>Starting and ending it post an announcement to the season&rsquo;s players, and members see a strip under the top bar the whole time. Change when it resumes, resume it early, or cancel one that hasn&rsquo;t started.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-list"/></svg></span><h3>Setting up a season</h3></div>
+        <ul>
+          <li>Five steps: Details, Songs + Votes, Timing, Players, Rounds. What you enter is kept on that phone or computer as you go, so a reload loses nothing: Seasons offers Pick up where you left off.</li>
+          <li>Songs + Votes: how many songs each player sends a round, the points each voter gives and the most on one song, downvotes, whether not voting costs a player their points, which services a round takes, and how repeats in a round are handled.</li>
+          <li>Timing: Steady (every deadline holds), Accelerated (submissions and voting close as soon as everyone&rsquo;s in) or Speedy (like Accelerated, and the rest of the season moves up by the time saved), with the days to submit and to vote.</li>
+          <li>Players: tick who&rsquo;s playing, each a DJ or a Spectator, and add someone new who never played in Music League.</li>
+          <li>Rounds: each with its name, prompt, who wrote it, and, if you like, a prompt and writer hidden from its Spectators until voting closes. Pick the first playlist&rsquo;s date and time and see the whole schedule before creating it.</li>
+          <li>Prompt rotation, a switch: a round&rsquo;s winner writes the prompt two rounds on.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-page"/></svg></span><h3>Running a season</h3></div>
+        <ul>
+          <li>Rounds open on their own, on schedule. Reorder or remove a round that hasn&rsquo;t opened, or add one at the end.</li>
+          <li>Edit a round: its name, prompt and who wrote it any time; its services, repeat rule, hiding and DJs and Spectators while it still takes tracks; and, before it opens, its own number of days to submit and to vote.</li>
+          <li>Change the season&rsquo;s settings and players. A change reaches the rounds that haven&rsquo;t closed or opened, as fits each setting.</li>
+          <li>Answer a player who asks to sit a round out, or set it for them. Once it&rsquo;s yes, nobody waits on them and they get no reminders for it.</li>
+          <li>Prompt rotation: the winner writes the prompt on Home and sends it; a commissioner edits it if need be and approves it, and it becomes the round&rsquo;s name and prompt, with the winner as its writer. Or drop the turn and write it yourself.</li>
+          <li>Hidden prompts: Claude scores the Spectators&rsquo; guesses when voting closes, and a commissioner can change a score on the round&rsquo;s results.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-bubble"/></svg></span><h3>Announcements</h3></div>
+        <ul>
+          <li>Post a message now or schedule it for later, up to 60 days ahead, to the whole league or to one season&rsquo;s players.</li>
+          <li>It shows on Home for a week and goes to the phone of everyone with notifications on.</li>
+          <li>Edit its words any time, and its time until it goes out. Take one down whenever.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-history"/></svg></span><h3>The log</h3></div>
+        <ul>
+          <li>What the commissioners have done, newest first, with who did it and when: pauses, deadlines moved, nudges, sit-out answers, prompts approved, rounds and seasons set up or changed, players and roles, announcements, commissioners chosen and invite links made.</li>
+          <li>Only commissioners can read it.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="icon"><svg><use href="#i-lock"/></svg></span><h3>Only the admin</h3></div>
+        <ul>
+          <li>Choose who&rsquo;s a commissioner, with a switch for each member.</li>
+          <li>League status: when the data was last published, and who taking part hasn&rsquo;t joined the site.</li>
+          <li>Invite links: make one for a player who hasn&rsquo;t joined, or show their unused one again, then Copy or Share it from the phone. Each works once, for that player.</li>
+          <li>Delete a round nobody really played: an empty one, or a test.</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
   <!-- ============ KEY ============ -->
   <section class="key" aria-labelledby="key-title">
     <h2 id="key-title">What the badges mean</h2>
@@ -732,9 +833,9 @@
 
   /* The mode switch. Without JavaScript every section shows, one after
      another; with it, one shows at a time and the URL says which
-     (?mode=seasons|rounds|home), so a link opens straight to it. */
+     (?mode=seasons|rounds|home|commish), so a link opens straight to it. */
   (function () {
-    var MODES = ["seasons", "rounds", "home"];
+    var MODES = ["seasons", "rounds", "home", "commish"];
     var DEFAULT = "seasons";
     document.documentElement.classList.add("js");
 

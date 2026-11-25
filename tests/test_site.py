@@ -1322,8 +1322,16 @@ class FeaturesPageWhatsNew(unittest.TestCase):
         self.assertRegex(css, r"\.feat-new\[hidden\]\s*\{\s*display:\s*none")
 
     def test_only_what_an_ordinary_member_sees(self):
-        # the page's scope rule: no admin powers
-        self.assertNotRegex(self.box, r"(?i)admin panel|league status|invite")
+        # the page's scope rule: no admin powers, except in a line marked
+        # For commissioners (the user's call, 2026-11-25: commissioner
+        # features are listed, in their own tab and marked lines)
+        lines = re.findall(r"<li data-shipped=.*?</li>", self.box, re.S)
+        self.assertTrue(lines)
+        for line in lines:
+            if "<b>For commissioners:" in line:
+                continue
+            self.assertNotRegex(line, r"(?i)admin panel|league status|invite", line)
+        self.assertNotRegex(self.box, r"(?i)admin panel|league status")
 
 
 class FeaturesPageTokens(unittest.TestCase):

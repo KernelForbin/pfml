@@ -23,7 +23,10 @@
   two rounds on, written on Home. Announcements can wait for a set time,
   go to one season, and be edited. The admin makes invite links on the
   page. An activity log records what commissioners do. The season setup
-  is kept on the device as it goes. Confirmations are in the page, not the
+  is kept on the device as it goes. The features page has a For
+  commissioners tab, for anyone to read, and What's new lists today's
+  commissioner changes in lines marked For commissioners (asked the same
+  day). Confirmations are in the page, not the
   browser's box. One migration, `2026-11-25_commissioner_tools.sql`, with a
   one-minute `pg_cron` timer; nudges and the new messages go out through
   `announcements_claim`, so `send-reminders` needs no redeploy.

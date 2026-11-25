@@ -257,6 +257,26 @@ class ThePages(unittest.TestCase):
         self.assertIn("return api().setSiteRoundDays(id, sd, vd);", js_body(seasons, "function onSubmit(ev) {"))
 
 
+class TheFeaturesPage(unittest.TestCase):
+    """Commissioner features are listed on the features page, in their own
+    tab, for anyone to read, and today's in What's new, marked as theirs
+    (the user's call, 2026-11-25)."""
+
+    def setUp(self):
+        self.page = read(SITE / "features.html")
+
+    def test_a_tab_of_their_own(self):
+        self.assertIn('<a href="?mode=commish" data-mode="commish">For commissioners</a>', self.page)
+        self.assertIn('<section class="mode" id="mode-commish" data-mode="commish">', self.page)
+        self.assertIn('var MODES = ["seasons", "rounds", "home", "commish"];', self.page)
+
+    def test_whats_new_marks_theirs(self):
+        box = self.page.split('id="whatsNew"', 1)[1].split("</aside>", 1)[0]
+        theirs = re.findall(r'<li data-shipped="(\d{4}-\d\d-\d\d)">.*?<b>For commissioners:', box)
+        self.assertGreaterEqual(len(theirs), 3)
+        self.assertEqual(set(theirs), {"2026-11-25"})
+
+
 class MembersSeeIt(unittest.TestCase):
     def test_the_pause_strip_on_every_page(self):
         account = read(SITE / "account.js")

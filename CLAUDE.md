@@ -220,6 +220,14 @@ work, data pipeline or backend changes, admin-only powers, or anything not
 shipped yet. The test: would a regular member notice if this disappeared?
 If not, it stays off.
 
+**For commissioners**, its own tab (`?mode=commish`), is the exception to
+"no admin-only powers" (the user's call, 2026-11-25): what commissioners,
+and the admin, can do on the Commissioner page, for anyone to read. A
+change to a commissioner feature updates that tab too. In New in the last
+30 days, a commissioner feature gets a line starting **For commissioners:**
+(a test holds that admin things appear only in such lines). Data pipeline
+and scripts stay off, as before.
+
 **New in the last 30 days**, the box at its top: a major new feature that
 members will notice also gets a line there, newest first, with
 `data-shipped` set to its CHANGELOG heading's date (a test checks the date
