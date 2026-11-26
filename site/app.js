@@ -101,13 +101,6 @@
     career.textContent = "All-Time";
     career.setAttribute("aria-current", String(activeKey === "career"));
     nav.appendChild(career);
-
-    // the live room (README, The live room), on every page (asked 2026-11-25)
-    var live = el("a", "season-tab season-tab-live");
-    live.href = "tt";
-    live.innerHTML = '<span class="live-dot" aria-hidden="true"></span>Listen Live';
-    live.setAttribute("aria-current", String(activeKey === "tt"));
-    nav.appendChild(live);
     syncScrollPadding();
   }
 

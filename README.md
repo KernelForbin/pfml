@@ -1232,14 +1232,7 @@ part's working).
 `career.html`, titled All-Time League Stats). The season button names the
 season being viewed, or the one in progress on any other page, and opens
 a list of every season, newest first (`seasonPicker` in `app.js`). All-Time
-also has a card on the Home page, under Past Seasons. Since 2026-11-25 a
-fourth pill, Listen Live, goes to the live room (`/tt`), with a pulsing dot
-(still for reduced motion). Four pills didn't fit one row on a phone
-(measured: 413px of pills for a 335px row at 375px wide, wrapping to a
-144px top bar), so under 480px and again under 400px the pills get tighter
-padding, a smaller font and smaller gaps. Measured after: one row, a 105px
-top bar, from 360px wide up (19px to spare at 360); a screen under about
-350px, like the first iPhone SE, gets two rows.
+also has a card on the Home page, under Past Seasons.
 
 **Account menu.** `account.js` adds two buttons to the right of the top bar
 on every members-only page once `auth.js` lets a member in: the inbox, and
@@ -2773,8 +2766,8 @@ bottom of its DJ's queue, initials for avatars, and **Lames never skip a
 track: only the DJ playing it, the admin or a commissioner can**. It's the
 mechanic, in PFML's own look; nothing of turntable.fm's name or artwork.
 
-**The page** (`tt.html`, `tt.js`; Listen Live in the top bar, on every
-member page, since 2026-11-25):
+**The page** (`tt.html`, `tt.js`; Live room in the menu under the
+initials):
 
 - **The stage:** the player, what's playing and who's playing it, a
   progress bar, Awesome and Lame (never on your own track), Skip for who

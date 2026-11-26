@@ -1,23 +1,17 @@
 # Changelog
 
-## 2026-11-25: Listen Live in the top bar; the repeats sign comes down
+## 2026-11-25: The repeats sign comes down
 
 - **Asked:** take the Repeat checker sign off the top of Home ("it was a
-  brief joke"), and add a Listen Live link to the top bar that goes to the
-  live room.
-- **Changed:** the marquee, its bulbs and its Bungee font are gone from
-  Home, `app.js` and `style.css`, and its tests with them. The top bar has
-  a fourth pill after All-Time, Listen Live, with a pulsing dot (still for
-  reduced motion), lit on the room's own page. The account menu's Live
-  room link, added earlier the same day, went: the top bar has it. Four
-  pills wrapped to two rows on a phone (a 144px sticky top bar), so the
-  pills are tighter under 480px and 400px wide.
-- **Verified:** tests hold the pill on every page's top bar, lit only on
-  /tt, the phone rules, and that nothing of the sign is left; 7 breaks in
-  a scratch clone, all caught. Measured in a browser on Home, All-Time and
-  the room: one row and a 105px top bar at 360, 375, 390 and 414px wide,
-  no label cut off and no sideways scroll; two rows under about 350px.
-  The pill reads at 6.46:1 lit and 14.48 or more unlit, light and dark.
+  brief joke"). A Listen Live link in the top bar was asked for too, built,
+  and then called off before it shipped: the live room stays as Live room
+  in the menu under the initials.
+- **Changed:** the marquee, its bulbs, its Bungee font and its tests are
+  gone from Home, `app.js` and `style.css`, and the features page no longer
+  mentions it. The Repeat checker itself stays, in the menu and on the
+  Submit page.
+- **Verified:** a test holds that nothing of the sign is left, and that the
+  room is in the menu and not the top bar; the suite passes.
 
 ## 2026-11-25: The live room
 

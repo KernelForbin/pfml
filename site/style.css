@@ -100,21 +100,6 @@ a:hover { color: var(--magenta-text); }
   box-shadow: 0 0 0 3px var(--wash);
 }
 .season-tab[aria-current="true"] .pip { background: var(--acid); box-shadow: 0 0 0 3px rgba(255,255,255,.3); }
-/* Listen Live, the live room's pill: a dot that pulses, still with reduced motion */
-.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--magenta); animation: live-pulse 1.6s ease-in-out infinite; }
-.season-tab[aria-current="true"] .live-dot { background: var(--acid); }
-@keyframes live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
-@media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
-/* four pills on one row on a phone (measured 2026-11-25: 413px of pills
-   for a 335px row at 375px wide, before; a 320px row at 360px) */
-@media (max-width: 480px) {
-  .seasons { gap: 5px; }
-  .season-tab { padding: 7px 8px; font-size: 0.8rem; gap: 5px; }
-}
-@media (max-width: 400px) {
-  .seasons { gap: 4px; }
-  .season-tab { padding: 7px 7px; font-size: 0.76rem; gap: 4px; }
-}
 
 /* Every season in one pill (app.js seasonPicker): opens a list, newest first. */
 .season-pick { position: relative; display: inline-flex; }
