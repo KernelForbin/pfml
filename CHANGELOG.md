@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-11-25: The live room's library keeps every track
+
+- **Asked:** a track moved from the library to the queue disappeared from
+  the library. The library should keep every track you save until you
+  delete it; taking a track out of the queue shouldn't touch the library;
+  and nothing should get into the queue that isn't in the library, so
+  adding to the library comes first.
+- **Changed:** the Library tab lists every saved track, A to Z, each marked
+  with its place in the queue if it has one, with Queue or Remove from
+  queue, and Delete (which asks once, on the button). The Queue tab's To
+  library is now Remove from queue. Add a track's results have one button,
+  Add to library; once a result is in the library it can be queued from
+  the same row. No database change: a queued track was always a library
+  track with a place, and the page had been hiding it from the Library tab.
+- **Verified:** tests hold each rule; each was broken in a scratch clone
+  and caught. Clicked through in a browser at 375px on a stubbed room:
+  add, queue, unqueue (still in the library), reorder, delete, and a
+  result already saved.
+
 ## 2026-11-25: The repeats sign comes down
 
 - **Asked:** take the Repeat checker sign off the top of Home ("it was a

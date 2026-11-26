@@ -505,19 +505,29 @@
       ? '<img class="tt-thumb" src="https://i.ytimg.com/vi/' + encodeURIComponent(t.track) + '/default.jpg" alt="" width="60" height="45" loading="lazy">'
       : '<span class="tt-thumb tt-thumb-none" aria-hidden="true">♫</span>';
   }
-  function trackText(t) {
+  // `place`: where it sits in the queue (1 is next), when it's there
+  function trackText(t, place) {
     return '<span class="tt-track"><b>' + esc(t.title) + "</b><small>" + (t.artist ? esc(t.artist) + " · " : "") +
-      (t.platform === "youtube" ? "YouTube" : "SoundCloud") + (t.seconds ? " · " + clock(t.seconds) : "") + "</small></span>";
+      (t.platform === "youtube" ? "YouTube" : "SoundCloud") + (t.seconds ? " · " + clock(t.seconds) : "") +
+      (place ? ' · <span class="tt-queued">' + (place === 1 ? "next in your queue" : "#" + place + " in your queue") + "</span>" : "") +
+      "</small></span>";
   }
 
+  // The library is every track you've saved, and only Delete takes one out.
+  // The queue is the ones from it you'll play, in order: queuing and
+  // unqueuing leave the library alone, and a track gets into the queue only
+  // from the library (the user's call, 2026-11-25). In the database a queued
+  // track is a library track with a place (queue_pos).
   function drawMine() {
     var queue = library.filter(function (t) { return t.queue_pos != null; });
-    var rest = library.filter(function (t) { return t.queue_pos == null; });
+    var all = library.slice().sort(function (a, b) {
+      return a.title.localeCompare(b.title, undefined, { sensitivity: "base" }) || a.artist.localeCompare(b.artist);
+    });
     Array.prototype.forEach.call($("ttTabs").querySelectorAll("button"), function (b) {
       var on = b.getAttribute("data-tab") === tab;
       b.setAttribute("aria-pressed", String(on));
       if (b.getAttribute("data-tab") === "queue") b.textContent = "Queue (" + queue.length + ")";
-      if (b.getAttribute("data-tab") === "library") b.textContent = "Library (" + rest.length + ")";
+      if (b.getAttribute("data-tab") === "library") b.textContent = "Library (" + all.length + ")";
     });
     $("ttQueue").hidden = tab !== "queue";
     $("ttLibrary").hidden = tab !== "library";
@@ -527,17 +537,26 @@
         '<button type="button" class="cm-icon" data-act="q-up" aria-label="Move ' + esc(t.title) + ' up"' + (i ? "" : " disabled") + ">↑</button>" +
         '<button type="button" class="cm-icon" data-act="q-down" aria-label="Move ' + esc(t.title) + ' down"' + (i < queue.length - 1 ? "" : " disabled") + ">↓</button>" +
         '<button type="button" class="sub-btn sub-btn-quiet sub-btn-small" data-act="q-top"' + (i ? "" : " disabled") + ">Top</button>" +
-        '<button type="button" class="sub-btn sub-btn-quiet sub-btn-small" data-act="q-out">To library</button></span></li>';
-    }).join("") : '<li class="tt-empty">Your queue is empty. Add a track, or queue one from your library.</li>';
-    $("ttLibrary").innerHTML = rest.length ? rest.map(function (t) {
-      return '<li class="tt-item" data-id="' + esc(t.id) + '">' + thumb(t) + trackText(t) + '<span class="tt-item-acts">' +
-        '<button type="button" class="sub-btn sub-btn-small" data-act="l-queue">Queue</button>' +
-        '<button type="button" class="sub-btn sub-btn-quiet sub-btn-small" data-act="l-del">Delete</button></span></li>';
-    }).join("") : '<li class="tt-empty">' + (queue.length ? "Everything you’ve saved is in your queue." : "Nothing saved yet.") + "</li>";
+        '<button type="button" class="sub-btn sub-btn-quiet sub-btn-small" data-act="unqueue">Remove from queue</button></span></li>';
+    }).join("") : '<li class="tt-empty">' + (all.length ? "Your queue is empty. Queue tracks from your library."
+                                                         : "Your queue is empty. Add a track to your library, then queue it from there.") + "</li>";
+    $("ttLibrary").innerHTML = all.length ? all.map(function (t) {
+      var place = t.queue_pos != null ? queue.indexOf(t) + 1 : 0;
+      return '<li class="tt-item" data-id="' + esc(t.id) + '">' + thumb(t) + trackText(t, place) + '<span class="tt-item-acts">' +
+        (place ? '<button type="button" class="sub-btn sub-btn-quiet sub-btn-small" data-act="unqueue">Remove from queue</button>'
+               : '<button type="button" class="sub-btn sub-btn-small" data-act="queue">Queue</button>') +
+        '<button type="button" class="sub-btn sub-btn-quiet sub-btn-small" data-act="delete">Delete</button></span></li>';
+    }).join("") : '<li class="tt-empty">Nothing saved yet. Add a track, or Save one from Recently played.</li>';
+    if (tab === "add") drawResults();
   }
 
   function queueIds() {
     return library.filter(function (t) { return t.queue_pos != null; }).map(function (t) { return t.id; });
+  }
+
+  // The library's own copy of a track, if it has one.
+  function saved(t) {
+    return library.filter(function (x) { return x.platform === t.platform && x.track === t.track; })[0] || null;
   }
 
   function onMine(ev) {
@@ -546,17 +565,30 @@
     var b = ev.target.closest("button[data-act]");
     if (!b) return;
     var act = b.getAttribute("data-act"), li = b.closest("[data-id], [data-i]");
-    if (act === "r-queue" || act === "r-lib") { addResult(+li.getAttribute("data-i"), act === "r-queue", b); return; }
-    var id = li.getAttribute("data-id"), ids = queueIds(), i = ids.indexOf(id), done;
+    if (act === "add") { addResult(+li.getAttribute("data-i"), b); return; }
+    var id = li.getAttribute("data-id");
+    // a search result already in the library acts on its library copy
+    if (!id && li.hasAttribute("data-i")) { var mine = saved(results[+li.getAttribute("data-i")]); id = mine && mine.id; }
+    if (!id) return;
+    var ids = queueIds(), i = ids.indexOf(id), done;
     if (act === "q-up" || act === "q-down") {
       var j = act === "q-up" ? i - 1 : i + 1;
       ids[i] = ids[j]; ids[j] = id;
       done = api().roomQueueSet(ids);
     } else if (act === "q-top") { ids.splice(i, 1); ids.unshift(id); done = api().roomQueueSet(ids); }
-    else if (act === "q-out") { ids.splice(i, 1); done = api().roomQueueSet(ids); }
-    else if (act === "l-queue") { ids.push(id); done = api().roomQueueSet(ids); }
-    else if (act === "l-del") done = api().roomLibraryRemove(id);
-    else return;
+    else if (act === "unqueue") { ids.splice(i, 1); done = api().roomQueueSet(ids); }
+    else if (act === "queue") { if (i === -1) ids.push(id); done = api().roomQueueSet(ids); }
+    else if (act === "delete") {
+      // asks once, on the button itself: Delete takes it out of the library
+      // for good, and out of the queue with it
+      if (b.getAttribute("data-armed") !== "1") {
+        b.setAttribute("data-armed", "1");
+        b.textContent = "Delete for good?";
+        setTimeout(function () { if (b.isConnected) { b.removeAttribute("data-armed"); b.textContent = "Delete"; } }, 4000);
+        return;
+      }
+      done = api().roomLibraryRemove(id);
+    } else return;
     b.disabled = true;
     mineMsg("");
     done.then(loadLibrary).catch(function (err) { b.disabled = false; mineMsg(errText(err)); });
@@ -590,12 +622,18 @@
     return { error: "The room plays YouTube and SoundCloud. Paste a link from one of them." };
   }
 
+  // A result goes into the library first; once it's there, it can be
+  // queued from the same row, as from the library.
   var results = [];
   function drawResults() {
     $("ttResults").innerHTML = results.map(function (t, i) {
-      return '<li class="tt-item" data-i="' + i + '">' + thumb(t) + trackText(t) + '<span class="tt-item-acts">' +
-        '<button type="button" class="sub-btn sub-btn-small" data-act="r-queue">Queue</button>' +
-        '<button type="button" class="sub-btn sub-btn-quiet sub-btn-small" data-act="r-lib">Library</button></span></li>';
+      var mine = saved(t);
+      return '<li class="tt-item" data-i="' + i + '">' + thumb(t) + trackText(mine || t, mine && mine.queue_pos != null ? queueIds().indexOf(mine.id) + 1 : 0) +
+        '<span class="tt-item-acts">' +
+        (!mine ? '<button type="button" class="sub-btn sub-btn-small" data-act="add">Add to library</button>'
+          : '<span class="tt-in">In your library</span>' + (mine.queue_pos != null ? ""
+            : '<button type="button" class="sub-btn sub-btn-quiet sub-btn-small" data-act="queue">Queue</button>')) +
+        "</span></li>";
     }).join("");
   }
 
@@ -632,12 +670,12 @@
     });
   }
 
-  function addResult(i, queue, b) {
+  function addResult(i, b) {
     var t = results[i];
     if (!t) return;
     b.disabled = true;
-    api().roomLibraryAdd(t, queue).then(function () {
-      mineMsg("“" + t.title + "” is in your " + (queue ? "queue." : "library."), true);
+    api().roomLibraryAdd(t, false).then(function () {
+      mineMsg("“" + t.title + "” is in your library.", true);
       return loadLibrary();
     }).catch(function (err) { b.disabled = false; mineMsg(errText(err)); });
   }

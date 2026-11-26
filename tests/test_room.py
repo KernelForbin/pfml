@@ -149,6 +149,26 @@ class ThePage(unittest.TestCase):
         # the room's page still has the top bar filled
         self.assertIn('page === "tt") {', js_body(read(SITE / "app.js"), "function boot() {"))
 
+    def test_the_library_keeps_every_track_and_the_queue_comes_from_it(self):
+        # the user's call (2026-11-25): only Delete takes a track out of the
+        # library, unqueuing leaves it there, and adding is to the library
+        draw = js_body(self.js, "function drawMine() {")
+        self.assertIn("var all = library.slice().sort(", draw)
+        self.assertIn('b.textContent = "Library (" + all.length + ")";', draw)
+        self.assertIn('$("ttLibrary").innerHTML = all.length ? all.map(', draw)
+        self.assertNotIn("queue_pos == null", draw)
+        self.assertNotIn("To library", self.js)
+        mine = js_body(self.js, "function onMine(ev) {")
+        self.assertIn('else if (act === "unqueue") { ids.splice(i, 1); done = api().roomQueueSet(ids); }', mine)
+        self.assertEqual(self.js.count("api().roomLibraryRemove("), 1)
+        # the first tap only asks; the second deletes
+        self.assertRegex(mine, r'if \(b\.getAttribute\("data-armed"\) !== "1"\) \{\n\s+b\.setAttribute\("data-armed", "1"\);\n'
+                               r'\s+b\.textContent = "Delete for good\?";\n.*?\n\s+return;\n\s+\}\n\s+done = api\(\)\.roomLibraryRemove\(id\);')
+        # every add is to the library only; queuing is a second step
+        self.assertEqual(re.findall(r"api\(\)\.roomLibraryAdd\([^)]*\)", self.js), ["api().roomLibraryAdd(t, false)", "api().roomLibraryAdd(t, false)"])
+        results = js_body(self.js, "function drawResults() {")
+        self.assertIn('(!mine ? \'<button type="button" class="sub-btn sub-btn-small" data-act="add">Add to library</button>\'', results)
+
     def test_the_repeats_sign_is_gone_from_home(self):
         # a brief joke (2026-11-22 to 2026-11-25), taken down with its font
         home, app, css = read(SITE / "index.html"), read(SITE / "app.js"), read(SITE / "style.css")

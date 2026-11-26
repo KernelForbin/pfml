@@ -2016,6 +2016,8 @@ main[data-tab="more"] [data-panel]:not([data-panel="more"]) { display: none; }
 .tt-track b { font-weight: 600; }
 .tt-track small { color: var(--muted); font-size: 0.82rem; }
 .tt-item-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.tt-queued { color: var(--magenta-text); font-weight: 600; }
+.tt-in { color: var(--muted); font-size: 0.85rem; }
 .sub-admin h3 { margin: 4px 0 4px; font-size: 1.05rem; }
 
 @media (max-width: 620px) {

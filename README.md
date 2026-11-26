@@ -2781,11 +2781,18 @@ initials):
 - **Chat:** the last 200 messages on coming in, 280 characters each, 20 a
   minute at most. Its writer or the admin can remove one; it's marked
   removed, never deleted.
-- **Your music:** Queue (what you'll play, top first: up, down, Top, To
-  library), Library, and Add a track: search YouTube (the same
-  `search-tracks` function as the Submit page), or paste a YouTube or
-  SoundCloud link (read through the service's oEmbed, like the Submit
-  page). A library holds 500 tracks.
+- **Your music:** Library, Queue and Add a track. The library is every
+  track you've saved, A to Z, and only Delete (which asks on the button,
+  once) takes one out. The queue is the ones from it you'll play, top
+  first (up, down, Top, Remove from queue). Queuing and unqueuing leave
+  the library alone, and a track gets into the queue only from the
+  library (the user's call, 2026-11-25: adding to the library comes
+  first). Add a track searches YouTube (the same `search-tracks` function
+  as the Submit page), or reads a pasted YouTube or SoundCloud link (the
+  service's oEmbed, like the Submit page), and adds it to the library; a
+  result already there can be queued from the same row. A library holds
+  500 tracks. In the database a queued track is a library track with a
+  place (`queue_pos`), so it never needed two copies.
 - **Recently played:** the last 20, with Save.
 
 **The database is the room** (`supabase/migrations/2026-11-25_live_room.sql`,
