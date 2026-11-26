@@ -2861,7 +2861,8 @@ skipping someone else's track, taking someone off the decks, or the admin
 removing someone else's message, goes in the activity log.
 
 **Not built:** more than one room, DJ points, avatars beyond initials, a
-notification when someone starts DJing, and Spotify (its player needs
+notification when someone starts DJing (Home shows it instead: Live now
+on Home, below), and Spotify (its player needs
 each listener signed in to Spotify, and plays previews on a phone).
 
 **Checked:**
@@ -2887,6 +2888,45 @@ each listener signed in to Spotify, and plays previews on a phone).
 - **Not checked:** how it looks (the browser pane was hidden that day, so
   layout was measured, not seen); Realtime on the live project, which
   needs a signed-in member; any phone; SoundCloud on an iPhone.
+
+### Live now on Home
+
+Asked 2026-11-26: while someone's DJing, the top of Home shows the room,
+just under the What's new button (which stays the first thing on Home,
+the call of 2026-10-24). One dark card, like the room's own stage, that
+links to `/tt`: what's playing (YouTube's thumbnail, or ♫ for
+SoundCloud), who's playing it, a progress bar on the database's clock,
+Awesome and Lame as counts, who's up next in turn order, and the crowd's
+initials (twelve, then "+N") with how many are there. Nothing playing:
+no card.
+
+**Looking isn't being there.** `room_here()` marks its caller present,
+so Home can't use it. `room_peek()`
+(`supabase/migrations/2026-11-26_room_peek.sql`) is read only: members
+only, `stable`, and it moves nothing along. Since nobody's page may have
+moved the room on lately, it leaves out what `room_advance` would clear:
+anyone silent for 90 seconds (off the decks and out of the crowd), a
+track whose time is up, and a room nobody's in at all. Its rehearsal is
+`supabase/checks/2026-11-26_room_peek_rehearsal.sql` (7 checks).
+
+**How often.** Home asks on load, then every 30 seconds while the page
+is in view, not at all while it's hidden, and again as soon as it's back.
+As the track's time runs out it asks again 5 seconds later, and once
+more 5 seconds after that if the next track hadn't started yet, so the
+card doesn't vanish for half a minute between tracks. No Realtime: the
+room's one channel stays the room page's.
+
+**Checked:** the SQL on the local Postgres (2026-11-26): the rehearsal
+passes, and nine breaks of `room_peek` (looking puts you in the room,
+looking moves it on, a finished track shows, an empty room shows, the
+gone stay on the decks or in the crowd, no vote count, non-members, a
+stranger) each made it fail. `tests/test_room.py` (LiveNowOnHome),
+break-checked. In a browser on a stubbed copy, at 375px and 800px, light
+and dark: no sideways scroll with a long title, a big crowd, SoundCloud,
+a track of unknown length, nobody next; no card for nothing playing or a
+missing function; a fresh look as a track ends; contrast at least 9 in
+dark. Not checked: the real database's answer, which waits on the
+migration.
 
 ## Deleting a round
 

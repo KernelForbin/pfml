@@ -770,6 +770,12 @@
     roomHere: function (afterId) {
       return client.rpc("room_here", { p_after: afterId || null }).then(must);
     },
+    // What Home shows of the room while someone's DJing (README, Live now on
+    // Home): what's playing, the decks and the crowd, or null. Looking
+    // doesn't put the reader in the room.
+    roomPeek: function () {
+      return client.rpc("room_peek").then(must);
+    },
     roomLeave: function () {
       return client.rpc("room_leave").then(must);
     },

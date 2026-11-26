@@ -35,6 +35,7 @@ CALLS = (
     ("room_library_add", {"p_platform": "youtube", "p_track": "aaaaaaaaaaa", "p_title": "x", "p_artist": "", "p_seconds": 1,
                           "p_queue": False}, "Only league members have a library."),
     ("room_queue_set", {"p_ids": []}, "Only league members have a queue."),
+    ("room_peek", {}, "Only league members can see the room."),
 )
 
 

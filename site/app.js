@@ -380,6 +380,111 @@
     }).catch(function (err) { console.error(err); });
   }
 
+  // Live now (README, Live now on Home): while someone's DJing in the live
+  // room, the top of Home shows what's playing, who's playing it, the decks
+  // and the crowd, and takes the reader in. It looks again every 30 seconds
+  // while the page is in view, and as the track ends; looking never puts the
+  // reader in the room. Nothing playing, or no database function yet: nothing.
+  var LIVE_LOOK_MS = 30000, LIVE_SOON_MS = 5000, LIVE_CROWD_SHOWN = 12;
+  var live = { st: null, offset: 0, names: null, look: null, tick: null, busy: false };
+
+  function liveClock(s) {
+    s = Math.max(0, Math.round(s));
+    return Math.floor(s / 60) + ":" + (s % 60 < 10 ? "0" : "") + (s % 60);
+  }
+
+  function liveLook() {
+    var box = $("liveBox");
+    if (!box || typeof PFML.api.roomPeek !== "function") return;
+    clearTimeout(live.look);
+    // one look at a time; it looks again when the page is back in view
+    if (document.hidden || live.busy) return;
+    live.busy = true;
+    var names = live.names || PFML.api.people().then(function (people) {
+      var byId = {};
+      Object.keys(people || {}).forEach(function (u) { byId[people[u].competitorId] = people[u].name; });
+      return byId;
+    });
+    live.names = names;
+    var soon = false;
+    Promise.all([PFML.api.roomPeek(), names]).then(function (res) {
+      var st = res[0];
+      var was = !!live.st;
+      live.st = st && st.play ? st : null;
+      // between tracks, the room's pages may not have started the next yet
+      soon = was && !live.st;
+      if (live.st) live.offset = Date.parse(st.now) - Date.now();
+      drawLive(res[1] || {});
+    }).catch(function (err) {
+      live.names = null;
+      live.st = null;
+      drawLive({});
+      console.error(err);
+    }).then(function () {
+      live.busy = false;
+      clearTimeout(live.look);
+      if (!document.hidden) live.look = setTimeout(liveLook, soon ? LIVE_SOON_MS : LIVE_LOOK_MS);
+    });
+  }
+
+  function drawLive(names) {
+    var box = $("liveBox"), st = live.st;
+    clearInterval(live.tick);
+    if (!st) { box.hidden = true; box.innerHTML = ""; return; }
+    var me = PFML.member ? PFML.member.competitorId : null;
+    function nameOf(id) { return (id === me ? "you" : names[id]) || "A member"; }
+    function upper(text) { return text.charAt(0).toUpperCase() + text.slice(1); }
+    var play = st.play, djs = st.djs || [], crowd = st.crowd || [];
+    var art = play.platform === "youtube"
+      ? '<img class="live-art" src="https://i.ytimg.com/vi/' + encodeURIComponent(play.track) + '/mqdefault.jpg" alt="" width="160" height="90">'
+      : '<span class="live-art live-art-none" aria-hidden="true">♫</span>';
+    // the decks in turn order from the one playing: who's on, and who's next
+    var at = djs.indexOf(play.dj), next = at === -1 ? djs : djs.slice(at + 1).concat(djs.slice(0, at));
+    var faces = crowd.slice(0, LIVE_CROWD_SHOWN).map(function (id) { return PFML.avatar(id, names[id] || "?"); }).join("");
+    box.innerHTML = '<a class="live-link" href="tt">' +
+      '<span class="live-kicker"><span class="live-pip" aria-hidden="true"></span>Live now in the room</span>' +
+      '<span class="live-track">' + art + '<span class="live-text">' +
+        "<b>" + esc(play.title) + "</b>" +
+        (play.artist ? '<span class="live-artist">' + esc(play.artist) + "</span>" : "") +
+        '<span class="live-dj">' + PFML.avatar(play.dj, names[play.dj] || "?") + "<span>Played by <b>" + esc(nameOf(play.dj)) + "</b></span></span>" +
+      "</span></span>" +
+      '<span class="live-bar" aria-hidden="true"><span id="liveBarFill"></span></span>' +
+      '<span class="live-facts"><span id="liveTime"></span>' +
+        "<span>Awesome <b>" + play.awesome + "</b> · Lame <b>" + play.lame + "</b></span></span>" +
+      '<span class="live-row"><span class="live-label">Up next</span>' +
+        (next.length ? esc(upper(next.map(nameOf).join(", "))) : "Nobody yet. Step up and DJ.") + "</span>" +
+      '<span class="live-row"><span class="live-label">The crowd</span><span class="live-faces">' + faces +
+        (crowd.length > LIVE_CROWD_SHOWN ? '<span class="live-more">+' + (crowd.length - LIVE_CROWD_SHOWN) + "</span>" : "") +
+        "</span>" + crowd.length + " here</span>" +
+      '<span class="live-go">Listen live →</span></a>';
+    box.hidden = false;
+    liveTick();
+    live.tick = setInterval(liveTick, 1000);
+  }
+
+  // the bar and the time, on the database's clock; as the track ends, look again
+  function liveTick() {
+    var st = live.st;
+    if (!st || !$("liveTime")) return;
+    var len = st.play.seconds, pos = Math.max(0, (Date.now() + live.offset - Date.parse(st.play.started_at)) / 1000);
+    if (len && pos >= len) {
+      clearInterval(live.tick);
+      clearTimeout(live.look);
+      live.look = setTimeout(liveLook, LIVE_SOON_MS);
+      return;
+    }
+    $("liveBarFill").style.width = (len ? Math.min(100, 100 * pos / len) : 0) + "%";
+    $("liveTime").textContent = len ? liveClock(pos) + " / " + liveClock(len) : liveClock(pos);
+  }
+
+  function initLive() {
+    if (!$("liveBox")) return;
+    liveLook();
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) { clearTimeout(live.look); clearInterval(live.tick); } else liveLook();
+    });
+  }
+
   // A round open for submissions on the site gets a banner on the home
   // page. Without the tables (a database the migration hasn't reached) it
   // just doesn't show.
@@ -615,7 +720,7 @@
   // The newest line in the features page's "New in the last 30 days" box (a test
   // keeps the two equal). The features page records the newest date it
   // showed in this browser; Home's button says New until that catches up.
-  var FEATURES_UPDATED = "2026-11-25";
+  var FEATURES_UPDATED = "2026-11-26";
   var FEATURES_SEEN_KEY = "pfml.featuresSeen";
 
   function renderFeaturesButton() {
@@ -674,6 +779,7 @@
   function initHome() {
     renderFeaturesButton();
     renderSubmitBanner();
+    initLive();
     renderAnnouncements();
     renderPromptTurns();
     if ($("promptTurnBox")) $("promptTurnBox").addEventListener("submit", onPromptTurn);

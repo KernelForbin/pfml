@@ -227,5 +227,82 @@ class ThePage(unittest.TestCase):
         self.assertIn("live room", read(SITE / "privacy.html"))
 
 
+PEEK_MIG = read(ROOT / "supabase" / "migrations" / "2026-11-26_room_peek.sql")
+PEEK_REHEARSAL = read(ROOT / "supabase" / "checks" / "2026-11-26_room_peek_rehearsal.sql")
+
+
+class LiveNowOnHome(unittest.TestCase):
+    """Live now (asked 2026-11-26; README, Live now on Home): while someone's
+    DJing, the top of Home shows the track, the DJ, the decks and the crowd.
+    The SQL ran on a local Postgres with its rehearsal, which caught nine
+    breaks of room_peek; these pin the rules in the text."""
+
+    def setUp(self):
+        self.sql = schema()
+        self.peek = function(self.sql, "room_peek")
+        self.app = read(SITE / "app.js")
+
+    def test_schema_has_the_migration(self):
+        self.assertIn(PEEK_MIG[PEEK_MIG.index("-- What Home shows"):], self.sql)
+
+    def test_members_only(self):
+        self.assertIn("revoke all on function public.room_peek() from public, anon;", PEEK_MIG)
+        self.assertIn("grant execute on function public.room_peek() to authenticated;", PEEK_MIG)
+        self.assertNotRegex(PEEK_MIG, r"grant [^;]* to anon")
+        self.assertIn("if not public.is_member() then\n    raise exception 'Only league members can see the room.';", self.peek)
+
+    def test_looking_changes_nothing(self):
+        # a Home visit never counts as being in the room, nor moves it on
+        self.assertIn("returns jsonb language plpgsql stable security definer", self.peek)
+        for word in ("room_touch", "room_advance", "room_bump", "room_start_next", "insert ", "update ", "delete "):
+            with self.subTest(word):
+                self.assertNotIn(word, self.peek)
+
+    def test_it_leaves_out_what_the_room_would_clear(self):
+        # anyone silent for 90 seconds (the decks, the crowd, and whether
+        # anyone's there at all), and a track whose time is up
+        self.assertEqual(self.peek.count("last_seen > now() - interval '90 seconds'"), 3)
+        self.assertIn("now() < pl.started_at + make_interval(secs => coalesce(pl.seconds, 600))", self.peek)
+        self.assertIn("if not found or not exists (select 1 from public.room_presence where last_seen > now() - interval '90 seconds') then\n"
+                      "    return null;", self.peek)
+
+    def test_the_rehearsal_counts_its_checks(self):
+        n = PEEK_REHEARSAL.count("checks := checks + 1;")
+        self.assertEqual(n, 7)
+        self.assertIn(f'"Rehearsal passed: {n} checks held. Nothing was kept."', PEEK_REHEARSAL)
+
+    def test_it_sits_at_the_top_of_home_under_whats_new(self):
+        main = read(SITE / "index.html").split("<main>", 1)[1]
+        after = main.split('<div class="shell home-top">', 1)[1].split("</div>", 1)[1]
+        self.assertTrue(after.lstrip().startswith(
+            '<section class="shell live-now" id="liveBox" aria-label="Live now in the room" hidden></section>'))
+        self.assertIn("initLive();", js_body(self.app, "function initHome() {"))
+        css = re.sub(r"/\*.*?\*/", "", read(SITE / "style.css"), flags=re.S)
+        self.assertRegex(css, r"\.live-now\[hidden\]\s*\{\s*display:\s*none")
+
+    def test_it_peeks_and_never_comes_in(self):
+        self.assertIn('client.rpc("room_peek")', read(SITE / "auth.js"))
+        look = js_body(self.app, "function liveLook() {")
+        self.assertIn("PFML.api.roomPeek()", look)
+        self.assertNotIn("roomHere", self.app)
+        self.assertNotIn("roomWatch", self.app)
+
+    def test_it_shows_the_track_the_dj_the_decks_and_the_crowd(self):
+        draw = js_body(self.app, "function drawLive(names) {")
+        for needle in ("esc(play.title)", "esc(play.artist)", "esc(nameOf(play.dj))", "esc(upper(next.map(nameOf).join(\", \")))",
+                       "crowd.length + \" here", "play.awesome", "play.lame", '<a class="live-link" href="tt">'):
+            with self.subTest(needle):
+                self.assertIn(needle, draw)
+        # nothing playing: it goes
+        self.assertIn('if (!st) { box.hidden = true; box.innerHTML = ""; return; }', draw)
+
+    def test_it_looks_again_only_while_in_view(self):
+        look = js_body(self.app, "function liveLook() {")
+        self.assertIn("if (document.hidden || live.busy) return;", look)
+        self.assertIn("var LIVE_LOOK_MS = 30000", self.app)
+        init = js_body(self.app, "function initLive() {")
+        self.assertIn('if (document.hidden) { clearTimeout(live.look); clearInterval(live.tick); } else liveLook();', init)
+
+
 if __name__ == "__main__":
     unittest.main()

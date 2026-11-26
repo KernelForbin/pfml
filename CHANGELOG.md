@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-11-26: Live now on Home
+
+- **Asked:** while someone's actively DJing in the live room, show it at
+  the top of Home: the current track, the crowd, the DJ and so on.
+- **Changed:** a dark Live now card under the What's new button, linking
+  to the room: the track with its thumbnail, who's playing it, a progress
+  bar, Awesome and Lame, who's up next, and the crowd. It shows only while
+  a track is playing with someone in the room, looks again every 30
+  seconds while Home is in view, and right after a track ends. A new
+  read-only database function, `room_peek()`, gives Home the room without
+  counting the reader as in it (`room_here()` would), and leaves out
+  anyone silent for 90 seconds, a finished track and an empty room, since
+  looking moves nothing along. Needs
+  `supabase/migrations/2026-11-26_room_peek.sql` run first.
+- **Verified:** the migration and its rehearsal (7 checks) on the local
+  Postgres, with nine SQL breaks each caught; the new tests break-checked
+  in a scratch clone (11 breaks, all caught); the card in a browser on a
+  stubbed copy at 375px and desktop, light and dark (README, Live now on
+  Home).
+
 ## 2026-11-25: The live room's library keeps every track
 
 - **Asked:** a track moved from the library to the queue disappeared from

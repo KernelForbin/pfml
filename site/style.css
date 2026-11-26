@@ -1605,6 +1605,45 @@ body.auth-checking::before {
   .sub-banner-link:hover .sub-banner-go { background: rgba(255, 255, 255, 0.24); }
 }
 
+/* Live now (app.js drawLive): the live room at the top of Home while
+   someone's DJing. Dark in both modes, like the room's own stage. */
+.live-now { padding-top: 14px; }
+.live-now[hidden] { display: none; }
+.live-link {
+  display: grid; gap: 10px; padding: 16px 18px; border-radius: var(--r);
+  background: var(--inverse); color: var(--on-inverse); text-decoration: none;
+  border: 1px solid rgba(204, 255, 61, 0.35);   /* an edge on a dark page too */
+  box-shadow: 0 18px 40px -22px rgba(22, 17, 26, .8), 0 2px 6px -2px rgba(22, 17, 26, .15);
+}
+.live-kicker { display: flex; align-items: center; gap: 8px; color: var(--acid); font: 700 0.74rem/1 "Archivo", sans-serif; text-transform: uppercase; letter-spacing: 0.08em; }
+.live-pip { width: 9px; height: 9px; border-radius: 50%; background: var(--acid); animation: live-pulse 1.6s ease-out infinite; }
+@keyframes live-pulse { 0% { box-shadow: 0 0 0 0 rgba(204, 255, 61, .55); } 100% { box-shadow: 0 0 0 9px rgba(204, 255, 61, 0); } }
+@media (prefers-reduced-motion: reduce) { .live-pip { animation: none; } }
+.live-track { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.live-art { flex: none; width: 128px; height: 72px; border-radius: 8px; object-fit: cover; background: rgba(255, 255, 255, 0.08); }
+.live-art-none { display: flex; align-items: center; justify-content: center; color: var(--acid); font-size: 1.6rem; }
+.live-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.live-text > b { font: 800 1.15rem/1.25 "Archivo", sans-serif; overflow-wrap: anywhere; }
+.live-artist { font-size: 0.92rem; opacity: 0.85; overflow-wrap: anywhere; }
+.live-dj { display: flex; align-items: center; gap: 7px; margin-top: 4px; font-size: 0.9rem; overflow-wrap: anywhere; }
+.live-dj .av, .live-faces .av { width: 26px; height: 26px; font-size: 0.62rem; }
+.live-bar { display: block; height: 5px; border-radius: 999px; background: rgba(255, 255, 255, 0.18); overflow: hidden; }
+.live-bar span { display: block; height: 100%; width: 0; border-radius: 999px; background: var(--acid); }
+.live-facts { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; font-size: 0.85rem; opacity: 0.9; font-variant-numeric: tabular-nums; }
+.live-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 0.9rem; overflow-wrap: anywhere; }
+.live-label { min-width: 74px; font: 700 0.7rem/1.2 "Archivo", sans-serif; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.75; }
+.live-faces { display: flex; flex-wrap: wrap; padding-left: 6px; }
+.live-faces .av { margin-left: -6px; box-shadow: 0 0 0 2px var(--inverse); }
+.live-more { margin-left: 4px; align-self: center; font-size: 0.8rem; opacity: 0.85; }
+.live-go { justify-self: start; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--acid); color: var(--acid); font-weight: 600; font-size: 0.92rem; }
+@media (max-width: 480px) {
+  .live-art { width: 96px; height: 54px; }
+}
+@media (hover: hover) {
+  .live-link:hover { color: var(--on-inverse); transform: translateY(-1px); }
+  .live-link:hover .live-go { background: rgba(204, 255, 61, 0.12); }
+}
+
 .sub-round-card { padding: 20px 22px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow-sm); }
 .sub-round-card h2 { margin: 2px 0 6px; font-size: 1.45rem; letter-spacing: -0.02em; }
 .sub-season { margin: 0; font: 700 0.76rem/1 "Archivo", sans-serif; text-transform: uppercase; letter-spacing: 0.08em; color: var(--deep); }

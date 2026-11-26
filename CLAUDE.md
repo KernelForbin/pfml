@@ -390,6 +390,9 @@ Sound starts only from a tap (Tune in), and a phone needs the player to
 exist before that tap. Don't use the name or look of turntable.fm in the
 site. Try changes on a stubbed copy with real players: the stub has to
 follow the database's rules (turns, who may skip, 90 seconds of silence).
+Home shows the room while a track plays (README, Live now on Home) through
+`room_peek()`, which is read only: a Home visit must never count as being
+in the room or move it along, so `room_here()` stays the room page's alone.
 
 ## The daily security check
 
