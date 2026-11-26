@@ -204,7 +204,8 @@ class Linking(unittest.TestCase):
         # moved from every footer to the initials menu (2026-10-25); the
         # sign-in card keeps its link, since a signed-out visitor has no menu
         build = js_function(read("account.js"), "function build(member)")
-        self.assertIn('<a class="acct-item" href="features">Site features</a>', build)
+        self.assertIn('<a class="acct-item acct-new-item" href="features">What&rsquo;s new on the site', build)
+        self.assertEqual(build.count('href="features"'), 1)
         for name in MEMBER_PAGES + ["privacy.html"]:
             footer = read(name).split("<footer", 1)[1].split("</footer>", 1)[0]
             self.assertNotIn('href="features"', footer, name)
@@ -1297,29 +1298,39 @@ class FeaturesPageWhatsNew(unittest.TestCase):
         self.assertIn("box.hidden = left === 0;", script)
         self.assertRegex(self.page, r"\.whats-new\[hidden\], \.whats-new li\[hidden\] \{ display: none; \}")
 
-    def test_the_home_button_knows_the_newest_line(self):
-        # forget to move FEATURES_UPDATED and Home stops saying New
+    def test_the_menu_knows_the_newest_line(self):
+        # forget to move FEATURES_UPDATED and the menu stops saying New
         newest = max(d for d, _, _, _ in self.items)
-        self.assertIn(f'var FEATURES_UPDATED = "{newest}";', read("app.js"))
+        self.assertIn(f'var FEATURES_UPDATED = "{newest}";', read("account.js"))
+        self.assertNotIn("FEATURES_UPDATED", read("app.js"))
 
-    def test_visiting_records_the_newest_line_the_home_button_checks(self):
+    def test_visiting_records_the_newest_line_the_menu_checks(self):
         script = self.page.split("/* What's new:", 1)[1].split("})();", 1)[0]
         self.assertIn('try { if (newest) localStorage.setItem("pfml.featuresSeen", newest); } catch (e)', script)
-        app = read("app.js")
-        self.assertIn('var FEATURES_SEEN_KEY = "pfml.featuresSeen";', app)
-        button = app.split("function renderFeaturesButton() {", 1)[1].split("\n  }\n", 1)[0]
-        self.assertIn("try { seen = localStorage.getItem(FEATURES_SEEN_KEY) || \"\"; } catch (e) { return; }", button)
-        self.assertIn("var unseen = recent && seen < FEATURES_UPDATED;", button)
-        self.assertIn('$("featuresNew").hidden = !unseen;', button)
-        self.assertIn("renderFeaturesButton();", app.split("function initHome() {", 1)[1].split("\n  }\n", 1)[0])
+        account = read("account.js")
+        self.assertIn('var FEATURES_SEEN_KEY = "pfml.featuresSeen";', account)
+        unseen = js_function(account, "function featuresUnseen()")
+        self.assertIn('try { seen = localStorage.getItem(FEATURES_SEEN_KEY) || ""; } catch (e) { return false; }', unseen)
+        self.assertIn("return recent && seen < FEATURES_UPDATED;", unseen)
 
-    def test_the_button_is_the_first_thing_on_home(self):
+    def test_whats_new_is_at_the_top_of_the_initials_menu_only(self):
+        # moved off Home into the menu (the user's call, 2026-11-26): first
+        # under the menu's head, with New, and a dot on the initials
+        build = js_function(read("account.js"), "function build(member)")
+        self.assertIn("var unseen = featuresUnseen();", build)
+        after_head = build.split('</small></span></div>" +', 1)[1]
+        self.assertTrue(after_head.lstrip().startswith(
+            """'<a class="acct-item acct-new-item" href="features">What&rsquo;s new on the site' +"""))
+        self.assertIn("""'<span class="feat-new" id="acctNewBadge"' + (unseen ? "" : " hidden") + ">New</span></a>" +""", build)
+        self.assertIn("""'<span class="acct-dot" id="acctNewDot"' + (unseen ? "" : " hidden") + "></span></button>" +""", build)
         home = read("index.html")
-        main = home.split("<main>", 1)[1]
-        self.assertTrue(main.lstrip().startswith('<div class="shell home-top">'))
-        self.assertIn('<a class="feat-btn" id="featuresBtn" href="features">', main)
+        for needle in ("featuresBtn", "featuresNew", 'href="features"'):
+            self.assertNotIn(needle, home)
+        self.assertNotIn("renderFeaturesButton", read("app.js"))
         css = re.sub(r"/\*.*?\*/", "", read("style.css"), flags=re.S)
         self.assertRegex(css, r"\.feat-new\[hidden\]\s*\{\s*display:\s*none")
+        self.assertRegex(css, r"\.acct-dot\[hidden\]\s*\{\s*display:\s*none")
+        self.assertNotIn(".feat-btn", css)
 
     def test_only_what_an_ordinary_member_sees(self):
         # the page's scope rule: no admin powers, except in a line marked

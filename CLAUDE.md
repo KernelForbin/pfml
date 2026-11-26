@@ -207,8 +207,9 @@ See README, Translations.
 ## Keep the features page true
 
 `site/features.html` (pfml.fun/features) is a plain-language tour of what
-members can see and do, linked from Site features in the initials menu, Home's
-What's new button and the sign-in card (not the footers, since 2026-10-25).
+members can see and do, linked from What's new on the site at the top of the
+initials menu (Home's button moved there 2026-11-26) and the sign-in card
+(not the footers, since 2026-10-25).
 **Any change that adds, removes or visibly alters a feature updates that
 page in the same change.** Every sentence on it has to be true of the code
 as it ships.
@@ -233,8 +234,9 @@ members will notice also gets a line there, newest first, with
 `data-shipped` set to its CHANGELOG heading's date (a test checks the date
 is a real heading). Lines drop off on their own after 30 days, by the
 reader's clock. Don't prune them by hand, and leave out fixes and small
-tweaks. Move `FEATURES_UPDATED` in `app.js` to the newest line's date too:
-that's what puts New on Home's What's new button (a test checks they match).
+tweaks. Move `FEATURES_UPDATED` in `account.js` to the newest line's date too:
+that's what puts New on What's new in the initials menu, and a dot on the
+initials (a test checks they match).
 
 **How it's built**, the box at its bottom, is the one exception to the
 scope rule (the user's call, 2026-10-25): built with Claude Opus 5.5, and

@@ -10,8 +10,10 @@
      opened the inbox, which is stored in Supabase (members.inbox_seen_at,
      set by mark_inbox_seen()) so it's the same on every device.
    - Your initials, in the same coloured circle as on the round pages,
-     opening a menu: Repeat checker, My profile, Site features, Add to
-     home screen, Dark mode and Sign out. (Submit a track left it
+     opening a menu: What's new on the site (at the top, with New, and a
+     dot on the initials, until the features page has been seen since its
+     newest line), Repeat checker, My profile, Live room, Add to home
+     screen, Dark mode and Sign out. (Submit a track left it
      2026-11-02; Home's banner leads to the Submit page.)
 
    Round and track names for inbox items come from data/lookup.json (a few
@@ -370,6 +372,23 @@
     if (sw) sw.setAttribute("aria-checked", String(on));
   }
 
+  /* ---- what's new ---- */
+
+  // What's new, at the top of the initials menu (moved from Home's button,
+  // 2026-11-26): the newest line in the features page's "New in the last
+  // 30 days" box (a test keeps the two equal). The features page records
+  // the newest date it showed in this browser; the menu says New, with a
+  // dot on the initials, until that catches up.
+  var FEATURES_UPDATED = "2026-11-26";
+  var FEATURES_SEEN_KEY = "pfml.featuresSeen";
+
+  function featuresUnseen() {
+    var seen = null;
+    try { seen = localStorage.getItem(FEATURES_SEEN_KEY) || ""; } catch (e) { return false; }   // can't remember: don't nag
+    var recent = Date.parse(FEATURES_UPDATED + "T12:00:00Z") >= Date.now() - 30 * 24 * 60 * 60 * 1000;
+    return recent && seen < FEATURES_UPDATED;
+  }
+
   /* ---- add to home screen ---- */
 
   // A "Get the app" button in the top bar on phones, until it's been tapped
@@ -605,6 +624,7 @@
     var bar = document.querySelector(".topbar-inner");
     if (!bar || bar.querySelector(".acct")) return;
     state.member = member;
+    var unseen = featuresUnseen();
     var box = document.createElement("div");
     box.className = "acct";
     box.innerHTML =
@@ -614,14 +634,16 @@
       '<button type="button" class="acct-btn acct-inbox-btn" id="acctInboxBtn" aria-expanded="false" aria-controls="acctInbox" aria-label="Inbox">' +
         INBOX_ICON + '<span class="acct-badge" id="acctBadge" hidden></span></button>' +
       '<button type="button" class="acct-btn acct-me-btn" id="acctMeBtn" aria-expanded="false" aria-controls="acctMenu" ' +
-        'aria-label="Account menu for ' + esc(member.name) + '" title="' + esc(member.name) + '">' + avatar(member.competitorId, member.name) + "</button>" +
+        'aria-label="Account menu for ' + esc(member.name) + (unseen ? ", new on the site" : "") + '" title="' + esc(member.name) + '">' +
+        avatar(member.competitorId, member.name) + '<span class="acct-dot" id="acctNewDot"' + (unseen ? "" : " hidden") + "></span></button>" +
       '<div class="acct-pop acct-menu" id="acctMenu" hidden>' +
         '<div class="acct-menu-head">' + avatar(member.competitorId, member.name) +
           '<span class="acct-menu-who"><b>' + esc(member.name) + "</b><small>Signed in</small></span></div>" +
+        '<a class="acct-item acct-new-item" href="features">What&rsquo;s new on the site' +
+          '<span class="feat-new" id="acctNewBadge"' + (unseen ? "" : " hidden") + ">New</span></a>" +
         '<a class="acct-item" href="repeats">Repeat checker</a>' +
         '<a class="acct-item" href="profile">My profile</a>' +
         '<a class="acct-item" href="tt">Live room</a>' +
-        '<a class="acct-item" href="features">Site features</a>' +
         '<a class="acct-item" href="commissioner" id="acctCommish" hidden>Commissioner</a>' +
         // the admin's way into the round demo from the installed app,
         // which has no address bar (README, Round demo)

@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-11-26 (follow-up 2): What's new moves to the initials menu
+
+- **Asked:** move What's new off Home to the initials menu only, at the
+  top of it, with the same New.
+- **Changed:** Home's What's new button is gone, so Live now's pill is the
+  first thing on Home. The menu opens with "What's new on the site",
+  marked New on the same rule as before (the features page's newest line
+  hasn't been seen in this browser, and is from the last 30 days); the
+  initials get a small dot then too, since New inside a closed menu would
+  go unseen. That item replaces Site features, which went to the same
+  page. `FEATURES_UPDATED` moved from `app.js` to `account.js`, since the
+  menu is on every page.
+- **Verified:** tests for the menu item, its New and dot, and that Home
+  has no link left, each broken in a scratch clone and caught; in a
+  browser on a stubbed copy at 375px, light and dark, with real clicks.
+
 ## 2026-11-26 (follow-up): Live now is a pill, and says when the room is quiet
 
 - **Asked:** make Live now a collapsed pill that expands, small when

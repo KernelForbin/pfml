@@ -915,6 +915,11 @@ body.auth-checking::before {
 }
 /* These set their own display, which beats the hidden attribute. */
 .acct-badge[hidden], .acct-pop[hidden] { display: none; }
+/* something new on the features page: a dot on the initials, and New on
+   What's new at the top of the menu (account.js featuresUnseen) */
+.acct-dot { position: absolute; top: 0; right: 0; width: 11px; height: 11px; border-radius: 50%; background: var(--magenta); border: 2px solid var(--paper); }
+.acct-dot[hidden] { display: none; }
+.acct-new-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-weight: 600; white-space: nowrap; }
 .acct-pop {
   position: absolute; z-index: 50; top: calc(100% + 10px); right: 0;
   background: var(--card); border: 1px solid var(--border); border-radius: var(--r-sm);
@@ -1570,18 +1575,12 @@ body.auth-checking::before {
 
 /* ---------- submitting on the site (/submit) ---------- */
 
-/* Home's What's new button (app.js renderFeaturesButton) */
-/* the What's new button, and Live now beside it when there's room */
+/* the top of Home: Live now's pill, and its card when opened */
 .home-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding-top: 18px; }
 .home-top + .sub-banner { padding-top: 12px; }
-.feat-btn {
-  display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px;
-  background: var(--card); border: 1px solid var(--border); box-shadow: var(--shadow-sm);
-  color: var(--ink); text-decoration: none; font-weight: 600; font-size: 0.92rem;
-}
+/* New, on What's new in the initials menu (account.js) */
 .feat-new { padding: 2px 8px; border-radius: 999px; background: var(--magenta); color: #fff; font: 700 0.7rem/1.4 "Archivo", sans-serif; text-transform: uppercase; letter-spacing: 0.06em; }
 .feat-new[hidden] { display: none; }
-@media (hover: hover) { .feat-btn:hover { color: var(--magenta-text); box-shadow: var(--shadow-md); } }
 
 .sub-banner { padding-top: 22px; }
 

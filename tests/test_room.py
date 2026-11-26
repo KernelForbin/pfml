@@ -271,13 +271,12 @@ class LiveNowOnHome(unittest.TestCase):
         self.assertEqual(n, 7)
         self.assertIn(f'"Rehearsal passed: {n} checks held. Nothing was kept."', PEEK_REHEARSAL)
 
-    def test_it_sits_beside_whats_new(self):
-        # the user's call (2026-11-26): a small pill, not a card, until opened;
-        # What's new stays the first thing on Home
+    def test_it_is_the_first_thing_on_home(self):
+        # the user's calls (2026-11-26): a small pill, not a card, until
+        # opened; What's new left Home for the initials menu
         main = read(SITE / "index.html").split("<main>", 1)[1]
-        top = main.split('<div class="shell home-top">', 1)[1].split("\n  </div>", 1)[0]
-        self.assertRegex(top, r'^\s*<a class="feat-btn" id="featuresBtn" href="features">.*</a>\s*'
-                              r'<div class="live-now" id="liveBox" hidden></div>\s*$')
+        self.assertTrue(main.lstrip().startswith(
+            '<div class="shell home-top">\n    <div class="live-now" id="liveBox" hidden></div>\n  </div>'))
         self.assertIn("initLive();", js_body(self.app, "function initHome() {"))
         css = re.sub(r"/\*.*?\*/", "", read(SITE / "style.css"), flags=re.S)
         self.assertRegex(css, r"\.live-now\[hidden\], \.live-card\[hidden\]\s*\{\s*display:\s*none")

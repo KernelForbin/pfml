@@ -70,9 +70,10 @@ site/                    everything GitHub Pages serves
                          Opens with "New in the last 30 days": each item dated
                          by its CHANGELOG entry, and an inline script hides
                          items older than 30 days, then the box itself.
-                         Home's What's new button links here and says New
+                         What's new at the top of the initials menu links
+                         here and says New, with a dot on the initials,
                          until this browser has opened the page since the
-                         newest line (FEATURES_UPDATED in app.js; the page
+                         newest line (FEATURES_UPDATED in account.js; the page
                          stores pfml.featuresSeen in localStorage). Ends
                          with "How it's built", numbers counted at every
                          deploy (Build stats, below)
@@ -284,8 +285,8 @@ The privacy page ("Privacy and Security") is linked from every page's
 footer and from the sign-in card itself (`showGate` in `auth.js`), since a
 signed-out visitor sees only that card; the footers are hidden until
 sign-in. Its own footer links back to the site. The features page is
-linked from Site features in the initials menu and Home's What's new
-button, and from the sign-in card, since a signed-out visitor has no menu;
+linked from What's new on the site, at the top of the initials menu
+(Home's button moved there on 2026-11-26), and from the sign-in card, since a signed-out visitor has no menu;
 it left the footers on 2026-10-25.
 
 ### Security check
@@ -2891,10 +2892,10 @@ each listener signed in to Spotify, and plays previews on a phone).
 
 ### Live now on Home
 
-Asked 2026-11-26, and made small the same day: a pill beside the What's
-new button (which stays the first thing on Home, the call of 2026-10-24),
-on the same row when there's room. The user's calls: collapsed, small,
-expandable, and saying so when nothing's on.
+Asked 2026-11-26, and made small the same day: a pill, the first thing
+on Home (What's new moved to the initials menu the same day). The
+user's calls: collapsed, small, expandable, and saying so when
+nothing's on.
 
 - **Playing:** a dark pill with a pulsing lime dot, "Live now: <track> ·
   <DJ>", cut short with an ellipsis rather than wrapping. A tap opens the
@@ -2934,7 +2935,8 @@ and dark: no sideways scroll with a long title, a big crowd, SoundCloud,
 a track of unknown length, nobody next; no card for nothing playing or a
 missing function; a fresh look as a track ends; contrast at least 9 in
 dark. The pill, the same day: one 37px line at 375px and 1280px, a long
-title cut short at 440px and still beside What's new on a wide screen;
+title cut short at 440px (beside What's new on a wide screen, until
+that moved to the menu);
 opening it with a real click leaves the pill where it was and puts the
 card on its own line; open or closed survives a reload; the quiet
 pill's text is at least 6.76 against its background in dark. Not

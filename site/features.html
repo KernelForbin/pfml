@@ -522,7 +522,6 @@
           <li>The season in progress has its own card on Home, under the round's prompt: the round underway, the last one finished, and the top three, with a shared place marked like T2.</li>
           <li>Under Past Seasons, a card for every other season, with All-Time beside them: rounds, tracks, players and who won.</li>
           <li>If there's a tie for the win, the card names everyone who shares it.</li>
-          <li>A What's new on the site button at the top of Home opens this page, and says New when something has been added since you last looked here, on that phone or computer.</li>
           <li>The top of Home says where the league is: the current round, like Season 3 &middot; Round 10, with its prompt in full, a link to its reading when it has one, and a Submit on Music League button that opens the league there; and below it the next round, with its prompt once it&rsquo;s known, or Waiting for its prompt.</li>
           <li>When a round&rsquo;s results come in, it sits above them for a day as Just finished, with its top three tracks and a link to the full results, and every round moves along: the next round becomes the current one, and the one after appears as next. After the day it&rsquo;s on the season&rsquo;s page.</li>
           <li>From the vault: a past round's winner, picked at random each time you open Home, with the submitter's note and a comment from whoever backed it most.</li>
@@ -622,7 +621,7 @@
         <div class="card-head"><span class="icon"><svg><use href="#i-disc"/></svg></span><h3>The live room</h3></div>
         <ul>
           <li>One room for the whole league, at pfml.fun/tt, or Live room in the menu under your initials. Whoever&rsquo;s there hears the same track at the same moment.</li>
-          <li>At the top of Home, beside What&rsquo;s new, a small pill says what&rsquo;s playing in the room and who&rsquo;s DJing it, or that nothing&rsquo;s playing now. Tap it while a track plays to see how far in it is, the votes so far, who&rsquo;s up next and who&rsquo;s in the crowd; it stays open or closed as you left it. Looking from Home doesn&rsquo;t put you in the room.</li>
+          <li>At the top of Home, a small pill says what&rsquo;s playing in the room and who&rsquo;s DJing it, or that nothing&rsquo;s playing now. Tap it while a track plays to see how far in it is, the votes so far, who&rsquo;s up next and who&rsquo;s in the crowd; it stays open or closed as you left it. Looking from Home doesn&rsquo;t put you in the room.</li>
           <li>Tap Tune in to hear it: a browser starts sound only after a tap. The track joins at the second the room is at, and Volume and Tune out sit beside it.</li>
           <li>Your music: search YouTube, or paste a YouTube or SoundCloud link, and add the track to your library. Your library keeps every track you save until you delete it. Queue tracks from it: your queue is what you&rsquo;ll play, top first. Move them up, down or to the top, or take one out of the queue; it stays in your library.</li>
           <li>Step up to DJ once your queue has a track. DJs take turns in the order they stepped up, one track each. The track you play goes to the bottom of your queue. Step down whenever you like; a track of yours that&rsquo;s playing plays on.</li>
@@ -684,7 +683,8 @@
           <li>The site is for league members only. You sign in with Google.</li>
           <li>The first time, use the personal invite link from the league organizer. It connects your Google account to your player, once.</li>
           <li>Google asks which account to use every time you sign in. Picked the wrong one? The card that says it isn't linked has Use a different Google account, which takes you straight back to the choice.</li>
-          <li>Your initials sit at the top right. Tap them for Repeat checker, My profile, Site features (this page), Add to home screen, Dark mode and Sign out.</li>
+          <li>Your initials sit at the top right. Tap them for What&rsquo;s new on the site (this page), Repeat checker, My profile, Live room, Add to home screen, Dark mode and Sign out.</li>
+          <li>When something has been added here since you last looked, on that phone or computer, your initials get a dot and What&rsquo;s new says New.</li>
         </ul>
       </article>
     </div>
@@ -842,8 +842,8 @@
       if (!li.hidden) left += 1;
     });
     box.hidden = left === 0;
-    // the Home page's What's new button says New until this browser has
-    // seen the newest line here (app.js, FEATURES_SEEN_KEY)
+    // What's new in the initials menu says New until this browser has
+    // seen the newest line here (account.js, FEATURES_SEEN_KEY)
     var newest = "";
     box.querySelectorAll("li[data-shipped]").forEach(function (li) {
       if (li.getAttribute("data-shipped") > newest) newest = li.getAttribute("data-shipped");
