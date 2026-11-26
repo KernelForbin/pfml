@@ -380,13 +380,15 @@
     }).catch(function (err) { console.error(err); });
   }
 
-  // Live now (README, Live now on Home): while someone's DJing in the live
-  // room, the top of Home shows what's playing, who's playing it, the decks
-  // and the crowd, and takes the reader in. It looks again every 30 seconds
-  // while the page is in view, and as the track ends; looking never puts the
-  // reader in the room. Nothing playing, or no database function yet: nothing.
+  // Live now (README, Live now on Home): a small pill beside What's new.
+  // While someone's DJing it says what's playing and who's playing it, and
+  // opens into a card with the decks and the crowd; otherwise it says the
+  // room is quiet and links there. It looks again every 30 seconds while
+  // the page is in view, and as the track ends; looking never puts the
+  // reader in the room. No database function, or no answer: no pill.
   var LIVE_LOOK_MS = 30000, LIVE_SOON_MS = 5000, LIVE_CROWD_SHOWN = 12;
-  var live = { st: null, offset: 0, names: null, look: null, tick: null, busy: false };
+  var LIVE_OPEN_KEY = "pfml.liveOpen";
+  var live = { st: null, offset: 0, names: null, look: null, tick: null, busy: false, open: false };
 
   function liveClock(s) {
     s = Math.max(0, Math.round(s));
@@ -414,11 +416,11 @@
       // between tracks, the room's pages may not have started the next yet
       soon = was && !live.st;
       if (live.st) live.offset = Date.parse(st.now) - Date.now();
-      drawLive(res[1] || {});
+      drawLive(res[1] || {}, false);
     }).catch(function (err) {
       live.names = null;
       live.st = null;
-      drawLive({});
+      drawLive({}, true);
       console.error(err);
     }).then(function () {
       live.busy = false;
@@ -427,10 +429,17 @@
     });
   }
 
-  function drawLive(names) {
+  function drawLive(names, failed) {
     var box = $("liveBox"), st = live.st;
     clearInterval(live.tick);
-    if (!st) { box.hidden = true; box.innerHTML = ""; return; }
+    if (failed) { box.hidden = true; box.innerHTML = ""; return; }
+    if (!st) {
+      // the quiet room: one line, into the room
+      box.innerHTML = '<a class="live-pill is-idle" href="tt"><span class="live-pip is-off" aria-hidden="true"></span>' +
+        '<span class="live-pill-what"><b>Live room:</b> nothing playing now</span><span class="live-chev" aria-hidden="true">→</span></a>';
+      box.hidden = false;
+      return;
+    }
     var me = PFML.member ? PFML.member.competitorId : null;
     function nameOf(id) { return (id === me ? "you" : names[id]) || "A member"; }
     function upper(text) { return text.charAt(0).toUpperCase() + text.slice(1); }
@@ -441,7 +450,11 @@
     // the decks in turn order from the one playing: who's on, and who's next
     var at = djs.indexOf(play.dj), next = at === -1 ? djs : djs.slice(at + 1).concat(djs.slice(0, at));
     var faces = crowd.slice(0, LIVE_CROWD_SHOWN).map(function (id) { return PFML.avatar(id, names[id] || "?"); }).join("");
-    box.innerHTML = '<a class="live-link" href="tt">' +
+    box.innerHTML = '<button type="button" class="live-pill" id="livePill" aria-expanded="' + live.open + '" aria-controls="liveCard">' +
+        '<span class="live-pip" aria-hidden="true"></span>' +
+        '<span class="live-pill-what"><b>Live now:</b> ' + esc(play.title) + " · " + esc(upper(nameOf(play.dj))) + "</span>" +
+        '<span class="live-chev" aria-hidden="true">▾</span></button>' +
+      '<div class="live-card" id="liveCard"' + (live.open ? "" : " hidden") + '><a class="live-link" href="tt">' +
       '<span class="live-kicker"><span class="live-pip" aria-hidden="true"></span>Live now in the room</span>' +
       '<span class="live-track">' + art + '<span class="live-text">' +
         "<b>" + esc(play.title) + "</b>" +
@@ -456,10 +469,21 @@
       '<span class="live-row"><span class="live-label">The crowd</span><span class="live-faces">' + faces +
         (crowd.length > LIVE_CROWD_SHOWN ? '<span class="live-more">+' + (crowd.length - LIVE_CROWD_SHOWN) + "</span>" : "") +
         "</span>" + crowd.length + " here</span>" +
-      '<span class="live-go">Listen live →</span></a>';
+      '<span class="live-go">Listen live →</span></a></div>';
     box.hidden = false;
     liveTick();
     live.tick = setInterval(liveTick, 1000);
+  }
+
+  // Opening and closing the card; the choice is kept on this phone or
+  // computer, closed until it's opened
+  function onLivePill(ev) {
+    var b = ev.target.closest("#livePill");
+    if (!b) return;
+    live.open = !live.open;
+    try { localStorage.setItem(LIVE_OPEN_KEY, live.open ? "1" : "0"); } catch (e) { /* kept for this visit only */ }
+    b.setAttribute("aria-expanded", String(live.open));
+    $("liveCard").hidden = !live.open;
   }
 
   // the bar and the time, on the database's clock; as the track ends, look again
@@ -479,6 +503,8 @@
 
   function initLive() {
     if (!$("liveBox")) return;
+    try { live.open = localStorage.getItem(LIVE_OPEN_KEY) === "1"; } catch (e) { live.open = false; }
+    $("liveBox").addEventListener("click", onLivePill);
     liveLook();
     document.addEventListener("visibilitychange", function () {
       if (document.hidden) { clearTimeout(live.look); clearInterval(live.tick); } else liveLook();

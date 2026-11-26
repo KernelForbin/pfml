@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-26 (follow-up): Live now is a pill, and says when the room is quiet
+
+- **Asked:** make Live now a collapsed pill that expands, small when
+  collapsed, and show "Live room: nothing playing now" when nothing is.
+- **Changed:** Live now moved into the row with the What's new button. A
+  track playing: a dark pill, "Live now: <track> · <DJ>", one line, that
+  opens the full card on a tap (closed by default; the choice is kept on
+  that device, which the privacy page now lists). Nothing playing: a
+  plain pill, "Live room: nothing playing now →", into the room. No
+  database change.
+- **Verified:** tests for the pill, the toggle, the quiet pill and the
+  layout, each broken in a scratch clone and caught; in a browser on a
+  stubbed copy at 375px and desktop, light and dark (README, Live now on
+  Home).
+
 ## 2026-11-26: Live now on Home
 
 - **Asked:** while someone's actively DJing in the live room, show it at

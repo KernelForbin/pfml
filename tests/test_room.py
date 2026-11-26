@@ -271,14 +271,22 @@ class LiveNowOnHome(unittest.TestCase):
         self.assertEqual(n, 7)
         self.assertIn(f'"Rehearsal passed: {n} checks held. Nothing was kept."', PEEK_REHEARSAL)
 
-    def test_it_sits_at_the_top_of_home_under_whats_new(self):
+    def test_it_sits_beside_whats_new(self):
+        # the user's call (2026-11-26): a small pill, not a card, until opened;
+        # What's new stays the first thing on Home
         main = read(SITE / "index.html").split("<main>", 1)[1]
-        after = main.split('<div class="shell home-top">', 1)[1].split("</div>", 1)[1]
-        self.assertTrue(after.lstrip().startswith(
-            '<section class="shell live-now" id="liveBox" aria-label="Live now in the room" hidden></section>'))
+        top = main.split('<div class="shell home-top">', 1)[1].split("\n  </div>", 1)[0]
+        self.assertRegex(top, r'^\s*<a class="feat-btn" id="featuresBtn" href="features">.*</a>\s*'
+                              r'<div class="live-now" id="liveBox" hidden></div>\s*$')
         self.assertIn("initLive();", js_body(self.app, "function initHome() {"))
         css = re.sub(r"/\*.*?\*/", "", read(SITE / "style.css"), flags=re.S)
-        self.assertRegex(css, r"\.live-now\[hidden\]\s*\{\s*display:\s*none")
+        self.assertRegex(css, r"\.live-now\[hidden\], \.live-card\[hidden\]\s*\{\s*display:\s*none")
+        self.assertRegex(css, r"\.home-top\s*\{[^}]*display:\s*flex;[^}]*flex-wrap:\s*wrap")
+        # the pill stays put beside What's new; the card opens on a line of its own
+        self.assertRegex(css, r"\.live-now\s*\{\s*display:\s*contents;\s*\}")
+        self.assertRegex(css, r"\.live-pill\s*\{[^}]*max-width:\s*min\(100%, 440px\)")
+        self.assertRegex(css, r"\.live-card\s*\{\s*flex-basis:\s*100%")
+        self.assertRegex(css, r"\.live-pill-what\s*\{[^}]*text-overflow:\s*ellipsis;[^}]*white-space:\s*nowrap")
 
     def test_it_peeks_and_never_comes_in(self):
         self.assertIn('client.rpc("room_peek")', read(SITE / "auth.js"))
@@ -288,13 +296,37 @@ class LiveNowOnHome(unittest.TestCase):
         self.assertNotIn("roomWatch", self.app)
 
     def test_it_shows_the_track_the_dj_the_decks_and_the_crowd(self):
-        draw = js_body(self.app, "function drawLive(names) {")
+        draw = js_body(self.app, "function drawLive(names, failed) {")
         for needle in ("esc(play.title)", "esc(play.artist)", "esc(nameOf(play.dj))", "esc(upper(next.map(nameOf).join(\", \")))",
                        "crowd.length + \" here", "play.awesome", "play.lame", '<a class="live-link" href="tt">'):
             with self.subTest(needle):
                 self.assertIn(needle, draw)
-        # nothing playing: it goes
-        self.assertIn('if (!st) { box.hidden = true; box.innerHTML = ""; return; }', draw)
+        # no answer from the database: no pill at all
+        self.assertIn('if (failed) { box.hidden = true; box.innerHTML = ""; return; }', draw)
+
+    def test_closed_it_is_one_line_and_opens_on_a_tap(self):
+        draw = js_body(self.app, "function drawLive(names, failed) {")
+        self.assertIn("""<button type="button" class="live-pill" id="livePill" aria-expanded="' + live.open + '" aria-controls="liveCard">""", draw)
+        self.assertIn("""<b>Live now:</b> ' + esc(play.title) + " · " + esc(upper(nameOf(play.dj)))""", draw)
+        self.assertIn("""'<div class="live-card" id="liveCard"' + (live.open ? "" : " hidden") + '>""", draw)
+        toggle = js_body(self.app, "function onLivePill(ev) {")
+        self.assertIn("live.open = !live.open;", toggle)
+        self.assertIn('$("liveCard").hidden = !live.open;', toggle)
+        self.assertIn('b.setAttribute("aria-expanded", String(live.open));', toggle)
+        # closed until opened, and the choice is kept on that device
+        self.assertIn("open: false };", self.app)
+        self.assertIn('try { localStorage.setItem(LIVE_OPEN_KEY, live.open ? "1" : "0"); } catch (e)', toggle)
+        init = js_body(self.app, "function initLive() {")
+        self.assertIn('try { live.open = localStorage.getItem(LIVE_OPEN_KEY) === "1"; } catch (e) { live.open = false; }', init)
+        self.assertIn('$("liveBox").addEventListener("click", onLivePill);', init)
+        self.assertIn("whether Home&rsquo;s Live now is open", read(SITE / "privacy.html"))
+
+    def test_nothing_playing_says_so_and_links_in(self):
+        draw = js_body(self.app, "function drawLive(names, failed) {")
+        quiet = draw.split("if (!st) {", 1)[1].split("return;", 1)[0]
+        self.assertIn('<a class="live-pill is-idle" href="tt">', quiet)
+        self.assertIn("<b>Live room:</b> nothing playing now", quiet)
+        self.assertIn("box.hidden = false;", quiet)
 
     def test_it_looks_again_only_while_in_view(self):
         look = js_body(self.app, "function liveLook() {")

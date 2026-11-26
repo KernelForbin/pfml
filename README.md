@@ -2891,14 +2891,22 @@ each listener signed in to Spotify, and plays previews on a phone).
 
 ### Live now on Home
 
-Asked 2026-11-26: while someone's DJing, the top of Home shows the room,
-just under the What's new button (which stays the first thing on Home,
-the call of 2026-10-24). One dark card, like the room's own stage, that
-links to `/tt`: what's playing (YouTube's thumbnail, or ♫ for
-SoundCloud), who's playing it, a progress bar on the database's clock,
-Awesome and Lame as counts, who's up next in turn order, and the crowd's
-initials (twelve, then "+N") with how many are there. Nothing playing:
-no card.
+Asked 2026-11-26, and made small the same day: a pill beside the What's
+new button (which stays the first thing on Home, the call of 2026-10-24),
+on the same row when there's room. The user's calls: collapsed, small,
+expandable, and saying so when nothing's on.
+
+- **Playing:** a dark pill with a pulsing lime dot, "Live now: <track> ·
+  <DJ>", cut short with an ellipsis rather than wrapping. A tap opens the
+  card below it, the whole row wide: what's playing (YouTube's thumbnail,
+  or ♫ for SoundCloud), who's playing it, a progress bar on the
+  database's clock, Awesome and Lame as counts, who's up next in turn
+  order, the crowd's initials (twelve, then "+N") with how many are
+  there, and Listen live into `/tt`. Closed until opened; open or closed
+  is remembered on that phone or computer (`pfml.liveOpen`).
+- **Nothing playing:** a plain pill, "Live room: nothing playing now →",
+  into the room.
+- **No answer** (the function missing, or the network): no pill.
 
 **Looking isn't being there.** `room_here()` marks its caller present,
 so Home can't use it. `room_peek()`
@@ -2913,7 +2921,7 @@ track whose time is up, and a room nobody's in at all. Its rehearsal is
 is in view, not at all while it's hidden, and again as soon as it's back.
 As the track's time runs out it asks again 5 seconds later, and once
 more 5 seconds after that if the next track hadn't started yet, so the
-card doesn't vanish for half a minute between tracks. No Realtime: the
+pill doesn't say nothing's playing for half a minute between tracks. No Realtime: the
 room's one channel stays the room page's.
 
 **Checked:** the SQL on the local Postgres (2026-11-26): the rehearsal
@@ -2925,8 +2933,12 @@ break-checked. In a browser on a stubbed copy, at 375px and 800px, light
 and dark: no sideways scroll with a long title, a big crowd, SoundCloud,
 a track of unknown length, nobody next; no card for nothing playing or a
 missing function; a fresh look as a track ends; contrast at least 9 in
-dark. Not checked: the real database's answer, which waits on the
-migration.
+dark. The pill, the same day: one 37px line at 375px and 1280px, a long
+title cut short at 440px and still beside What's new on a wide screen;
+opening it with a real click leaves the pill where it was and puts the
+card on its own line; open or closed survives a reload; the quiet
+pill's text is at least 6.76 against its background in dark. Not
+checked: how either pill looks on a real phone.
 
 ## Deleting a round
 
