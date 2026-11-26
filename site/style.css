@@ -100,6 +100,21 @@ a:hover { color: var(--magenta-text); }
   box-shadow: 0 0 0 3px var(--wash);
 }
 .season-tab[aria-current="true"] .pip { background: var(--acid); box-shadow: 0 0 0 3px rgba(255,255,255,.3); }
+/* Listen Live, the live room's pill: a dot that pulses, still with reduced motion */
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--magenta); animation: live-pulse 1.6s ease-in-out infinite; }
+.season-tab[aria-current="true"] .live-dot { background: var(--acid); }
+@keyframes live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
+/* four pills on one row on a phone (measured 2026-11-25: 413px of pills
+   for a 335px row at 375px wide, before; a 320px row at 360px) */
+@media (max-width: 480px) {
+  .seasons { gap: 5px; }
+  .season-tab { padding: 7px 8px; font-size: 0.8rem; gap: 5px; }
+}
+@media (max-width: 400px) {
+  .seasons { gap: 4px; }
+  .season-tab { padding: 7px 7px; font-size: 0.76rem; gap: 4px; }
+}
 
 /* Every season in one pill (app.js seasonPicker): opens a list, newest first. */
 .season-pick { position: relative; display: inline-flex; }
@@ -1584,49 +1599,6 @@ body.auth-checking::before {
 
 .sub-banner { padding-top: 22px; }
 
-/* Home's Repeat checker sign (asked 2026-11-22, "obnoxiously obvious"): a
-   Vegas marquee, a ring of chasing bulbs and a bulb arrow racing in from
-   each side. app.js renderRepeatSign places the bulbs; each takes its turn
-   from --d. Every bulb blinks about once a second, well under the 3 flashes
-   a second that can trigger seizures, and all stay lit with reduced motion.
-   The sign is --inverse, dark in both modes, so its gold reads in both. */
-.rsign-wrap { padding-top: 22px; }
-.rsign-row { display: flex; align-items: center; justify-content: center; gap: 10px; max-width: 760px; margin: 0 auto; }
-.rsign {
-  position: relative; flex: 1; min-width: 0; display: block; padding: 24px 20px; border-radius: var(--r);
-  background: var(--inverse); color: var(--gold); text-decoration: none; text-align: center;
-  box-shadow: var(--shadow-md); transition: transform .15s ease;
-}
-@media (hover: hover) { .rsign:hover { color: var(--gold); transform: translateY(-1px) scale(1.01); } }
-.rsign:focus-visible { outline: 3px solid var(--magenta-text); outline-offset: 3px; }
-.rsign-txt {
-  position: relative; display: block; font: 400 clamp(1.1rem, 4.6vw, 1.9rem)/1.08 "Bungee", "Archivo", Impact, sans-serif;
-  letter-spacing: 0.04em; text-wrap: balance; text-shadow: 0 0 10px rgba(227, 177, 44, .6);
-}
-.rsign-sub { position: relative; display: block; margin-top: 6px; color: var(--on-inverse); font-size: 0.78rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
-.rsign-lights { position: absolute; inset: 0; pointer-events: none; }
-.rsign-arrow { position: relative; flex: none; width: 66px; height: 46px; }
-.rs-bulb {
-  --rs-off: var(--edge);
-  position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%;
-  background: var(--rs-off); animation: rs-lit .9s steps(1) infinite; animation-delay: var(--d, 0s);
-}
-.rsign-lights .rs-bulb { --rs-off: rgba(255, 255, 255, .16); }
-@keyframes rs-lit {
-  0% { background: var(--gold); box-shadow: 0 0 6px 2px rgba(227, 177, 44, .8); }
-  34%, 100% { background: var(--rs-off); box-shadow: none; }
-}
-@media (max-width: 480px) {
-  /* smaller arrows on a phone, so the sign keeps its width */
-  .rsign-row { gap: 4px; }
-  .rsign { padding: 20px 12px; }
-  .rsign-arrow { width: 44px; height: 32px; }
-  .rsign-arrow .rs-bulb { width: 6px; height: 6px; margin: -3px 0 0 -3px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .rs-bulb { animation: none; background: var(--gold); box-shadow: 0 0 6px 2px rgba(227, 177, 44, .8); }
-  .rsign { transition: none; }
-}
 /* The open round, in the site's own purple (it was black with lime-green
    text until 2026-10-24, the user's call). The same in light and dark: the
    brand purple to a deeper one, with white text, at least 6.4:1 throughout. */

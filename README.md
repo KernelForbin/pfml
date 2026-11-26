@@ -1232,7 +1232,14 @@ part's working).
 `career.html`, titled All-Time League Stats). The season button names the
 season being viewed, or the one in progress on any other page, and opens
 a list of every season, newest first (`seasonPicker` in `app.js`). All-Time
-also has a card on the Home page, under Past Seasons.
+also has a card on the Home page, under Past Seasons. Since 2026-11-25 a
+fourth pill, Listen Live, goes to the live room (`/tt`), with a pulsing dot
+(still for reduced motion). Four pills didn't fit one row on a phone
+(measured: 413px of pills for a 335px row at 375px wide, wrapping to a
+144px top bar), so under 480px and again under 400px the pills get tighter
+padding, a smaller font and smaller gaps. Measured after: one row, a 105px
+top bar, from 360px wide up (19px to spare at 360); a screen under about
+350px, like the first iPhone SE, gets two rows.
 
 **Account menu.** `account.js` adds two buttons to the right of the top bar
 on every members-only page once `auth.js` lets a member in: the inbox, and
@@ -1389,25 +1396,12 @@ pfml.fun/round-9-prompt.
 
 ## Repeat checker (/repeats)
 
-### Repeat checker sign
+### Repeat checker sign (removed)
 
-Asked 2026-11-22: link the Repeat checker at the top of Home, above the
-current round, "obnoxiously obvious", with blinking arrows round it, "a
-caricature of a notification". From four mockups the user picked a Vegas
-marquee: "Check for repeats here" in gold Bungee (Google Fonts, Home only)
-on a dark sign (`--inverse`, dark in both modes), a ring of chasing bulbs,
-and a solid arrow of bulbs each side whose lights run in toward it. It sits
-after the announcements and the open-round banner, before Just finished,
-Current round and Next round, and always shows. The whole sign is one link
-to `repeats`; the bulbs and arrows are `aria-hidden`.
-
-`renderRepeatSign` in `app.js` places the bulbs: every ~17px round the
-sign, 8px in, chasing in threes, redrawn by a `ResizeObserver` whenever the
-sign changes size (the font arriving late rewraps the words, which left a
-ring drawn at the old size in the mockup). Each bulb blinks once every
-0.9s, well under the 3 flashes a second that can trigger seizures, and
-with reduced motion every bulb stays lit. On a phone (480px and under) the
-arrows shrink so the sign keeps its width.
+From 2026-11-22 to 2026-11-25 Home opened with a Vegas marquee, "Check for
+repeats here", in chasing bulbs, linking here. It was a brief joke, and the
+user had it taken down on 2026-11-25 (with its Bungee font). The Repeat
+checker is in the menu under the initials and on the Submit page.
 
 Has an artist, song or album been submitted before? Members type into one
 box and the page answers as they type: "Yes: 3 past submissions match", in
@@ -2779,8 +2773,8 @@ bottom of its DJ's queue, initials for avatars, and **Lames never skip a
 track: only the DJ playing it, the admin or a commissioner can**. It's the
 mechanic, in PFML's own look; nothing of turntable.fm's name or artwork.
 
-**The page** (`tt.html`, `tt.js`; Live room in the menu under the
-initials):
+**The page** (`tt.html`, `tt.js`; Listen Live in the top bar, on every
+member page, since 2026-11-25):
 
 - **The stage:** the player, what's playing and who's playing it, a
   progress bar, Awesome and Lame (never on your own track), Skip for who

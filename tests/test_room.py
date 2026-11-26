@@ -139,7 +139,32 @@ class ThePage(unittest.TestCase):
         srcs = re.findall(r'<script src="([^"]+)"', self.html)
         self.assertEqual(srcs[1:], ["config.js", "auth.js", "account.js", "sentiment.js", "tt.js", "app.js"])
         self.assertIn('<body class="gated" data-page="tt">', self.html)
-        self.assertIn('<a class="acct-item" href="tt">Live room</a>', read(SITE / "account.js"))
+
+    def test_listen_live_is_in_every_pages_top_bar(self):
+        # asked 2026-11-25: a Listen Live pill after All-Time, lit on the room's own page
+        nav = js_body(read(SITE / "app.js"), "function renderNav(index, activeKey) {")
+        self.assertIn('live.href = "tt";', nav)
+        self.assertIn("Listen Live';", nav)
+        self.assertIn('live.setAttribute("aria-current", String(activeKey === "tt"));', nav)
+        self.assertLess(nav.index("nav.appendChild(career);"), nav.index("nav.appendChild(live);"))
+        # the room's page hands renderNav its own key
+        self.assertIn('page === "tt") {', js_body(read(SITE / "app.js"), "function boot() {"))
+        self.assertIn("@media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }", read(SITE / "style.css"))
+        # one way in from the top bar, not a second name in the menu
+        self.assertNotIn('href="tt"', read(SITE / "account.js"))
+
+    def test_four_pills_fit_one_row_on_a_phone(self):
+        # measured 2026-11-25: one row from 360px wide up with these, two
+        # rows (a 144px top bar) without
+        css = read(SITE / "style.css")
+        self.assertRegex(css, r"@media \(max-width: 480px\) \{\n  \.seasons \{ gap: 5px; \}\n  \.season-tab \{ padding: 7px 8px; font-size: 0\.8rem; gap: 5px; \}")
+        self.assertRegex(css, r"@media \(max-width: 400px\) \{\n  \.seasons \{ gap: 4px; \}\n  \.season-tab \{ padding: 7px 7px; font-size: 0\.76rem; gap: 4px; \}")
+
+    def test_the_repeats_sign_is_gone_from_home(self):
+        # a brief joke (2026-11-22 to 2026-11-25), taken down with its font
+        home, app, css = read(SITE / "index.html"), read(SITE / "app.js"), read(SITE / "style.css")
+        for text, needle in ((home, "rsign"), (home, "Bungee"), (app, "renderRepeatSign"), (css, ".rsign"), (css, "rs-bulb")):
+            self.assertNotIn(needle, text)
 
     def test_nothing_plays_before_a_tap(self):
         # a browser starts sound only from a tap (an iPhone: only in a

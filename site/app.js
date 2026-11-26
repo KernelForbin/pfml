@@ -101,6 +101,13 @@
     career.textContent = "All-Time";
     career.setAttribute("aria-current", String(activeKey === "career"));
     nav.appendChild(career);
+
+    // the live room (README, The live room), on every page (asked 2026-11-25)
+    var live = el("a", "season-tab season-tab-live");
+    live.href = "tt";
+    live.innerHTML = '<span class="live-dot" aria-hidden="true"></span>Listen Live';
+    live.setAttribute("aria-current", String(activeKey === "tt"));
+    nav.appendChild(live);
     syncScrollPadding();
   }
 
@@ -627,52 +634,6 @@
     $("featuresBtn").setAttribute("aria-label", "What's new on the site" + (unseen ? ", new features since your last look" : ""));
   }
 
-  // Home's Repeat checker sign (asked 2026-11-22): bulbs every ~17px round
-  // the sign, 8px in from its edge, chasing in threes, and a solid arrow of
-  // bulbs each side whose lights run toward the sign. Redrawn whenever the
-  // sign changes size (the Bungee font arriving rewraps it). Decoration only:
-  // the link is the sign. style.css has the timing and the reduced motion.
-  var SIGN_ARROW = ["....X..", "....XX.", "XXXXXXX", "....XX.", "....X.."];
-
-  function signBulb(host, x, y, delay) {
-    var b = el("span", "rs-bulb");
-    b.style.left = x + "px";
-    b.style.top = y + "px";
-    b.style.setProperty("--d", delay + "s");
-    host.appendChild(b);
-  }
-
-  function renderRepeatSign() {
-    var sign = $("repeatSign");
-    if (!sign) return;
-    var lights = sign.querySelector(".rsign-lights");
-    function draw() {
-      lights.innerHTML = "";
-      var w = sign.clientWidth, h = sign.clientHeight, m = 8, i = 0;
-      [[m, m, w - m, m], [w - m, m, w - m, h - m], [w - m, h - m, m, h - m], [m, h - m, m, m]].forEach(function (s) {
-        var n = Math.max(1, Math.round(Math.hypot(s[2] - s[0], s[3] - s[1]) / 17));
-        for (var k = 0; k < n; k++, i++) {
-          signBulb(lights, s[0] + (s[2] - s[0]) * k / n, s[1] + (s[3] - s[1]) * k / n, -(i % 3) * 0.3);
-        }
-      });
-      var gap = window.matchMedia("(max-width: 480px)").matches ? 6 : 9.5, cols = SIGN_ARROW[0].length;
-      Array.prototype.forEach.call(document.querySelectorAll(".rsign-arrow"), function (host) {
-        host.innerHTML = "";
-        var left = host.getAttribute("data-points") === "left";
-        SIGN_ARROW.forEach(function (row, r) {
-          row.split("").forEach(function (ch, c) {
-            if (ch !== "X") return;
-            // the tip lights last, so the lights run the way the arrow points
-            signBulb(host, 5 + (left ? cols - 1 - c : c) * gap, 4 + r * gap, -(cols - 1 - c) * 0.13);
-          });
-        });
-      });
-    }
-    draw();
-    if (window.ResizeObserver) new ResizeObserver(draw).observe(sign);
-    else window.addEventListener("resize", draw);
-  }
-
   // Prompt rotation (README, Commissioner tools): a round's winner writes
   // the prompt two rounds on. While it's their turn, Home asks them for it,
   // and a commissioner approves it before it shows. Nothing for anyone else,
@@ -719,7 +680,6 @@
 
   function initHome() {
     renderFeaturesButton();
-    renderRepeatSign();
     renderSubmitBanner();
     renderAnnouncements();
     renderPromptTurns();
